@@ -171,6 +171,20 @@
   font-weight: 400;
 }
 
+/**
+ * Note dactylographiée — la fonte des Titres employée en petit corps.
+ * N'introduit PAS de cinquième famille : c'est une variation de taille du
+ * style Titre, telle qu'utilisée pour les mentions machine à écrire
+ * (en-tête de document, hypothèse, note d'intention).
+ */
+@utility type-note {
+  font-family: var(--font-titre);
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.65;
+  letter-spacing: var(--tracking-copy);
+  font-weight: 400;
+}
+
 @utility type-annotation {
   font-family: var(--font-annotation);
   font-size: var(--text-annotation);
@@ -178,6 +192,31 @@
   letter-spacing: var(--tracking-annotation);
   font-style: italic;
   font-weight: 400;
+}
+
+/**
+ * Surface papier — grain de la charte posé en fond.
+ *
+ * Le grain est en `multiply` par-dessus la couleur de surface : il assombrit
+ * la fibre sans laver la teinte, et fonctionne donc sur Papier comme sur Sable.
+ * Le fichier de repli (`/textures/papier-grain.jpg`) peut être remplacé par une
+ * image pilotée depuis Sanity via la variable `--paper-texture`.
+ */
+@utility surface-paper {
+  position: relative;
+  background-color: var(--color-surface);
+}
+
+@utility surface-paper-grain {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--paper-texture, url('/textures/papier-grain.jpg'));
+  background-size: cover;
+  background-position: center;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 /** Conteneurs de page — largeurs alignées sur les tokens. */

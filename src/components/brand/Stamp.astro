@@ -1,0 +1,57 @@
+---
+import stamp from '~/assets/brand/stamp-labo-de-com.svg?raw';
+import plongee from '~/assets/brand/plongee-sous-le-visible.svg?raw';
+
+/**
+ * Tampons de marque (submarks), inlinés pour hériter de `currentColor`.
+ *
+ * `rotate` reproduit la pose légèrement de travers du tampon encreur ;
+ * l'animation de rotation lente est réservée à la variante « labo », et
+ * neutralisée si l'utilisateur a réduit les animations.
+ */
+interface Props {
+  variant?: 'labo' | 'plongee';
+  class?: string;
+  /** Inclinaison en degrés. */
+  rotate?: number;
+  spin?: boolean;
+}
+
+const { variant = 'labo', class: className = '', rotate = -8, spin = false } = Astro.props;
+const svg = variant === 'labo' ? stamp : plongee;
+---
+
+<span
+  class:list={['block', spin && 'stamp-spin', className]}
+  style={`--stamp-rotate:${rotate}deg`}
+  aria-hidden="true"
+  set:html={svg}
+/>
+
+<style>
+  span {
+    transform: rotate(var(--stamp-rotate));
+  }
+
+  span :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .stamp-spin :global(svg) {
+    animation: stamp-rotation 36s linear infinite;
+  }
+
+  @keyframes stamp-rotation {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stamp-spin :global(svg) {
+      animation: none;
+    }
+  }
+</style>

@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField } from 'sanity';
 
+import { manifestoHero } from './manifestoHero';
 import { heroSection } from './heroSection';
 import { richTextSection } from './richTextSection';
 import { mediaSection } from './mediaSection';
@@ -7,6 +8,7 @@ import { projectListSection } from './projectListSection';
 import { ctaSection } from './ctaSection';
 
 export const sectionTypes = [
+  manifestoHero,
   heroSection,
   richTextSection,
   mediaSection,

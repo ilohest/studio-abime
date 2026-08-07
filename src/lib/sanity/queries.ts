@@ -81,6 +81,9 @@ const SECTIONS = /* groq */ `sections[]{
   _key,
   _type,
   ...,
+  _type == "manifestoHero" => {
+    background ${IMAGE}
+  },
   _type == "heroSection" => {
     media ${IMAGE},
     cta ${LINK}

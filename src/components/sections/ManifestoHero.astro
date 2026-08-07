@@ -1,0 +1,202 @@
+---
+import Wordmark from '~/components/brand/Wordmark.astro';
+import Stamp from '~/components/brand/Stamp.astro';
+import { resolveImage } from '~/lib/sanity/image';
+import { getLocaleMeta, type Locale } from '~/i18n/config';
+import type { ManifestoHero } from '~/lib/sanity/types';
+
+/**
+ * Hero « manifeste » — double page imprimée.
+ *
+ * Mise en page figée (direction artistique), textes pilotés par Sanity.
+ *
+ * Le pli central est tracé en CSS et non peint dans la texture de fond :
+ * le fond est en `cover`, donc recadré différemment à chaque largeur, alors
+ * que le pli doit rester calé sur la colonne centrale. En CSS il reste net à
+ * tous les DPR, ne pèse rien, et son écart/inclinaison restent réglables.
+ */
+interface Props {
+  section: ManifestoHero;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+
+// La date « (se modifie auto) » du document d'origine : recalculée à chaque rendu.
+const today = new Intl.DateTimeFormat(getLocaleMeta(locale).htmlLang, {
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+}).format(new Date());
+
+const metaLines = (section.metaLines ?? []).map((line) => ({
+  label: line.label,
+  value: line.autoDate ? today : (line.value ?? ''),
+}));
+
+// Texture éditoriale si l'éditeur en fournit une, sinon celle de la charte.
+const background = resolveImage(section.background, { width: 1600 });
+const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
+---
+
+<section
+  class="manifesto surface-paper relative isolate flex min-h-[100svh] flex-col overflow-hidden"
+  style={`--paper-texture:url('${textureUrl}')`}
+>
+  <div class="surface-paper-grain"></div>
+
+  {/* Réglure verticale du papier, très discrète. */}
+  <div class="manifesto-rules" aria-hidden="true"></div>
+
+  {/*
+    Le pli : deux filets légèrement décalés, celui de droite très légèrement
+    incliné. Ils débordent en hauteur (top/bottom négatifs) — une ligne pivotée
+    ne toucherait plus les bords sinon.
+  */}
+  <div class="manifesto-fold" aria-hidden="true">
+    <span class="manifesto-fold-line manifesto-fold-line--a"></span>
+    <span class="manifesto-fold-line manifesto-fold-line--b"></span>
+  </div>
+
+  <div
+    class="relative z-10 grid flex-1 grid-cols-1 gap-x-12 gap-y-12 px-6 py-10 md:grid-cols-2 md:gap-y-16 md:px-10 md:py-16"
+  >
+    {/*
+      ── Page de gauche ────────────────────────────────────────────────
+      En mobile la double page s'effondre en colonne unique : la marque
+      passe alors en premier (`order`), pour que le logo reste au-dessus de
+      la ligne de flottaison plutôt que rejeté après le manifeste.
+    */}
+    <div class="order-2 flex flex-col justify-between md:order-1">
+      {
+        metaLines.length > 0 && (
+          <dl class="type-note text-muted">
+            {metaLines.map((line) => (
+              <div class="flex gap-1">
+                <dt>{line.label} :</dt>
+                <dd>{line.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )
+      }
+
+      <div class="mt-10 flex flex-col gap-10 md:mt-0 md:gap-14 md:pl-[12%]">
+        {
+          section.hypothesis && (
+            <p class="type-note max-w-[34ch]">
+              <span class="uppercase">{section.hypothesisLabel ?? 'Hypothèse'}</span> :{' '}
+              {section.hypothesis}
+            </p>
+          )
+        }
+
+        {
+          (section.intention?.length ?? 0) > 0 && (
+            <div class="max-w-[34ch] md:pl-[10%]">
+              <p class="type-note uppercase">{section.intentionLabel ?? 'Note d’intention'} :</p>
+
+              <div class="mt-6 flex flex-col gap-4">
+                {section.intention?.map((paragraph) => (
+                  <p class="type-note">{paragraph}</p>
+                ))}
+              </div>
+            </div>
+          )
+        }
+      </div>
+
+      {
+        section.showStamp !== false && (
+          <div class="mt-10 md:mt-0">
+            <Stamp variant="labo" class="w-20 text-ink/70 md:w-28" rotate={-8} />
+          </div>
+        )
+      }
+    </div>
+
+    {/* ── Page de droite ──────────────────────────────────────────────── */}
+    <div
+      class="order-1 flex flex-col justify-center gap-10 md:order-2 md:justify-between md:gap-16 md:py-[12%]"
+    >
+      <div class="flex flex-1 items-center justify-center">
+        <h1 class="w-full max-w-[30rem]">
+          <Wordmark class="text-ink" />
+        </h1>
+      </div>
+
+      {
+        section.tagline && (
+          <p class="type-note mx-auto max-w-[46ch] text-center text-balance">{section.tagline}</p>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Réglure : colonnes régulières, à peine perceptibles — la trame du papier. */
+  .manifesto-rules {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent,
+      transparent calc(100% / 14 - 1px),
+      color-mix(in oklab, var(--color-abime) 7%, transparent) calc(100% / 14 - 1px),
+      color-mix(in oklab, var(--color-abime) 7%, transparent) calc(100% / 14)
+    );
+  }
+
+  .manifesto-fold {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .manifesto-fold-line {
+    position: absolute;
+    /* Débordement vertical : une ligne inclinée ne rejoindrait pas les coins. */
+    top: -9%;
+    height: 118%;
+    width: 1px;
+    background: color-mix(in oklab, var(--color-abime) 22%, transparent);
+  }
+
+  /* Filet principal, parfaitement vertical, sur la colonne centrale. */
+  .manifesto-fold-line--a {
+    left: 50%;
+  }
+
+  /*
+    Second filet : décalé de 3px et incliné de 0.35°. L'inclinaison suffit à
+    faire lire un pli de papier plutôt qu'un trait vectoriel — l'écart entre
+    les deux lignes s'ouvre progressivement du haut vers le bas.
+  */
+  .manifesto-fold-line--b {
+    left: calc(50% + 3px);
+    transform: rotate(0.35deg);
+    transform-origin: center;
+    background: color-mix(in oklab, var(--color-abime) 11%, transparent);
+  }
+
+  /* En mobile, la double page devient une page unique : plus de pli. */
+  @media (max-width: 767px) {
+    .manifesto-fold {
+      display: none;
+    }
+
+    .manifesto-rules {
+      background-image: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent calc(100% / 6 - 1px),
+        color-mix(in oklab, var(--color-abime) 6%, transparent) calc(100% / 6 - 1px),
+        color-mix(in oklab, var(--color-abime) 6%, transparent) calc(100% / 6)
+      );
+    }
+  }
+</style>

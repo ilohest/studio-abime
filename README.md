@@ -205,8 +205,25 @@ Les composants n'utilisent jamais ces couleurs directement mais des **rôles** (
 | Sous-titres | Commuters Sans SemiBold | Majuscule | 18 px | +5 % | `.type-sous-titre` |
 | Copy | GT Canon M Regular | — | 18 px | +2 % | `.type-copy` |
 | Annotations | GT Canon Narrow S Italic | — | 20 px | −5 % | `.type-annotation` |
+| _Note dactylo._ | GT Canon Mono Regular | — | 12 px | +2 % | `.type-note` |
+
+`.type-note` n'introduit pas de cinquième famille : c'est la fonte des Titres employée en petit corps, pour les mentions machine à écrire du hero (en-tête, hypothèse, note d'intention).
 
 Tout est déclaré dans `@theme` (`src/styles/global.css`), donc disponible à la fois comme variables `:root` et comme utilitaires Tailwind (`text-titre`, `font-copy`, `tracking-annotation`…).
+
+### Logos
+
+`src/assets/brand/` contient le logo principal, le tampon « Labo de Com. » et le submark « Plongée sous le visible », inlinés par les composants `src/components/brand/`.
+
+Les fichiers d'origine existaient en sept déclinaisons de couleur ; leur remplissage a été converti en `currentColor` et le bloc `<defs><style>` retiré (les classes `.cls-1` seraient entrées en collision entre deux SVG inlinés sur une même page). **Un seul fichier par logo** couvre donc désormais toute la palette : la couleur se pilote en CSS (`class="text-lumiere"`, `text-papier`…).
+
+### Hero de la page d'accueil
+
+La section `manifestoHero` reproduit la double page imprimée : mentions dactylographiées à gauche, logo à droite, pli central. La **mise en page est figée** dans le composant (c'est une direction artistique, pas un gabarit) ; seuls les textes sont éditables depuis Sanity. La mention « Date » se recalcule à chaque rendu si l'option _date automatique_ est cochée.
+
+Le pli central est tracé en CSS — deux filets décalés de 3 px, celui de droite incliné de 0.35° — et non peint dans la texture. Le fond étant en `cover`, une ligne peinte dériverait par rapport à la grille à chaque largeur d'écran, alors que le pli doit rester calé sur la colonne centrale ; en CSS elle reste nette à tous les DPR et ne pèse rien. Les filets débordent verticalement (`top: -9%; height: 118%`) car une ligne pivotée ne rejoindrait plus les coins.
+
+En dessous de 768 px, la double page s'effondre en colonne unique : le pli disparaît et la marque passe en premier, pour que le logo reste au-dessus de la ligne de flottaison.
 
 > **⚠️ Licence des fontes.** Commuters Sans est actuellement le fichier **« Fontspring DEMO »** (`.otf`) : jeu de glyphes réduit et licence non valable pour une mise en production web. Remplacer `public/fonts/CommutersSans-SemiBold.otf` par la version webfont sous licence (`.woff2`) avant mise en ligne — le nom de famille CSS étant inchangé, aucune autre modification ne sera nécessaire.
 

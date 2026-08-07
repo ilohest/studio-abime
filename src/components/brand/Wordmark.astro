@@ -1,0 +1,35 @@
+---
+import wordmark from '~/assets/brand/wordmark.svg?raw';
+
+/**
+ * Logo principal — « STUDIO ABIME (Labo de Com.) ».
+ *
+ * Le SVG est inliné (et non servi via <img>) pour deux raisons :
+ *  - il hérite de `currentColor`, donc une seule source couvre les sept
+ *    déclinaisons de couleur de la charte ;
+ *  - aucune requête réseau supplémentaire sur le chemin critique du hero.
+ */
+interface Props {
+  class?: string;
+  /** Titre accessible. `null` pour un logo purement décoratif (déjà annoncé ailleurs). */
+  title?: string | null;
+}
+
+const { class: className = '', title = 'Studio Abîme — Labo de Com.' } = Astro.props;
+---
+
+<span
+  class:list={['block', className]}
+  role={title ? 'img' : undefined}
+  aria-label={title ?? undefined}
+  aria-hidden={title ? undefined : 'true'}
+  set:html={wordmark}
+/>
+
+<style>
+  span :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+</style>

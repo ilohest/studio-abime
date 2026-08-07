@@ -70,6 +70,18 @@ interface SectionBase {
   _type: string;
 }
 
+export interface ManifestoHero extends SectionBase {
+  _type: 'manifestoHero';
+  metaLines?: Array<{ _key: string; label: string; value?: string; autoDate?: boolean }>;
+  hypothesisLabel?: string;
+  hypothesis?: string;
+  intentionLabel?: string;
+  intention?: string[];
+  tagline?: string;
+  background?: SanityImage;
+  showStamp?: boolean;
+}
+
 export interface HeroSection extends SectionBase {
   _type: 'heroSection';
   heading: string;
@@ -114,7 +126,13 @@ export interface CtaSection extends SectionBase {
   cta?: SanityLink;
 }
 
-export type Section = HeroSection | RichTextSection | MediaSection | ProjectListSection | CtaSection;
+export type Section =
+  | ManifestoHero
+  | HeroSection
+  | RichTextSection
+  | MediaSection
+  | ProjectListSection
+  | CtaSection;
 
 /* -------------------------------------------------------------------------- */
 /* Documents                                                                   */
