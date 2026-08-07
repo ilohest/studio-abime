@@ -1,0 +1,268 @@
+---
+import { Image } from 'astro:assets';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SmartLink from '~/components/primitives/SmartLink.astro';
+import type { Locale } from '~/i18n/config';
+import type { StudioStatement } from '~/lib/sanity/types';
+
+/**
+ * Manifeste illustré — déclaration, note, planche de figures, appel à action.
+ *
+ * La planche repose sur une grille de 12 colonnes : chaque figure déclare le
+ * nombre de colonnes qu'elle occupe et son éventuel débord hors marge. La
+ * composition reste donc pilotable depuis le CMS sans exposer de positions
+ * absolues, qui seraient ingérables en responsive.
+ */
+interface Props {
+  section: StudioStatement;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+const figures = section.figures ?? [];
+---
+
+<section class="statement surface-paper">
+  <div class="statement__grain surface-paper-grain"></div>
+
+  <div class="statement__inner">
+    {/* ── Déclaration ─────────────────────────────────────────────────── */}
+    <p class="type-declaration statement__text">{section.statement}</p>
+
+    {/* ── Note ────────────────────────────────────────────────────────── */}
+    {
+      section.note && (
+        <p class="statement__note">
+          {section.noteNumber && <span class="statement__ref">{section.noteNumber}</span>}
+          <span class="type-note">{section.note}</span>
+        </p>
+      )
+    }
+
+    {/* ── Planche de figures ──────────────────────────────────────────── */}
+    {
+      figures.length > 0 && (
+        <div class="statement__plate">
+          {figures.map((figure) => (
+            <figure
+              class="statement__figure"
+              data-bleed={figure.bleed ?? 'none'}
+              data-push={figure.pushRight ? '' : undefined}
+              style={`--span:${Math.min(Math.max(figure.span ?? 3, 1), 12)}`}
+            >
+              {figure.image?.asset ? (
+                <SanityImage
+                  image={figure.image}
+                  width={900}
+                  sizes="(min-width: 768px) 25vw, 80vw"
+                  class="statement__image"
+                />
+              ) : (
+                figure.fallbackImage && (
+                  /*
+                    `alt` vide : la légende adjacente porte déjà la référence,
+                    la répéter ici la ferait entendre deux fois aux lecteurs
+                    d'écran. Les visuels venus du CMS utilisent, eux, leur
+                    propre champ « texte alternatif ».
+                  */
+                  <Image
+                    src={figure.fallbackImage}
+                    alt=""
+                    widths={[400, 900]}
+                    sizes="(min-width: 768px) 25vw, 80vw"
+                    loading="lazy"
+                    class="statement__image"
+                  />
+                )
+              )}
+
+              {(figure.number || figure.caption) && (
+                <figcaption class="statement__caption">
+                  {figure.number && <span class="statement__ref">{figure.number}</span>}
+                  {figure.caption}
+                </figcaption>
+              )}
+            </figure>
+          ))}
+
+          {section.marker && <p class="type-note statement__marker">{section.marker}</p>}
+
+          {/* Placé dans la planche pour venir sous la dernière figure. */}
+          <div class="statement__actions">
+            <SmartLink link={section.cta} locale={locale} class="statement__cta" />
+          </div>
+        </div>
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .statement {
+    position: relative;
+    isolation: isolate;
+    padding-block: clamp(5rem, 12vh, 9rem);
+    overflow: hidden;
+  }
+
+  .statement__grain {
+    z-index: 0;
+  }
+
+  .statement__inner {
+    position: relative;
+    z-index: 1;
+    padding-inline: clamp(1.5rem, 4vw, 4rem);
+  }
+
+  .statement__text {
+    max-width: 56ch;
+    margin-inline: auto;
+    text-align: justify;
+    /* Retrait de première ligne : reprend la mise en page d'un texte imprimé. */
+    text-indent: 3em;
+  }
+
+  .statement__note {
+    max-width: 56ch;
+    margin: clamp(1.5rem, 4vh, 3rem) auto 0;
+  }
+
+  /* Référence de figure : la seule occurrence de l'italique dans ce bloc. */
+  .statement__ref {
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.75rem;
+    letter-spacing: var(--tracking-annotation);
+    margin-inline-end: 0.35em;
+  }
+
+  /* ── Planche ──────────────────────────────────────────────────────────── */
+  .statement__plate {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 2rem);
+    align-items: end;
+    margin-top: clamp(3rem, 9vh, 7rem);
+  }
+
+  .statement__figure {
+    grid-column: span var(--span);
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  /*
+    Débord : la figure sort de la marge du bloc sans élargir la page — le
+    `overflow: hidden` de la section coupe proprement le dépassement.
+  */
+  .statement__figure[data-bleed='left'] {
+    margin-inline-start: calc(-1 * clamp(1.5rem, 4vw, 4rem));
+  }
+
+  .statement__figure[data-bleed='right'] {
+    margin-inline-end: calc(-1 * clamp(1.5rem, 4vw, 4rem));
+  }
+
+  /* Pousse la figure en fin de rangée, en absorbant l'espace disponible. */
+  .statement__figure[data-push] {
+    grid-column: span var(--span) / -1;
+  }
+
+  .statement__image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .statement__caption {
+    margin-top: 0.6rem;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    letter-spacing: 0;
+    color: var(--color-ink);
+  }
+
+  .statement__caption .statement__ref {
+    margin-inline-end: 0.2em;
+  }
+
+  /*
+    Mention technique et bouton reçoivent une position explicite : l'ordre du
+    DOM suit la logique de lecture (figures, puis mention, puis action), tandis
+    que la grille les replace dans la composition.
+  */
+  .statement__marker {
+    grid-column: 7 / span 3;
+    grid-row: 1;
+    align-self: start;
+    text-align: center;
+  }
+
+  .statement__actions {
+    grid-column: span 3 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-start;
+    margin-top: clamp(1.5rem, 4vh, 2.5rem);
+  }
+
+  .statement__cta {
+    display: inline-block;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 1rem;
+    letter-spacing: var(--tracking-annotation);
+    padding: 0.7em 1.4em;
+    border: 1px solid var(--color-ink);
+    border-radius: 999px;
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  .statement__cta:hover {
+    background-color: var(--color-ink);
+    color: var(--color-ink-invert);
+  }
+
+  /* ── Mobile : la planche s'empile, plus de débord ─────────────────────── */
+  @media (max-width: 767px) {
+    .statement__text {
+      text-align: left;
+      text-indent: 0;
+    }
+
+    .statement__plate {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+
+    .statement__figure {
+      grid-column: span 1;
+      grid-row: auto;
+    }
+
+    .statement__figure[data-bleed='left'],
+    .statement__figure[data-bleed='right'] {
+      margin-inline: 0;
+    }
+
+    .statement__figure[data-push] {
+      grid-column-end: auto;
+    }
+
+    .statement__marker {
+      grid-column: span 2;
+      grid-row: auto;
+      text-align: left;
+    }
+
+    .statement__actions {
+      grid-column: span 2;
+      grid-row: auto;
+    }
+  }
+</style>

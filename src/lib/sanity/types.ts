@@ -9,6 +9,7 @@
  * générer ces types automatiquement via `sanity typegen` (`sanity.types.ts`).
  */
 import type { PortableTextBlock } from '@portabletext/types';
+import type { ImageMetadata } from 'astro';
 import type { Locale } from '~/i18n/config';
 
 export type { PortableTextBlock };
@@ -88,6 +89,31 @@ export interface ServicesMenu extends SectionBase {
   groups?: Array<{ _key: string; title: string; items?: string[] }>;
 }
 
+export interface StudioStatement extends SectionBase {
+  _type: 'studioStatement';
+  statement: string;
+  noteNumber?: string;
+  note?: string;
+  marker?: string;
+  cta?: SanityLink;
+  figures?: Array<{
+    _key: string;
+    /** Requis côté CMS ; absent quand la figure vient du contenu d'amorçage. */
+    image?: SanityImage;
+    number?: string;
+    caption?: string;
+    span?: number;
+    bleed?: 'none' | 'left' | 'right';
+    pushRight?: boolean;
+    /**
+     * Visuel groupé au site, utilisé UNIQUEMENT par le contenu d'amorçage
+     * (`src/content/homeFallback.ts`) tant que Sanity n'est pas alimenté.
+     * Jamais renseigné par le CMS.
+     */
+    fallbackImage?: ImageMetadata;
+  }>;
+}
+
 export interface HeroSection extends SectionBase {
   _type: 'heroSection';
   heading: string;
@@ -135,6 +161,7 @@ export interface CtaSection extends SectionBase {
 export type Section =
   | ManifestoHero
   | ServicesMenu
+  | StudioStatement
   | HeroSection
   | RichTextSection
   | MediaSection

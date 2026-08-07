@@ -1,3 +1,7 @@
+import etudeLune from '~/assets/sections/etude-lune.webp';
+import papierLumiere from '~/assets/sections/papier-lumiere.webp';
+import atelierBandes from '~/assets/sections/atelier-bandes.webp';
+
 import type { Locale } from '~/i18n/config';
 import type { Page, Section } from '~/lib/sanity/types';
 
@@ -59,6 +63,47 @@ const sections: Record<string, Section[]> = {
           items: ['Déploiement', 'Ateliers & formations', 'Conférences', 'Outils de com'],
         },
       ],
+    },
+    {
+      _key: 'statement',
+      _type: 'studioStatement',
+      statement:
+        "Studio Abîme est un espace où on ne produit pas pour vous mais où on expérimente la communication ensemble. Un labo dans lequel on relie les outils et les langages qui font un projet. Son identité ne se regarde pas seulement. Elle se vit.",
+      noteNumber: 'fig.04',
+      note: "— On étudie la communication à l'échelle humaine : celle des sens, des émotions et des moyens réels dont un projet dispose.",
+      marker: '94,65+50,65',
+      figures: [
+        {
+          _key: 'f5',
+          number: 'fig.05',
+          caption: 'Compréhension de la constitution',
+          span: 3,
+          bleed: 'left',
+          fallbackImage: etudeLune,
+        },
+        {
+          _key: 'f6',
+          number: 'fig.06',
+          caption: 'Compréhension de la constitution',
+          span: 3,
+          fallbackImage: papierLumiere,
+        },
+        {
+          _key: 'f7',
+          number: 'fig.07',
+          caption: 'Compréhension de la constitution',
+          span: 3,
+          bleed: 'right',
+          pushRight: true,
+          fallbackImage: atelierBandes,
+        },
+      ],
+      cta: {
+        kind: 'external',
+        label: 'Entrer dans le studio →',
+        externalUrl: '/projets',
+        openInNewTab: false,
+      },
     },
   ],
 };
