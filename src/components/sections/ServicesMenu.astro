@@ -110,6 +110,21 @@ const numbered = groups.map((group, index) => ({
     overflow: hidden;
   }
 
+  /*
+    Une fois ancré, le rail doit passer AU-DESSUS des sections suivantes.
+
+    Le monter d'un cran ne suffit pas : `position: sticky` crée un contexte
+    d'empilement, et le `z-index` du panneau y reste donc confiné. Les sections
+    suivantes, plus loin dans le DOM, se peignent alors par-dessus lui.
+    C'est la SCÈNE qu'il faut élever — elle seule sort le rail de ce piège.
+
+    Sans risque de recouvrement : la scène n'est visible qu'à la fin de sa
+    piste, où la section suivante est encore sous la ligne de flottaison.
+  */
+  .services[data-docked] .services__stage {
+    z-index: 30;
+  }
+
   .services__grain {
     z-index: 0;
   }

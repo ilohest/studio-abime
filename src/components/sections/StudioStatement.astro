@@ -89,7 +89,7 @@ const figures = section.figures ?? [];
 
           {/* Placé dans la planche pour venir sous la dernière figure. */}
           <div class="statement__actions">
-            <SmartLink link={section.cta} locale={locale} class="statement__cta" />
+            <SmartLink link={section.cta} locale={locale} />
           </div>
         </div>
       )
@@ -209,7 +209,13 @@ const figures = section.figures ?? [];
     margin-top: clamp(1.5rem, 4vh, 2.5rem);
   }
 
-  .statement__cta {
+  /*
+    Le lien est produit par `SmartLink`, donc porte SON identifiant de portée,
+    pas celui de cette section : une règle `.statement__cta` scopée ici ne
+    l'atteindrait jamais. On le vise donc depuis son conteneur, qui appartient
+    bien à ce composant, avec `:global` sur le seul élément à styler.
+  */
+  .statement__actions :global(a) {
     display: inline-block;
     font-family: var(--font-annotation);
     font-style: italic;
@@ -223,7 +229,7 @@ const figures = section.figures ?? [];
       color 0.3s ease;
   }
 
-  .statement__cta:hover {
+  .statement__actions :global(a:hover) {
     background-color: var(--color-ink);
     color: var(--color-ink-invert);
   }
