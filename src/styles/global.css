@@ -199,7 +199,7 @@
  *
  * Le grain est en `multiply` par-dessus la couleur de surface : il assombrit
  * la fibre sans laver la teinte, et fonctionne donc sur Papier comme sur Sable.
- * Le fichier de repli (`/textures/papier-grain.jpg`) peut être remplacé par une
+ * Le fichier de repli (`/textures/papier-froisse.jpg`) peut être remplacé par une
  * image pilotée depuis Sanity via la variable `--paper-texture`.
  */
 @utility surface-paper {
@@ -211,7 +211,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background-image: var(--paper-texture, url('/textures/papier-grain.jpg'));
+  background-image: var(--paper-texture, url('/textures/papier-froisse.jpg'));
   background-size: cover;
   background-position: center;
   mix-blend-mode: multiply;

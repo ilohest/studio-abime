@@ -29,14 +29,26 @@ const today = new Intl.DateTimeFormat(getLocaleMeta(locale).htmlLang, {
   year: 'numeric',
 }).format(new Date());
 
-const metaLines = (section.metaLines ?? []).map((line) => ({
-  label: line.label,
-  value: line.autoDate ? today : (line.value ?? ''),
-}));
+/**
+ * Une mention devient cliquable d'elle-même quand sa valeur est une adresse
+ * e-mail ou une URL : l'éditeur saisit simplement « elodie@studioabime.com »
+ * sans avoir à gérer un champ de lien séparé.
+ */
+function hrefFor(value: string): string | null {
+  const trimmed = value.trim();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return `mailto:${trimmed}`;
+  if (/^https?:\/\//.test(trimmed)) return trimmed;
+  return null;
+}
+
+const metaLines = (section.metaLines ?? []).map((line) => {
+  const value = line.autoDate ? today : (line.value ?? '');
+  return { label: line.label, value, href: hrefFor(value) };
+});
 
 // Texture éditoriale si l'éditeur en fournit une, sinon celle de la charte.
 const background = resolveImage(section.background, { width: 1600 });
-const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
+const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
 ---
 
 <section
@@ -44,9 +56,6 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
   style={`--paper-texture:url('${textureUrl}')`}
 >
   <div class="surface-paper-grain"></div>
-
-  {/* Réglure verticale du papier, très discrète. */}
-  <div class="manifesto-rules" aria-hidden="true"></div>
 
   {/*
     Le pli : deux filets légèrement décalés, celui de droite très légèrement
@@ -70,21 +79,34 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
     <div class="order-2 flex flex-col justify-between md:order-1">
       {
         metaLines.length > 0 && (
-          <dl class="type-note text-muted">
+          <dl class="type-note text-ink">
             {metaLines.map((line) => (
               <div class="flex gap-1">
                 <dt>{line.label} :</dt>
-                <dd>{line.value}</dd>
+                <dd>
+                  {line.href ? (
+                    <a href={line.href} class="underline-offset-2 hover:underline">
+                      {line.value}
+                    </a>
+                  ) : (
+                    line.value
+                  )}
+                </dd>
               </div>
             ))}
           </dl>
         )
       }
 
-      <div class="mt-10 flex flex-col gap-10 md:mt-0 md:gap-14 md:pl-[12%]">
+      {/*
+        Les décalages sont en MARGE et non en padding : `max-width` étant en
+        border-box, un padding en % rognerait la largeur du texte et changerait
+        les retours à la ligne du bloc.
+      */}
+      <div class="mt-10 flex flex-col gap-10 md:mt-0 md:gap-14">
         {
           section.hypothesis && (
-            <p class="type-note max-w-[34ch]">
+            <p class="type-note max-w-[34ch] md:ml-[16%]">
               <span class="uppercase">{section.hypothesisLabel ?? 'Hypothèse'}</span> :{' '}
               {section.hypothesis}
             </p>
@@ -93,7 +115,7 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
 
         {
           (section.intention?.length ?? 0) > 0 && (
-            <div class="max-w-[34ch] md:pl-[10%]">
+            <div class="max-w-[34ch] md:ml-[56%]">
               <p class="type-note uppercase">{section.intentionLabel ?? 'Note d’intention'} :</p>
 
               <div class="mt-6 flex flex-col gap-4">
@@ -109,7 +131,7 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
       {
         section.showStamp !== false && (
           <div class="mt-10 md:mt-0">
-            <Stamp variant="labo" class="w-20 text-ink/70 md:w-28" rotate={-8} />
+            <Stamp variant="labo" class="w-20 text-ink md:w-28" rotate={-8} />
           </div>
         )
       }
@@ -135,21 +157,6 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
 </section>
 
 <style>
-  /* Réglure : colonnes régulières, à peine perceptibles — la trame du papier. */
-  .manifesto-rules {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background-image: repeating-linear-gradient(
-      to right,
-      transparent,
-      transparent calc(100% / 14 - 1px),
-      color-mix(in oklab, var(--color-abime) 7%, transparent) calc(100% / 14 - 1px),
-      color-mix(in oklab, var(--color-abime) 7%, transparent) calc(100% / 14)
-    );
-  }
-
   .manifesto-fold {
     position: absolute;
     inset: 0;
@@ -163,7 +170,7 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
     top: -9%;
     height: 118%;
     width: 1px;
-    background: color-mix(in oklab, var(--color-abime) 22%, transparent);
+    background: var(--color-ink);
   }
 
   /* Filet principal, parfaitement vertical, sur la colonne centrale. */
@@ -177,26 +184,16 @@ const textureUrl = background?.src ?? '/textures/papier-grain.jpg';
     les deux lignes s'ouvre progressivement du haut vers le bas.
   */
   .manifesto-fold-line--b {
-    left: calc(50% + 3px);
+    left: calc(50% + 2px);
     transform: rotate(0.35deg);
     transform-origin: center;
-    background: color-mix(in oklab, var(--color-abime) 11%, transparent);
+    background: var(--color-ink);
   }
 
   /* En mobile, la double page devient une page unique : plus de pli. */
   @media (max-width: 767px) {
     .manifesto-fold {
       display: none;
-    }
-
-    .manifesto-rules {
-      background-image: repeating-linear-gradient(
-        to right,
-        transparent,
-        transparent calc(100% / 6 - 1px),
-        color-mix(in oklab, var(--color-abime) 6%, transparent) calc(100% / 6 - 1px),
-        color-mix(in oklab, var(--color-abime) 6%, transparent) calc(100% / 6)
-      );
     }
   }
 </style>

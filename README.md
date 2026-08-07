@@ -225,6 +225,24 @@ Le pli central est tracé en CSS — deux filets décalés de 3 px, celui de dro
 
 En dessous de 768 px, la double page s'effondre en colonne unique : le pli disparaît et la marque passe en premier, pour que le logo reste au-dessus de la ligne de flottaison.
 
+Une mention dont la valeur est une adresse e-mail ou une URL devient cliquable d'elle-même (`mailto:` / lien externe) : l'éditeur saisit l'adresse, sans champ de lien supplémentaire à gérer.
+
+Tant qu'aucune page d'accueil n'est désignée dans Sanity, la racine sert le contenu d'amorçage de `src/content/homeFallback.ts` plutôt qu'un 404. Ce fichier devient inutile — et supprimable — dès que le CMS est alimenté.
+
+### Navigation et pied de page
+
+Il n'y a **pas d'en-tête** : la navigation, les réseaux sociaux, le crédit de réalisation et le sélecteur de langue vivent dans le pied de page, face au logo. `src/components/Header.astro` est conservé au cas où une barre de navigation deviendrait nécessaire sur les pages intérieures.
+
+La baseline du pied de page a une valeur par défaut dans le composant ; dès que « Texte de pied de page » est renseigné dans Sanity, c'est le CMS qui prend la main.
+
+### Curseur personnalisé
+
+`src/components/CustomCursor.astro` — un disque qui suit la souris avec un léger retard (interpolation à 0.18 par image), s'ouvre en anneau au survol des éléments interactifs et se contracte au clic.
+
+Écrit en script natif plutôt qu'en îlot Vue : sans état partagé ni props, un composant framework coûterait un runtime complet pour une boucle d'animation de quelques lignes.
+
+Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le curseur système n'est masqué qu'une fois le nôtre en place (si le script échoue, l'utilisateur garde son curseur), et `prefers-reduced-motion` supprime le retard.
+
 > **⚠️ Licence des fontes.** Commuters Sans est actuellement le fichier **« Fontspring DEMO »** (`.otf`) : jeu de glyphes réduit et licence non valable pour une mise en production web. Remplacer `public/fonts/CommutersSans-SemiBold.otf` par la version webfont sous licence (`.woff2`) avant mise en ligne — le nom de famille CSS étant inchangé, aucune autre modification ne sera nécessaire.
 
 ---

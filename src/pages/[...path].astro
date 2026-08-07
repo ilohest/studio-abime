@@ -14,6 +14,7 @@ import {
   projectBySlugQuery,
   projectsIndexQuery,
 } from '~/lib/sanity/queries';
+import { getHomeFallback } from '~/content/homeFallback';
 import { useTranslations } from '~/i18n/ui';
 import type { CategorySummary, Page, Project, ProjectCard } from '~/lib/sanity/types';
 
@@ -61,6 +62,9 @@ let categories: CategorySummary[] = [];
 
 if (route.kind === 'home') {
   page = await loadQuery<Page | null>({ query: homePageQuery, locale, fallback: null });
+  // Tant qu'aucune page d'accueil n'est désignée dans Sanity, on sert le
+  // contenu d'amorçage plutôt qu'un 404 sur la racine du site.
+  page ??= getHomeFallback(locale);
 } else if (route.kind === 'page') {
   page = await loadQuery<Page | null>({
     query: pageBySlugQuery,

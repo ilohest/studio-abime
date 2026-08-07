@@ -1,6 +1,8 @@
 ---
 import SmartLink from '~/components/primitives/SmartLink.astro';
 import PortableText from '~/components/primitives/PortableText.astro';
+import Wordmark from '~/components/brand/Wordmark.astro';
+import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { SiteContext } from '~/lib/sanity/types';
@@ -8,54 +10,98 @@ import type { SiteContext } from '~/lib/sanity/types';
 interface Props {
   locale: Locale;
   site: SiteContext;
+  /** L'en-tête ayant disparu, le sélecteur de langue vit désormais ici. */
+  alternates?: Partial<Record<Locale, string>>;
 }
 
-const { locale, site } = Astro.props;
+const { locale, site, alternates } = Astro.props;
+
+/**
+ * Baseline par défaut : sert tant que le texte de pied de page n'est pas
+ * renseigné dans Sanity (« Réglages du site » → Navigation). Dès qu'il l'est,
+ * c'est le contenu du CMS qui s'affiche.
+ */
+const DEFAULT_BASELINE =
+  'Créer depuis le fond. Donner forme avec justesse. À la frontière du sensible, du social et du créatif.';
+
+/** Crédit de réalisation — hors CMS, il ne relève pas du contenu éditorial. */
+const CREDIT = { label: 'Website by Isaure', href: 'https://isaure-lohest.com/' };
 
 const nav = site.localized?.footerNav ?? [];
 const social = site.settings?.socialLinks ?? [];
 const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
 const year = new Date().getFullYear();
+const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
 ---
 
-<footer class="surface-invert mt-(--spacing-section)">
-  <div class="container-wide grid gap-10 py-16 md:grid-cols-3">
-    <div>
-      <p class="type-titre text-[1.75rem]">{siteTitle}</p>
-      <PortableText value={site.localized?.footerText} locale={locale} class="mt-4 max-w-prose" />
+<footer class="surface-paper border-t border-line">
+  <div class="surface-paper-grain"></div>
+
+  <div
+    class="relative z-10 grid grid-cols-1 gap-12 px-6 py-14 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-16 md:px-10"
+  >
+    {/* ── Colonne de gauche : mention, baseline, liens ─────────────────── */}
+    <div class="flex flex-col gap-10">
+      <div class="max-w-[68ch]">
+        <p class="type-note uppercase">© {year} {siteTitle}</p>
+
+        {
+          hasCmsBaseline ? (
+            <PortableText value={site.localized?.footerText} locale={locale} class="type-note mt-1" />
+          ) : (
+            <p class="type-note mt-1">{DEFAULT_BASELINE}</p>
+          )
+        }
+      </div>
+
+      <div class="type-note flex flex-wrap gap-x-12 gap-y-2">
+        {
+          nav.length > 0 && (
+            <ul class="flex flex-col gap-1">
+              {nav.map((item) => (
+                <li>
+                  <SmartLink link={item} locale={locale} class="underline-offset-2 hover:underline" />
+                </li>
+              ))}
+            </ul>
+          )
+        }
+
+        {
+          social.length > 0 && (
+            <ul class="flex flex-col gap-1">
+              {social.map((item) => (
+                <li>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="underline-offset-2 hover:underline"
+                  >
+                    {item.platform}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+
+        <a
+          href={CREDIT.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline-offset-2 hover:underline"
+        >
+          {CREDIT.label}
+        </a>
+
+        <LocaleSwitcher locale={locale} alternates={alternates} />
+      </div>
     </div>
 
-    {
-      nav.length > 0 && (
-        <nav class="flex flex-col gap-2" aria-label="Pied de page">
-          {nav.map((item) => (
-            <SmartLink link={item} locale={locale} class="type-copy hover:opacity-60" />
-          ))}
-        </nav>
-      )
-    }
-
-    {
-      social.length > 0 && (
-        <ul class="flex flex-col gap-2">
-          {social.map((item) => (
-            <li>
-              <a
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="type-sous-titre hover:opacity-60"
-              >
-                {item.platform}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )
-    }
-  </div>
-
-  <div class="container-wide border-t border-line py-6">
-    <p class="type-annotation text-muted">© {year} {siteTitle}</p>
+    {/* ── Colonne de droite : la marque ────────────────────────────────── */}
+    <div class="w-full max-w-[22rem] md:w-[22rem] md:justify-self-end">
+      <Wordmark class="text-ink" title={null} />
+    </div>
   </div>
 </footer>

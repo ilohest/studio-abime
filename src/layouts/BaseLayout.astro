@@ -3,9 +3,9 @@ import { VisualEditing } from '@sanity/astro/visual-editing';
 
 import '~/styles/global.css';
 
-import Header from '~/components/Header.astro';
 import Footer from '~/components/Footer.astro';
 import Seo from '~/components/Seo.astro';
+import CustomCursor from '~/components/CustomCursor.astro';
 
 import { getLocaleMeta, type Locale } from '~/i18n/config';
 import { useTranslations } from '~/i18n/ui';
@@ -75,13 +75,18 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
       {t('nav.skipToContent')}
     </a>
 
-    <Header locale={locale} site={site} alternates={alternates} />
-
+    {/*
+      Pas d'en-tête : la navigation vit dans le pied de page. Le composant
+      `src/components/Header.astro` reste disponible si une barre de navigation
+      devient nécessaire sur les pages intérieures.
+    */}
     <main id="contenu">
       <slot />
     </main>
 
-    <Footer locale={locale} site={site} />
+    <Footer locale={locale} site={site} alternates={alternates} />
+
+    <CustomCursor />
 
     {/*
       Overlay d'édition visuelle : monté uniquement en mode preview.

@@ -1,0 +1,125 @@
+---
+/**
+ * Curseur personnalisé — un disque qui suit la souris avec un léger retard.
+ *
+ * Volontairement écrit en script natif plutôt qu'en îlot Vue : il n'a ni état
+ * partagé, ni props, ni rendu conditionnel. Un composant framework coûterait
+ * un runtime complet pour une boucle d'animation de quelques lignes.
+ *
+ * Garde-fous :
+ *  - activé uniquement sur pointeur fin (souris) — jamais sur tactile ;
+ *  - le curseur natif n'est masqué qu'une fois le nôtre en place, pour ne
+ *    jamais laisser l'utilisateur sans repère si le script échoue ;
+ *  - `prefers-reduced-motion` supprime le retard (suivi instantané).
+ */
+---
+
+<div id="cursor" class="cursor" aria-hidden="true"></div>
+
+<style>
+  .cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background-color: var(--color-ink);
+    pointer-events: none;
+    opacity: 0;
+    /* Position pilotée par rAF ; seules l'échelle et l'opacité transitionnent. */
+    transition:
+      opacity 0.25s ease,
+      scale 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.25s ease;
+    will-change: transform;
+  }
+
+  /* Actif seulement quand le script a pris la main (voir html.has-cursor). */
+  :global(html.has-cursor) {
+    cursor: none;
+  }
+
+  :global(html.has-cursor) .cursor {
+    opacity: 1;
+  }
+
+  /* Survol d'un élément interactif : le disque s'ouvre en anneau. */
+  .cursor.is-hovering {
+    scale: 2.6;
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px var(--color-ink);
+  }
+
+  /* Clic maintenu : légère contraction, pour un retour tactile visuel. */
+  .cursor.is-pressed {
+    scale: 0.7;
+  }
+
+  @media (pointer: coarse) {
+    .cursor {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  const cursor = document.getElementById('cursor');
+  const finePointer = window.matchMedia('(pointer: fine)');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (cursor && finePointer.matches) {
+    // Position réelle du pointeur / position rendue : l'écart entre les deux
+    // est ce qui produit le retard.
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
+    let currentX = targetX;
+    let currentY = targetY;
+    let frame = 0;
+
+    // 1 = aucun retard. Plus la valeur est basse, plus le curseur traîne.
+    const EASING = reducedMotion.matches ? 1 : 0.18;
+
+    const INTERACTIVE = 'a, button, [role="button"], input, textarea, select, summary, label';
+
+    const render = () => {
+      currentX += (targetX - currentX) * EASING;
+      currentY += (targetY - currentY) * EASING;
+      cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      frame = requestAnimationFrame(render);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      targetX = event.clientX;
+      targetY = event.clientY;
+      cursor.classList.toggle(
+        'is-hovering',
+        Boolean((event.target as Element | null)?.closest?.(INTERACTIVE)),
+      );
+    };
+
+    document.addEventListener('pointermove', onPointerMove, { passive: true });
+    document.addEventListener('pointerdown', () => cursor.classList.add('is-pressed'));
+    document.addEventListener('pointerup', () => cursor.classList.remove('is-pressed'));
+
+    // Le curseur disparaît avec le pointeur (sortie de fenêtre, changement d'onglet).
+    document.addEventListener('pointerleave', () => cursor.classList.remove('is-hovering'));
+    document.addEventListener('mouseleave', () => (cursor.style.opacity = '0'));
+    document.addEventListener('mouseenter', () => (cursor.style.opacity = ''));
+
+    // Le curseur natif n'est masqué qu'ici : si le script n'a pas tourné,
+    // l'utilisateur garde son curseur système.
+    document.documentElement.classList.add('has-cursor');
+    frame = requestAnimationFrame(render);
+
+    // Le pointeur devient grossier (passage en mode tablette) : on rend la main.
+    finePointer.addEventListener('change', (event) => {
+      if (!event.matches) {
+        cancelAnimationFrame(frame);
+        document.documentElement.classList.remove('has-cursor');
+      }
+    });
+  }
+</script>
