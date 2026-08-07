@@ -84,10 +84,36 @@
 
     const INTERACTIVE = 'a, button, [role="button"], input, textarea, select, summary, label';
 
+    let running = false;
+
+    /**
+     * La boucle s'arrête d'elle-même une fois le curseur arrivé sur sa cible,
+     * et ne redémarre qu'au prochain mouvement. Sans cela elle occuperait le
+     * fil principal à chaque image, y compris pendant le défilement — au
+     * détriment des animations pilotées par le scroll.
+     */
     const render = () => {
-      currentX += (targetX - currentX) * EASING;
-      currentY += (targetY - currentY) * EASING;
+      const dx = targetX - currentX;
+      const dy = targetY - currentY;
+
+      // Sous le demi-pixel, l'écart n'est plus visible : inutile de continuer.
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+        currentX = targetX;
+        currentY = targetY;
+        cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        running = false;
+        return;
+      }
+
+      currentX += dx * EASING;
+      currentY += dy * EASING;
       cursor.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+      frame = requestAnimationFrame(render);
+    };
+
+    const start = () => {
+      if (running) return;
+      running = true;
       frame = requestAnimationFrame(render);
     };
 
@@ -98,6 +124,7 @@
         'is-hovering',
         Boolean((event.target as Element | null)?.closest?.(INTERACTIVE)),
       );
+      start();
     };
 
     document.addEventListener('pointermove', onPointerMove, { passive: true });
@@ -112,12 +139,13 @@
     // Le curseur natif n'est masqué qu'ici : si le script n'a pas tourné,
     // l'utilisateur garde son curseur système.
     document.documentElement.classList.add('has-cursor');
-    frame = requestAnimationFrame(render);
+    start();
 
     // Le pointeur devient grossier (passage en mode tablette) : on rend la main.
     finePointer.addEventListener('change', (event) => {
       if (!event.matches) {
         cancelAnimationFrame(frame);
+        running = false;
         document.documentElement.classList.remove('has-cursor');
       }
     });

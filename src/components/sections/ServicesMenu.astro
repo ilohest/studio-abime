@@ -138,32 +138,43 @@ const numbered = groups.map((group, index) => ({
 
   /* ── Panneau / rail ───────────────────────────────────────────────────── */
   .services__panel {
-    /*
-      Bord gauche et largeur suivent la MÊME interpolation : 50 % → rail.
-      C'est ce qui garantit qu'aucun saut ne se produit quand `position`
-      bascule en `fixed` à l'arrivée.
-    */
-    --panel-size: calc(50% - (50% - var(--rail-width)) * var(--p));
-
     position: absolute;
     top: 0;
-    left: var(--panel-size);
+    left: 50%;
     z-index: 2;
     display: flex;
     align-items: center;
     height: 100%;
-    width: var(--panel-size);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    width: 50%;
     padding: 3rem clamp(1.25rem, 3vw, 3rem);
+    /*
+      Déplacement en `transform` uniquement : -100 % de SA propre largeur amène
+      le panneau exactement sur le bord gauche.
+
+      Une version antérieure interpolait `left` ET `width` — ce qui forçait un
+      recalcul de mise en page ET un re-passage à la ligne du texte à CHAQUE
+      image rendue pendant tout le défilement. C'était la cause des à-coups.
+      Ici le mouvement reste sur le compositeur ; le changement de forme se fait
+      en une seule étape, au seuil de compactage.
+    */
+    transform: translate3d(calc(var(--p) * -100%), 0, 0);
+    will-change: transform;
   }
 
-  /* Ancré : quitte la scène pour rester en place sur toute la page. */
+  /*
+    Ancré : quitte la scène pour rester en place sur toute la page.
+    La largeur se réduit ici seulement — la scène papier est encore à l'écran
+    derrière, le rétrécissement du fond est donc invisible.
+  */
   .services[data-docked] .services__panel {
     position: fixed;
     left: 0;
     width: var(--rail-width);
     height: 100svh;
+    padding-inline: 1.5rem;
+    transform: none;
+    /* Menu plus haut que l'écran : il défile seul, sans bloquer la page. */
+    overflow-y: auto;
   }
 
   .services__groups {
@@ -171,8 +182,18 @@ const numbered = groups.map((group, index) => ({
     flex-direction: column;
     gap: clamp(2.5rem, 6vh, 4.5rem);
     width: 100%;
+    max-width: none;
     position: relative;
     z-index: 1;
+    /*
+      Le panneau garde sa demi-largeur pendant tout le trajet ; c'est cette
+      colonne qui se resserre à la largeur du rail. La transition ne dure que
+      400 ms — le re-passage à la ligne du texte est donc payé une fois,
+      et non à chaque image comme lorsque la largeur suivait le défilement.
+    */
+    transition:
+      max-width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* ── Un pôle : deux colonnes au large, empilé et resserré au rail ─────── */
@@ -195,6 +216,7 @@ const numbered = groups.map((group, index) => ({
     bascule se lit comme une étape du mouvement, pas comme un changement d'état.
   */
   .services[data-compact] .services__groups {
+    max-width: calc(var(--rail-width) - 3rem);
     gap: 1.75rem;
   }
 
@@ -240,11 +262,18 @@ const numbered = groups.map((group, index) => ({
       position: static;
     }
 
-    .services__panel {
+    .services__panel,
+    .services[data-docked] .services__panel {
       position: static;
       width: 100%;
       height: auto;
       padding-block: 3.5rem;
+      transform: none;
+    }
+
+    .services__groups,
+    .services[data-compact] .services__groups {
+      max-width: none;
     }
   }
 
@@ -269,9 +298,16 @@ const numbered = groups.map((group, index) => ({
       position: absolute;
       left: 50%;
       width: 50%;
+      transform: none;
     }
 
-    .services__group {
+    .services__groups,
+    .services[data-compact] .services__groups {
+      max-width: none;
+    }
+
+    .services__group,
+    .services__groups {
       transition: none;
     }
   }
