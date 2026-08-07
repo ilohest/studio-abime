@@ -1,0 +1,126 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectGrid from '~/components/ProjectGrid.astro';
+import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer.astro';
+
+import { buildRouteManifest, matchRoute } from '~/lib/routing';
+import { getSiteContext } from '~/lib/siteContext';
+import { getDocumentAlternates, getStaticAlternates } from '~/lib/alternates';
+import { loadQuery } from '~/lib/sanity/loadQuery';
+import {
+  homePageQuery,
+  pageBySlugQuery,
+  projectBySlugQuery,
+  projectsIndexQuery,
+} from '~/lib/sanity/queries';
+import { useTranslations } from '~/i18n/ui';
+import type { CategorySummary, Page, Project, ProjectCard } from '~/lib/sanity/types';
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ROUTE UNIVERSELLE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Un seul fichier sert l'intégralité du site public : accueil, pages
+ * institutionnelles, index portfolio et pages projet — dans toutes les langues.
+ *
+ * Pourquoi pas une arborescence `src/pages/[locale]/projets/[slug].astro` ?
+ * Parce que les segments d'URL sont traduits (`/projets` ↔ `/en/work`) et que
+ * le préfixe de langue est conditionnel. Une arborescence figée obligerait à
+ * dupliquer des fichiers à chaque nouvelle langue. Ici, `src/lib/routing.ts`
+ * porte toute la logique : ajouter une langue ne touche AUCUN fichier de route.
+ *
+ * Rendu : statique par défaut ; à la demande quand l'édition visuelle est
+ * activée, afin que le Presentation Tool reçoive du contenu frais à chaque
+ * frappe de l'éditeur.
+ */
+export const prerender = import.meta.env.PUBLIC_SANITY_VISUAL_EDITING_ENABLED !== 'true';
+
+export async function getStaticPaths() {
+  const routes = await buildRouteManifest();
+
+  return routes.map((route) => ({
+    // '/' → path undefined (racine) ; '/projets/abime' → 'projets/abime'.
+    params: { path: route.path === '/' ? undefined : route.path.slice(1) },
+  }));
+}
+
+const route = matchRoute(Astro.params.path);
+if (!route) return Astro.rewrite('/404');
+
+const { locale } = route;
+const site = await getSiteContext(locale);
+const t = useTranslations(locale);
+
+/* ── Chargement du contenu selon le type de route ─────────────────────────── */
+
+let page: Page | null = null;
+let project: Project | null = null;
+let projects: ProjectCard[] = [];
+let categories: CategorySummary[] = [];
+
+if (route.kind === 'home') {
+  page = await loadQuery<Page | null>({ query: homePageQuery, locale, fallback: null });
+} else if (route.kind === 'page') {
+  page = await loadQuery<Page | null>({
+    query: pageBySlugQuery,
+    params: { slug: route.slug },
+    locale,
+    fallback: null,
+  });
+} else if (route.kind === 'project') {
+  project = await loadQuery<Project | null>({
+    query: projectBySlugQuery,
+    params: { slug: route.slug },
+    locale,
+    fallback: null,
+  });
+} else {
+  const data = await loadQuery<{ projects: ProjectCard[]; categories: CategorySummary[] }>({
+    query: projectsIndexQuery,
+    locale,
+    fallback: { projects: [], categories: [] },
+  });
+  projects = data.projects;
+  categories = data.categories;
+}
+
+// Contenu supprimé ou dépublié depuis la génération du manifeste.
+if (route.kind !== 'projectIndex' && !page && !project) {
+  return Astro.rewrite('/404');
+}
+
+/* ── Métadonnées communes ─────────────────────────────────────────────────── */
+
+const document = project ?? page;
+const alternates =
+  route.kind === 'projectIndex'
+    ? getStaticAlternates('projectIndex')
+    : route.kind === 'home'
+      ? getStaticAlternates('home')
+      : await getDocumentAlternates(document?._id, locale);
+
+const title =
+  route.kind === 'projectIndex' ? t('nav.projects') : (document?.title ?? site.localized?.siteTitle ?? '');
+---
+
+<BaseLayout locale={locale} site={site} seo={document?.seo} title={title} alternates={alternates}>
+  {project && <ProjectTemplateRenderer project={project} locale={locale} />}
+
+  {page && <SectionRenderer sections={page.sections} locale={locale} />}
+
+  {
+    route.kind === 'projectIndex' && (
+      <div class="container-wide py-(--spacing-section)">
+        <header class="mb-12 max-w-3xl">
+          <h1 class="type-titre text-balance">{t('nav.projects')}</h1>
+          {site.localized?.projectsIntro && (
+            <p class="type-copy mt-6 text-pretty">{site.localized.projectsIntro}</p>
+          )}
+        </header>
+
+        <ProjectGrid projects={projects} categories={categories} locale={locale} showFilters />
+      </div>
+    )
+  }
+</BaseLayout>

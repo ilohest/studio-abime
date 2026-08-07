@@ -1,0 +1,56 @@
+---
+import { resolveImage, type AspectRatio } from '~/lib/sanity/image';
+import type { SanityImage } from '~/lib/sanity/types';
+
+/**
+ * Image issue de Sanity : URL optimisée, `srcset` responsive, dimensions
+ * explicites (aucun décalage de mise en page) et placeholder LQIP en fond.
+ */
+interface Props {
+  image?: SanityImage | null;
+  /** Largeur de référence — la plus grande taille réellement affichée. */
+  width?: number;
+  ratio?: AspectRatio;
+  sizes?: string;
+  loading?: 'lazy' | 'eager';
+  fetchpriority?: 'high' | 'low' | 'auto';
+  class?: string;
+  /** Surcharge le texte alternatif du CMS (rare : visuel purement décoratif). */
+  alt?: string;
+}
+
+const {
+  image,
+  width = 1280,
+  ratio,
+  sizes = '100vw',
+  loading = 'lazy',
+  fetchpriority = 'auto',
+  class: className,
+  alt,
+} = Astro.props;
+
+const resolved = resolveImage(image, { width, ratio });
+---
+
+{
+  resolved && (
+    <img
+      src={resolved.src}
+      srcset={resolved.srcset}
+      sizes={sizes}
+      width={resolved.width}
+      height={resolved.height}
+      alt={alt ?? resolved.alt}
+      loading={loading}
+      fetchpriority={fetchpriority}
+      decoding="async"
+      class={className}
+      style={
+        resolved.lqip
+          ? `background-image:url(${resolved.lqip});background-size:cover;background-position:center;`
+          : undefined
+      }
+    />
+  )
+}

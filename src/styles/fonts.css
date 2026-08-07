@@ -1,0 +1,53 @@
+/**
+ * Fontes du design system Studio Abîme.
+ *
+ * Fichiers dans `public/fonts/`.
+ * `font-display: swap` + préchargement du corps de texte dans le <head> (BaseLayout).
+ *
+ * ⚠️ Commuters Sans est actuellement un fichier « Fontspring DEMO » (.otf) :
+ *    jeu de glyphes réduit et licence NON valable pour une mise en production web.
+ *    Remplacer par la licence webfont (woff2) avant mise en ligne — le nom de famille
+ *    CSS restant identique, aucun autre changement ne sera nécessaire.
+ */
+
+/* Titres */
+@font-face {
+  font-family: 'GT Canon Mono';
+  src:
+    url('/fonts/GT-Canon-Mono-Regular.woff2') format('woff2'),
+    url('/fonts/GT-Canon-Mono-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Copy / corps de texte */
+@font-face {
+  font-family: 'GT Canon Narrow M';
+  src:
+    url('/fonts/GT-Canon-M-Narrow-Regular.woff2') format('woff2'),
+    url('/fonts/GT-Canon-M-Narrow-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Annotations */
+@font-face {
+  font-family: 'GT Canon Narrow S';
+  src:
+    url('/fonts/GT-Canon-S-Narrow-Regular-Italic.woff2') format('woff2'),
+    url('/fonts/GT-Canon-S-Narrow-Regular-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Sous-titres */
+@font-face {
+  font-family: 'Commuters Sans';
+  src: url('/fonts/CommutersSans-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}

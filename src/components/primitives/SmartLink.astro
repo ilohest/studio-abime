@@ -1,0 +1,33 @@
+---
+import { resolveLink } from '~/lib/routing';
+import type { Locale } from '~/i18n/config';
+import type { SanityLink } from '~/lib/sanity/types';
+
+/**
+ * Rend un lien Sanity. Ne produit RIEN si le lien est incomplet côté CMS
+ * (destination manquante), plutôt qu'un `<a href="undefined">`.
+ */
+interface Props {
+  link?: SanityLink | null;
+  locale: Locale;
+  class?: string;
+  /** Libellé de repli si le CMS n'en fournit pas. */
+  fallbackLabel?: string;
+}
+
+const { link, locale, class: className, fallbackLabel } = Astro.props;
+const resolved = resolveLink(link, locale);
+const label = resolved?.label || fallbackLabel;
+---
+
+{
+  resolved && label && (
+    <a
+      href={resolved.href}
+      class={className}
+      {...(resolved.openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
+      <slot>{label}</slot>
+    </a>
+  )
+}

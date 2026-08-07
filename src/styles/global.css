@@ -1,0 +1,256 @@
+@import 'tailwindcss';
+@import './fonts.css';
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * DESIGN TOKENS — Studio Abîme
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Tailwind v4 : tout ce qui est déclaré dans `@theme` est émis en variables CSS
+ * sur `:root` ET génère les utilitaires correspondants.
+ *   --font-titre        → `font-titre`
+ *   --text-titre        → `text-titre` (taille + interlettrage + interlignage)
+ *   --color-ink         → `text-ink`, `bg-ink`, `border-ink`…
+ *
+ * Les interlettrages sont convertis depuis les % de la charte : 1 % = 0.01em.
+ */
+@theme {
+  /* ── Familles ────────────────────────────────────────────────────────────── */
+  --font-titre: 'GT Canon Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --font-sous-titre: 'Commuters Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-copy: 'GT Canon Narrow M', ui-serif, Georgia, serif;
+  --font-annotation: 'GT Canon Narrow S', ui-serif, Georgia, serif;
+
+  /* Alias sémantiques : la famille par défaut du document est le copy. */
+  --font-sans: var(--font-sous-titre);
+  --font-serif: var(--font-copy);
+  --font-mono: var(--font-titre);
+
+  /* ── Échelle typographique (valeurs de la charte) ────────────────────────── */
+
+  /* TITRES — GT Canon Mono Regular · Majuscule · 46 px · interlettrage -3 % */
+  --text-titre: 2.875rem; /* 46px */
+  --text-titre--line-height: 1.05;
+  --text-titre--letter-spacing: -0.03em;
+  --text-titre--font-weight: 400;
+
+  /* SOUS-TITRES — Commuters Sans SemiBold · Majuscule · 18 px · +5 % */
+  --text-sous-titre: 1.125rem; /* 18px */
+  --text-sous-titre--line-height: 1.3;
+  --text-sous-titre--letter-spacing: 0.05em;
+  --text-sous-titre--font-weight: 600;
+
+  /* COPY — GT Canon M Regular · 18 px · +2 % */
+  --text-copy: 1.125rem; /* 18px */
+  --text-copy--line-height: 1.55;
+  --text-copy--letter-spacing: 0.02em;
+  --text-copy--font-weight: 400;
+
+  /* ANNOTATIONS — GT Canon Narrow S Regular Italic · 20 px · -5 % */
+  --text-annotation: 1.25rem; /* 20px */
+  --text-annotation--line-height: 1.35;
+  --text-annotation--letter-spacing: -0.05em;
+  --text-annotation--font-weight: 400;
+
+  /* Interlettrages exposés séparément (utilitaires `tracking-*`) */
+  --tracking-titre: -0.03em;
+  --tracking-sous-titre: 0.05em;
+  --tracking-copy: 0.02em;
+  --tracking-annotation: -0.05em;
+
+  /* ── Palette de marque ───────────────────────────────────────────────────── */
+  --color-papier: #efebe2; /* Papier d'archive — C:05 M:05 Y:10 K:00 */
+  --color-abime: #2d2a29; /* Abîme          — C:68 M:64 Y:64 K:66 */
+  --color-sable: #d8d4cb; /* Sable          — C:14 M:12 Y:18 K:00 */
+  --color-lumiere: #f9edbb; /* Lumière        — C:03 M:04 Y:32 K:00 */
+  --color-ciel: #ced6e0; /* Ciel           — C:18 M:10 Y:06 K:00 */
+
+  /* ── Rôles sémantiques ───────────────────────────────────────────────────── */
+  /* Les composants utilisent CES tokens, jamais les couleurs brutes : on peut
+     ainsi retoucher la charte sans repasser sur chaque composant. */
+  --color-surface: var(--color-papier);
+  --color-surface-alt: var(--color-sable);
+  --color-surface-invert: var(--color-abime);
+  --color-ink: var(--color-abime);
+  --color-ink-invert: var(--color-papier);
+  --color-muted: color-mix(in oklab, var(--color-abime) 62%, var(--color-papier));
+  --color-line: color-mix(in oklab, var(--color-abime) 18%, var(--color-papier));
+  --color-accent: var(--color-lumiere);
+  --color-accent-alt: var(--color-ciel);
+
+  /* ── Rythme & mise en page ───────────────────────────────────────────────── */
+  --spacing-gutter: 1.5rem;
+  --spacing-section: 6rem;
+  --container-content: 44rem;
+  --container-wide: 90rem;
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * STYLES DE BASE
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-copy);
+    font-size: var(--text-copy);
+    line-height: var(--text-copy--line-height);
+    letter-spacing: var(--text-copy--letter-spacing);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-ink);
+  }
+
+  /** Bloc sombre : inverse les rôles, tout le contenu enfant suit. */
+  .surface-invert {
+    background-color: var(--color-surface-invert);
+    color: var(--color-ink-invert);
+    --color-line: color-mix(in oklab, var(--color-papier) 24%, var(--color-abime));
+    --color-muted: color-mix(in oklab, var(--color-papier) 66%, var(--color-abime));
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * UTILITAIRES TYPOGRAPHIQUES COMPOSÉS
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Une classe = un style complet de la charte (famille + casse + taille + tracking).
+ * À privilégier sur la composition manuelle pour garantir la cohérence.
+ */
+@utility type-titre {
+  font-family: var(--font-titre);
+  font-size: var(--text-titre);
+  line-height: var(--text-titre--line-height);
+  letter-spacing: var(--tracking-titre);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+@utility type-sous-titre {
+  font-family: var(--font-sous-titre);
+  font-size: var(--text-sous-titre);
+  line-height: var(--text-sous-titre--line-height);
+  letter-spacing: var(--tracking-sous-titre);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+@utility type-copy {
+  font-family: var(--font-copy);
+  font-size: var(--text-copy);
+  line-height: var(--text-copy--line-height);
+  letter-spacing: var(--tracking-copy);
+  font-weight: 400;
+}
+
+@utility type-annotation {
+  font-family: var(--font-annotation);
+  font-size: var(--text-annotation);
+  line-height: var(--text-annotation--line-height);
+  letter-spacing: var(--tracking-annotation);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/** Conteneurs de page — largeurs alignées sur les tokens. */
+@utility container-content {
+  width: 100%;
+  max-width: var(--container-content);
+  margin-inline: auto;
+  padding-inline: var(--spacing-gutter);
+}
+
+@utility container-wide {
+  width: 100%;
+  max-width: var(--container-wide);
+  margin-inline: auto;
+  padding-inline: var(--spacing-gutter);
+}
+
+/**
+ * Rendu du contenu riche (Portable Text) : les balises générées par le CMS
+ * n'ont pas de classes, on les stylise donc par contexte.
+ */
+@layer components {
+  .prose-abime > * + * {
+    margin-top: 1.25em;
+  }
+
+  .prose-abime h2 {
+    font-family: var(--font-titre);
+    font-size: var(--text-titre);
+    line-height: var(--text-titre--line-height);
+    letter-spacing: var(--tracking-titre);
+    text-transform: uppercase;
+    margin-top: 2em;
+  }
+
+  .prose-abime h3 {
+    font-family: var(--font-sous-titre);
+    font-size: var(--text-sous-titre);
+    letter-spacing: var(--tracking-sous-titre);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 2em;
+  }
+
+  .prose-abime a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .prose-abime blockquote {
+    font-family: var(--font-annotation);
+    font-size: var(--text-annotation);
+    letter-spacing: var(--tracking-annotation);
+    font-style: italic;
+    padding-inline-start: 1.25rem;
+    border-inline-start: 1px solid var(--color-line);
+  }
+
+  .prose-abime ul {
+    list-style: disc;
+    padding-inline-start: 1.25rem;
+  }
+
+  .prose-abime ol {
+    list-style: decimal;
+    padding-inline-start: 1.25rem;
+  }
+
+  .prose-abime figcaption {
+    font-family: var(--font-annotation);
+    font-size: var(--text-annotation);
+    letter-spacing: var(--tracking-annotation);
+    font-style: italic;
+    color: var(--color-muted);
+  }
+}

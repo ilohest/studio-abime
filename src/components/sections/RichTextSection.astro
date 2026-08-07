@@ -1,0 +1,29 @@
+---
+import PortableText from '~/components/primitives/PortableText.astro';
+import type { Locale } from '~/i18n/config';
+import type { RichTextSection } from '~/lib/sanity/types';
+
+interface Props {
+  section: RichTextSection;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+
+const widthClass = {
+  narrow: 'max-w-[38rem]',
+  default: 'max-w-[44rem]',
+  wide: 'max-w-[64rem]',
+}[section.width ?? 'default'];
+---
+
+<section class="py-(--spacing-section)">
+  <div class="container-wide">
+    <div class:list={['mx-auto', widthClass]}>
+      {section.eyebrow && <p class="type-sous-titre text-muted">{section.eyebrow}</p>}
+      {section.heading && <h2 class="type-titre mt-3 text-balance">{section.heading}</h2>}
+
+      <PortableText value={section.body} locale={locale} class="mt-8" />
+    </div>
+  </div>
+</section>

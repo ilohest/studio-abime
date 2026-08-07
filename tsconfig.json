@@ -1,0 +1,19 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    /**
+     * Pas de `baseUrl` : il ferait résoudre les imports de paquets (`sanity/structure`,
+     * `sanity/presentation`…) vers le dossier local `sanity/` du projet.
+     * Les alias ci-dessous sont résolus relativement à ce fichier.
+     */
+    "paths": {
+      "~/*": ["./src/*"],
+      "@studio/*": ["./sanity/*"]
+    },
+    "types": ["node", "@sanity/astro/module"]
+  },
+  "include": [".astro/types.d.ts", "**/*.ts", "**/*.tsx", "**/*.astro", "**/*.vue"],
+  "exclude": ["dist", "node_modules", ".astro/cache"]
+}

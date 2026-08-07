@@ -1,0 +1,61 @@
+---
+import SmartLink from '~/components/primitives/SmartLink.astro';
+import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+
+import { localizedPath, projectsIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { SiteContext } from '~/lib/sanity/types';
+
+interface Props {
+  locale: Locale;
+  site: SiteContext;
+  alternates?: Partial<Record<Locale, string>>;
+}
+
+const { locale, site, alternates } = Astro.props;
+const t = useTranslations(locale);
+
+const homeHref = localizedPath(locale);
+const projectsHref = projectsIndexPath(locale);
+const nav = site.localized?.headerNav ?? [];
+const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
+const currentPath = Astro.url.pathname;
+---
+
+<header class="border-b border-line">
+  <div class="container-wide flex items-center justify-between gap-8 py-5">
+    <a href={homeHref} class="type-titre text-[1.5rem] leading-none" aria-label={siteTitle}>
+      {
+        site.settings?.logo ? (
+          <SanityImage image={site.settings.logo} width={200} loading="eager" class="h-8 w-auto" />
+        ) : (
+          siteTitle
+        )
+      }
+    </a>
+
+    <nav class="flex items-center gap-6" aria-label={t('nav.menu')}>
+      <a
+        href={projectsHref}
+        aria-current={currentPath.startsWith(projectsHref) ? 'page' : undefined}
+        class="type-sous-titre hover:opacity-60 aria-[current=page]:underline aria-[current=page]:underline-offset-4"
+      >
+        {t('nav.projects')}
+      </a>
+
+      {
+        nav.map((item) => (
+          <SmartLink
+            link={item}
+            locale={locale}
+            class="type-sous-titre hover:opacity-60"
+          />
+        ))
+      }
+
+      <LocaleSwitcher locale={locale} alternates={alternates} />
+    </nav>
+  </div>
+</header>

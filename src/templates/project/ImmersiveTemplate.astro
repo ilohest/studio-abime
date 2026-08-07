@@ -1,0 +1,84 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectFactSheet from '~/components/project/ProjectFactSheet.astro';
+import NextProject from '~/components/project/NextProject.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle IMMERSIF — couverture pleine hauteur sur fond sombre, titre en
+ * surimpression, fiche projet à la suite. Pour les cas clients très visuels.
+ *
+ * La couleur d'accent vient de `templateOptions.accent` et n'est appliquée
+ * qu'au titre : la palette reste maîtrisée quel que soit le choix de l'éditeur.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+const options = project.templateOptions ?? {};
+
+const accentClass = {
+  lumiere: 'text-lumiere',
+  ciel: 'text-ciel',
+  sable: 'text-sable',
+  papier: 'text-papier',
+}[options.accent ?? 'lumiere'];
+---
+
+<article>
+  <header class="surface-invert relative flex min-h-screen flex-col justify-end overflow-hidden">
+    {
+      options.coverVideoUrl ? (
+        <video
+          src={options.coverVideoUrl}
+          class="absolute inset-0 h-full w-full object-cover opacity-70"
+          autoplay
+          muted
+          loop
+          playsinline
+          aria-hidden="true"
+        />
+      ) : (
+        project.coverImage && (
+          <SanityImage
+            image={project.coverImage}
+            width={1920}
+            ratio="cinema"
+            sizes="100vw"
+            loading="eager"
+            fetchpriority="high"
+            class="absolute inset-0 h-full w-full object-cover opacity-70"
+          />
+        )
+      )
+    }
+
+    <div class="relative container-wide pb-20">
+      <h1 class:list={['type-titre max-w-5xl text-balance text-[clamp(2.5rem,7vw,5rem)]', accentClass]}>
+        {project.title}
+      </h1>
+      {project.excerpt && <p class="type-copy mt-6 max-w-prose text-pretty">{project.excerpt}</p>}
+    </div>
+  </header>
+
+  {
+    options.showFactSheet !== false && (
+      <div class="container-wide pt-16">
+        <ProjectFactSheet
+          project={project}
+          locale={locale}
+          class="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-4"
+        />
+      </div>
+    )
+  }
+
+  <SectionRenderer sections={project.sections} locale={locale} />
+
+  {options.showNextProject !== false && <NextProject project={project.next} locale={locale} />}
+</article>

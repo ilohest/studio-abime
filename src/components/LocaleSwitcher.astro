@@ -1,0 +1,49 @@
+---
+import { getLocaleMeta, isMonolingual, locales, type Locale } from '~/i18n/config';
+import { useTranslations } from '~/i18n/ui';
+
+/**
+ * Sélecteur de langue.
+ *
+ * Ne rend rien tant que le site est monolingue — le composant est déjà en place
+ * et s'activera automatiquement à l'ajout d'une langue dans `src/i18n/config.ts`.
+ *
+ * `alternates` reçoit l'URL traduite de la page courante quand elle existe ;
+ * à défaut, on renvoie vers l'accueil de la langue plutôt que vers un 404.
+ */
+interface Props {
+  locale: Locale;
+  alternates?: Partial<Record<Locale, string>>;
+}
+
+const { locale, alternates = {} } = Astro.props;
+const t = useTranslations(locale);
+---
+
+{
+  !isMonolingual && (
+    <nav class="flex items-center gap-3" aria-label={t('locale.switch')}>
+      {locales.map((code) => {
+        const meta = getLocaleMeta(code);
+        const href = alternates[code] ?? (code === locale ? '#' : `/${code}`);
+        const isCurrent = code === locale;
+
+        return (
+          <a
+            href={href}
+            hreflang={code}
+            lang={code}
+            aria-current={isCurrent ? 'true' : undefined}
+            class:list={[
+              'type-sous-titre transition-opacity',
+              isCurrent ? 'opacity-100 underline underline-offset-4' : 'opacity-50 hover:opacity-100',
+            ]}
+          >
+            <span class="sr-only">{meta.label}</span>
+            <span aria-hidden="true">{code.toUpperCase()}</span>
+          </a>
+        );
+      })}
+    </nav>
+  )
+}

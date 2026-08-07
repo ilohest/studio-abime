@@ -1,0 +1,53 @@
+---
+import { resolveImage } from '~/lib/sanity/image';
+import { absoluteUrl } from '~/lib/routing';
+import { locales, type Locale } from '~/i18n/config';
+import type { Seo as SeoType, SiteContext } from '~/lib/sanity/types';
+
+interface Props {
+  locale: Locale;
+  site: SiteContext;
+  seo?: SeoType;
+  fallbackTitle: string;
+}
+
+const { locale, site, seo, fallbackTitle } = Astro.props;
+
+const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
+
+// Cascade de repli : SEO du document → titre du document → nom du site.
+const title = seo?.title || fallbackTitle || siteTitle;
+const fullTitle = title === siteTitle ? title : `${title} — ${siteTitle}`;
+const description = seo?.description || site.localized?.siteDescription || '';
+
+const shareImage = resolveImage(seo?.image ?? site.localized?.defaultSeoImage, {
+  width: 1200,
+  ratio: 'landscape',
+});
+
+const canonical = absoluteUrl(Astro.url.pathname, Astro.site);
+const ogImage = shareImage ? absoluteUrl(shareImage.src, Astro.site) : null;
+---
+
+<title>{fullTitle}</title>
+{description && <meta name="description" content={description} />}
+<link rel="canonical" href={canonical} />
+{seo?.noIndex && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content={fullTitle} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={siteTitle} />
+<meta property="og:locale" content={locale} />
+{ogImage && <meta property="og:image" content={ogImage} />}
+
+<meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+
+{/*
+  Alternates de langue : inertes tant que le site est monolingue, actifs dès
+  qu'une seconde langue est ajoutée dans src/i18n/config.ts.
+  L'URL exacte de chaque traduction est fournie par la page via ce slot.
+*/}
+{locales.length > 1 && <slot name="alternates" />}

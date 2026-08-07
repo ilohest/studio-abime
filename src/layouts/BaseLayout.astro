@@ -1,0 +1,93 @@
+---
+import { VisualEditing } from '@sanity/astro/visual-editing';
+
+import '~/styles/global.css';
+
+import Header from '~/components/Header.astro';
+import Footer from '~/components/Footer.astro';
+import Seo from '~/components/Seo.astro';
+
+import { getLocaleMeta, type Locale } from '~/i18n/config';
+import { useTranslations } from '~/i18n/ui';
+import { visualEditingEnabled } from '~/lib/sanity/env';
+import type { Seo as SeoType, SiteContext } from '~/lib/sanity/types';
+
+interface Props {
+  locale: Locale;
+  site: SiteContext;
+  seo?: SeoType;
+  /** Titre de repli quand le document ne définit pas de titre SEO. */
+  title: string;
+  /** Classe appliquée au <body> — permet à un template d'inverser le thème. */
+  bodyClass?: string;
+  /** URLs de la même page dans les autres langues (hreflang + sélecteur). */
+  alternates?: Partial<Record<Locale, string>>;
+}
+
+const { locale, site, seo, title, bodyClass = '', alternates = {} } = Astro.props;
+
+const meta = getLocaleMeta(locale);
+const t = useTranslations(locale);
+
+const alternateEntries = Object.entries(alternates) as [Locale, string][];
+---
+
+<!doctype html>
+<html lang={meta.htmlLang} dir={meta.dir}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Le corps de texte est préchargé : il conditionne le premier rendu utile. -->
+    <link
+      rel="preload"
+      href="/fonts/GT-Canon-M-Narrow-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/GT-Canon-Mono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <Seo locale={locale} site={site} seo={seo} fallbackTitle={title} />
+
+    {
+      alternateEntries.map(([code, href]) => (
+        <link rel="alternate" hreflang={code} href={new URL(href, Astro.site ?? Astro.url).toString()} />
+      ))
+    }
+
+    <slot name="head" />
+  </head>
+
+  <body class={bodyClass}>
+    <a
+      href="#contenu"
+      class="type-sous-titre sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-abime focus:px-4 focus:py-2 focus:text-papier"
+    >
+      {t('nav.skipToContent')}
+    </a>
+
+    <Header locale={locale} site={site} alternates={alternates} />
+
+    <main id="contenu">
+      <slot />
+    </main>
+
+    <Footer locale={locale} site={site} />
+
+    {/*
+      Overlay d'édition visuelle : monté uniquement en mode preview.
+      Combiné au stega, il rend chaque texte cliquable et remonte les
+      modifications au Presentation Tool.
+    */}
+    <VisualEditing enabled={visualEditingEnabled} />
+  </body>
+</html>

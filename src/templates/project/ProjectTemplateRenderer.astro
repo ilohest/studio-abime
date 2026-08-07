@@ -1,0 +1,39 @@
+---
+import StandardTemplate from './StandardTemplate.astro';
+import ImmersiveTemplate from './ImmersiveTemplate.astro';
+import EditorialTemplate from './EditorialTemplate.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Registre des modèles de page projet.
+ *
+ * Pendant exact de `sanity/lib/projectTemplates.ts` (côté CMS).
+ * Un modèle inconnu — schéma déployé avant le rendu, ou valeur héritée —
+ * retombe sur le modèle standard : la page reste toujours affichable.
+ *
+ * ➜ AJOUTER UN MODÈLE : créer le composant, l'importer, ajouter un `case`,
+ *    puis déclarer l'entrée correspondante dans `sanity/lib/projectTemplates.ts`.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+---
+
+{
+  (() => {
+    switch (project.template) {
+      case 'immersive':
+        return <ImmersiveTemplate project={project} locale={locale} />;
+      case 'editorial':
+        return <EditorialTemplate project={project} locale={locale} />;
+      case 'standard':
+      default:
+        return <StandardTemplate project={project} locale={locale} />;
+    }
+  })()
+}

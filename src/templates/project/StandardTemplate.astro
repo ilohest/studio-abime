@@ -1,0 +1,60 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectFactSheet from '~/components/project/ProjectFactSheet.astro';
+import NextProject from '~/components/project/NextProject.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle STANDARD — en-tête sobre, fiche projet en colonne latérale,
+ * puis contenu modulaire. Convient à la majorité des cas clients.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+const options = project.templateOptions ?? {};
+---
+
+<article>
+  <header class="container-wide pt-16 pb-12">
+    <h1 class="type-titre max-w-4xl text-balance">{project.title}</h1>
+    {project.excerpt && <p class="type-copy mt-6 max-w-prose text-pretty">{project.excerpt}</p>}
+  </header>
+
+  {
+    project.coverImage && (
+      <div class="container-wide">
+        <SanityImage
+          image={project.coverImage}
+          width={1920}
+          ratio="landscape"
+          sizes="100vw"
+          loading="eager"
+          fetchpriority="high"
+          class="w-full object-cover"
+        />
+      </div>
+    )
+  }
+
+  <div class="container-wide mt-16 grid gap-12 lg:grid-cols-[1fr_18rem] lg:items-start">
+    <div class="order-2 lg:order-1">
+      <SectionRenderer sections={project.sections} locale={locale} />
+    </div>
+
+    {
+      options.showFactSheet !== false && (
+        <aside class="order-1 lg:order-2 lg:sticky lg:top-12">
+          <ProjectFactSheet project={project} locale={locale} />
+        </aside>
+      )
+    }
+  </div>
+
+  {options.showNextProject !== false && <NextProject project={project.next} locale={locale} />}
+</article>

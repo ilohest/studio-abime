@@ -1,0 +1,16 @@
+---
+import { renderPortableText } from '~/lib/portableText';
+import type { Locale } from '~/i18n/config';
+import type { PortableTextBlock } from '~/lib/sanity/types';
+
+interface Props {
+  value?: PortableTextBlock[] | null;
+  locale: Locale;
+  class?: string;
+}
+
+const { value, locale, class: className = '' } = Astro.props;
+const html = renderPortableText(value, locale);
+---
+
+{html && <div class:list={['prose-abime', className]} set:html={html} />}

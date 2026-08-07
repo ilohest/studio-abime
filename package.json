@@ -1,0 +1,45 @@
+{
+  "name": "studio-abime",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "sanity": "sanity",
+    "sanity:deploy-graphql": "sanity graphql deploy",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/node": "^11.1.0",
+    "@astrojs/react": "^6.0.2",
+    "@astrojs/vue": "^7.0.2",
+    "@portabletext/to-html": "^5.0.2",
+    "@portabletext/types": "^4.0.2",
+    "@sanity/astro": "^3.5.0",
+    "@sanity/client": "^7.26.2",
+    "@sanity/document-internationalization": "^6.2.28",
+    "@sanity/image-url": "^2.1.1",
+    "@sanity/types": "^6.9.1",
+    "@sanity/vision": "^6.9.1",
+    "@sanity/visual-editing": "^5.7.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "astro": "^7.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sanity": "^6.9.1",
+    "styled-components": "^6.5.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2"
+  }
+}

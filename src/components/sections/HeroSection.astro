@@ -1,0 +1,89 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SmartLink from '~/components/primitives/SmartLink.astro';
+import type { Locale } from '~/i18n/config';
+import type { HeroSection } from '~/lib/sanity/types';
+
+interface Props {
+  section: HeroSection;
+  locale: Locale;
+  /** `true` pour la première section de la page : charge le visuel en priorité. */
+  isFirst?: boolean;
+}
+
+const { section, locale, isFirst = false } = Astro.props;
+const layout = section.layout ?? 'centered';
+---
+
+<section
+  class:list={[
+    'py-(--spacing-section)',
+    layout === 'fullBleed' && 'relative min-h-[70vh] overflow-hidden py-0',
+  ]}
+>
+  {
+    layout === 'fullBleed' && section.media && (
+      <SanityImage
+        image={section.media}
+        width={1920}
+        ratio="cinema"
+        sizes="100vw"
+        loading={isFirst ? 'eager' : 'lazy'}
+        fetchpriority={isFirst ? 'high' : 'auto'}
+        class="absolute inset-0 h-full w-full object-cover"
+      />
+    )
+  }
+
+  <div
+    class:list={[
+      'container-wide',
+      layout === 'split' && 'grid items-center gap-12 md:grid-cols-2',
+      layout === 'centered' && 'text-center',
+      layout === 'fullBleed' &&
+        'surface-invert relative flex min-h-[70vh] flex-col justify-end bg-transparent py-20',
+    ]}
+  >
+    <div class:list={[layout === 'centered' && 'mx-auto max-w-3xl']}>
+      <h1 class="type-titre text-balance">{section.heading}</h1>
+
+      {section.subheading && <p class="type-copy mt-6 max-w-prose text-pretty">{section.subheading}</p>}
+
+      <SmartLink
+        link={section.cta}
+        locale={locale}
+        class="type-sous-titre mt-8 inline-block border-b border-current pb-1 hover:opacity-60"
+      />
+    </div>
+
+    {
+      layout === 'split' && section.media && (
+        <SanityImage
+          image={section.media}
+          width={900}
+          ratio="portrait"
+          sizes="(min-width: 768px) 50vw, 100vw"
+          loading={isFirst ? 'eager' : 'lazy'}
+          fetchpriority={isFirst ? 'high' : 'auto'}
+          class="w-full object-cover"
+        />
+      )
+    }
+  </div>
+
+  {
+    layout === 'centered' && section.media && (
+      <div class="container-wide mt-12">
+        <SanityImage
+          image={section.media}
+          width={1600}
+          ratio="landscape"
+          sizes="100vw"
+          loading={isFirst ? 'eager' : 'lazy'}
+          fetchpriority={isFirst ? 'high' : 'auto'}
+          class="w-full object-cover"
+        />
+      </div>
+    )
+  }
+</section>

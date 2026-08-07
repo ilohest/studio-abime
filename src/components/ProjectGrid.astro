@@ -1,0 +1,82 @@
+---
+import ProjectExplorer from '~/components/vue/ProjectExplorer.vue';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+
+import { projectPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import { toCategoryViews, toProjectCardView } from '~/lib/viewModels';
+import type { Locale } from '~/i18n/config';
+import type { CategorySummary, ProjectCard } from '~/lib/sanity/types';
+
+/**
+ * Grille de projets — point de bascule entre rendu statique et interactif.
+ *
+ * `showFilters: false` → HTML pur, zéro JavaScript envoyé au navigateur.
+ * `showFilters: true`  → composant Vue hydraté en `client:visible`.
+ *
+ * Le coût en JavaScript est ainsi payé uniquement là où l'interaction existe,
+ * ce qui est tout l'intérêt de l'architecture en îlots d'Astro.
+ */
+interface Props {
+  projects: ProjectCard[];
+  categories: CategorySummary[];
+  locale: Locale;
+  showFilters?: boolean;
+}
+
+const { projects, categories, locale, showFilters = false } = Astro.props;
+const t = useTranslations(locale);
+
+const projectViews = projects.map((project) => toProjectCardView(project, locale));
+const categoryViews = toCategoryViews(categories, projectViews);
+
+// Les filtres n'ont d'intérêt que s'il existe plusieurs catégories à départager.
+const useExplorer = showFilters && categoryViews.length > 1;
+---
+
+{
+  useExplorer ? (
+    <ProjectExplorer
+      client:visible
+      projects={projectViews}
+      categories={categoryViews}
+      queryParam="filtre"
+      labels={{
+        all: t('projects.all'),
+        filterBy: t('projects.filterBy'),
+        empty: t('projects.empty'),
+        count: t('projects.count'),
+        viewProject: t('projects.viewProject'),
+      }}
+    />
+  ) : (
+    <ul class="grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
+      {projects.map((project) => (
+        <li>
+          <a href={projectPath(locale, project.slug)} class="group block">
+            <div class="overflow-hidden bg-sable">
+              <SanityImage
+                image={project.thumbnail?.asset ? project.thumbnail : project.coverImage}
+                width={900}
+                ratio="portrait"
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                alt={project.title}
+                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+              />
+            </div>
+
+            <h3 class="type-sous-titre mt-4">{project.title}</h3>
+
+            {(project.client || project.year) && (
+              <p class="type-annotation mt-1 text-muted">
+                {[project.client, project.year].filter(Boolean).join(' — ')}
+              </p>
+            )}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+{projects.length === 0 && <p class="type-copy text-muted">{t('projects.empty')}</p>}

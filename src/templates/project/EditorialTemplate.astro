@@ -1,0 +1,83 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectFactSheet from '~/components/project/ProjectFactSheet.astro';
+import NextProject from '~/components/project/NextProject.astro';
+
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle ÉDITORIAL — longue lecture en colonne étroite, métadonnées en marge.
+ * Pour les cas clients narratifs (making-of, recherche, texte long).
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+const options = project.templateOptions ?? {};
+const t = useTranslations(locale);
+
+const marginNotes = [
+  project.client ? { label: t('project.client'), value: project.client } : null,
+  project.year ? { label: t('project.year'), value: String(project.year) } : null,
+].filter((note): note is { label: string; value: string } => note !== null);
+---
+
+<article>
+  <header class="container-content pt-24 pb-12 text-center">
+    <p class="type-sous-titre text-muted">
+      {[project.client, project.year].filter(Boolean).join(' — ')}
+    </p>
+    <h1 class="type-titre mt-6 text-balance">{project.title}</h1>
+    {project.excerpt && <p class="type-annotation mx-auto mt-8 max-w-prose text-pretty">{project.excerpt}</p>}
+  </header>
+
+  {
+    project.coverImage && (
+      <figure class="container-wide">
+        <SanityImage
+          image={project.coverImage}
+          width={1600}
+          ratio="landscape"
+          sizes="100vw"
+          loading="eager"
+          fetchpriority="high"
+          class="w-full object-cover"
+        />
+      </figure>
+    )
+  }
+
+  <div class="container-wide mt-16 grid gap-10 lg:grid-cols-[14rem_minmax(0,44rem)] lg:justify-center">
+    {
+      options.showMarginNotes !== false && marginNotes.length > 0 && (
+        <aside class="lg:sticky lg:top-12 lg:self-start lg:text-right">
+          <ul class="flex flex-col gap-3">
+            {marginNotes.map((note) => (
+              <li>
+                <span class="type-sous-titre block text-muted">{note.label}</span>
+                <span class="type-annotation">{note.value}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )
+    }
+
+    <div>
+      <SectionRenderer sections={project.sections} locale={locale} />
+
+      {
+        options.showFactSheet !== false && (
+          <ProjectFactSheet project={project} locale={locale} class="mt-12" />
+        )
+      }
+    </div>
+  </div>
+
+  {options.showNextProject !== false && <NextProject project={project.next} locale={locale} />}
+</article>

@@ -1,0 +1,63 @@
+---
+import HeroSection from './HeroSection.astro';
+import RichTextSection from './RichTextSection.astro';
+import MediaSection from './MediaSection.astro';
+import ProjectListSection from './ProjectListSection.astro';
+import CtaSection from './CtaSection.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Section } from '~/lib/sanity/types';
+
+/**
+ * Rendu du page builder.
+ *
+ * Registre `_type` (Sanity) → composant (Astro). C'est le pendant exact de
+ * `sanity/schemaTypes/objects/sections/index.ts` : les deux listes doivent
+ * rester alignées.
+ *
+ * ➜ AJOUTER UNE SECTION :
+ *    1. schéma dans `sanity/schemaTypes/objects/sections/` + export dans son index ;
+ *    2. composant dans ce dossier ;
+ *    3. une ligne dans le `switch` ci-dessous.
+ *
+ * Un `_type` inconnu (schéma déployé mais rendu pas encore livré) est ignoré
+ * silencieusement en production et signalé en développement — jamais d'écran
+ * blanc pour l'éditeur.
+ */
+interface Props {
+  sections?: Section[] | null;
+  locale: Locale;
+}
+
+const { sections, locale } = Astro.props;
+
+if (import.meta.env.DEV) {
+  const known = ['heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
+  for (const section of sections ?? []) {
+    if (!known.includes(section._type)) {
+      console.warn(`[sections] Aucun composant pour le type « ${section._type} ». Section ignorée.`);
+    }
+  }
+}
+---
+
+{
+  (sections ?? []).map((section, index) => {
+    const isFirst = index === 0;
+
+    switch (section._type) {
+      case 'heroSection':
+        return <HeroSection section={section} locale={locale} isFirst={isFirst} />;
+      case 'richTextSection':
+        return <RichTextSection section={section} locale={locale} />;
+      case 'mediaSection':
+        return <MediaSection section={section} />;
+      case 'projectListSection':
+        return <ProjectListSection section={section} locale={locale} />;
+      case 'ctaSection':
+        return <CtaSection section={section} locale={locale} />;
+      default:
+        return null;
+    }
+  })
+}

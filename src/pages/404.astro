@@ -1,0 +1,32 @@
+---
+import BaseLayout from '~/layouts/BaseLayout.astro';
+import { getSiteContext } from '~/lib/siteContext';
+import { defaultLocale } from '~/i18n/config';
+import { localizedPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+
+/**
+ * Page 404 — toujours pré-rendue, même en mode édition visuelle : elle doit
+ * rester servable quand tout le reste échoue.
+ */
+export const prerender = true;
+
+const locale = defaultLocale;
+const site = await getSiteContext(locale);
+const t = useTranslations(locale);
+---
+
+<BaseLayout locale={locale} site={site} title={t('error.notFound.title')}>
+  <div class="container-content flex min-h-[60vh] flex-col justify-center py-(--spacing-section)">
+    <p class="type-sous-titre text-muted">404</p>
+    <h1 class="type-titre mt-4">{t('error.notFound.title')}</h1>
+    <p class="type-copy mt-6">{t('error.notFound.body')}</p>
+
+    <a
+      href={localizedPath(locale)}
+      class="type-sous-titre mt-10 inline-block self-start border-b border-current pb-1 hover:opacity-60"
+    >
+      {t('error.backHome')}
+    </a>
+  </div>
+</BaseLayout>

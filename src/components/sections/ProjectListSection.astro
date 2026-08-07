@@ -1,0 +1,31 @@
+---
+import ProjectGrid from '~/components/ProjectGrid.astro';
+import type { Locale } from '~/i18n/config';
+import type { ProjectListSection } from '~/lib/sanity/types';
+
+interface Props {
+  section: ProjectListSection;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+
+// GROQ renvoie les deux jeux de données ; le mode choisi par l'éditeur décide.
+const projects =
+  section.mode === 'manual'
+    ? (section.manualProjects ?? [])
+    : (section.latestProjects ?? []).slice(0, section.limit ?? 6);
+---
+
+<section class="py-(--spacing-section)">
+  <div class="container-wide">
+    {section.heading && <h2 class="type-titre mb-10 text-balance">{section.heading}</h2>}
+
+    <ProjectGrid
+      projects={projects}
+      categories={section.categories ?? []}
+      locale={locale}
+      showFilters={section.showFilters ?? false}
+    />
+  </div>
+</section>

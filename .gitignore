@@ -1,0 +1,23 @@
+# build
+dist/
+.astro/
+.output/
+
+# deps
+node_modules/
+
+# env
+.env
+.env.production
+.env.local
+!.env.example
+
+# sanity
+.sanity/
+
+# système
+.DS_Store
+*.log
+npm-debug.log*
+.vscode/
+!.vscode/extensions.json

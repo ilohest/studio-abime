@@ -1,0 +1,61 @@
+---
+import SmartLink from '~/components/primitives/SmartLink.astro';
+import PortableText from '~/components/primitives/PortableText.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { SiteContext } from '~/lib/sanity/types';
+
+interface Props {
+  locale: Locale;
+  site: SiteContext;
+}
+
+const { locale, site } = Astro.props;
+
+const nav = site.localized?.footerNav ?? [];
+const social = site.settings?.socialLinks ?? [];
+const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
+const year = new Date().getFullYear();
+---
+
+<footer class="surface-invert mt-(--spacing-section)">
+  <div class="container-wide grid gap-10 py-16 md:grid-cols-3">
+    <div>
+      <p class="type-titre text-[1.75rem]">{siteTitle}</p>
+      <PortableText value={site.localized?.footerText} locale={locale} class="mt-4 max-w-prose" />
+    </div>
+
+    {
+      nav.length > 0 && (
+        <nav class="flex flex-col gap-2" aria-label="Pied de page">
+          {nav.map((item) => (
+            <SmartLink link={item} locale={locale} class="type-copy hover:opacity-60" />
+          ))}
+        </nav>
+      )
+    }
+
+    {
+      social.length > 0 && (
+        <ul class="flex flex-col gap-2">
+          {social.map((item) => (
+            <li>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="type-sous-titre hover:opacity-60"
+              >
+                {item.platform}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+
+  <div class="container-wide border-t border-line py-6">
+    <p class="type-annotation text-muted">© {year} {siteTitle}</p>
+  </div>
+</footer>
