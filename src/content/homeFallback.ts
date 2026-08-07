@@ -34,6 +34,32 @@ const sections: Record<string, Section[]> = {
         "Studio Abime est un labo de com et d'identités sensorielles qui naissent d'une plongée sous le visible.",
       showStamp: true,
     },
+    {
+      _key: 'services',
+      _type: 'servicesMenu',
+      groups: [
+        {
+          _key: 'g1',
+          title: 'Labo de com',
+          items: ['Recherche de Sens', 'Accompagnement', 'Audit'],
+        },
+        {
+          _key: 'g2',
+          title: 'Définition',
+          items: ['Direction artistique', 'Conception rédaction'],
+        },
+        {
+          _key: 'g3',
+          title: 'Production',
+          items: ['Identité sensorielle', 'Graphisme', 'Visuels', 'Rédaction'],
+        },
+        {
+          _key: 'g4',
+          title: 'Expansion',
+          items: ['Déploiement', 'Ateliers & formations', 'Conférences', 'Outils de com'],
+        },
+      ],
+    },
   ],
 };
 

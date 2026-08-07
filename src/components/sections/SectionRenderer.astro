@@ -1,5 +1,6 @@
 ---
 import ManifestoHero from './ManifestoHero.astro';
+import ServicesMenu from './ServicesMenu.astro';
 import HeroSection from './HeroSection.astro';
 import RichTextSection from './RichTextSection.astro';
 import MediaSection from './MediaSection.astro';
@@ -33,7 +34,7 @@ interface Props {
 const { sections, locale } = Astro.props;
 
 if (import.meta.env.DEV) {
-  const known = ['manifestoHero', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
+  const known = ['manifestoHero', 'servicesMenu', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
   for (const section of sections ?? []) {
     if (!known.includes(section._type)) {
       console.warn(`[sections] Aucun composant pour le type « ${section._type} ». Section ignorée.`);
@@ -49,6 +50,8 @@ if (import.meta.env.DEV) {
     switch (section._type) {
       case 'manifestoHero':
         return <ManifestoHero section={section} locale={locale} />;
+      case 'servicesMenu':
+        return <ServicesMenu section={section} />;
       case 'heroSection':
         return <HeroSection section={section} locale={locale} isFirst={isFirst} />;
       case 'richTextSection':

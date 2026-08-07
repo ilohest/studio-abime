@@ -82,6 +82,12 @@ export interface ManifestoHero extends SectionBase {
   showStamp?: boolean;
 }
 
+export interface ServicesMenu extends SectionBase {
+  _type: 'servicesMenu';
+  image?: SanityImage;
+  groups?: Array<{ _key: string; title: string; items?: string[] }>;
+}
+
 export interface HeroSection extends SectionBase {
   _type: 'heroSection';
   heading: string;
@@ -128,6 +134,7 @@ export interface CtaSection extends SectionBase {
 
 export type Section =
   | ManifestoHero
+  | ServicesMenu
   | HeroSection
   | RichTextSection
   | MediaSection

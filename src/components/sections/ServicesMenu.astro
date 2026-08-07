@@ -1,0 +1,279 @@
+---
+import { Image } from 'astro:assets';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import defaultVisual from '~/assets/sections/labo-de-com.webp';
+import type { ServicesMenu } from '~/lib/sanity/types';
+
+/**
+ * Menu des services — visuel à gauche, prestations numérotées à droite.
+ *
+ * ┌─ Mécanique de défilement ───────────────────────────────────────────────┐
+ * │ La section réserve une « piste » de défilement (100vh de contenu + la   │
+ * │ distance de transition). Pendant cette distance, la scène reste collée  │
+ * │ en haut (`position: sticky`) et le rail interne se translate vers la    │
+ * │ gauche : le visuel sort du cadre, la colonne des prestations vient      │
+ * │ s'ancrer sur le bord gauche — elle devient le menu.                     │
+ * │                                                                         │
+ * │ La progression est calculée en JS (et non via `animation-timeline`,     │
+ * │ dont le support navigateur reste inégal) puis exposée en variable CSS   │
+ * │ `--p` : toute la mise en mouvement reste donc décrite en CSS.           │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+interface Props {
+  section: ServicesMenu;
+}
+
+const { section } = Astro.props;
+const groups = section.groups ?? [];
+
+/** Numérotation dérivée de l'ordre : réordonner ne renumérote rien à la main. */
+const numbered = groups.map((group, index) => ({
+  ...group,
+  number: String(index + 1).padStart(2, '0'),
+}));
+---
+
+<section class="services" data-services-menu>
+  {/* Piste de défilement : sa hauteur définit la durée de la transition. */}
+  <div class="services__runway">
+    <div class="services__stage surface-paper">
+      <div class="services__grain surface-paper-grain"></div>
+
+      <div class="services__rail">
+        {/* ── Visuel : sort par la gauche ──────────────────────────────── */}
+        <figure class="services__visual">
+          {
+            section.image?.asset ? (
+              <SanityImage
+                image={section.image}
+                width={1200}
+                sizes="50vw"
+                class="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={defaultVisual}
+                alt=""
+                widths={[640, 875]}
+                sizes="50vw"
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+            )
+          }
+        </figure>
+
+        {/* ── Prestations : viennent s'ancrer à gauche ─────────────────── */}
+        <div class="services__panel">
+          <ol class="services__groups">
+            {
+              numbered.map((group) => (
+                <li class="services__group">
+                  <div class="services__label">
+                    <span class="type-note block">{group.number}</span>
+                    <h2 class="type-note uppercase">{group.title}</h2>
+                  </div>
+
+                  <ul class="services__items">
+                    {group.items?.map((item) => (
+                      <li class="type-note">{item}</li>
+                    ))}
+                  </ul>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .services {
+    --travel: 100vh; /* distance de défilement consommée par la transition */
+    --p: 0; /* progression 0 → 1, écrite par le script */
+  }
+
+  .services__runway {
+    height: calc(100svh + var(--travel));
+  }
+
+  .services__stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .services__grain {
+    z-index: 0;
+  }
+
+  /*
+    Le rail fait deux fois la largeur utile : chaque panneau occupe une moitié.
+    Le translater de -50 % fait sortir le visuel et amène le panneau à gauche.
+  */
+  .services__rail {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+    transform: translate3d(calc(var(--p) * -50%), 0, 0);
+    will-change: transform;
+  }
+
+  .services__visual {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--color-sable);
+  }
+
+  .services__visual :global(img) {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    /*
+      Léger contre-mouvement : le visuel se déplace un peu moins vite que le
+      rail, ce qui évite l'effet « bloc unique » et donne de la profondeur.
+    */
+    transform: translate3d(calc(var(--p) * 12%), 0, 0);
+  }
+
+  .services__panel {
+    display: flex;
+    align-items: center;
+    padding: 4rem clamp(1.5rem, 5vw, 5rem);
+  }
+
+  .services__groups {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 6vh, 4.5rem);
+    width: 100%;
+  }
+
+  .services__group {
+    display: grid;
+    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+    gap: clamp(1rem, 4vw, 3rem);
+    align-items: start;
+  }
+
+  .services__label {
+    white-space: nowrap;
+  }
+
+  .services__items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  /* ── Mobile : pas de transition horizontale, tout s'empile ────────────── */
+  @media (max-width: 767px) {
+    .services__runway {
+      height: auto;
+    }
+
+    .services__stage {
+      position: static;
+      height: auto;
+    }
+
+    .services__rail {
+      grid-template-columns: 1fr;
+      transform: none;
+    }
+
+    .services__visual {
+      height: 70svh;
+    }
+
+    .services__visual :global(img) {
+      transform: none;
+    }
+
+    .services__panel {
+      padding-block: 3.5rem;
+    }
+  }
+
+  /*
+    Mouvement réduit : la piste disparaît et les deux panneaux restent côte à
+    côte, sans déplacement au défilement.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .services__runway {
+      height: auto;
+    }
+
+    .services__stage {
+      position: static;
+      height: 100svh;
+    }
+
+    .services__rail {
+      transform: none;
+    }
+
+    .services__visual :global(img) {
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const sections = document.querySelectorAll<HTMLElement>('[data-services-menu]');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const desktop = window.matchMedia('(min-width: 768px)');
+
+  for (const section of sections) {
+    const runway = section.querySelector<HTMLElement>('.services__runway');
+    if (!runway) continue;
+
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+
+      // Hors desktop ou en mouvement réduit, le CSS reprend la main.
+      if (!desktop.matches || reducedMotion.matches) {
+        section.style.removeProperty('--p');
+        return;
+      }
+
+      const rect = runway.getBoundingClientRect();
+
+      // Section hors écran : rien à recalculer.
+      if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+
+      // Distance de défilement réellement disponible dans la piste.
+      const travel = rect.height - window.innerHeight;
+      if (travel <= 0) return;
+
+      // 0 quand le haut de la piste touche le haut de l'écran, 1 à la fin.
+      const progress = Math.min(Math.max(-rect.top / travel, 0), 1);
+      section.style.setProperty('--p', progress.toFixed(4));
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    /*
+      Un unique écouteur passif, coalescé par `requestAnimationFrame` : au pire
+      un `getBoundingClientRect` sur un seul élément par image rendue.
+      Filtrer en amont avec un IntersectionObserver a été écarté — le gain est
+      négligeable face au test de sortie d'écran ci-dessus, pour un état
+      supplémentaire à maintenir (l'écouteur attaché ou non).
+    */
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+  }
+</script>
