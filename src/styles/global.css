@@ -111,6 +111,23 @@
     color: var(--color-ink);
   }
 
+  /**
+   * Rail de menu ancré (voir `ServicesMenu.astro`).
+   *
+   * Le rail passe en `position: fixed` : il quitte le flux et recouvrirait la
+   * suite de la page. On réserve donc sa largeur sur tout ce qui vient après lui.
+   * La bascule a lieu alors que la scène occupe tout l'écran — le décalage
+   * s'applique hors du champ de vision, sans à-coup visible.
+   */
+  :root {
+    --rail-width: 16rem;
+  }
+
+  html.rail-docked [data-services-menu] ~ *,
+  html.rail-docked footer {
+    padding-left: var(--rail-width);
+  }
+
   /** Bloc sombre : inverse les rôles, tout le contenu enfant suit. */
   .surface-invert {
     background-color: var(--color-surface-invert);
