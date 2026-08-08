@@ -103,6 +103,12 @@ const numbered = groups.map((group, index) => ({
     --p: 0; /* progression 0 → 1, écrite par le script */
     --rail-width: 16rem; /* largeur du rail une fois ancré */
     --groups-max: 32rem; /* largeur du bloc de prestations, au repos */
+    /*
+      Décalage de l'intitulé et des prestations par rapport au numéro.
+      En `rem` et non en `em` : l'intitulé et la liste n'héritent pas du même
+      corps de texte, un retrait relatif les désalignerait l'un de l'autre.
+    */
+    --menu-indent: 1.35rem;
   }
 
   .services[data-compact] {
@@ -286,14 +292,57 @@ const numbered = groups.map((group, index) => ({
     gap: 0.2rem;
   }
 
+  /*
+    Le numéro reste seul au bord gauche ; l'intitulé et les prestations partagent
+    exactement le même retrait, et donc le même bord gauche.
+  */
   .services__label {
     white-space: nowrap;
+  }
+
+  .services__label h2 {
+    padding-inline-start: var(--menu-indent);
+    margin-top: 0.35em;
   }
 
   .services__items {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
+    padding-inline-start: var(--menu-indent);
+  }
+
+  /*
+    Pastille de repérage, posée dans la gouttière laissée par le retrait —
+    celle-là même qu'occupent les numéros. Elle apparaît au survol et reste
+    affichée sur l'élément courant.
+
+    Dessinée en pseudo-élément plutôt qu'avec un caractère « • » : sa taille
+    ne dépend alors pas de la fonte, et elle reste identique d'un état à l'autre.
+  */
+  .services__items li {
+    position: relative;
+  }
+
+  .services__items li::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(var(--menu-indent) * -0.62);
+    width: 4px;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+  }
+
+  .services__items li:hover::before,
+  .services__items li:focus-within::before,
+  .services__items li[aria-current]::before,
+  .services__items li[data-active]::before {
+    opacity: 1;
   }
 
   /* ── Mobile : empilement simple, aucun mouvement horizontal ───────────── */

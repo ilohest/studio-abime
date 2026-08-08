@@ -126,6 +126,17 @@
   html.rail-docked [data-services-menu] ~ *,
   html.rail-docked footer {
     padding-left: var(--rail-width);
+  }
+
+  /*
+    L'atténuation porte sur les COUCHES DE CONTENU, jamais sur la section
+    elle-même : atténuer la section emporterait aussi son fond papier, qui
+    cesserait alors de se confondre avec celui de la page — d'où une
+    démarcation horizontale nette à l'endroit où la section commence.
+    Le grain est exclu pour la même raison.
+  */
+  html.rail-docked [data-services-menu] ~ * > *:not(.surface-paper-grain),
+  html.rail-docked footer > *:not(.surface-paper-grain) {
     transition: opacity 0.6s ease-out 0.3s;
   }
 
@@ -139,8 +150,8 @@
    * visuel, il n'a pas à transiter par un écouteur d'évènements. Le rail vivant
    * à l'intérieur d'une section, un sélecteur de voisinage ne suffirait pas.
    */
-  html.rail-docked:has([data-services-rail]:hover) [data-services-menu] ~ *,
-  html.rail-docked:has([data-services-rail]:hover) footer {
+  html.rail-docked:has([data-services-rail]:hover) [data-services-menu] ~ * > *:not(.surface-paper-grain),
+  html.rail-docked:has([data-services-rail]:hover) footer > *:not(.surface-paper-grain) {
     opacity: 0.2;
   }
 
