@@ -65,10 +65,15 @@ const numbered = groups.map((group, index) => ({
         }
       </figure>
 
-      {/* ── Prestations : deviennent le rail de menu ───────────────────── */}
-      <nav class="services__panel surface-paper" data-services-rail aria-label="Services">
-        <div class="services__grain surface-paper-grain"></div>
-
+      {/*
+        ── Prestations : deviennent le rail de menu ─────────────────────
+        Volontairement SANS fond : la scène derrière peint déjà le papier sur
+        toute la largeur de l'écran. Un fond propre au panneau redessinerait la
+        même texture en `cover` de SA boîte — donc à une autre échelle — et
+        laisserait une couture visible à son bord droit pendant le défilement
+        horizontal. Une fois ancré, c'est la page qui fournit le papier.
+      */}
+      <nav class="services__panel" data-services-rail aria-label="Services">
         <ol class="services__groups">
           {
             numbered.map((group) => (
@@ -366,8 +371,17 @@ const numbered = groups.map((group, index) => ({
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const desktop = window.matchMedia('(min-width: 768px)');
 
-  /** Seuils de bascule, en progression. */
-  const COMPACT_AT = 0.5;
+  /**
+   * Seuils de bascule, en progression.
+   *
+   * Le compactage se déclenche tard, à l'approche du bord gauche : le menu
+   * arrive donc à sa largeur pleine et se resserre en fin de course.
+   * Il ne peut pas attendre l'ancrage lui-même — le panneau y prend d'un coup
+   * la largeur du rail, et un contenu encore large déborderait le temps de la
+   * transition. Les 20 % restants laissent à celle-ci (400 ms) le temps
+   * d'aboutir au moment où le menu touche le bord.
+   */
+  const COMPACT_AT = 0.8;
   const DOCK_AT = 0.999;
 
   for (const section of sections) {
