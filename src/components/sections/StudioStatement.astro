@@ -213,7 +213,8 @@ const figures = section.figures ?? [];
   .statement__marker {
     grid-column: 7 / span 3;
     grid-row: 1;
-    align-self: start;
+    /* Posée à mi-hauteur de la planche plutôt qu'en tête de rangée. */
+    align-self: center;
     text-align: center;
   }
 
@@ -239,7 +240,7 @@ const figures = section.figures ?? [];
     letter-spacing: var(--tracking-annotation);
     padding: 0.7em 1.4em;
     border: 1px solid var(--color-ink);
-    border-radius: 999px;
+    border-radius: 0;
     transition:
       background-color 0.3s ease,
       color 0.3s ease;

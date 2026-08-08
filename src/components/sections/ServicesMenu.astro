@@ -212,7 +212,17 @@ const numbered = groups.map((group, index) => ({
       clignote quand la souris ne fait que traverser le bord gauche de l'écran.
     */
     opacity: 0.2;
-    transition: opacity 0.6s ease-out 0.3s;
+    /*
+      La largeur se rétrécit sur la MÊME durée que celle du contenu (400 ms).
+      C'est ce qui autorise le compactage à se déclencher au moment exact de
+      l'ancrage : le panneau part de sa demi-page et reste donc plus large que
+      son contenu du premier au dernier instant, sans jamais le faire déborder.
+      Ce rétrécissement est invisible — la scène papier est encore à l'écran
+      derrière lui.
+    */
+    transition:
+      opacity 0.6s ease-out 0.3s,
+      width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* `focus-within` : au clavier aussi, le menu doit redevenir lisible. */
@@ -372,16 +382,14 @@ const numbered = groups.map((group, index) => ({
   const desktop = window.matchMedia('(min-width: 768px)');
 
   /**
-   * Seuils de bascule, en progression.
+   * Seuil unique : le menu garde sa disposition large pendant TOUT le trajet
+   * et ne se resserre qu'en touchant le bord gauche — au même instant que
+   * l'ancrage et que le passage en retrait.
    *
-   * Le compactage se déclenche tard, à l'approche du bord gauche : le menu
-   * arrive donc à sa largeur pleine et se resserre en fin de course.
-   * Il ne peut pas attendre l'ancrage lui-même — le panneau y prend d'un coup
-   * la largeur du rail, et un contenu encore large déborderait le temps de la
-   * transition. Les 20 % restants laissent à celle-ci (400 ms) le temps
-   * d'aboutir au moment où le menu touche le bord.
+   * Le panneau et son contenu se rétrécissent alors ensemble, sur la même
+   * durée (voir la transition `width` du panneau) : le panneau reste plus
+   * large que son contenu du début à la fin, et rien ne déborde.
    */
-  const COMPACT_AT = 0.8;
   const DOCK_AT = 0.999;
 
   for (const section of sections) {
@@ -427,7 +435,10 @@ const numbered = groups.map((group, index) => ({
       // 0 quand le haut de la piste touche le haut de l'écran, 1 à la fin.
       const progress = Math.min(Math.max(-rect.top / travel, 0), 1);
       section.style.setProperty('--p', progress.toFixed(4));
-      setState(progress >= COMPACT_AT, progress >= DOCK_AT);
+      // Compactage et ancrage partagent le même seuil : la disposition change
+      // au moment précis où le menu touche le bord.
+      const docked = progress >= DOCK_AT;
+      setState(docked, docked);
     };
 
     const onScroll = () => {
