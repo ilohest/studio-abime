@@ -126,6 +126,22 @@
   html.rail-docked [data-services-menu] ~ *,
   html.rail-docked footer {
     padding-left: var(--rail-width);
+    transition: opacity 0.6s ease-out 0.3s;
+  }
+
+  /**
+   * Bascule d'attention entre le menu et la page.
+   *
+   * Au repos, c'est le menu qui s'efface (règle portée par `ServicesMenu`).
+   * Dès qu'on le vise, il revient au premier plan et c'est la page qui recule.
+   *
+   * `:has()` plutôt qu'une classe posée en JS : le survol est un état purement
+   * visuel, il n'a pas à transiter par un écouteur d'évènements. Le rail vivant
+   * à l'intérieur d'une section, un sélecteur de voisinage ne suffirait pas.
+   */
+  html.rail-docked:has([data-services-rail]:hover) [data-services-menu] ~ *,
+  html.rail-docked:has([data-services-rail]:hover) footer {
+    opacity: 0.2;
   }
 
   /** Bloc sombre : inverse les rôles, tout le contenu enfant suit. */
@@ -210,7 +226,7 @@
 @utility type-declaration {
   font-family: var(--font-titre);
   font-size: clamp(1.25rem, 2.1vw, 1.9rem);
-  line-height: 1.45;
+  line-height: 1.25;
   letter-spacing: -0.01em;
   font-weight: 400;
 }

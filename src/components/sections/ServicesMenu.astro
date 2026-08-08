@@ -66,7 +66,7 @@ const numbered = groups.map((group, index) => ({
       </figure>
 
       {/* ── Prestations : deviennent le rail de menu ───────────────────── */}
-      <nav class="services__panel surface-paper" aria-label="Services">
+      <nav class="services__panel surface-paper" data-services-rail aria-label="Services">
         <div class="services__grain surface-paper-grain"></div>
 
         <ol class="services__groups">
@@ -159,6 +159,8 @@ const numbered = groups.map((group, index) => ({
     z-index: 2;
     display: flex;
     align-items: center;
+    /* Le bloc de prestations est centré dans la demi-page de droite. */
+    justify-content: center;
     height: 100%;
     width: 50%;
     padding: 3rem clamp(1.25rem, 3vw, 3rem);
@@ -190,6 +192,19 @@ const numbered = groups.map((group, index) => ({
     transform: none;
     /* Menu plus haut que l'écran : il défile seul, sans bloquer la page. */
     overflow-y: auto;
+    /*
+      Une fois devenu menu, le rail s'efface pour laisser la page respirer, et
+      revient au premier plan dès qu'on le vise. Le délai évite qu'il ne
+      clignote quand la souris ne fait que traverser le bord gauche de l'écran.
+    */
+    opacity: 0.2;
+    transition: opacity 0.6s ease-out 0.3s;
+  }
+
+  /* `focus-within` : au clavier aussi, le menu doit redevenir lisible. */
+  .services[data-docked] .services__panel:hover,
+  .services[data-docked] .services__panel:focus-within {
+    opacity: 1;
   }
 
   .services__groups {
@@ -197,7 +212,8 @@ const numbered = groups.map((group, index) => ({
     flex-direction: column;
     gap: clamp(2.5rem, 6vh, 4.5rem);
     width: 100%;
-    max-width: none;
+    /* Largeur bornée : c'est elle qui rend le centrage horizontal visible. */
+    max-width: 32rem;
     position: relative;
     z-index: 1;
     /*

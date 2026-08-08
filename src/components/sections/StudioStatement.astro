@@ -26,18 +26,21 @@ const figures = section.figures ?? [];
   <div class="statement__grain surface-paper-grain"></div>
 
   <div class="statement__inner">
-    {/* ── Déclaration ─────────────────────────────────────────────────── */}
-    <p class="type-declaration statement__text">{section.statement}</p>
+    {/*
+      Déclaration et note partagent un même conteneur : c'est ce qui garantit
+      que leurs bords gauches coïncident, quelles que soient leurs largeurs
+      de composition respectives.
+    */}
+    <div class="statement__lede">
+      <p class="type-declaration statement__text">{section.statement}</p>
 
-    {/* ── Note ────────────────────────────────────────────────────────── */}
-    {
-      section.note && (
+      {section.note && (
         <p class="statement__note">
           {section.noteNumber && <span class="statement__ref">{section.noteNumber}</span>}
           <span class="type-note">{section.note}</span>
         </p>
-      )
-    }
+      )}
+    </div>
 
     {/* ── Planche de figures ──────────────────────────────────────────── */}
     {
@@ -115,17 +118,25 @@ const figures = section.figures ?? [];
     padding-inline: clamp(1.5rem, 4vw, 4rem);
   }
 
-  .statement__text {
-    max-width: 56ch;
+  .statement__lede {
+    max-width: 52rem;
     margin-inline: auto;
-    text-align: justify;
+  }
+
+  .statement__text {
     /* Retrait de première ligne : reprend la mise en page d'un texte imprimé. */
     text-indent: 3em;
   }
 
+  /*
+    Largeur volontairement plus étroite que la déclaration, pour que la note
+    tienne sur deux lignes. `balance` répartit ensuite les mots entre elles
+    plutôt que de laisser une seconde ligne orpheline.
+  */
   .statement__note {
-    max-width: 56ch;
-    margin: clamp(1.5rem, 4vh, 3rem) auto 0;
+    max-width: 34rem;
+    margin-top: clamp(1.5rem, 4vh, 3rem);
+    text-wrap: balance;
   }
 
   /* Référence de figure : la seule occurrence de l'italique dans ce bloc. */
