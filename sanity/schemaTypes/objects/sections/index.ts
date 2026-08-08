@@ -3,6 +3,7 @@ import { defineArrayMember, defineField } from 'sanity';
 import { manifestoHero } from './manifestoHero';
 import { servicesMenu } from './servicesMenu';
 import { studioStatement } from './studioStatement';
+import { pullQuote } from './pullQuote';
 import { heroSection } from './heroSection';
 import { richTextSection } from './richTextSection';
 import { mediaSection } from './mediaSection';
@@ -13,6 +14,7 @@ export const sectionTypes = [
   manifestoHero,
   servicesMenu,
   studioStatement,
+  pullQuote,
   heroSection,
   richTextSection,
   mediaSection,

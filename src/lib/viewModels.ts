@@ -14,11 +14,13 @@ import type { CategorySummary, ProjectCard } from './sanity/types';
  */
 export interface ProjectCardView {
   id: string;
+  number: string;
   title: string;
   href: string;
   client: string | null;
   year: number | null;
   excerpt: string | null;
+  facts: Array<{ key: string; label: string; value: string }>;
   /** Clés de catégories — base du filtrage côté client. */
   categoryKeys: string[];
   image: {
@@ -37,18 +39,58 @@ export interface CategoryView {
   count: number;
 }
 
-export function toProjectCardView(card: ProjectCard, locale: Locale): ProjectCardView {
+/**
+ * Positions des respirations graphiques dans la grille.
+ *
+ * La distribution semble aléatoire, mais reste stable pour une même liste :
+ * aucun saut au moment où Vue hydrate le HTML rendu par Astro.
+ */
+export function getProjectSpacerPositions(ids: string[]): number[] {
+  if (ids.length < 3) return [];
+
+  const wanted = Math.max(1, Math.floor(ids.length / 5));
+  const seed = ids.join('|');
+  const hash = (value: string) => {
+    let result = 2166136261;
+    for (let index = 0; index < value.length; index += 1) {
+      result ^= value.charCodeAt(index);
+      result = Math.imul(result, 16777619);
+    }
+    return result >>> 0;
+  };
+
+  const candidates = Array.from({ length: ids.length - 1 }, (_, index) => index)
+    .sort((a, b) => hash(`${seed}:${a}`) - hash(`${seed}:${b}`));
+  const selected: number[] = [];
+
+  for (const position of candidates) {
+    if (selected.some((current) => Math.abs(current - position) <= 1)) continue;
+    selected.push(position);
+    if (selected.length === wanted) break;
+  }
+
+  return selected.sort((a, b) => a - b);
+}
+
+export function toProjectCardView(card: ProjectCard, locale: Locale, index = 0): ProjectCardView {
   // La vignette prime ; à défaut on retombe sur la couverture du projet.
   const source = card.thumbnail?.asset ? card.thumbnail : card.coverImage;
   const image = resolveImage(source, { width: 900, ratio: 'portrait' });
 
   return {
     id: card._id,
+    number: `[${String(index + 1).padStart(2, '0')}]`,
     title: card.title,
     href: projectPath(locale, card.slug),
     client: card.client ?? null,
     year: card.year ?? null,
     excerpt: card.excerpt ?? null,
+    facts: (card.listingFacts ?? [])
+      .filter((fact): fact is typeof fact & { label: string; value: string } =>
+        Boolean(fact.label?.trim() && fact.value?.trim()),
+      )
+      .slice(0, 5)
+      .map((fact) => ({ key: fact._key, label: fact.label.trim(), value: fact.value.trim() })),
     categoryKeys: (card.categories ?? []).map((category) => category.key).filter(Boolean),
     image: image ? { ...image, alt: image.alt || card.title, lqip: image.lqip ?? null } : null,
   };

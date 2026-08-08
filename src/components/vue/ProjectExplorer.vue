@@ -14,7 +14,7 @@
  * sélection reste partageable et le retour arrière du navigateur fonctionne.
  */
 import { computed, onMounted, ref, watch } from 'vue';
-import type { CategoryView, ProjectCardView } from '~/lib/viewModels';
+import { getProjectSpacerPositions, type CategoryView, type ProjectCardView } from '~/lib/viewModels';
 
 const props = defineProps<{
   projects: ProjectCardView[];
@@ -39,6 +39,23 @@ const filteredProjects = computed(() =>
     ? props.projects
     : props.projects.filter((project) => project.categoryKeys.includes(activeKey.value)),
 );
+
+type CatalogItem =
+  | { kind: 'project'; key: string; project: ProjectCardView }
+  | { kind: 'spacer'; key: string };
+
+const catalogItems = computed<CatalogItem[]>(() => {
+  const spacers = new Set(
+    getProjectSpacerPositions(filteredProjects.value.map((project) => project.id)),
+  );
+
+  return filteredProjects.value.flatMap((project, index) => [
+    { kind: 'project' as const, key: `project-${project.id}`, project },
+    ...(spacers.has(index)
+      ? [{ kind: 'spacer' as const, key: `spacer-${project.id}` }]
+      : []),
+  ]);
+});
 
 /** Restaure le filtre depuis l'URL au montage (lien partagé, retour arrière). */
 onMounted(() => {
@@ -108,43 +125,97 @@ function isActive(key: string) {
 
     <!-- Grille -->
     <TransitionGroup
+      v-if="filteredProjects.length > 0"
       tag="ul"
       name="project"
-      class="mt-8 grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3"
+      class="project-catalog-grid mt-8"
     >
-      <li v-for="project in filteredProjects" :key="project.id" class="project-item">
-        <a :href="project.href" class="group block">
-          <div class="overflow-hidden bg-sable">
+      <li
+        v-for="item in catalogItems"
+        :key="item.key"
+        class="project-item project-catalog-item"
+        :aria-hidden="item.kind === 'spacer' ? 'true' : undefined"
+      >
+        <div v-if="item.kind === 'spacer'" class="project-catalog-card project-catalog-spacer">
+          <span class="project-catalog-diagonal"></span>
+        </div>
+
+        <a v-else :href="item.project.href" class="project-catalog-card group">
+          <header class="project-catalog-heading">
+            <span class="project-catalog-number">{{ item.project.number }}</span>
+            <h3>{{ item.project.title }}</h3>
+          </header>
+
+          <div class="project-catalog-media">
             <img
-              v-if="project.image"
-              :src="project.image.src"
-              :srcset="project.image.srcset"
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              :width="project.image.width"
-              :height="project.image.height"
-              :alt="project.image.alt"
+              v-if="item.project.image"
+              :src="item.project.image.src"
+              :srcset="item.project.image.srcset"
+              sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
+              :width="item.project.image.width"
+              :height="item.project.image.height"
+              :alt="item.project.image.alt"
               loading="lazy"
               decoding="async"
-              class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+              class="project-catalog-image"
             />
           </div>
 
-          <h3 class="type-sous-titre mt-4">{{ project.title }}</h3>
+          <dl v-if="item.project.facts.length > 0" class="project-catalog-facts">
+            <div v-for="fact in item.project.facts" :key="fact.key">
+              <dt>{{ fact.label }}</dt>
+              <dd>{{ fact.value }}</dd>
+            </div>
+          </dl>
 
-          <p v-if="project.client || project.year" class="type-annotation mt-1 text-muted">
-            <span v-if="project.client">{{ project.client }}</span>
-            <span v-if="project.client && project.year"> — </span>
-            <span v-if="project.year">{{ project.year }}</span>
-          </p>
+          <p v-if="item.project.excerpt" class="project-catalog-copy">{{ item.project.excerpt }}</p>
 
           <span class="sr-only">{{ labels.viewProject }}</span>
         </a>
       </li>
     </TransitionGroup>
 
-    <p v-if="filteredProjects.length === 0" class="type-copy mt-12 text-muted">
-      {{ labels.empty }}
-    </p>
+    <ul v-else class="project-catalog-grid mt-8">
+      <li class="project-catalog-item">
+        <div class="project-catalog-card project-catalog-empty project-catalog-state-card" role="status">
+          <span class="project-catalog-number">[01]</span>
+          <p>{{ labels.empty }}</p>
+        </div>
+      </li>
+
+      <li class="project-catalog-item" aria-hidden="true">
+        <div class="project-catalog-card project-catalog-spacer project-catalog-state-card">
+          <span class="project-catalog-number">[02]</span>
+          <span class="project-catalog-diagonal"></span>
+        </div>
+      </li>
+
+      <li class="project-catalog-item" aria-hidden="true">
+        <div class="project-catalog-card project-catalog-state-card project-catalog-state-image-card">
+          <span class="project-catalog-number">[03]</span>
+          <div class="project-catalog-state-media">
+            <img
+              src="/media/studio-abime-fond-irise.jpg"
+              width="1240"
+              height="2048"
+              alt=""
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </div>
+      </li>
+
+      <li class="project-catalog-item">
+        <div class="project-catalog-card project-catalog-state-card project-catalog-state-quote">
+          <span class="project-catalog-number">[04]</span>
+          <p>
+            Communicare : mettre en commun. Relier. C’est le geste le plus ancien, celui qui nous a faits
+            humains. À force de tout diffuser, en a-t-on oublié le sens ?
+          </p>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 

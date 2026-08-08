@@ -34,9 +34,7 @@ const year = new Date().getFullYear();
 const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
 ---
 
-<footer class="surface-paper">
-  <div class="surface-paper-grain"></div>
-
+<footer>
   <div
     class="relative z-10 grid grid-cols-1 gap-12 px-6 py-14 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-16 md:px-10"
   >
@@ -100,7 +98,7 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
     </div>
 
     {/* ── Colonne de droite : la marque ────────────────────────────────── */}
-    <div class="w-full max-w-[22rem] md:w-[22rem] md:justify-self-end">
+    <div class="w-full max-w-[30rem] md:w-[30rem] md:justify-self-end">
       <Wordmark class="text-ink" title={null} />
     </div>
   </div>

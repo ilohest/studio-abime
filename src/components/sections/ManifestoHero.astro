@@ -68,42 +68,42 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
   </div>
 
   <div
-    class="relative z-10 grid flex-1 grid-cols-1 gap-x-12 gap-y-12 px-6 py-10 md:grid-cols-2 md:gap-y-16 md:px-10 md:py-16"
+    class="manifesto-layout relative z-10 grid flex-1 grid-cols-1 gap-x-12 gap-y-12 px-6 py-10 md:grid-cols-2 md:gap-y-16 md:px-10 md:py-16"
   >
+    {
+      metaLines.length > 0 && (
+        <dl class="manifesto-meta type-note text-ink">
+          {metaLines.map((line) => (
+            <div class="flex gap-1">
+              <dt>{line.label} :</dt>
+              <dd>
+                {line.href ? (
+                  <a href={line.href} class="underline-offset-2 hover:underline">
+                    {line.value}
+                  </a>
+                ) : (
+                  line.value
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )
+    }
+
     {/*
       ── Page de gauche ────────────────────────────────────────────────
       En mobile la double page s'effondre en colonne unique : la marque
       passe alors en premier (`order`), pour que le logo reste au-dessus de
       la ligne de flottaison plutôt que rejeté après le manifeste.
     */}
-    <div class="order-2 flex flex-col justify-between md:order-1">
-      {
-        metaLines.length > 0 && (
-          <dl class="type-note text-ink">
-            {metaLines.map((line) => (
-              <div class="flex gap-1">
-                <dt>{line.label} :</dt>
-                <dd>
-                  {line.href ? (
-                    <a href={line.href} class="underline-offset-2 hover:underline">
-                      {line.value}
-                    </a>
-                  ) : (
-                    line.value
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )
-      }
-
+    <div class="manifesto-left-page order-2 flex flex-col justify-between md:order-1">
       {/*
         Les décalages sont en MARGE et non en padding : `max-width` étant en
         border-box, un padding en % rognerait la largeur du texte et changerait
         les retours à la ligne du bloc.
       */}
-      <div class="mt-10 flex flex-col gap-10 md:mt-0 md:gap-14">
+      <div class="manifesto-notes mt-10 flex flex-col gap-10 md:mt-0 md:gap-14">
         {
           section.hypothesis && (
             <p class="type-note max-w-[34ch] md:ml-[16%]">
@@ -114,11 +114,19 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
         }
 
         {
+          section.showStamp !== false && (
+            <div class="manifesto-stamp-mobile ml-auto mr-2 md:hidden">
+              <Stamp variant="labo" class="w-24 text-ink" rotate={-8} />
+            </div>
+          )
+        }
+
+        {
           (section.intention?.length ?? 0) > 0 && (
-            <div class="max-w-[34ch] md:mt-12 md:ml-[56%]">
+            <div class="manifesto-intention md:mt-12 md:ml-[56%] md:max-w-[34ch]">
               <p class="type-note uppercase">{section.intentionLabel ?? 'Note d’intention'} :</p>
 
-              <div class="mt-6 flex flex-col gap-4">
+              <div class="mt-2 flex flex-col gap-2 md:mt-6 md:gap-4">
                 {section.intention?.map((paragraph) => (
                   <p class="type-note">{paragraph}</p>
                 ))}
@@ -130,7 +138,7 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
 
       {
         section.showStamp !== false && (
-          <div class="mt-10 md:mt-0">
+          <div class="mt-10 hidden md:mt-0 md:block">
             <Stamp variant="labo" class="w-20 text-ink md:w-28" rotate={-8} />
           </div>
         )
@@ -139,7 +147,7 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
 
     {/* ── Page de droite ──────────────────────────────────────────────── */}
     <div
-      class="order-1 flex flex-col justify-center gap-10 md:order-2 md:justify-between md:gap-16 md:py-[12%]"
+      class="manifesto-brand-page order-1 flex flex-col justify-center gap-10 md:order-2 md:justify-between md:gap-16 md:py-[12%]"
     >
       <div class="flex flex-1 items-center justify-center">
         <h1 class="w-full max-w-[30rem]">
@@ -194,6 +202,55 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
   @media (max-width: 767px) {
     .manifesto-fold {
       display: none;
+    }
+
+    .manifesto-layout {
+      padding-top: 1.25rem;
+      padding-inline: 1.25rem;
+    }
+
+    .manifesto-meta {
+      order: 0;
+      max-width: calc(100% - 6rem);
+    }
+
+    .manifesto-brand-page {
+      padding-top: 2rem;
+    }
+
+    .manifesto-notes {
+      gap: 0;
+      min-height: 12.375rem;
+    }
+
+    .manifesto-intention {
+      position: absolute;
+      right: 1.25rem;
+      bottom: 0.5rem;
+      left: 2.25rem;
+      max-width: none;
+    }
+
+    .manifesto-stamp-mobile {
+      position: relative;
+      z-index: 1;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .manifesto-meta,
+    .manifesto-left-page {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .manifesto-left-page {
+      padding-top: 12rem;
+    }
+
+    .manifesto-brand-page {
+      grid-column: 2;
+      grid-row: 1;
     }
   }
 </style>

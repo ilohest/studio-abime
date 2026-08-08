@@ -114,6 +114,13 @@ export interface StudioStatement extends SectionBase {
   }>;
 }
 
+export interface PullQuote extends SectionBase {
+  _type: 'pullQuote';
+  text: string;
+  measure?: 'narrow' | 'default' | 'wide';
+  fullHeight?: boolean;
+}
+
 export interface HeroSection extends SectionBase {
   _type: 'heroSection';
   heading: string;
@@ -162,6 +169,7 @@ export type Section =
   | ManifestoHero
   | ServicesMenu
   | StudioStatement
+  | PullQuote
   | HeroSection
   | RichTextSection
   | MediaSection
@@ -187,6 +195,7 @@ export interface ProjectCard {
   client?: string;
   year?: number;
   excerpt?: string;
+  listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   thumbnail?: SanityImage | null;
   coverImage?: SanityImage | null;
   categories: CategorySummary[];
@@ -216,6 +225,7 @@ export interface Project {
   year?: number;
   excerpt?: string;
   services?: string[];
+  listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   coverImage?: SanityImage;
   thumbnail?: SanityImage;
   categories: CategorySummary[];

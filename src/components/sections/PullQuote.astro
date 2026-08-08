@@ -1,0 +1,302 @@
+---
+import type { PullQuote } from '~/lib/sanity/types';
+
+interface Props {
+  section: PullQuote;
+}
+
+const { section } = Astro.props;
+const measure = section.measure ?? 'narrow';
+
+let charIndex = 0;
+const textLines = section.text.split(/\n+/).map((line) => ({
+  segments: line
+    .trim()
+    .split(/(\s+)/)
+    .filter(Boolean)
+    .map((value) => {
+      const isWhitespace = /^\s+$/.test(value);
+
+      return {
+        value,
+        isWhitespace,
+        chars: isWhitespace
+          ? []
+          : Array.from(value).map((char) => ({ char, index: charIndex++ })),
+      };
+    }),
+}));
+---
+
+<section
+  class="pull-quote surface-paper"
+  data-letter-reveal
+  data-measure={measure}
+  data-full-height={section.fullHeight !== false ? '' : undefined}
+>
+  <div class="pull-quote__grain surface-paper-grain"></div>
+
+  <div class="pull-quote__inner">
+    <blockquote class="pull-quote__text" aria-label={section.text}>
+      <span aria-hidden="true">
+        {
+          textLines.map((line, lineIndex) => (
+            <>
+              <span class="pull-quote__line">
+                {line.segments.map((segment) =>
+                  segment.isWhitespace ? (
+                    segment.value
+                  ) : (
+                    <span class="pull-quote__word">
+                      {segment.chars.map(({ char, index }) => (
+                        <span class="pull-quote__char" data-char={char} data-char-index={index}>
+                          {char}
+                        </span>
+                      ))}
+                    </span>
+                  ),
+                )}
+              </span>
+              {lineIndex < textLines.length - 1 && ' '}
+            </>
+          ))
+        }
+      </span>
+    </blockquote>
+  </div>
+</section>
+
+<style>
+  .pull-quote {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding-block: clamp(5rem, 12vh, 9rem);
+  }
+
+  .pull-quote[data-full-height] {
+    min-height: 100svh;
+  }
+
+  .pull-quote__grain {
+    z-index: 0;
+  }
+
+  .pull-quote__inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: clamp(1.5rem, 4vw, 4rem);
+  }
+
+  .pull-quote[data-measure='narrow'] .pull-quote__inner {
+    max-width: 52rem;
+  }
+
+  .pull-quote[data-measure='default'] .pull-quote__inner {
+    max-width: 64rem;
+  }
+
+  .pull-quote[data-measure='wide'] .pull-quote__inner {
+    max-width: none;
+  }
+
+  .pull-quote__text {
+    font-family: var(--font-titre);
+    font-size: clamp(1.7rem, 4.15vw, 4.35rem);
+    font-weight: 400;
+    line-height: 1.07;
+    letter-spacing: -0.035em;
+    text-align: left;
+  }
+
+  /*
+    Composition volontairement irrégulière : chaque ligne reste centrée sur
+    le même axe, puis glisse légèrement à gauche ou à droite. Les amplitudes
+    restent modestes pour conserver une lecture continue.
+  */
+  .pull-quote__line {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin-inline: auto;
+    transform: translateX(var(--line-offset, 0));
+  }
+
+  .pull-quote__line:nth-child(10n + 1) {
+    /* Première ligne volontairement rentrée, comme une ouverture de paragraphe. */
+    --line-offset: 4vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 2) {
+    --line-offset: -5vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 3) {
+    --line-offset: -3vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 4) {
+    --line-offset: -5vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 5) {
+    --line-offset: -8vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 6) {
+    --line-offset: -2vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 7) {
+    --line-offset: -11vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 8) {
+    --line-offset: -3vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 9) {
+    --line-offset: -18vw;
+  }
+
+  .pull-quote__line:nth-child(10n + 10) {
+    --line-offset: -1vw;
+  }
+
+  /*
+    Les mots restent d'un seul tenant : seules les coupures naturelles entre
+    eux servent au retour à la ligne, comme sur la référence éditoriale.
+  */
+  .pull-quote__word,
+  .pull-quote__char {
+    display: inline-block;
+    /* Le retrait appartient au paragraphe, jamais aux fragments internes. */
+    text-indent: 0;
+  }
+
+  .pull-quote__word {
+    white-space: nowrap;
+  }
+
+  .pull-quote__char {
+    position: relative;
+    color: var(--color-ink);
+  }
+
+  /*
+    Amélioration progressive : sans JavaScript, le texte reste Encre. Le fond
+    Sable n'est activé qu'une fois la progression de scroll initialisée.
+  */
+  .pull-quote[data-reveal-ready] .pull-quote__char {
+    color: var(--color-sable);
+  }
+
+  .pull-quote__char::after {
+    content: attr(data-char);
+    position: absolute;
+    inset: 0;
+    color: var(--color-ink);
+    opacity: var(--char-reveal, 0);
+    pointer-events: none;
+  }
+
+  @media (max-width: 767px) {
+    .pull-quote {
+      min-height: auto;
+      padding-block: clamp(5rem, 15vh, 8rem);
+    }
+
+    .pull-quote__text {
+      font-size: clamp(1.65rem, 7.8vw, 2.45rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      text-indent: 2em;
+    }
+
+    .pull-quote__line {
+      display: inline;
+      width: auto;
+      max-width: none;
+      margin: 0;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const revealSections = document.querySelectorAll<HTMLElement>('[data-letter-reveal]');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  type RevealSection = {
+    section: HTMLElement;
+    text: HTMLElement;
+    chars: HTMLElement[];
+  };
+
+  const reveals: RevealSection[] = Array.from(revealSections).flatMap((section) => {
+    const text = section.querySelector<HTMLElement>('.pull-quote__text');
+    if (!text) return [];
+
+    return [
+      {
+        section,
+        text,
+        chars: Array.from(section.querySelectorAll<HTMLElement>('[data-char-index]')),
+      },
+    ];
+  });
+
+  let ticking = false;
+
+  const setProgress = ({ chars }: RevealSection, progress: number) => {
+    const sweep = progress * chars.length;
+
+    chars.forEach((char, index) => {
+      const reveal = Math.min(Math.max(sweep - index, 0), 1);
+      char.style.setProperty('--char-reveal', reveal.toFixed(3));
+    });
+  };
+
+  const update = () => {
+    ticking = false;
+
+    for (const reveal of reveals) {
+      reveal.section.toggleAttribute('data-reveal-ready', !reducedMotion.matches);
+
+      if (reducedMotion.matches) {
+        setProgress(reveal, 1);
+        continue;
+      }
+
+      /* Le déclencheur suit le texte, pas la section pleine hauteur autour. */
+      const top = reveal.text.getBoundingClientRect().top;
+      const viewport = window.innerHeight;
+
+      /*
+        La lecture commence quand le bloc entre par le bas (93 % de l'écran)
+        et se déploie jusqu'à 15 % : cette plage plus longue laisse chaque
+        lettre respirer sans retarder l'apparition du premier mot.
+      */
+      const start = viewport * 0.93;
+      const end = viewport * 0.15;
+      const progress = Math.min(Math.max((start - top) / (start - end), 0), 1);
+
+      setProgress(reveal, progress);
+    }
+  };
+
+  const requestUpdate = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  };
+
+  window.addEventListener('scroll', requestUpdate, { passive: true });
+  window.addEventListener('resize', requestUpdate, { passive: true });
+  reducedMotion.addEventListener('change', requestUpdate);
+  update();
+</script>

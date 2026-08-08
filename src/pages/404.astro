@@ -3,30 +3,288 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
 import { getSiteContext } from '~/lib/siteContext';
 import { defaultLocale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
-import { useTranslations } from '~/i18n/ui';
 
-/**
- * Page 404 — toujours pré-rendue, même en mode édition visuelle : elle doit
- * rester servable quand tout le reste échoue.
- */
+/** La 404 reste pre-rendue pour etre disponible independamment du CMS. */
 export const prerender = true;
+
+/** La prévisualisation directe et toute réécriture vers cette page restent de vraies 404 HTTP. */
+Astro.response.status = 404;
 
 const locale = defaultLocale;
 const site = await getSiteContext(locale);
-const t = useTranslations(locale);
+const homeHref = localizedPath(locale);
+
+const phrases = [
+  'On a plongé trop loin. La page reste introuvable.',
+  'Pièce manquante n° 404. Rien ne disparaît vraiment.',
+  'Dans les archives du visible, nous cherchons le chemin.',
+  "Ce qui n'est pas encore visible existe déjà.",
+];
+const canvasCopy = phrases.join(' ');
 ---
 
-<BaseLayout locale={locale} site={site} title={t('error.notFound.title')}>
-  <div class="container-content flex min-h-[60vh] flex-col justify-center py-(--spacing-section)">
-    <p class="type-sous-titre text-muted">404</p>
-    <h1 class="type-titre mt-4">{t('error.notFound.title')}</h1>
-    <p class="type-copy mt-6">{t('error.notFound.body')}</p>
+<BaseLayout
+  locale={locale}
+  site={site}
+  title="Page introuvable - Studio Abîme"
+  bodyClass="page-404"
+  hideFooter
+>
+  <section class="error-page" aria-labelledby="error-title">
+    <div class="paper-grain" aria-hidden="true"></div>
 
-    <a
-      href={localizedPath(locale)}
-      class="type-sous-titre mt-10 inline-block self-start border-b border-current pb-1 hover:opacity-60"
-    >
-      {t('error.backHome')}
-    </a>
-  </div>
+    <div class="accessible-copy">
+      <h1 id="error-title">Page introuvable.</h1>
+      <p>
+        Pièce manquante numéro 404. Nous avons plongé trop loin dans les archives du
+        visible. Rien ne disparaît vraiment : remontez à la surface pour retrouver le chemin.
+      </p>
+    </div>
+
+    <div class="error-content">
+      <canvas class="text-canvas" data-error-text data-copy={canvasCopy} aria-hidden="true"></canvas>
+
+      <figure class="video-stage">
+        <video
+          class="error-video"
+          src="/media/studio-abime-404.mp4"
+          poster="/media/studio-abime-404-poster.jpg"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          aria-label="Collage animé de l'univers visuel de Studio Abîme"
+        ></video>
+        <figcaption class="video-caption">
+          <span class="video-ref">fig.404</span>
+          La trace d'une page qui n'est plus ici
+        </figcaption>
+      </figure>
+
+      <div class="return-action">
+        <a class="button-outline" href={homeHref}>Remonter à la surface →</a>
+      </div>
+    </div>
+  </section>
 </BaseLayout>
+
+<style>
+  :global(body.page-404) {
+    overflow-x: hidden;
+  }
+
+  .error-page {
+    position: relative;
+    isolation: isolate;
+    min-height: 100svh;
+    overflow: hidden;
+    background: var(--color-papier);
+    color: var(--color-abime);
+    font-family: var(--font-titre);
+  }
+
+  .paper-grain {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background-image: var(--paper-texture, url('/textures/papier-froisse.jpg'));
+    background-position: center;
+    background-size: cover;
+    mix-blend-mode: multiply;
+    opacity: 0.28;
+    pointer-events: none;
+  }
+
+  .accessible-copy {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .error-content {
+    --error-font-size: 1rem;
+    position: relative;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+  .text-canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    font-size: var(--error-font-size);
+    pointer-events: none;
+  }
+
+  .video-stage {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    top: 21svh;
+    left: 50%;
+    width: 25rem;
+    max-width: calc(100% - 2rem);
+    height: 58svh;
+    flex-direction: column;
+    margin: 0;
+    padding: clamp(0.4rem, 0.8vw, 0.7rem);
+    transform: translateX(-50%);
+    background: var(--color-papier);
+    box-shadow: 0 1.4rem 4rem rgb(45 42 41 / 16%);
+  }
+
+  .error-video {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+    background: var(--color-sable);
+    object-fit: cover;
+  }
+
+  .video-caption {
+    flex: 0 0 auto;
+    min-height: 1.75rem;
+    padding-top: 0.55rem;
+    background: var(--color-papier);
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    font-size: 0.7rem;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .video-ref {
+    margin-inline-end: 0.45em;
+  }
+
+  .return-action {
+    position: absolute;
+    z-index: 3;
+    right: clamp(1rem, 3vw, 2.25rem);
+    bottom: clamp(1rem, 3vw, 2.25rem);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 767px) {
+    .error-content {
+      --error-font-size: 0.64rem;
+    }
+
+    .video-stage {
+      top: 22svh;
+      width: 17rem;
+      max-width: calc(100% - 1rem);
+      height: 56svh;
+      padding: 0.35rem;
+    }
+
+    .video-caption {
+      min-height: 1.6rem;
+      padding-top: 0.4rem;
+      font-size: 0.56rem;
+    }
+
+    .return-action {
+      right: 0.75rem;
+      bottom: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  const canvases = document.querySelectorAll<HTMLCanvasElement>('[data-error-text]');
+
+  for (const canvas of canvases) {
+    const content = canvas.closest<HTMLElement>('.error-content');
+    const figure = content?.querySelector<HTMLElement>('.video-stage');
+    const copy = canvas.dataset.copy?.trim();
+    if (!content || !figure || !copy) continue;
+
+    const words = copy.split(/\s+/);
+
+    const draw = () => {
+      const width = content.clientWidth;
+      const height = content.clientHeight;
+      if (!width || !height) return;
+
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.scale(ratio, ratio);
+      context.clearRect(0, 0, width, height);
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const styles = getComputedStyle(content);
+      // Une variable CSS conserve son unité (`1rem`) dans getPropertyValue().
+      // La taille calculée du canvas est en pixels et peut donc être utilisée
+      // directement par l'API 2D, indépendamment du DPR.
+      const fontSize = Number.parseFloat(getComputedStyle(canvas).fontSize) || 16;
+      const lineHeight = fontSize * 1.24;
+      context.font = `400 ${fontSize}px "GT Canon Mono", ui-monospace, monospace`;
+      context.fillStyle = styles.getPropertyValue('--color-ink').trim() || '#2d2a29';
+      context.textBaseline = 'alphabetic';
+
+      const contentRect = content.getBoundingClientRect();
+      const figureRect = figure.getBoundingClientRect();
+      const gutter = Math.max(8, fontSize * 0.7);
+      const exclusion = {
+        top: figureRect.top - contentRect.top - gutter,
+        right: figureRect.right - contentRect.left + gutter,
+        bottom: figureRect.bottom - contentRect.top + gutter,
+        left: figureRect.left - contentRect.left - gutter,
+      };
+
+      let wordIndex = 0;
+      for (let baseline = fontSize; baseline <= height + lineHeight; baseline += lineHeight) {
+        const intersectsFigure = baseline >= exclusion.top && baseline <= exclusion.bottom;
+        const segments: Array<[number, number]> = intersectsFigure
+          ? [[0, Math.max(0, exclusion.left)], [Math.min(width, exclusion.right), width]]
+          : [[0, width]];
+
+        for (const [start, end] of segments) {
+          if (end - start < fontSize) continue;
+          let x = start;
+
+          while (x < end) {
+            const word = words[wordIndex % words.length];
+            const token = `${x === start ? '' : ' '}${word}`;
+            const tokenWidth = context.measureText(token).width;
+            if (x + tokenWidth > end) break;
+
+            context.fillText(token, x, baseline);
+            x += tokenWidth;
+            wordIndex += 1;
+          }
+        }
+      }
+    };
+
+    let animationFrame = 0;
+    const scheduleDraw = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(draw);
+    };
+
+    document.fonts.ready.then(scheduleDraw);
+    const observer = new ResizeObserver(scheduleDraw);
+    observer.observe(content);
+    observer.observe(figure);
+    window.addEventListener('resize', scheduleDraw, { passive: true });
+    window.visualViewport?.addEventListener('resize', scheduleDraw, { passive: true });
+  }
+</script>

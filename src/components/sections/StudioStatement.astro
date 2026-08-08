@@ -22,100 +22,164 @@ const { section, locale } = Astro.props;
 const figures = section.figures ?? [];
 ---
 
-<section class="statement surface-paper">
-  <div class="statement__grain surface-paper-grain"></div>
+<section class="statement" data-statement-intro>
+  <div class="statement__intro-runway">
+    <div class="statement__intro-stage">
+      <div class="statement__inner statement__scene">
+        <div class="statement__text-slot">
+          {/*
+            Déclaration et note partagent un même conteneur : leurs bords
+            gauches restent alignés, quelle que soit la largeur de composition.
+          */}
+          <div class="statement__lede">
+            <p class="type-declaration statement__text">{section.statement}</p>
 
-  <div class="statement__inner">
-    {/*
-      Déclaration et note partagent un même conteneur : c'est ce qui garantit
-      que leurs bords gauches coïncident, quelles que soient leurs largeurs
-      de composition respectives.
-    */}
-    <div class="statement__lede">
-      <p class="type-declaration statement__text">{section.statement}</p>
-
-      {section.note && (
-        <p class="statement__note">
-          {section.noteNumber && <span class="statement__ref">{section.noteNumber}</span>}
-          <span class="type-note">{section.note}</span>
-        </p>
-      )}
-    </div>
-
-    {/* ── Planche de figures ──────────────────────────────────────────── */}
-    {
-      figures.length > 0 && (
-        <div class="statement__plate">
-          {figures.map((figure) => (
-            <figure
-              class="statement__figure"
-              data-bleed={figure.bleed ?? 'none'}
-              data-push={figure.pushRight ? '' : undefined}
-              style={`--span:${Math.min(Math.max(figure.span ?? 3, 1), 12)}`}
-            >
-              {figure.image?.asset ? (
-                <SanityImage
-                  image={figure.image}
-                  width={900}
-                  sizes="(min-width: 768px) 25vw, 80vw"
-                  class="statement__image"
-                />
-              ) : (
-                figure.fallbackImage && (
-                  /*
-                    `alt` vide : la légende adjacente porte déjà la référence,
-                    la répéter ici la ferait entendre deux fois aux lecteurs
-                    d'écran. Les visuels venus du CMS utilisent, eux, leur
-                    propre champ « texte alternatif ».
-                  */
-                  <Image
-                    src={figure.fallbackImage}
-                    alt=""
-                    widths={[400, 900]}
-                    sizes="(min-width: 768px) 25vw, 80vw"
-                    loading="lazy"
-                    class="statement__image"
-                  />
-                )
-              )}
-
-              {(figure.number || figure.caption) && (
-                <figcaption class="statement__caption">
-                  {figure.number && <span class="statement__ref">{figure.number}</span>}
-                  {figure.caption}
-                </figcaption>
-              )}
-            </figure>
-          ))}
-
-          {section.marker && <p class="type-note statement__marker">{section.marker}</p>}
-
-          {/* Placé dans la planche pour venir sous la dernière figure. */}
-          <div class="statement__actions">
-            <SmartLink link={section.cta} locale={locale} />
+            {section.note && (
+              <p class="statement__note">
+                {section.noteNumber && (
+                  <span class="statement__ref">{section.noteNumber}</span>
+                )}
+                <span class="statement__note-text">{section.note}</span>
+              </p>
+            )}
           </div>
         </div>
-      )
-    }
+
+        <div class="statement__body">
+          {/* ── Planche de figures ────────────────────────────────────── */}
+          {
+            figures.length > 0 && (
+              <div class="statement__plate">
+                {figures.map((figure) => (
+                  <figure
+                    class="statement__figure"
+                    data-bleed={figure.bleed ?? 'none'}
+                    data-push={figure.pushRight ? '' : undefined}
+                    style={`--span:${Math.min(Math.max(figure.span ?? 3, 1), 12)}`}
+                  >
+                    {figure.image?.asset ? (
+                      <SanityImage
+                        image={figure.image}
+                        width={900}
+                        sizes="(min-width: 768px) 25vw, 80vw"
+                        class="statement__image"
+                      />
+                    ) : (
+                      figure.fallbackImage && (
+                        /*
+                          `alt` vide : la légende adjacente porte déjà la
+                          référence. Les visuels du CMS utilisent leur propre
+                          champ « texte alternatif ».
+                        */
+                        <Image
+                          src={figure.fallbackImage}
+                          alt=""
+                          widths={[400, 900]}
+                          sizes="(min-width: 768px) 25vw, 80vw"
+                          loading="lazy"
+                          class="statement__image"
+                        />
+                      )
+                    )}
+
+                    {(figure.number || figure.caption) && (
+                      <figcaption class="statement__caption">
+                        {figure.number && (
+                          <span class="statement__ref">{figure.number}</span>
+                        )}
+                        {figure.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+
+                {section.marker && (
+                  <p class="type-note statement__marker">{section.marker}</p>
+                )}
+
+                {/* Placé dans la planche pour venir sous la dernière figure. */}
+                <div class="statement__actions">
+                  <SmartLink link={section.cta} locale={locale} class="button-outline" />
+                </div>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </div>
   </div>
+  <div class="statement__tail" aria-hidden="true"></div>
 </section>
 
 <style>
   .statement {
+    --intro-x: 100vw;
+    --intro-travel: 100svh;
+    --scene-tail: 0px;
+    --scene-lift: clamp(1.5rem, 5svh, 3rem);
+    --plate-lift: clamp(10rem, 28svh, 15rem);
     position: relative;
-    isolation: isolate;
-    padding-block: clamp(5rem, 12vh, 9rem);
-    overflow: hidden;
+    margin-top: -200svh;
+    /*
+      Le rail est réservé dès le début de l'entrée horizontale. La largeur
+      ne change donc plus lorsque `rail-docked` est ajouté à la fin du trajet.
+    */
+    padding-left: var(--rail-width);
+    padding-bottom: clamp(5rem, 12vh, 9rem);
+    overflow: clip;
   }
 
-  .statement__grain {
-    z-index: 0;
+  /*
+    Au retour du scroll vertical, la section passe devant l'ancienne scène
+    sticky. La découpe préserve le rail fixe et supprime la bande de fond qui
+    recouvrait le haut des images.
+  */
+  :global(html.statement-vertical) .statement {
+    z-index: 31;
+    clip-path: inset(0 0 0 var(--rail-width));
   }
 
   .statement__inner {
     position: relative;
     z-index: 1;
+    width: 100%;
     padding-inline: clamp(1.5rem, 4vw, 4rem);
+  }
+
+  .statement__intro-runway {
+    height: calc(100svh + var(--intro-travel));
+  }
+
+  .statement__intro-stage {
+    position: sticky;
+    top: 0;
+    z-index: 31;
+    height: 100svh;
+    /* La scène transparente ne doit pas bloquer le menu placé derrière. */
+    pointer-events: none;
+  }
+
+  .statement__scene {
+    transform: translate3d(var(--intro-x), calc(-1 * var(--scene-lift)), 0);
+    will-change: transform;
+  }
+
+  .statement__text-slot {
+    display: flex;
+    align-items: center;
+    height: 100svh;
+  }
+
+  .statement__tail {
+    height: var(--scene-tail);
+  }
+
+  .statement__body {
+    /*
+      La planche fait partie de la même scène que le texte : aucune compensation
+      verticale n'est nécessaire et leur écart reste structurellement constant.
+    */
+    margin-top: calc(-1 * (clamp(3rem, 9vh, 7rem) + var(--plate-lift)));
   }
 
   /*
@@ -144,11 +208,21 @@ const figures = section.figures ?? [];
     text-wrap: balance;
   }
 
-  /* Référence de figure : la seule occurrence de l'italique dans ce bloc. */
+  .statement__note-text {
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    letter-spacing: 0;
+    color: var(--color-ink);
+  }
+
+  /* Référence de figure en fonte d'annotation. */
   .statement__ref {
     font-family: var(--font-annotation);
     font-style: italic;
     font-size: 0.75rem;
+    line-height: 1.25;
     letter-spacing: var(--tracking-annotation);
     margin-inline-end: 0.35em;
   }
@@ -195,8 +269,8 @@ const figures = section.figures ?? [];
     margin-top: 0.6rem;
     font-family: var(--font-annotation);
     font-style: italic;
-    font-size: 0.7rem;
-    line-height: 1.4;
+    font-size: 0.75rem;
+    line-height: 1.25;
     letter-spacing: 0;
     color: var(--color-ink);
   }
@@ -226,33 +300,42 @@ const figures = section.figures ?? [];
     margin-top: clamp(1.5rem, 4vh, 2.5rem);
   }
 
-  /*
-    Le lien est produit par `SmartLink`, donc porte SON identifiant de portée,
-    pas celui de cette section : une règle `.statement__cta` scopée ici ne
-    l'atteindrait jamais. On le vise donc depuis son conteneur, qui appartient
-    bien à ce composant, avec `:global` sur le seul élément à styler.
-  */
-  .statement__actions :global(a) {
-    display: inline-block;
-    font-family: var(--font-annotation);
-    font-style: italic;
-    font-size: 1rem;
-    letter-spacing: var(--tracking-annotation);
-    padding: 0.7em 1.4em;
-    border: 1px solid var(--color-ink);
-    border-radius: 0;
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  .statement__actions :global(a:hover) {
-    background-color: var(--color-ink);
-    color: var(--color-ink-invert);
-  }
-
   /* ── Mobile : la planche s'empile, plus de débord ─────────────────────── */
   @media (max-width: 767px) {
+    .statement {
+      margin-top: 0;
+      padding-left: 0;
+      padding-block: clamp(5rem, 12vh, 9rem);
+      overflow: hidden;
+      clip-path: none;
+    }
+
+    .statement__intro-runway {
+      height: auto;
+    }
+
+    .statement__intro-stage {
+      position: static;
+      display: block;
+      height: auto;
+    }
+
+    .statement__scene {
+      transform: none;
+    }
+
+    .statement__text-slot {
+      height: auto;
+    }
+
+    .statement__tail {
+      display: none;
+    }
+
+    .statement__body {
+      margin-top: 0;
+    }
+
     .statement__text {
       text-align: left;
       text-indent: 0;
@@ -288,4 +371,98 @@ const figures = section.figures ?? [];
       grid-row: auto;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) and (min-width: 768px) {
+    .statement {
+      margin-top: 0;
+      padding-left: 0;
+      padding-block: clamp(5rem, 12vh, 9rem);
+      clip-path: none;
+    }
+
+    .statement__intro-runway {
+      height: auto;
+    }
+
+    .statement__intro-stage {
+      position: static;
+      display: block;
+      height: auto;
+    }
+
+    .statement__scene {
+      transform: none;
+    }
+
+    .statement__text-slot {
+      height: auto;
+    }
+
+    .statement__tail {
+      display: none;
+    }
+
+    .statement__body {
+      margin-top: 0;
+    }
+  }
 </style>
+
+<script>
+  const statements = document.querySelectorAll<HTMLElement>('[data-statement-intro]');
+  const desktop = window.matchMedia('(min-width: 768px)');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const statement of statements) {
+    const runway = statement.querySelector<HTMLElement>('.statement__intro-runway');
+    const scene = statement.querySelector<HTMLElement>('.statement__scene');
+    if (!runway || !scene) continue;
+
+    let ticking = false;
+
+    const syncTail = () => {
+      if (!desktop.matches || reducedMotion.matches) {
+        statement.style.removeProperty('--scene-tail');
+        return;
+      }
+
+      const tail = Math.max(scene.scrollHeight - window.innerHeight, 0);
+      statement.style.setProperty('--scene-tail', `${tail}px`);
+    };
+
+    const update = () => {
+      ticking = false;
+
+      if (!desktop.matches || reducedMotion.matches) {
+        statement.style.removeProperty('--intro-x');
+        statement.style.removeProperty('--scene-tail');
+        document.documentElement.classList.remove('statement-vertical');
+        return;
+      }
+
+      const rect = runway.getBoundingClientRect();
+      const travel = window.innerHeight;
+      if (travel <= 0) return;
+
+      const elapsed = Math.min(Math.max(-rect.top, 0), travel);
+      const remaining = travel - elapsed;
+      const horizontalOffset = (remaining / travel) * window.innerWidth;
+
+      // Toute la scène partage ce seul déplacement horizontal.
+      statement.style.setProperty('--intro-x', `${horizontalOffset}px`);
+      document.documentElement.classList.toggle('statement-vertical', remaining <= 0);
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    new ResizeObserver(syncTail).observe(scene);
+    syncTail();
+    update();
+  }
+</script>

@@ -4,7 +4,7 @@ import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
-import { toCategoryViews, toProjectCardView } from '~/lib/viewModels';
+import { getProjectSpacerPositions, toCategoryViews, toProjectCardView } from '~/lib/viewModels';
 import type { Locale } from '~/i18n/config';
 import type { CategorySummary, ProjectCard } from '~/lib/sanity/types';
 
@@ -27,8 +27,24 @@ interface Props {
 const { projects, categories, locale, showFilters = false } = Astro.props;
 const t = useTranslations(locale);
 
-const projectViews = projects.map((project) => toProjectCardView(project, locale));
+const projectViews = projects.map((project, index) => toProjectCardView(project, locale, index));
 const categoryViews = toCategoryViews(categories, projectViews);
+const spacerPositions = new Set(getProjectSpacerPositions(projects.map((project) => project._id)));
+const staticCards = projects.map((project, index) => ({
+  kind: 'project' as const,
+  key: project._id,
+  project,
+  index,
+  facts: (project.listingFacts ?? [])
+    .filter((fact) => fact.label?.trim() && fact.value?.trim())
+    .slice(0, 5),
+}));
+const staticCatalogItems = staticCards.flatMap((card, index) => [
+  card,
+  ...(spacerPositions.has(index)
+    ? [{ kind: 'spacer' as const, key: `spacer-${card.project._id}` }]
+    : []),
+]);
 
 // Les filtres n'ont d'intérêt que s'il existe plusieurs catégories à départager.
 const useExplorer = showFilters && categoryViews.length > 1;
@@ -50,33 +66,92 @@ const useExplorer = showFilters && categoryViews.length > 1;
       }}
     />
   ) : (
-    <ul class="grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3">
-      {projects.map((project) => (
-        <li>
-          <a href={projectPath(locale, project.slug)} class="group block">
-            <div class="overflow-hidden bg-sable">
+    <ul class="project-catalog-grid">
+      {staticCatalogItems.map((item) => item.kind === 'spacer' ? (
+        <li class="project-catalog-item" aria-hidden="true">
+          <div class="project-catalog-card project-catalog-spacer">
+            <span class="project-catalog-diagonal"></span>
+          </div>
+        </li>
+      ) : (
+        <li class="project-catalog-item">
+          <a href={projectPath(locale, item.project.slug)} class="project-catalog-card group">
+            <header class="project-catalog-heading">
+              <span class="project-catalog-number">[{String(item.index + 1).padStart(2, '0')}]</span>
+              <h3>{item.project.title}</h3>
+            </header>
+
+            <div class="project-catalog-media">
               <SanityImage
-                image={project.thumbnail?.asset ? project.thumbnail : project.coverImage}
+                image={item.project.thumbnail?.asset ? item.project.thumbnail : item.project.coverImage}
                 width={900}
                 ratio="portrait"
-                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                alt={project.title}
-                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
+                alt={item.project.title}
+                class="project-catalog-image"
               />
             </div>
 
-            <h3 class="type-sous-titre mt-4">{project.title}</h3>
-
-            {(project.client || project.year) && (
-              <p class="type-annotation mt-1 text-muted">
-                {[project.client, project.year].filter(Boolean).join(' — ')}
-              </p>
+            {item.facts.length > 0 && (
+              <dl class="project-catalog-facts">
+                {item.facts.map((fact) => (
+                  <div>
+                    <dt>{fact.label}</dt>
+                    <dd>{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
+
+            {item.project.excerpt && <p class="project-catalog-copy">{item.project.excerpt}</p>}
+            <span class="sr-only">{t('projects.viewProject')}</span>
           </a>
         </li>
       ))}
+
+      {projects.length === 0 && (
+        <Fragment>
+          <li class="project-catalog-item">
+            <div class="project-catalog-card project-catalog-empty project-catalog-state-card" role="status">
+              <span class="project-catalog-number">[01]</span>
+              <p>{t('projects.empty')}</p>
+            </div>
+          </li>
+
+          <li class="project-catalog-item" aria-hidden="true">
+            <div class="project-catalog-card project-catalog-spacer project-catalog-state-card">
+              <span class="project-catalog-number">[02]</span>
+              <span class="project-catalog-diagonal"></span>
+            </div>
+          </li>
+
+          <li class="project-catalog-item" aria-hidden="true">
+            <div class="project-catalog-card project-catalog-state-card project-catalog-state-image-card">
+              <span class="project-catalog-number">[03]</span>
+              <div class="project-catalog-state-media">
+                <img
+                  src="/media/studio-abime-fond-irise.jpg"
+                  width="1240"
+                  height="2048"
+                  alt=""
+                  loading="eager"
+                  decoding="async"
+                />
+              </div>
+            </div>
+          </li>
+
+          <li class="project-catalog-item">
+            <div class="project-catalog-card project-catalog-state-card project-catalog-state-quote">
+              <span class="project-catalog-number">[04]</span>
+              <p>
+                Communicare : mettre en commun. Relier. C’est le geste le plus ancien, celui qui nous a
+                faits humains. À force de tout diffuser, en a-t-on oublié le sens ?
+              </p>
+            </div>
+          </li>
+        </Fragment>
+      )}
     </ul>
   )
 }
-
-{projects.length === 0 && <p class="type-copy text-muted">{t('projects.empty')}</p>}

@@ -52,6 +52,7 @@ const PROJECT_CARD = /* groq */ `{
   client,
   year,
   excerpt,
+  listingFacts[]{ _key, label, value },
   thumbnail ${IMAGE},
   coverImage ${IMAGE},
   "categories": coalesce(categories[]->${CATEGORY}, [])
@@ -203,6 +204,7 @@ export const projectBySlugQuery = /* groq */ `
   year,
   excerpt,
   services,
+  listingFacts[]{ _key, label, value },
   coverImage ${IMAGE},
   thumbnail ${IMAGE},
   "categories": coalesce(categories[]->${CATEGORY}, []),

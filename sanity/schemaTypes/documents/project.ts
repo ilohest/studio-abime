@@ -76,6 +76,43 @@ export const project = defineType({
       group: 'meta',
     }),
     defineField({
+      name: 'listingFacts',
+      title: 'Champs de la carte projet',
+      type: 'array',
+      group: 'meta',
+      description:
+        "Jusqu’à 5 lignes libres affichées entre l’image et l’accroche sur la page Projets. Une ligne incomplète n’est pas affichée.",
+      of: [
+        defineArrayMember({
+          name: 'listingFact',
+          title: 'Champ',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'label',
+              title: 'Intitulé',
+              type: 'string',
+              description: 'Ex. Discipline, Livrable, Matière…',
+            }),
+            defineField({
+              name: 'value',
+              title: 'Valeur',
+              type: 'string',
+              description: 'Ex. Identité visuelle, Papier, 2026…',
+            }),
+          ],
+          preview: {
+            select: { title: 'label', subtitle: 'value' },
+            prepare: ({ title, subtitle }) => ({
+              title: title || 'Champ sans intitulé',
+              subtitle: subtitle || 'Aucune valeur — cette ligne ne sera pas affichée',
+            }),
+          },
+        }),
+      ],
+      validation: (rule) => rule.max(5),
+    }),
+    defineField({
       name: 'categories',
       title: 'Catégories',
       type: 'array',

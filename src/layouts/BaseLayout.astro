@@ -6,8 +6,10 @@ import '~/styles/global.css';
 import Footer from '~/components/Footer.astro';
 import Seo from '~/components/Seo.astro';
 import CustomCursor from '~/components/CustomCursor.astro';
+import ServicesRail from '~/components/ServicesRail.astro';
 
 import { getLocaleMeta, type Locale } from '~/i18n/config';
+import { localizedPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { visualEditingEnabled } from '~/lib/sanity/env';
 import type { Seo as SeoType, SiteContext } from '~/lib/sanity/types';
@@ -20,11 +22,26 @@ interface Props {
   title: string;
   /** Classe appliquée au <body> — permet à un template d'inverser le thème. */
   bodyClass?: string;
+  /** Masque le pied de page pour les vues immersives qui portent leur propre navigation. */
+  hideFooter?: boolean;
+  /** Affiche le rail de services persistant des pages intérieures. */
+  showServicesRail?: boolean;
   /** URLs de la même page dans les autres langues (hreflang + sélecteur). */
   alternates?: Partial<Record<Locale, string>>;
 }
 
-const { locale, site, seo, title, bodyClass = '', alternates = {} } = Astro.props;
+const {
+  locale,
+  site,
+  seo,
+  title,
+  bodyClass = '',
+  hideFooter = false,
+  showServicesRail = true,
+  alternates = {},
+} = Astro.props;
+
+const resolvedBodyClass = [bodyClass, showServicesRail && 'has-services-rail'].filter(Boolean).join(' ');
 
 const meta = getLocaleMeta(locale);
 const t = useTranslations(locale);
@@ -67,7 +84,7 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
     <slot name="head" />
   </head>
 
-  <body class={bodyClass}>
+  <body class={resolvedBodyClass}>
     <a
       href="#contenu"
       class="type-sous-titre sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-abime focus:px-4 focus:py-2 focus:text-papier"
@@ -80,11 +97,13 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
       `src/components/Header.astro` reste disponible si une barre de navigation
       devient nécessaire sur les pages intérieures.
     */}
-    <main id="contenu">
+    {showServicesRail && <ServicesRail mode="page" homeHref={localizedPath(locale)} />}
+
+    <main id="contenu" data-page-content={showServicesRail ? '' : undefined}>
       <slot />
     </main>
 
-    <Footer locale={locale} site={site} alternates={alternates} />
+    {!hideFooter && <Footer locale={locale} site={site} alternates={alternates} />}
 
     <CustomCursor />
 

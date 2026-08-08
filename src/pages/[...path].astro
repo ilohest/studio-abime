@@ -106,21 +106,33 @@ const alternates =
 
 const title =
   route.kind === 'projectIndex' ? t('nav.projects') : (document?.title ?? site.localized?.siteTitle ?? '');
+
+const projectsIntro =
+  site.localized?.projectsIntro ??
+  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.';
+
+const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type === 'servicesMenu') ?? false;
 ---
 
-<BaseLayout locale={locale} site={site} seo={document?.seo} title={title} alternates={alternates}>
+<BaseLayout
+  locale={locale}
+  site={site}
+  seo={document?.seo}
+  title={title}
+  bodyClass={route.kind === 'projectIndex' ? 'page-projects' : ''}
+  alternates={alternates}
+  showServicesRail={!hasEmbeddedServicesRail}
+>
   {project && <ProjectTemplateRenderer project={project} locale={locale} />}
 
   {page && <SectionRenderer sections={page.sections} locale={locale} />}
 
   {
     route.kind === 'projectIndex' && (
-      <div class="container-wide py-(--spacing-section)">
-        <header class="mb-12 max-w-3xl">
-          <h1 class="type-titre text-balance">{t('nav.projects')}</h1>
-          {site.localized?.projectsIntro && (
-            <p class="type-copy mt-6 text-pretty">{site.localized.projectsIntro}</p>
-          )}
+      <div class="project-index container-wide py-(--spacing-section)">
+        <header class="project-index__header">
+          <h1 class="project-index__title type-titre text-balance">{t('nav.projects')}</h1>
+          <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>
         </header>
 
         <ProjectGrid projects={projects} categories={categories} locale={locale} showFilters />
@@ -128,3 +140,31 @@ const title =
     )
   }
 </BaseLayout>
+
+<style>
+  .project-index__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  .project-index__title {
+    text-align: center;
+  }
+
+  .project-index__intro {
+    max-width: 76rem;
+    margin-top: clamp(3rem, 7vw, 7rem);
+    margin-inline: auto;
+    text-indent: clamp(7rem, 20vw, 22rem);
+  }
+
+  @media (max-width: 767px) {
+    .project-index__header {
+      margin-bottom: 3rem;
+    }
+
+    .project-index__intro {
+      margin-top: 2.5rem;
+      text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
+  }
+</style>

@@ -1,7 +1,10 @@
 ---
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import ServicesRail from '~/components/ServicesRail.astro';
 import defaultVisual from '~/assets/sections/labo-de-com.webp';
+import { localizedPath } from '~/i18n/routes';
+import type { Locale } from '~/i18n/config';
 import type { ServicesMenu } from '~/lib/sanity/types';
 
 /**
@@ -12,10 +15,8 @@ import type { ServicesMenu } from '~/lib/sanity/types';
  * │ la scène reste collée en haut et la progression `--p` (0 → 1) pilote :   │
  * │                                                                          │
  * │   • le visuel, qui sort du cadre par la gauche ;                         │
- * │   • le panneau, dont le bord gauche ET la largeur convergent vers le     │
- * │     rail — une seule et même expression, donc aucun saut en fin de       │
- * │     course ;                                                             │
- * │   • le compactage interne (titres et prestations se rapprochent).        │
+ * │   • le panneau, qui rejoint le bord gauche ;                            │
+ * │   • puis `--dock-progress`, qui rapproche uniquement les prestations.   │
  * │                                                                          │
  * │ À l'arrivée, le panneau bascule en `position: fixed` : il reste alors    │
  * │ ancré à gauche pendant que la suite de la page défile. La bascule a lieu │
@@ -25,22 +26,16 @@ import type { ServicesMenu } from '~/lib/sanity/types';
  */
 interface Props {
   section: ServicesMenu;
+  locale: Locale;
 }
 
-const { section } = Astro.props;
+const { section, locale } = Astro.props;
 const groups = section.groups ?? [];
-
-/** Numérotation dérivée de l'ordre : réordonner ne renumérote rien à la main. */
-const numbered = groups.map((group, index) => ({
-  ...group,
-  number: String(index + 1).padStart(2, '0'),
-}));
 ---
 
 <section class="services" data-services-menu>
   <div class="services__runway">
-    <div class="services__stage surface-paper">
-      <div class="services__grain surface-paper-grain"></div>
+    <div class="services__stage">
 
       {/* ── Visuel : sort du cadre par la gauche ───────────────────────── */}
       <figure class="services__visual">
@@ -73,46 +68,29 @@ const numbered = groups.map((group, index) => ({
         laisserait une couture visible à son bord droit pendant le défilement
         horizontal. Une fois ancré, c'est la page qui fournit le papier.
       */}
-      <nav class="services__panel" data-services-rail aria-label="Services">
-        <ol class="services__groups">
-          {
-            numbered.map((group) => (
-              <li class="services__group">
-                <div class="services__label">
-                  <span class="type-note block">{group.number}</span>
-                  <h2 class="type-note uppercase">{group.title}</h2>
-                </div>
-
-                <ul class="services__items">
-                  {group.items?.map((item) => (
-                    <li class="type-note">{item}</li>
-                  ))}
-                </ul>
-              </li>
-            ))
-          }
-        </ol>
-      </nav>
+      <ServicesRail
+        groups={groups}
+        mode="embedded"
+        homeHref={localizedPath(locale)}
+        class="services__panel"
+      />
     </div>
   </div>
 </section>
 
 <style>
   .services {
-    --travel: 100vh; /* distance de défilement consommée par la transition */
+    --travel: 100vh; /* distance de défilement avant l'ancrage */
     --p: 0; /* progression 0 → 1, écrite par le script */
+    --dock-progress: 0; /* rapprochement de la colonne des prestations */
     --rail-width: 16rem; /* largeur du rail une fois ancré */
-    --groups-max: 32rem; /* largeur du bloc de prestations, au repos */
+    --groups-max: 32rem;
     /*
       Décalage de l'intitulé et des prestations par rapport au numéro.
       En `rem` et non en `em` : l'intitulé et la liste n'héritent pas du même
       corps de texte, un retrait relatif les désalignerait l'un de l'autre.
     */
     --menu-indent: 1.35rem;
-  }
-
-  .services[data-compact] {
-    --groups-max: calc(var(--rail-width) - 3rem);
   }
 
   .services__runway {
@@ -122,28 +100,23 @@ const numbered = groups.map((group, index) => ({
   .services__stage {
     position: sticky;
     top: 0;
+    z-index: 30;
     height: 100svh;
     overflow: hidden;
   }
 
   /*
-    Une fois ancré, le rail doit passer AU-DESSUS des sections suivantes.
+    La scène reste au-dessus de la section suivante pendant tout le mouvement.
+    Seul le texte entrant, placé en `z-index: 31`, peut la survoler.
 
     Le monter d'un cran ne suffit pas : `position: sticky` crée un contexte
     d'empilement, et le `z-index` du panneau y reste donc confiné. Les sections
     suivantes, plus loin dans le DOM, se peignent alors par-dessus lui.
     C'est la SCÈNE qu'il faut élever — elle seule sort le rail de ce piège.
 
-    Sans risque de recouvrement : la scène n'est visible qu'à la fin de sa
-    piste, où la section suivante est encore sous la ligne de flottaison.
+    Le fond papier de la section suivante ne peut ainsi plus défiler derrière
+    le menu pendant sa translation.
   */
-  .services[data-docked] .services__stage {
-    z-index: 30;
-  }
-
-  .services__grain {
-    z-index: 0;
-  }
 
   /* ── Visuel ───────────────────────────────────────────────────────────── */
   .services__visual {
@@ -153,7 +126,6 @@ const numbered = groups.map((group, index) => ({
     z-index: 1;
     width: 50%;
     overflow: hidden;
-    background-color: var(--color-sable);
     /* -100 % de SA propre largeur = exactement la moitié de la scène. */
     transform: translate3d(calc(var(--p) * -100%), 0, 0);
     will-change: transform;
@@ -163,12 +135,12 @@ const numbered = groups.map((group, index) => ({
     height: 100%;
     width: 100%;
     object-fit: cover;
-    /* Contre-mouvement léger : évite l'effet « bloc unique ». */
-    transform: translate3d(calc(var(--p) * 18%), 0, 0);
+    /* Aucun contre-mouvement : l'image couvre toujours entièrement son cadre. */
+    transform: none;
   }
 
   /* ── Panneau / rail ───────────────────────────────────────────────────── */
-  .services__panel {
+  .services :global(.services__panel) {
     position: absolute;
     top: 0;
     left: 50%;
@@ -193,155 +165,39 @@ const numbered = groups.map((group, index) => ({
       recalcul de mise en page ET un re-passage à la ligne du texte à CHAQUE
       image rendue pendant tout le défilement. C'était la cause des à-coups.
       Ici le mouvement reste sur le compositeur ; le changement de forme se fait
-      en une seule étape, au seuil de compactage.
+      en une seule étape, au seuil d'ancrage.
     */
     transform: translate3d(calc(var(--p) * -100%), 0, 0);
     will-change: transform;
+    --rail-groups-margin: max(0px, calc((100% - 32rem) / 2 * (1 - var(--p))));
+    --rail-items-transform: translateX(calc((1 - var(--dock-progress)) * 10rem));
   }
 
   /*
     Ancré : quitte la scène pour rester en place sur toute la page.
-    La largeur se réduit ici seulement — la scène papier est encore à l'écran
-    derrière, le rétrécissement du fond est donc invisible.
+    La largeur du rail est appliquée ici — la scène papier est encore à l'écran
+    derrière, la bascule du panneau reste donc invisible.
   */
-  .services[data-docked] .services__panel {
+  .services[data-docked] :global(.services__panel) {
     position: fixed;
     left: 0;
     width: var(--rail-width);
     height: 100svh;
     transform: none;
-    /* Menu plus haut que l'écran : il défile seul, sans bloquer la page. */
-    overflow-y: auto;
+    /* Le contenu reste visible pendant toute la phase pilotée par le scroll. */
+    overflow: visible;
     /*
       Une fois devenu menu, le rail s'efface pour laisser la page respirer, et
       revient au premier plan dès qu'on le vise. Le délai évite qu'il ne
       clignote quand la souris ne fait que traverser le bord gauche de l'écran.
     */
     opacity: 0.2;
-    /*
-      La largeur se rétrécit sur la MÊME durée que celle du contenu (400 ms).
-      C'est ce qui autorise le compactage à se déclencher au moment exact de
-      l'ancrage : le panneau part de sa demi-page et reste donc plus large que
-      son contenu du premier au dernier instant, sans jamais le faire déborder.
-      Ce rétrécissement est invisible — la scène papier est encore à l'écran
-      derrière lui.
-    */
-    transition:
-      opacity 0.6s ease-out 0.3s,
-      width 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 0.6s ease-out 0.3s;
   }
 
   /* `focus-within` : au clavier aussi, le menu doit redevenir lisible. */
-  .services[data-docked] .services__panel:hover,
-  .services[data-docked] .services__panel:focus-within {
-    opacity: 1;
-  }
-
-  .services__groups {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(2.5rem, 6vh, 4.5rem);
-    width: 100%;
-    max-width: var(--groups-max);
-    /*
-      Centrage au repos, qui se résorbe au fil de `--p` pour rejoindre le bord
-      gauche du rail. La référence reste la largeur LARGE (`32rem`) et non
-      `--groups-max` : cette dernière change d'un coup au seuil de compactage,
-      et la marge sauterait avec elle. Ici la marge décroît continûment pendant
-      que la largeur, elle, se resserre en 400 ms.
-    */
-    margin-inline-start: max(0px, calc((100% - 32rem) / 2 * (1 - var(--p))));
-    position: relative;
-    z-index: 1;
-    /*
-      Le panneau garde sa demi-largeur pendant tout le trajet ; c'est cette
-      colonne qui se resserre à la largeur du rail. La transition ne dure que
-      400 ms — le re-passage à la ligne du texte est donc payé une fois,
-      et non à chaque image comme lorsque la largeur suivait le défilement.
-    */
-    transition:
-      max-width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /* ── Un pôle : deux colonnes au large, empilé et resserré au rail ─────── */
-  .services__group {
-    display: grid;
-    grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
-    gap: clamp(1rem, 4vw, 3rem);
-    align-items: start;
-    /*
-      Seul `gap` est animé : `grid-template-columns` passe de deux pistes à une
-      seule, ce que le navigateur ne sait pas interpoler — le passage en colonne
-      unique est donc instantané, et c'est le resserrement qui porte le mouvement.
-    */
-    transition: gap 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /*
-    Compactage : les prestations passent sous leur intitulé et s'en rapprochent.
-    Déclenché à mi-parcours, pendant que le panneau se rétrécit encore — la
-    bascule se lit comme une étape du mouvement, pas comme un changement d'état.
-  */
-  .services[data-compact] .services__groups {
-    gap: 1.75rem;
-  }
-
-  .services[data-compact] .services__group {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.2rem;
-  }
-
-  /*
-    Le numéro reste seul au bord gauche ; l'intitulé et les prestations partagent
-    exactement le même retrait, et donc le même bord gauche.
-  */
-  .services__label {
-    white-space: nowrap;
-  }
-
-  .services__label h2 {
-    padding-inline-start: var(--menu-indent);
-    margin-top: 0.35em;
-  }
-
-  .services__items {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    padding-inline-start: var(--menu-indent);
-  }
-
-  /*
-    Pastille de repérage, posée dans la gouttière laissée par le retrait —
-    celle-là même qu'occupent les numéros. Elle apparaît au survol et reste
-    affichée sur l'élément courant.
-
-    Dessinée en pseudo-élément plutôt qu'avec un caractère « • » : sa taille
-    ne dépend alors pas de la fonte, et elle reste identique d'un état à l'autre.
-  */
-  .services__items li {
-    position: relative;
-  }
-
-  .services__items li::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: calc(var(--menu-indent) * -0.62);
-    width: 4px;
-    height: 4px;
-    margin-top: -2px;
-    border-radius: 50%;
-    background-color: currentColor;
-    opacity: 0;
-    transition: opacity 0.25s ease-out;
-  }
-
-  .services__items li:hover::before,
-  .services__items li:focus-within::before,
-  .services__items li[aria-current]::before,
-  .services__items li[data-active]::before {
+  .services[data-docked] :global(.services__panel:hover),
+  .services[data-docked] :global(.services__panel:focus-within) {
     opacity: 1;
   }
 
@@ -354,6 +210,7 @@ const numbered = groups.map((group, index) => ({
     .services__stage {
       position: static;
       height: auto;
+      overflow: visible;
     }
 
     .services__visual {
@@ -368,23 +225,20 @@ const numbered = groups.map((group, index) => ({
     }
 
     .services,
-    .services[data-docked] .services__panel {
+    .services[data-docked] :global(.services__panel) {
       position: static;
     }
 
-    .services__panel,
-    .services[data-docked] .services__panel {
+    .services :global(.services__panel),
+    .services[data-docked] :global(.services__panel) {
       position: static;
       width: 100%;
-      height: auto;
-      padding-block: 3.5rem;
+      height: 0;
+      padding: 0;
       transform: none;
-    }
-
-    .services__groups,
-    .services[data-compact] .services__groups {
-      max-width: none;
-      margin-inline-start: 0;
+      will-change: auto;
+      --rail-groups-margin: 0;
+      --rail-items-transform: none;
     }
   }
 
@@ -404,23 +258,14 @@ const numbered = groups.map((group, index) => ({
       transform: none;
     }
 
-    .services__panel,
-    .services[data-docked] .services__panel {
+    .services :global(.services__panel),
+    .services[data-docked] :global(.services__panel) {
       position: absolute;
       left: 50%;
       width: 50%;
       transform: none;
-    }
-
-    .services__groups,
-    .services[data-compact] .services__groups {
-      max-width: none;
-      margin-inline-start: 0;
-    }
-
-    .services__group,
-    .services__groups {
-      transition: none;
+      --rail-groups-margin: 0;
+      --rail-items-transform: none;
     }
   }
 </style>
@@ -430,26 +275,17 @@ const numbered = groups.map((group, index) => ({
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const desktop = window.matchMedia('(min-width: 768px)');
 
-  /**
-   * Seuil unique : le menu garde sa disposition large pendant TOUT le trajet
-   * et ne se resserre qu'en touchant le bord gauche — au même instant que
-   * l'ancrage et que le passage en retrait.
-   *
-   * Le panneau et son contenu se rétrécissent alors ensemble, sur la même
-   * durée (voir la transition `width` du panneau) : le panneau reste plus
-   * large que son contenu du début à la fin, et rien ne déborde.
-   */
-  const DOCK_AT = 0.999;
+  /* Le panneau ne change d'état qu'une fois exactement arrivé à gauche. */
+  const DOCK_AT = 1;
 
   for (const section of sections) {
     const runway = section.querySelector<HTMLElement>('.services__runway');
     if (!runway) continue;
 
     let ticking = false;
-
-    const setState = (compact: boolean, docked: boolean) => {
-      section.toggleAttribute('data-compact', compact);
+    const setDocked = (docked: boolean) => {
       section.toggleAttribute('data-docked', docked);
+
       // Le rail sort du flux : la suite de la page doit lui réserver sa place.
       document.documentElement.classList.toggle('rail-docked', docked);
     };
@@ -460,7 +296,8 @@ const numbered = groups.map((group, index) => ({
       // Hors desktop ou en mouvement réduit, le CSS reprend entièrement la main.
       if (!desktop.matches || reducedMotion.matches) {
         section.style.removeProperty('--p');
-        setState(false, false);
+        section.style.removeProperty('--dock-progress');
+        setDocked(false);
         return;
       }
 
@@ -469,25 +306,28 @@ const numbered = groups.map((group, index) => ({
       // Piste hors écran : on fige l'état plutôt que de recalculer.
       if (rect.bottom < 0) {
         // Déjà dépassée : le rail reste ancré.
-        setState(true, true);
+        section.style.setProperty('--p', '1');
+        section.style.setProperty('--dock-progress', '1');
+        setDocked(true);
         return;
       }
       if (rect.top > window.innerHeight) {
-        setState(false, false);
+        section.style.removeProperty('--dock-progress');
+        setDocked(false);
         return;
       }
 
-      // Distance de défilement réellement disponible dans la piste.
+      // Le menu et le manifeste partagent exactement cette même distance.
       const travel = rect.height - window.innerHeight;
       if (travel <= 0) return;
 
-      // 0 quand le haut de la piste touche le haut de l'écran, 1 à la fin.
+      // Première phase : 0 au départ, 1 lorsque la colonne touche la gauche.
       const progress = Math.min(Math.max(-rect.top / travel, 0), 1);
       section.style.setProperty('--p', progress.toFixed(4));
-      // Compactage et ancrage partagent le même seuil : la disposition change
-      // au moment précis où le menu touche le bord.
+      // Les deux colonnes se rapprochent pendant ce même mouvement.
+      section.style.setProperty('--dock-progress', progress.toFixed(4));
       const docked = progress >= DOCK_AT;
-      setState(docked, docked);
+      setDocked(docked);
     };
 
     const onScroll = () => {

@@ -105,6 +105,21 @@ const sections: Record<string, Section[]> = {
         openInNewTab: false,
       },
     },
+    {
+      _key: 'sensory-quote',
+      _type: 'pullQuote',
+      text: `Personne ne perçoit avec les
+yeux seulement. Une identité
+qui ne joue que sur la vue se
+prive du reste des ressentis.
+La question n'est pas de
+savoir si votre proposition a
+une odeur ou un son.
+C'est de savoir si vous les
+avez choisis.`,
+      measure: 'wide',
+      fullHeight: true,
+    },
   ],
 };
 
