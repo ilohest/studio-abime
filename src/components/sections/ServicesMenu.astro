@@ -97,6 +97,11 @@ const numbered = groups.map((group, index) => ({
     --travel: 100vh; /* distance de défilement consommée par la transition */
     --p: 0; /* progression 0 → 1, écrite par le script */
     --rail-width: 16rem; /* largeur du rail une fois ancré */
+    --groups-max: 32rem; /* largeur du bloc de prestations, au repos */
+  }
+
+  .services[data-compact] {
+    --groups-max: calc(var(--rail-width) - 3rem);
   }
 
   .services__runway {
@@ -159,11 +164,16 @@ const numbered = groups.map((group, index) => ({
     z-index: 2;
     display: flex;
     align-items: center;
-    /* Le bloc de prestations est centré dans la demi-page de droite. */
-    justify-content: center;
     height: 100%;
     width: 50%;
-    padding: 3rem clamp(1.25rem, 3vw, 3rem);
+    /*
+      Retrait horizontal CONSTANT, identique à celui du rail : c'est lui qui
+      fixe le bord gauche du contenu une fois ancré. Le centrage au repos est
+      obtenu par la marge de `.services__groups`, qui se résorbe avec `--p` —
+      et non par `justify-content`, qui ferait sauter le contenu au moment où
+      le panneau se rétrécit.
+    */
+    padding: 3rem 1.5rem;
     /*
       Déplacement en `transform` uniquement : -100 % de SA propre largeur amène
       le panneau exactement sur le bord gauche.
@@ -188,7 +198,6 @@ const numbered = groups.map((group, index) => ({
     left: 0;
     width: var(--rail-width);
     height: 100svh;
-    padding-inline: 1.5rem;
     transform: none;
     /* Menu plus haut que l'écran : il défile seul, sans bloquer la page. */
     overflow-y: auto;
@@ -212,8 +221,15 @@ const numbered = groups.map((group, index) => ({
     flex-direction: column;
     gap: clamp(2.5rem, 6vh, 4.5rem);
     width: 100%;
-    /* Largeur bornée : c'est elle qui rend le centrage horizontal visible. */
-    max-width: 32rem;
+    max-width: var(--groups-max);
+    /*
+      Centrage au repos, qui se résorbe au fil de `--p` pour rejoindre le bord
+      gauche du rail. La référence reste la largeur LARGE (`32rem`) et non
+      `--groups-max` : cette dernière change d'un coup au seuil de compactage,
+      et la marge sauterait avec elle. Ici la marge décroît continûment pendant
+      que la largeur, elle, se resserre en 400 ms.
+    */
+    margin-inline-start: max(0px, calc((100% - 32rem) / 2 * (1 - var(--p))));
     position: relative;
     z-index: 1;
     /*
@@ -247,7 +263,6 @@ const numbered = groups.map((group, index) => ({
     bascule se lit comme une étape du mouvement, pas comme un changement d'état.
   */
   .services[data-compact] .services__groups {
-    max-width: calc(var(--rail-width) - 3rem);
     gap: 1.75rem;
   }
 
@@ -305,6 +320,7 @@ const numbered = groups.map((group, index) => ({
     .services__groups,
     .services[data-compact] .services__groups {
       max-width: none;
+      margin-inline-start: 0;
     }
   }
 
@@ -335,6 +351,7 @@ const numbered = groups.map((group, index) => ({
     .services__groups,
     .services[data-compact] .services__groups {
       max-width: none;
+      margin-inline-start: 0;
     }
 
     .services__group,

@@ -118,9 +118,14 @@ const figures = section.figures ?? [];
     padding-inline: clamp(1.5rem, 4vw, 4rem);
   }
 
+  /*
+    Pleine largeur : la déclaration occupe tout l'espace disponible, qui est
+    déjà réduit de la largeur du rail par la règle globale `html.rail-docked`.
+    Aucune largeur à recalculer ici — le décalage du menu est déjà pris en
+    compte en amont.
+  */
   .statement__lede {
-    max-width: 52rem;
-    margin-inline: auto;
+    max-width: none;
   }
 
   .statement__text {
