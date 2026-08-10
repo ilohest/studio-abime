@@ -61,13 +61,14 @@ const items = (section.projects?.length ?? 0) > 0
         class="showcase__track"
         data-drag-scroll
         data-cursor-interactive
+        data-cursor-label="Glisser"
         tabindex="0"
         role="group"
         aria-label="Sélection de projets"
       >
         {items.map((item) => (
           <figure class="showcase__item">
-            <a href={item.href} class="showcase__link">
+            <a href={item.href} class="showcase__link" data-cursor-label="Voir">
               {item.image ? (
                 <SanityImage
                   image={item.image}
@@ -172,12 +173,28 @@ const items = (section.projects?.length ?? 0) > 0
 
   .showcase__link {
     display: block;
+    overflow: hidden;
+  }
+
+  /*
+    Léger agrandissement au survol : le mot du curseur annonce le geste, ce
+    zoom désigne la cible. Le débordement est masqué par le lien, donc l'image
+    grandit dans son cadre au lieu de pousser ses voisines.
+  */
+  .showcase__link:hover .showcase__image {
+    transform: scale(1.04);
+  }
+
+  /* Pendant le glissement, plus aucune cible ne se désigne. */
+  .showcase__track[data-dragging] .showcase__link:hover .showcase__image {
+    transform: none;
   }
 
   .showcase__image {
     display: block;
     width: 100%;
     height: auto;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     /*
       Sans cela, tirer sur une image déclencherait le glisser-déposer natif du
       navigateur au lieu de faire défiler la planche.

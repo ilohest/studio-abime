@@ -15,7 +15,7 @@
  */
 ---
 
-<div id="cursor" class="cursor" aria-hidden="true"></div>
+<div id="cursor" class="cursor" aria-hidden="true"><span class="cursor__label"></span></div>
 
 <style>
   .cursor {
@@ -56,6 +56,38 @@
     background-color: color-mix(in srgb, var(--color-ink) 30%, transparent);
   }
 
+  /*
+    Curseur porteur d'un mot — « Glisser », « Voir »…
+    Le pointeur système restant visible, ce mot ne remplace pas un repère de
+    position : il ne fait qu'annoncer le geste attendu. Un élément peut donc
+    déclarer son intention sans qu'aucune icône n'ait à être devinée.
+  */
+  .cursor__label {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.8rem;
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-ink-invert);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .cursor.has-label {
+    width: 78px;
+    height: 78px;
+    margin: -39px 0 0 -39px;
+    background-color: var(--color-ink);
+  }
+
+  .cursor.has-label .cursor__label {
+    opacity: 1;
+  }
+
   @media (pointer: coarse) {
     .cursor {
       display: none;
@@ -71,17 +103,34 @@
     const INTERACTIVE =
       'a, button, [role="button"], input, textarea, select, summary, label, [data-cursor-interactive]';
 
+    const label = cursor.querySelector<HTMLElement>('.cursor__label');
+
     const onPointerMove = (event: PointerEvent) => {
       cursor.style.transform = `translate3d(${event.clientX}px, ${event.clientY}px, 0)`;
-      const interactive = (event.target as Element | null)?.closest?.(INTERACTIVE);
-      cursor.classList.toggle('is-hovering', Boolean(interactive));
+
+      const target = event.target as Element | null;
+      const interactive = target?.closest?.(INTERACTIVE);
+
+      /*
+        `closest` remonte au plus proche : un lien portant son propre mot
+        l'emporte donc naturellement sur la zone défilante qui l'entoure.
+        C'est ce qui résout le conflit entre « glisser la planche » et
+        « ouvrir ce projet » sans code de priorité à écrire.
+      */
+      const labelled = target?.closest?.('[data-cursor-label]');
+      const text = labelled?.getAttribute('data-cursor-label') ?? '';
+
+      if (label && label.textContent !== text) label.textContent = text;
+      cursor.classList.toggle('has-label', Boolean(text));
+      cursor.classList.toggle('is-hovering', Boolean(interactive) && !text);
+
       document.documentElement.classList.add('has-cursor');
     };
 
     document.addEventListener('pointermove', onPointerMove, { passive: true });
     // Le curseur disparaît avec le pointeur (sortie de fenêtre, changement d'onglet).
     document.addEventListener('pointerleave', () => {
-      cursor.classList.remove('is-hovering');
+      cursor.classList.remove('is-hovering', 'has-label');
     });
     document.addEventListener('mouseleave', () => (cursor.style.opacity = '0'));
     document.addEventListener('mouseenter', () => (cursor.style.opacity = ''));

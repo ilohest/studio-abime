@@ -155,6 +155,21 @@ const hasSanityBackground = Boolean(section.background?.asset);
     min-width: 0;
   }
 
+  /*
+    La figure de gauche déborde de la marge du bloc et vient chercher le bord.
+    Le `overflow: hidden` de la section coupe ce qui dépasse, la largeur de page
+    reste inchangée.
+
+    Les deux marges se compensent : une marge négative seule élargirait la
+    cellule, et la figure de gauche deviendrait plus grande que celle de droite.
+    Ici le bloc se déplace sans changer de taille.
+  */
+  .plate__figure:first-child {
+    --plate-shift: clamp(2.5rem, 7vw, 7rem);
+    margin-inline-start: calc(-1 * var(--plate-shift));
+    margin-inline-end: var(--plate-shift);
+  }
+
   .plate__image {
     display: block;
     width: 100%;
@@ -179,6 +194,11 @@ const hasSanityBackground = Boolean(section.background?.asset);
     .plate__figures {
       grid-template-columns: minmax(0, 1fr);
       gap: clamp(2.5rem, 8vh, 4rem);
+    }
+
+    /* En colonne unique, le débord n'a plus de sens. */
+    .plate__figure:first-child {
+      margin-inline: 0;
     }
   }
 </style>

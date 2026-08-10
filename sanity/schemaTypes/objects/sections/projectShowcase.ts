@@ -29,7 +29,12 @@ export const projectShowcase = defineType({
           options: { filter: sameLanguageFilter },
         }),
       ],
-      validation: (rule) => rule.min(1),
+      /*
+        Avertissement et non erreur : une sélection vide n'affiche simplement
+        rien. En faire une erreur empêcherait de publier une page d'accueil
+        dont la sélection n'est pas encore arrêtée.
+      */
+      validation: (rule) => rule.min(1).warning('Aucun projet sélectionné : la section ne s’affichera pas.'),
     }),
     defineField({
       name: 'startNumber',

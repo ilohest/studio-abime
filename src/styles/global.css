@@ -126,6 +126,17 @@
     color: var(--color-ink);
   }
 
+  /*
+    Page Projets : son fond EST l'accent Lumière, un surlignage de la même
+    teinte y serait donc invisible. La sélection bascule sur Ciel, le second
+    accent de la palette.
+  */
+  body.page-projects ::selection,
+  body.page-projects::selection {
+    background-color: var(--color-ciel);
+    color: var(--color-ink);
+  }
+
   /**
    * Rail de menu ancré (voir `ServicesMenu.astro`).
    *
