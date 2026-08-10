@@ -66,7 +66,7 @@ export const localizedSettings = defineType({
       type: 'array',
       group: 'general',
       description:
-        'Occupent un emplacement de la grille à la place d’un projet. Le texte s’affiche en bas à droite de la carte, en italique.',
+        'Chaque texte occupe une case de la grille à la place d’un projet — les projets suivants se décalent, aucun n’est masqué. Le texte s’affiche en bas à droite de la case, en italique.',
       of: [
         defineArrayMember({
           type: 'object',
@@ -80,10 +80,10 @@ export const localizedSettings = defineType({
             }),
             defineField({
               name: 'position',
-              title: 'Emplacement',
+              title: 'Position dans la grille',
               type: 'number',
               description:
-                'Rang occupé dans la grille : 1 pour la première carte, 2 pour la deuxième… Vide ou au-delà de la grille : la carte se place en dernier.',
+                'On compte les cases à partir de 1 pour celle en haut à gauche, puis de gauche à droite (2, 3, 4…) et ligne après ligne. Laissé vide, ou au-delà du nombre de cases, le texte se place en dernier.',
               validation: (rule) => rule.min(1).integer(),
             }),
           ],
@@ -91,7 +91,7 @@ export const localizedSettings = defineType({
             select: { text: 'text', position: 'position' },
             prepare: ({ text, position }) => ({
               title: text?.slice(0, 60) || 'Carte de texte',
-              subtitle: position ? `Emplacement ${position}` : 'En fin de grille',
+              subtitle: position ? `Position ${position}` : 'En fin de grille',
             }),
           },
         }),

@@ -39,31 +39,31 @@ export interface CategoryView {
   count: number;
 }
 
-/**
- * Positions des respirations graphiques dans la grille.
- *
- * La distribution semble aléatoire, mais reste stable pour une même liste :
- * aucun saut au moment où Vue hydrate le HTML rendu par Astro.
- */
 /** Carte de texte insérée dans la grille des projets. */
 export interface ProjectNote {
   _key: string;
   text: string;
-  /** Rang occupé dans la grille finale, 1 = première carte. */
+  /**
+   * Case occupée dans la grille : 1 pour celle en haut à gauche, puis de
+   * gauche à droite et ligne après ligne.
+   */
   position?: number;
 }
 
 export type CatalogEntry<T> = { kind: 'card'; value: T } | { kind: 'note'; note: ProjectNote };
 
 /**
- * Intercale les cartes de texte dans la grille, au rang demandé.
+ * Intercale les cartes de texte dans la grille, à la position demandée.
  *
- * Les notes sont insérées par position croissante : leurs rangs se lisent donc
+ * Les cartes prennent leur case et décalent les projets suivants : aucun projet
+ * n'est masqué.
+ *
+ * L'insertion se fait par position CROISSANTE : les positions se lisent donc
  * sur la grille FINALE, telle que l'éditeur la voit. Les insérer dans l'ordre
- * de saisie décalerait chaque note suivante d'autant, et les rangs ne
- * voudraient plus rien dire.
+ * de saisie décalerait chaque carte suivante d'autant, et les positions ne
+ * désigneraient plus les mêmes cases.
  *
- * Un rang absent ou au-delà de la grille place la carte en fin de liste.
+ * Une position absente ou au-delà de la grille place la carte en dernier.
  */
 export function insertProjectNotes<T>(cards: T[], notes: ProjectNote[] = []): CatalogEntry<T>[] {
   const entries: CatalogEntry<T>[] = cards.map((value) => ({ kind: 'card', value }));
@@ -82,6 +82,12 @@ export function insertProjectNotes<T>(cards: T[], notes: ProjectNote[] = []): Ca
   return entries;
 }
 
+/**
+ * Positions des respirations graphiques dans la grille.
+ *
+ * La distribution semble aléatoire, mais reste stable pour une même liste :
+ * aucun saut au moment où Vue hydrate le HTML rendu par Astro.
+ */
 export function getProjectSpacerPositions(ids: string[]): number[] {
   if (ids.length < 3) return [];
 
