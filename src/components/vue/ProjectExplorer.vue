@@ -14,7 +14,13 @@
  * sélection reste partageable et le retour arrière du navigateur fonctionne.
  */
 import { computed, onMounted, ref, watch } from 'vue';
-import { getProjectSpacerPositions, type CategoryView, type ProjectCardView } from '~/lib/viewModels';
+import {
+  getProjectSpacerPositions,
+  insertProjectNotes,
+  type CategoryView,
+  type ProjectCardView,
+  type ProjectNote,
+} from '~/lib/viewModels';
 
 const props = defineProps<{
   projects: ProjectCardView[];
@@ -26,6 +32,8 @@ const props = defineProps<{
     count: string;
     viewProject: string;
   };
+  /** Cartes de texte intercalées dans la grille, à leur rang. */
+  notes?: ProjectNote[];
   /** Nom du paramètre d'URL, traduit selon la langue. */
   queryParam?: string;
 }>();
@@ -44,17 +52,23 @@ type CatalogItem =
   | { kind: 'project'; key: string; project: ProjectCardView }
   | { kind: 'spacer'; key: string };
 
-const catalogItems = computed<CatalogItem[]>(() => {
+/*
+  Les cartes de texte sont réinsérées APRÈS filtrage : leur rang se lit donc
+  sur la grille réellement affichée, et non sur la liste complète des projets.
+*/
+const catalogItems = computed(() => {
   const spacers = new Set(
     getProjectSpacerPositions(filteredProjects.value.map((project) => project.id)),
   );
 
-  return filteredProjects.value.flatMap((project, index) => [
+  const cards: CatalogItem[] = filteredProjects.value.flatMap((project, index) => [
     { kind: 'project' as const, key: `project-${project.id}`, project },
     ...(spacers.has(index)
       ? [{ kind: 'spacer' as const, key: `spacer-${project.id}` }]
       : []),
   ]);
+
+  return insertProjectNotes(cards, props.notes ?? []);
 });
 
 /** Restaure le filtre depuis l'URL au montage (lien partagé, retour arrière). */
@@ -131,44 +145,54 @@ function isActive(key: string) {
       class="project-catalog-grid mt-8"
     >
       <li
-        v-for="item in catalogItems"
-        :key="item.key"
+        v-for="entry in catalogItems"
+        :key="entry.kind === 'note' ? `note-${entry.note._key}` : entry.value.key"
         class="project-item project-catalog-item"
-        :aria-hidden="item.kind === 'spacer' ? 'true' : undefined"
+        :aria-hidden="entry.kind !== 'note' && entry.value.kind === 'spacer' ? 'true' : undefined"
       >
-        <div v-if="item.kind === 'spacer'" class="project-catalog-card project-catalog-spacer">
+        <div
+          v-if="entry.kind === 'note'"
+          class="project-catalog-card project-catalog-state-card project-catalog-state-quote"
+        >
+          <p>{{ entry.note.text }}</p>
+        </div>
+
+        <div
+          v-else-if="entry.value.kind === 'spacer'"
+          class="project-catalog-card project-catalog-spacer"
+        >
           <span class="project-catalog-diagonal"></span>
         </div>
 
-        <a v-else :href="item.project.href" class="project-catalog-card group">
+        <a v-else :href="entry.value.project.href" class="project-catalog-card group">
           <header class="project-catalog-heading">
-            <span class="project-catalog-number">{{ item.project.number }}</span>
-            <h3>{{ item.project.title }}</h3>
+            <span class="project-catalog-number">{{ entry.value.project.number }}</span>
+            <h3>{{ entry.value.project.title }}</h3>
           </header>
 
           <div class="project-catalog-media">
             <img
-              v-if="item.project.image"
-              :src="item.project.image.src"
-              :srcset="item.project.image.srcset"
+              v-if="entry.value.project.image"
+              :src="entry.value.project.image.src"
+              :srcset="entry.value.project.image.srcset"
               sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
-              :width="item.project.image.width"
-              :height="item.project.image.height"
-              :alt="item.project.image.alt"
+              :width="entry.value.project.image.width"
+              :height="entry.value.project.image.height"
+              :alt="entry.value.project.image.alt"
               loading="lazy"
               decoding="async"
               class="project-catalog-image"
             />
           </div>
 
-          <dl v-if="item.project.facts.length > 0" class="project-catalog-facts">
-            <div v-for="fact in item.project.facts" :key="fact.key">
+          <dl v-if="entry.value.project.facts.length > 0" class="project-catalog-facts">
+            <div v-for="fact in entry.value.project.facts" :key="fact.key">
               <dt>{{ fact.label }}</dt>
               <dd>{{ fact.value }}</dd>
             </div>
           </dl>
 
-          <p v-if="item.project.excerpt" class="project-catalog-copy">{{ item.project.excerpt }}</p>
+          <p v-if="entry.value.project.excerpt" class="project-catalog-copy">{{ entry.value.project.excerpt }}</p>
 
           <span class="sr-only">{{ labels.viewProject }}</span>
         </a>

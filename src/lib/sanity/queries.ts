@@ -162,7 +162,8 @@ export const localizedSettingsQuery = /* groq */ `
   "footerNav": coalesce(footerNav[]{ _key, ...${LINK} }, []),
   footerText ${PORTABLE_TEXT},
   "homePageSlug": homePage->slug.current,
-  projectsIntro
+  projectsIntro,
+  "projectsNotes": coalesce(projectsNotes[]{ _key, text, position }, [])
 }`;
 
 /* -------------------------------------------------------------------------- */

@@ -61,6 +61,44 @@ export const localizedSettings = defineType({
     }),
 
     defineField({
+      name: 'projectsNotes',
+      title: 'Cartes de texte — page Projets',
+      type: 'array',
+      group: 'general',
+      description:
+        'Occupent un emplacement de la grille à la place d’un projet. Le texte s’affiche en bas à droite de la carte, en italique.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'text',
+              title: 'Texte',
+              type: 'text',
+              rows: 4,
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: 'position',
+              title: 'Emplacement',
+              type: 'number',
+              description:
+                'Rang occupé dans la grille : 1 pour la première carte, 2 pour la deuxième… Vide ou au-delà de la grille : la carte se place en dernier.',
+              validation: (rule) => rule.min(1).integer(),
+            }),
+          ],
+          preview: {
+            select: { text: 'text', position: 'position' },
+            prepare: ({ text, position }) => ({
+              title: text?.slice(0, 60) || 'Carte de texte',
+              subtitle: position ? `Emplacement ${position}` : 'En fin de grille',
+            }),
+          },
+        }),
+      ],
+    }),
+
+    defineField({
       name: 'headerNav',
       title: 'Menu principal',
       type: 'array',

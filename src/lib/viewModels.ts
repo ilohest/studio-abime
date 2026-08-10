@@ -45,6 +45,43 @@ export interface CategoryView {
  * La distribution semble aléatoire, mais reste stable pour une même liste :
  * aucun saut au moment où Vue hydrate le HTML rendu par Astro.
  */
+/** Carte de texte insérée dans la grille des projets. */
+export interface ProjectNote {
+  _key: string;
+  text: string;
+  /** Rang occupé dans la grille finale, 1 = première carte. */
+  position?: number;
+}
+
+export type CatalogEntry<T> = { kind: 'card'; value: T } | { kind: 'note'; note: ProjectNote };
+
+/**
+ * Intercale les cartes de texte dans la grille, au rang demandé.
+ *
+ * Les notes sont insérées par position croissante : leurs rangs se lisent donc
+ * sur la grille FINALE, telle que l'éditeur la voit. Les insérer dans l'ordre
+ * de saisie décalerait chaque note suivante d'autant, et les rangs ne
+ * voudraient plus rien dire.
+ *
+ * Un rang absent ou au-delà de la grille place la carte en fin de liste.
+ */
+export function insertProjectNotes<T>(cards: T[], notes: ProjectNote[] = []): CatalogEntry<T>[] {
+  const entries: CatalogEntry<T>[] = cards.map((value) => ({ kind: 'card', value }));
+
+  const ordered = notes
+    .filter((note) => note.text?.trim())
+    .slice()
+    .sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER));
+
+  for (const note of ordered) {
+    const wanted = (note.position ?? entries.length + 1) - 1;
+    const index = Math.min(Math.max(wanted, 0), entries.length);
+    entries.splice(index, 0, { kind: 'note', note });
+  }
+
+  return entries;
+}
+
 export function getProjectSpacerPositions(ids: string[]): number[] {
   if (ids.length < 3) return [];
 

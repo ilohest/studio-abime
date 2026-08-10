@@ -4,7 +4,13 @@ import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
-import { getProjectSpacerPositions, toCategoryViews, toProjectCardView } from '~/lib/viewModels';
+import {
+  getProjectSpacerPositions,
+  insertProjectNotes,
+  toCategoryViews,
+  toProjectCardView,
+  type ProjectNote,
+} from '~/lib/viewModels';
 import type { Locale } from '~/i18n/config';
 import type { CategorySummary, ProjectCard } from '~/lib/sanity/types';
 
@@ -22,9 +28,11 @@ interface Props {
   categories: CategorySummary[];
   locale: Locale;
   showFilters?: boolean;
+  /** Cartes de texte intercalées dans la grille, à leur rang. */
+  notes?: ProjectNote[];
 }
 
-const { projects, categories, locale, showFilters = false } = Astro.props;
+const { projects, categories, locale, showFilters = false, notes = [] } = Astro.props;
 const t = useTranslations(locale);
 
 const projectViews = projects.map((project, index) => toProjectCardView(project, locale, index));
@@ -39,12 +47,15 @@ const staticCards = projects.map((project, index) => ({
     .filter((fact) => fact.label?.trim() && fact.value?.trim())
     .slice(0, 5),
 }));
-const staticCatalogItems = staticCards.flatMap((card, index) => [
-  card,
-  ...(spacerPositions.has(index)
-    ? [{ kind: 'spacer' as const, key: `spacer-${card.project._id}` }]
-    : []),
-]);
+const staticCatalogItems = insertProjectNotes(
+  staticCards.flatMap((card, index) => [
+    card,
+    ...(spacerPositions.has(index)
+      ? [{ kind: 'spacer' as const, key: `spacer-${card.project._id}` }]
+      : []),
+  ]),
+  notes,
+);
 
 // Les filtres n'ont d'intérêt que s'il existe plusieurs catégories à départager.
 const useExplorer = showFilters && categoryViews.length > 1;
@@ -56,6 +67,7 @@ const useExplorer = showFilters && categoryViews.length > 1;
       client:visible
       projects={projectViews}
       categories={categoryViews}
+      notes={notes}
       queryParam="filtre"
       labels={{
         all: t('projects.all'),
@@ -67,7 +79,13 @@ const useExplorer = showFilters && categoryViews.length > 1;
     />
   ) : (
     <ul class="project-catalog-grid">
-      {staticCatalogItems.map((item) => item.kind === 'spacer' ? (
+      {staticCatalogItems.map((entry) => entry.kind === 'note' ? (
+        <li class="project-catalog-item">
+          <div class="project-catalog-card project-catalog-state-card project-catalog-state-quote">
+            <p>{entry.note.text}</p>
+          </div>
+        </li>
+      ) : entry.value.kind === 'spacer' ? (
         <li class="project-catalog-item" aria-hidden="true">
           <div class="project-catalog-card project-catalog-spacer">
             <span class="project-catalog-diagonal"></span>
@@ -75,26 +93,26 @@ const useExplorer = showFilters && categoryViews.length > 1;
         </li>
       ) : (
         <li class="project-catalog-item">
-          <a href={projectPath(locale, item.project.slug)} class="project-catalog-card group">
+          <a href={projectPath(locale, entry.value.project.slug)} class="project-catalog-card group">
             <header class="project-catalog-heading">
-              <span class="project-catalog-number">[{String(item.index + 1).padStart(2, '0')}]</span>
-              <h3>{item.project.title}</h3>
+              <span class="project-catalog-number">[{String(entry.value.index + 1).padStart(2, '0')}]</span>
+              <h3>{entry.value.project.title}</h3>
             </header>
 
             <div class="project-catalog-media">
               <SanityImage
-                image={item.project.thumbnail?.asset ? item.project.thumbnail : item.project.coverImage}
+                image={entry.value.project.thumbnail?.asset ? entry.value.project.thumbnail : entry.value.project.coverImage}
                 width={900}
                 ratio="portrait"
                 sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
-                alt={item.project.title}
+                alt={entry.value.project.title}
                 class="project-catalog-image"
               />
             </div>
 
-            {item.facts.length > 0 && (
+            {entry.value.facts.length > 0 && (
               <dl class="project-catalog-facts">
-                {item.facts.map((fact) => (
+                {entry.value.facts.map((fact) => (
                   <div>
                     <dt>{fact.label}</dt>
                     <dd>{fact.value}</dd>
@@ -103,7 +121,7 @@ const useExplorer = showFilters && categoryViews.length > 1;
               </dl>
             )}
 
-            {item.project.excerpt && <p class="project-catalog-copy">{item.project.excerpt}</p>}
+            {entry.value.project.excerpt && <p class="project-catalog-copy">{entry.value.project.excerpt}</p>}
             <span class="sr-only">{t('projects.viewProject')}</span>
           </a>
         </li>

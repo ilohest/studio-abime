@@ -306,6 +306,8 @@ export interface LocalizedSettings {
   /** Slug de la page désignée comme accueil : sert à l'exclure des routes `/slug`. */
   homePageSlug?: string | null;
   projectsIntro?: string;
+  /** Cartes de texte intercalées dans la grille de la page Projets. */
+  projectsNotes?: Array<{ _key: string; text: string; position?: number }>;
 }
 
 /** Données communes à toutes les pages, injectées par le layout. */

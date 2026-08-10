@@ -135,7 +135,13 @@ const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type 
           <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>
         </header>
 
-        <ProjectGrid projects={projects} categories={categories} locale={locale} showFilters />
+        <ProjectGrid
+          projects={projects}
+          categories={categories}
+          locale={locale}
+          notes={site.localized?.projectsNotes ?? []}
+          showFilters
+        />
       </div>
     )
   }
