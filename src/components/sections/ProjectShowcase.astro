@@ -52,8 +52,19 @@ const items = (section.projects?.length ?? 0) > 0
       {/*
         `tabindex` sur la zone défilante : sans lui, un utilisateur au clavier
         ne peut pas atteindre les visuels sortis du cadre.
+
+        `data-cursor-interactive` : le curseur système étant masqué, un
+        `cursor: grab` ne s'afficherait jamais. C'est donc l'anneau du curseur
+        personnalisé qui signale que la planche se parcourt à la souris.
       */}
-      <div class="showcase__track" tabindex="0" role="group" aria-label="Sélection de projets">
+      <div
+        class="showcase__track"
+        data-drag-scroll
+        data-cursor-interactive
+        tabindex="0"
+        role="group"
+        aria-label="Sélection de projets"
+      >
         {items.map((item) => (
           <figure class="showcase__item">
             <a href={item.href} class="showcase__link">
@@ -111,6 +122,11 @@ const items = (section.projects?.length ?? 0) > 0
     overflow-x: auto;
     /* Le défilement horizontal ne doit pas entraîner la page avec lui. */
     overscroll-behavior-x: contain;
+    /*
+      Le défilement doux global rendrait chaque image du glissement à la souris
+      poursuivie plutôt qu'immédiate : la planche traînerait derrière le curseur.
+    */
+    scroll-behavior: auto;
     padding-inline: clamp(1.5rem, 4vw, 4rem);
     /* Place laissée sous les visuels pour que la rotation ne soit pas rognée. */
     padding-block: 1.5rem;
@@ -162,6 +178,17 @@ const items = (section.projects?.length ?? 0) > 0
     display: block;
     width: 100%;
     height: auto;
+    /*
+      Sans cela, tirer sur une image déclencherait le glisser-déposer natif du
+      navigateur au lieu de faire défiler la planche.
+    */
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  /* Pendant le glissement, aucune sélection de texte ne doit se former. */
+  .showcase__track[data-dragging] {
+    user-select: none;
   }
 
   .showcase__caption {
@@ -181,3 +208,73 @@ const items = (section.projects?.length ?? 0) > 0
     }
   }
 </style>
+
+<script>
+  /**
+   * Glissement à la souris — parcourir la planche en cliquant et tirant.
+   *
+   * Réservé au pointeur souris : sur tactile, le défilement natif est déjà là,
+   * avec son inertie. Le reproduire en JavaScript ne ferait que la supprimer.
+   */
+  const tracks = document.querySelectorAll<HTMLElement>('[data-drag-scroll]');
+
+  /** Au-delà de ce déplacement, le geste est un glissement, plus un clic. */
+  const DRAG_THRESHOLD = 5;
+
+  for (const track of tracks) {
+    let pointerId: number | null = null;
+    let startX = 0;
+    let startLeft = 0;
+    let travelled = 0;
+
+    track.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0) return;
+
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startLeft = track.scrollLeft;
+      travelled = 0;
+
+      // La capture garde le geste vivant même si le curseur sort de la planche.
+      track.setPointerCapture(pointerId);
+      track.setAttribute('data-dragging', '');
+    });
+
+    track.addEventListener('pointermove', (event) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+
+      const delta = event.clientX - startX;
+      travelled = Math.max(travelled, Math.abs(delta));
+      track.scrollLeft = startLeft - delta;
+    });
+
+    const endDrag = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId) return;
+
+      if (track.hasPointerCapture(pointerId)) track.releasePointerCapture(pointerId);
+      pointerId = null;
+      track.removeAttribute('data-dragging');
+    };
+
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
+
+    /*
+      Un glissement se termine par un `click` sur le visuel relâché dessous.
+      On l'intercepte à la capture, avant qu'il n'atteigne le lien : sans cela,
+      parcourir la planche ouvrirait un projet au hasard.
+      `travelled` n'est remis à zéro qu'au clic suivant, donc il est encore
+      lisible ici — `click` survient après `pointerup`.
+    */
+    track.addEventListener(
+      'click',
+      (event) => {
+        if (travelled > DRAG_THRESHOLD) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      },
+      true,
+    );
+  }
+</script>

@@ -4,6 +4,7 @@ import PortableText from '~/components/primitives/PortableText.astro';
 import Wordmark from '~/components/brand/Wordmark.astro';
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
 
+import { localizedPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
 import type { SiteContext } from '~/lib/sanity/types';
 
@@ -31,6 +32,7 @@ const nav = site.localized?.footerNav ?? [];
 const social = site.settings?.socialLinks ?? [];
 const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
 const year = new Date().getFullYear();
+const homeHref = localizedPath(locale);
 const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
 ---
 
@@ -97,9 +99,15 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
       </div>
     </div>
 
-    {/* ── Colonne de droite : la marque ────────────────────────────────── */}
+    {/* ── Colonne de droite : la marque, retour à l'accueil ─────────────── */}
     <div class="w-full max-w-[30rem] md:w-[30rem] md:justify-self-end">
-      <Wordmark class="text-ink" title={null} />
+      {/*
+        Le logo porte ici le nom accessible du lien : l'énoncer une seconde fois
+        le ferait entendre en double aux lecteurs d'écran.
+      */}
+      <a href={homeHref} class="block transition-opacity hover:opacity-70">
+        <Wordmark class="text-ink" title={`${siteTitle} — retour à l’accueil`} />
+      </a>
     </div>
   </div>
 </footer>
