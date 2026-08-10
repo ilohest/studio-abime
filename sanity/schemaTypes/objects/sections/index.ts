@@ -4,6 +4,9 @@ import { manifestoHero } from './manifestoHero';
 import { servicesMenu } from './servicesMenu';
 import { studioStatement } from './studioStatement';
 import { pullQuote } from './pullQuote';
+import { plateSpread } from './plateSpread';
+import { projectShowcase } from './projectShowcase';
+import { fullBleedImage } from './fullBleedImage';
 import { heroSection } from './heroSection';
 import { richTextSection } from './richTextSection';
 import { mediaSection } from './mediaSection';
@@ -15,6 +18,9 @@ export const sectionTypes = [
   servicesMenu,
   studioStatement,
   pullQuote,
+  plateSpread,
+  projectShowcase,
+  fullBleedImage,
   heroSection,
   richTextSection,
   mediaSection,

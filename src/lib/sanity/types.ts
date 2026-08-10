@@ -121,6 +121,44 @@ export interface PullQuote extends SectionBase {
   fullHeight?: boolean;
 }
 
+export interface PlateSpread extends SectionBase {
+  _type: 'plateSpread';
+  background?: SanityImage;
+  /** Visuel de repli, réservé au contenu d'amorçage (jamais saisi dans le CMS). */
+  fallbackBackground?: ImageMetadata;
+  figures?: Array<{
+    _key: string;
+    image?: SanityImage;
+    number?: string;
+    caption?: string;
+    fallbackImage?: ImageMetadata;
+  }>;
+}
+
+export interface ProjectShowcase extends SectionBase {
+  _type: 'projectShowcase';
+  projects?: ProjectCard[];
+  startNumber?: number;
+  /**
+   * Projets factices, réservés au contenu d'amorçage tant qu'aucun projet réel
+   * n'existe dans Sanity. Jamais renseignés par le CMS.
+   */
+  fallbackItems?: Array<{
+    _key: string;
+    title: string;
+    href?: string;
+    fallbackImage: ImageMetadata;
+  }>;
+}
+
+export interface FullBleedImage extends SectionBase {
+  _type: 'fullBleedImage';
+  image?: SanityImage;
+  caption?: string;
+  /** Visuel de repli, réservé au contenu d'amorçage. */
+  fallbackImage?: ImageMetadata;
+}
+
 export interface HeroSection extends SectionBase {
   _type: 'heroSection';
   heading: string;
@@ -170,6 +208,9 @@ export type Section =
   | ServicesMenu
   | StudioStatement
   | PullQuote
+  | PlateSpread
+  | ProjectShowcase
+  | FullBleedImage
   | HeroSection
   | RichTextSection
   | MediaSection

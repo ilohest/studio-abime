@@ -1,6 +1,11 @@
 import etudeLune from '~/assets/sections/etude-lune.webp';
 import papierLumiere from '~/assets/sections/papier-lumiere.webp';
 import atelierBandes from '~/assets/sections/atelier-bandes.webp';
+import plancheFond from '~/assets/sections/planche-fond.webp';
+import plancheMain from '~/assets/sections/planche-main.webp';
+import plancheCercle from '~/assets/sections/planche-cercle.webp';
+import laboDeCom from '~/assets/sections/labo-de-com.webp';
+import lettreManuscrite from '~/assets/sections/lettre-manuscrite.webp';
 
 import type { Locale } from '~/i18n/config';
 import type { Page, Section } from '~/lib/sanity/types';
@@ -106,6 +111,25 @@ const sections: Record<string, Section[]> = {
       },
     },
     {
+      _key: 'plate',
+      _type: 'plateSpread',
+      fallbackBackground: plancheFond,
+      figures: [
+        {
+          _key: 'p1',
+          number: 'fig.01',
+          caption: 'Fam. des ranunculaceæ — Ancolie (Aquilegia)',
+          fallbackImage: plancheMain,
+        },
+        {
+          _key: 'p2',
+          number: 'fig.02',
+          caption: 'Fam. des liliaceæ — Asphodèle (Asphodelus)',
+          fallbackImage: plancheCercle,
+        },
+      ],
+    },
+    {
       _key: 'sensory-quote',
       _type: 'pullQuote',
       text: `Personne ne perçoit avec les
@@ -119,6 +143,25 @@ C'est de savoir si vous les
 avez choisis.`,
       measure: 'wide',
       fullHeight: true,
+    },
+    {
+      _key: 'showcase',
+      _type: 'projectShowcase',
+      startNumber: 1,
+      // Aucun projet n'existe encore dans Sanity : on montre la mise en page
+      // avec des visuels de la marque. Dès qu'une sélection est faite dans le
+      // CMS, ce sont les projets choisis qui s'affichent.
+      fallbackItems: [
+        { _key: 's1', title: 'Projet en cours', fallbackImage: atelierBandes },
+        { _key: 's2', title: 'Projet en cours', fallbackImage: etudeLune },
+        { _key: 's3', title: 'Projet en cours', fallbackImage: laboDeCom },
+        { _key: 's4', title: 'Projet en cours', fallbackImage: papierLumiere },
+      ],
+    },
+    {
+      _key: 'lettre',
+      _type: 'fullBleedImage',
+      fallbackImage: lettreManuscrite,
     },
   ],
 };

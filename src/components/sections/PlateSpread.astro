@@ -1,0 +1,166 @@
+---
+import { Image } from 'astro:assets';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import type { PlateSpread } from '~/lib/sanity/types';
+
+/**
+ * Planche — double page d'herbier, sur laquelle se posent des figures.
+ *
+ * Le fond est une trame et non une illustration : il est fortement atténué,
+ * pour que les figures posées par-dessus restent le sujet.
+ *
+ * Les figures se répartissent en colonnes de part et d'autre du pli. Elles ne
+ * sont pas positionnées en absolu : une grille laisse la planche se recomposer
+ * seule quand la largeur change — et s'empiler en dessous de 768 px.
+ */
+interface Props {
+  section: PlateSpread;
+}
+
+const { section } = Astro.props;
+const figures = section.figures ?? [];
+const hasSanityBackground = Boolean(section.background?.asset);
+---
+
+<section class="plate surface-paper">
+  <div class="plate__grain surface-paper-grain"></div>
+
+  {/* ── Fond : la double page imprimée ─────────────────────────────────── */}
+  <div class="plate__background" aria-hidden="true">
+    {
+      hasSanityBackground ? (
+        <SanityImage image={section.background} width={1600} sizes="100vw" class="plate__backdrop" />
+      ) : (
+        section.fallbackBackground && (
+          <Image
+            src={section.fallbackBackground}
+            alt=""
+            widths={[900, 1600]}
+            sizes="100vw"
+            loading="lazy"
+            class="plate__backdrop"
+          />
+        )
+      )
+    }
+  </div>
+
+  {/* ── Figures posées sur la planche ──────────────────────────────────── */}
+  {
+    figures.length > 0 && (
+      <div class="plate__figures">
+        {figures.map((figure) => (
+          <figure class="plate__figure">
+            {figure.image?.asset ? (
+              <SanityImage
+                image={figure.image}
+                width={900}
+                sizes="(min-width: 768px) 40vw, 80vw"
+                class="plate__image"
+              />
+            ) : (
+              /*
+                `alt` vide : la légende adjacente porte la référence. Les visuels
+                venus du CMS utilisent, eux, leur propre texte alternatif.
+              */
+              figure.fallbackImage && (
+                <Image
+                  src={figure.fallbackImage}
+                  alt=""
+                  widths={[400, 900]}
+                  sizes="(min-width: 768px) 40vw, 80vw"
+                  loading="lazy"
+                  class="plate__image"
+                />
+              )
+            )}
+
+            {(figure.number || figure.caption) && (
+              <figcaption class="plate__caption">
+                {figure.number && <span class="plate__ref">{figure.number}</span>}
+                {figure.caption}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .plate {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: clamp(3rem, 7vh, 6rem);
+  }
+
+  .plate__grain {
+    z-index: 0;
+  }
+
+  /* ── Fond ─────────────────────────────────────────────────────────────── */
+  .plate__background {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .plate__backdrop {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /*
+      Fortement effacé : la planche imprimée sert de trame de fond, elle ne
+      doit pas disputer l'attention aux figures posées dessus. `multiply`
+      la fait mordre dans le papier au lieu de la poser comme un calque.
+    */
+    opacity: 0.4;
+    mix-blend-mode: multiply;
+  }
+
+  /* ── Figures ──────────────────────────────────────────────────────────── */
+  .plate__figures {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* Écart large : c'est lui qui laisse le pli de la planche respirer. */
+    gap: clamp(2rem, 11vw, 9rem);
+    align-items: start;
+    padding-inline: clamp(1.5rem, 4.5vw, 4.5rem);
+  }
+
+  .plate__figure {
+    min-width: 0;
+  }
+
+  .plate__image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .plate__caption {
+    margin-top: 0.6rem;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    color: var(--color-ink);
+  }
+
+  .plate__ref {
+    margin-inline-end: 0.35em;
+  }
+
+  /* ── Mobile : la double page s'empile en une colonne ──────────────────── */
+  @media (max-width: 767px) {
+    .plate__figures {
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(2.5rem, 8vh, 4rem);
+    }
+  }
+</style>

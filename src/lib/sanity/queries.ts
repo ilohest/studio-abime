@@ -100,6 +100,21 @@ const SECTIONS = /* groq */ `sections[]{
       image ${IMAGE}
     }
   },
+  _type == "plateSpread" => {
+    background ${IMAGE},
+    figures[]{
+      _key,
+      number,
+      caption,
+      image ${IMAGE}
+    }
+  },
+  _type == "projectShowcase" => {
+    "projects": coalesce(projects[]->${PROJECT_CARD}, [])
+  },
+  _type == "fullBleedImage" => {
+    image ${IMAGE}
+  },
   _type == "heroSection" => {
     media ${IMAGE},
     cta ${LINK}

@@ -1,0 +1,66 @@
+---
+import { Image } from 'astro:assets';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import type { FullBleedImage } from '~/lib/sanity/types';
+
+/**
+ * Image pleine largeur — un visuel seul, d'un bord à l'autre.
+ *
+ * Aucun recadrage : l'image garde son format d'origine et la hauteur de la
+ * section en découle.
+ */
+interface Props {
+  section: FullBleedImage;
+}
+
+const { section } = Astro.props;
+const hasSanityImage = Boolean(section.image?.asset);
+---
+
+<section class="bleed">
+  <figure class="bleed__figure">
+    {
+      hasSanityImage ? (
+        <SanityImage image={section.image} width={1800} sizes="100vw" class="bleed__image" />
+      ) : (
+        section.fallbackImage && (
+          <Image
+            src={section.fallbackImage}
+            alt=""
+            widths={[900, 1800]}
+            sizes="100vw"
+            loading="lazy"
+            class="bleed__image"
+          />
+        )
+      )
+    }
+
+    {section.caption && <figcaption class="bleed__caption">{section.caption}</figcaption>}
+  </figure>
+</section>
+
+<style>
+  .bleed {
+    position: relative;
+  }
+
+  .bleed__figure {
+    margin: 0;
+  }
+
+  .bleed__image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .bleed__caption {
+    padding: 0.9rem clamp(1.5rem, 4vw, 4rem) 0;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: 0.75rem;
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-ink);
+  }
+</style>

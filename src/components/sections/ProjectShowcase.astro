@@ -1,0 +1,183 @@
+---
+import { Image } from 'astro:assets';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import { projectPath } from '~/i18n/routes';
+import type { Locale } from '~/i18n/config';
+import type { ProjectShowcase } from '~/lib/sanity/types';
+
+/**
+ * Sélection de projets — planche défilante.
+ *
+ * Les visuels sont posés côte à côte, légèrement de travers, et se parcourent
+ * horizontalement : ceux qui dépassent du cadre se découvrent au défilement.
+ *
+ * Chaque image garde son format d'origine. Seule la LARGEUR est imposée ; la
+ * hauteur suit. C'est la variété des proportions qui compose la planche —
+ * fixer les deux dimensions la ramènerait à une grille régulière.
+ */
+interface Props {
+  section: ProjectShowcase;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+const start = section.startNumber ?? 1;
+
+/** Le CMS fournit des projets ; le contenu d'amorçage, des visuels groupés. */
+const items = (section.projects?.length ?? 0) > 0
+  ? (section.projects ?? []).map((project, index) => ({
+      key: project._id,
+      title: project.title,
+      href: projectPath(locale, project.slug),
+      /* Même règle que la page portfolio : la vignette prime, la couverture supplée. */
+      image: project.thumbnail?.asset ? project.thumbnail : project.coverImage,
+      fallbackImage: undefined,
+      number: String(start + index).padStart(2, '0'),
+    }))
+  : (section.fallbackItems ?? []).map((item, index) => ({
+      key: item._key,
+      title: item.title,
+      href: item.href,
+      image: null,
+      fallbackImage: item.fallbackImage,
+      number: String(start + index).padStart(2, '0'),
+    }));
+---
+
+{
+  items.length > 0 && (
+    <section class="showcase surface-paper">
+      <div class="showcase__grain surface-paper-grain"></div>
+
+      {/*
+        `tabindex` sur la zone défilante : sans lui, un utilisateur au clavier
+        ne peut pas atteindre les visuels sortis du cadre.
+      */}
+      <div class="showcase__track" tabindex="0" role="group" aria-label="Sélection de projets">
+        {items.map((item) => (
+          <figure class="showcase__item">
+            <a href={item.href} class="showcase__link">
+              {item.image ? (
+                <SanityImage
+                  image={item.image}
+                  width={1200}
+                  sizes="(min-width: 768px) 34vw, 78vw"
+                  alt={item.title}
+                  class="showcase__image"
+                />
+              ) : (
+                item.fallbackImage && (
+                  <Image
+                    src={item.fallbackImage}
+                    alt={item.title}
+                    widths={[600, 1200]}
+                    sizes="(min-width: 768px) 34vw, 78vw"
+                    loading="lazy"
+                    class="showcase__image"
+                  />
+                )
+              )}
+            </a>
+
+            <figcaption class="showcase__caption">
+              <span>fig.</span>
+              <span>({item.number})</span>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .showcase {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: clamp(4rem, 10vh, 8rem);
+  }
+
+  .showcase__grain {
+    z-index: 0;
+  }
+
+  .showcase__track {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(1.5rem, 4vw, 4rem);
+    overflow-x: auto;
+    /* Le défilement horizontal ne doit pas entraîner la page avec lui. */
+    overscroll-behavior-x: contain;
+    padding-inline: clamp(1.5rem, 4vw, 4rem);
+    /* Place laissée sous les visuels pour que la rotation ne soit pas rognée. */
+    padding-block: 1.5rem;
+    scrollbar-width: none;
+  }
+
+  .showcase__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .showcase__track:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 4px;
+  }
+
+  .showcase__item {
+    flex: 0 0 auto;
+    /* Seule la largeur est imposée : la hauteur suit le format de l'image. */
+    width: clamp(15rem, 34vw, 34rem);
+    margin: 0;
+    transform: rotate(var(--tilt, 0deg));
+  }
+
+  /*
+    Inclinaisons alternées, volontairement faibles et irrégulières : des angles
+    identiques donneraient une trame répétitive plutôt qu'une pose à la main.
+  */
+  .showcase__item:nth-child(4n + 1) {
+    --tilt: -1.1deg;
+  }
+
+  .showcase__item:nth-child(4n + 2) {
+    --tilt: 0.7deg;
+  }
+
+  .showcase__item:nth-child(4n + 3) {
+    --tilt: -0.5deg;
+  }
+
+  .showcase__item:nth-child(4n + 4) {
+    --tilt: 1.3deg;
+  }
+
+  .showcase__link {
+    display: block;
+  }
+
+  .showcase__image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .showcase__caption {
+    display: flex;
+    gap: clamp(2rem, 6vw, 6rem);
+    margin-top: 0.9rem;
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: clamp(0.95rem, 1.4vw, 1.35rem);
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .showcase__item {
+      transform: none;
+    }
+  }
+</style>

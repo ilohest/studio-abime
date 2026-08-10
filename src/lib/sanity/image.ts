@@ -51,13 +51,21 @@ export function resolveImage(
     return url.url();
   };
 
+  /*
+    Sans recadrage demandé, l'image garde ses proportions d'origine : la hauteur
+    se déduit donc du ratio réel de l'asset, fourni par Sanity. Retomber sur un
+    ratio arbitraire donnerait des attributs `width`/`height` faux à toute image
+    non recadrée — et donc une réservation d'espace erronée avant chargement.
+  */
+  const naturalRatio = source.asset.metadata?.dimensions?.aspectRatio;
+
   return {
     src: base(width),
     srcset: DEFAULT_WIDTHS.filter((w) => w <= width * 2)
       .map((w) => `${base(w)} ${w}w`)
       .join(', '),
     width,
-    height: height ?? Math.round(width / ASPECT_RATIOS.landscape),
+    height: height ?? Math.round(width / (naturalRatio || ASPECT_RATIOS.landscape)),
     alt: source.alt ?? '',
     lqip: source.asset.metadata?.lqip,
   };
