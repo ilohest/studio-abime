@@ -60,8 +60,8 @@ const items = (section.projects?.length ?? 0) > 0
               {item.image ? (
                 <SanityImage
                   image={item.image}
-                  width={1200}
-                  sizes="(min-width: 768px) 34vw, 78vw"
+                  width={900}
+                  sizes="(min-width: 768px) 22vw, 60vw"
                   alt={item.title}
                   class="showcase__image"
                 />
@@ -70,8 +70,8 @@ const items = (section.projects?.length ?? 0) > 0
                   <Image
                     src={item.fallbackImage}
                     alt={item.title}
-                    widths={[600, 1200]}
-                    sizes="(min-width: 768px) 34vw, 78vw"
+                    widths={[400, 900]}
+                    sizes="(min-width: 768px) 22vw, 60vw"
                     loading="lazy"
                     class="showcase__image"
                   />
@@ -129,7 +129,7 @@ const items = (section.projects?.length ?? 0) > 0
   .showcase__item {
     flex: 0 0 auto;
     /* Seule la largeur est imposée : la hauteur suit le format de l'image. */
-    width: clamp(15rem, 34vw, 34rem);
+    width: clamp(11rem, 22vw, 22rem);
     margin: 0;
     transform: rotate(var(--tilt, 0deg));
   }

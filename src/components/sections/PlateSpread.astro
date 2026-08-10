@@ -25,8 +25,16 @@ const hasSanityBackground = Boolean(section.background?.asset);
 <section class="plate surface-paper">
   <div class="plate__grain surface-paper-grain"></div>
 
-  {/* ── Fond : la double page imprimée ─────────────────────────────────── */}
-  <div class="plate__background" aria-hidden="true">
+  {/*
+    Le fond de planche et les figures sont enfermés dans un conteneur commun.
+    Positionné en absolu directement sur la section, le fond se calerait sur sa
+    boîte de remplissage — donc jusque sous le retrait réservé au menu ancré.
+    Ici il s'arrête à la zone de contenu. Le grain, lui, reste en pleine largeur :
+    c'est le papier de la page, il doit rester continu sous le menu.
+  */}
+  <div class="plate__inner">
+    {/* ── Fond : la double page imprimée ───────────────────────────────── */}
+    <div class="plate__background" aria-hidden="true">
     {
       hasSanityBackground ? (
         <SanityImage image={section.background} width={1600} sizes="100vw" class="plate__backdrop" />
@@ -84,8 +92,9 @@ const hasSanityBackground = Boolean(section.background?.asset);
           </figure>
         ))}
       </div>
-    )
-  }
+      )
+    }
+  </div>
 </section>
 
 <style>
@@ -98,6 +107,15 @@ const hasSanityBackground = Boolean(section.background?.asset);
 
   .plate__grain {
     z-index: 0;
+  }
+
+  /*
+    Référence de positionnement du fond de planche. Étant à l'intérieur de la
+    section, il tient dans sa zone de contenu — donc à droite du retrait que la
+    règle `html.rail-docked` réserve au menu.
+  */
+  .plate__inner {
+    position: relative;
   }
 
   /* ── Fond ─────────────────────────────────────────────────────────────── */
