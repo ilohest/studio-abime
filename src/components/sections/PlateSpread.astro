@@ -170,6 +170,17 @@ const hasSanityBackground = Boolean(section.background?.asset);
     margin-inline-end: var(--plate-shift);
   }
 
+  /*
+    Menu ancré : le débord se limite exactement au retrait du bloc, si bien que
+    la figure vient affleurer le bord de la zone de contenu sans jamais passer
+    sous le rail. Sans ce plafond, le débord fixe la ferait glisser dessous —
+    la section est décalée de `--rail-width`, mais la figure, elle, continuait
+    de remonter vers la gauche.
+  */
+  :global(html.rail-docked) .plate__figure:first-child {
+    --plate-shift: clamp(1.5rem, 4.5vw, 4.5rem);
+  }
+
   .plate__image {
     display: block;
     width: 100%;
