@@ -1,0 +1,274 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
+import NextProject from '~/components/project/NextProject.astro';
+import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+
+import { projectGallery } from '~/lib/projectGallery';
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle COLONNE FIXE — le texte tient, les images défilent.
+ *
+ * La colonne de gauche (retour, titre, fiche, texte) reste en place pendant
+ * que la planche de droite se déroule : on lit le projet une fois, on regarde
+ * les visuels aussi longtemps qu'on veut. Quand le texte dépasse la hauteur de
+ * l'écran, c'est la colonne elle-même qui défile — la planche n'en bouge pas.
+ *
+ * La trame de droite est une grille à deux colonnes ; chaque visuel choisit
+ * d'occuper une case ou toute la largeur (`gallery[].span`). Toutes les
+ * combinaisons se composent ainsi sans réglage de position.
+ *
+ * Sous 900 px il n'y a plus deux colonnes à opposer : le texte reprend le flux
+ * normal et les images le suivent.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+
+/* La trame de ce modèle compte 2 colonnes : une largeur plus grande y est bornée. */
+const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(item.span, 2) }));
+
+const columnSizes = '(min-width: 900px) 26vw, 50vw';
+---
+
+<article class="split">
+  <div class="split__layout">
+    {/* ── Colonne fixe : le texte du projet ──────────────────────────────── */}
+    <div class="split__pane">
+      <div class="split__paneInner">
+        <ProjectBackLink locale={locale} />
+
+        {/*
+          Le nom du projet passe en mention, entre parenthèses : c'est le
+          titre affiché qui porte la page. Sans titre affiché, le nom reprend
+          sa place — la page garde toujours son `h1`.
+        */}
+        <header class="split__header">
+          {project.headline && <p class="split__eyebrow">({project.title})</p>}
+          <h1 class="split__title text-balance">{project.headline || project.title}</h1>
+        </header>
+
+        <ProjectFacts project={project} locale={locale} class="split__facts" />
+
+        <div class="split__body">
+          <SectionRenderer sections={project.sections} locale={locale} />
+        </div>
+      </div>
+    </div>
+
+    {/* ── Planche défilante ──────────────────────────────────────────────── */}
+    {
+      items.length > 0 && (
+        <div class="split__gallery">
+          <div class="split__grid">
+            {items.map((item) => (
+              <figure class="split__figure" style={`--span:${item.span}`}>
+                <SanityImage
+                  image={item.image}
+                  width={1400}
+                  sizes={columnSizes}
+                  class="split__image"
+                />
+                {item.caption && <figcaption class="split__caption">{item.caption}</figcaption>}
+              </figure>
+            ))}
+          </div>
+        </div>
+      )
+    }
+  </div>
+
+  <NextProject project={project.next} locale={locale} />
+</article>
+
+<style>
+  /*
+    `align-items: start` est ce qui rend la colonne collante possible : étirée
+    par défaut sur toute la hauteur de la grille, elle n'aurait aucune marge de
+    manœuvre pour se caler en haut de l'écran.
+  */
+  .split__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    align-items: start;
+  }
+
+  /*
+    La colonne ne défile pas pour son compte : elle se cale en haut de l'écran
+    et c'est la page qui coule sous elle. Une zone de défilement interne aurait
+    donné une seconde barre, et deux gestes de lecture concurrents.
+
+    Corollaire : le texte doit tenir dans un écran. Plus long, il serait
+    inaccessible sous le bord bas — d'où la place laissée au contenu long dans
+    les blocs de la colonne plutôt que dans l'en-tête.
+  */
+  .split__pane {
+    position: sticky;
+    top: 0;
+  }
+
+  .split__paneInner {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 34rem;
+    margin-inline: auto;
+    padding: clamp(2rem, 4vw, 4rem) clamp(1rem, 1.8vw, 1.75rem);
+  }
+
+  .split__header {
+    width: 100%;
+    margin-top: clamp(4rem, 11vw, 8rem);
+    text-align: center;
+  }
+
+  /* Même police que le texte courant : la mention se lit comme une note. */
+  .split__eyebrow {
+    margin: 0;
+    font-family: var(--font-copy);
+    font-size: 0.9375rem;
+    font-weight: 400;
+    letter-spacing: var(--tracking-copy);
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  /*
+    Le titre quitte la casse forcée et le mono des titres de section : ici
+    c'est une phrase qui se lit, pas une enseigne.
+  */
+  .split__title {
+    margin: 0.9rem 0 0;
+    font-family: var(--font-copy);
+    font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    text-transform: none;
+  }
+
+  /*
+    `:global` : la classe est posée sur un élément rendu PAR le composant
+    enfant, il ne porte donc pas la marque de portée de ce fichier.
+  */
+  .split__paneInner :global(.split__facts) {
+    margin-top: clamp(6rem, 16vw, 12rem);
+  }
+
+  .split__body {
+    width: 100%;
+  }
+
+  /*
+    Les blocs de contenu sont écrits pour la pleine page : ils portent leur
+    propre conteneur et un rythme vertical de section entière. Dans une colonne,
+    on leur retire les deux — la colonne fixe EST déjà le conteneur.
+  */
+  .split__body :global(section) {
+    padding-block: 0;
+  }
+
+  .split__body :global(.container-wide),
+  .split__body :global(.container-content) {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .split__body :global(section) + :global(section) {
+    margin-top: clamp(2rem, 5vw, 3rem);
+  }
+
+  .split__body :global(section:first-child) {
+    margin-top: clamp(1.75rem, 4vw, 2.5rem);
+  }
+
+  /* ── Planche ────────────────────────────────────────────────────────────── */
+  /*
+    La planche respire en haut et à droite, et reste au ras du texte à gauche :
+    c'est ce bord commun qui tient les deux colonnes ensemble. « Pleine
+    largeur » vaut donc pour toute la largeur disponible de la planche.
+  */
+  .split__gallery {
+    --gallery-inset: clamp(1.5rem, 3.5vw, 4rem);
+    min-height: 100svh;
+    padding-top: var(--gallery-inset);
+    padding-right: var(--gallery-inset);
+  }
+
+  /*
+    `gap` unique : l'écart entre deux lignes est exactement celui qui sépare
+    deux colonnes. La rangée de légende, elle, est collée à son visuel
+    (`row-gap: 0` sur la figure), sans quoi elle creuserait les lignes.
+  */
+  .split__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.35rem, 0.8vw, 0.75rem);
+  }
+
+  /*
+    Une figure = UNE case de la trame. Elle occupait auparavant deux rangées
+    (visuel puis légende) empruntées à la grille : l'écart de la grille se
+    comptait alors deux fois entre deux lignes d'images, et les lignes
+    s'éloignaient plus que les colonnes.
+
+    La figure s'étire donc sur toute la hauteur de sa case et pousse son
+    visuel vers le bas — c'est ce qui aligne les visuels d'une même ligne.
+  */
+  .split__figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .split__figure {
+    grid-column: span var(--span, 1);
+  }
+
+  /*
+    `:global` : le visuel est rendu par le composant `SanityImage`, il ne porte
+    donc pas la marque de portée de ce fichier. Sans cela, l'image garde sa
+    taille naturelle — ni pleine largeur, ni calée en bas de sa rangée.
+  */
+  .split__figure :global(.split__image) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .split__caption {
+    margin-top: 0.5rem;
+    font-family: var(--font-annotation);
+    font-size: 0.9375rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 899px) {
+    .split__layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .split__pane {
+      position: relative;
+    }
+
+    .split__paneInner {
+      max-width: none;
+      padding-inline: var(--spacing-gutter);
+    }
+
+    .split__gallery {
+      min-height: 0;
+    }
+  }
+</style>
+

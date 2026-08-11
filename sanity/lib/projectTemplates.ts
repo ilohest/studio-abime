@@ -12,6 +12,18 @@
  */
 export const PROJECT_TEMPLATES = [
   {
+    value: 'split',
+    title: 'Colonne fixe',
+    description:
+      'Titre, fiche et texte fixes à gauche ; colonne d’images défilante à droite.',
+  },
+  {
+    value: 'banner',
+    title: 'Bandeau',
+    description:
+      'Titre en ouverture, texte et fiche côte à côte, planche d’images en bandeau dessous.',
+  },
+  {
     value: 'standard',
     title: 'Standard',
     description: 'En-tête classique, fiche projet en colonne, contenu modulaire.',

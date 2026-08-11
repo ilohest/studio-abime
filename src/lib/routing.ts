@@ -111,33 +111,52 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
   return { kind: 'page', locale, path, slug: rest.join('/') };
 }
 
-/** Convertit un lien Sanity en lien prêt à rendre. */
+/**
+ * Convertit un lien Sanity en lien prêt à rendre.
+ *
+ * La référence prime sur l'URL : le CMS ne propose plus que des pages du site,
+ * et une destination fraîchement choisie doit donc l'emporter sur l'éventuelle
+ * URL héritée du temps où les deux formes coexistaient.
+ */
 export function resolveLink(link: SanityLink | undefined | null, locale: Locale): ResolvedLink | null {
   if (!link) return null;
 
-  if (link.kind === 'external') {
-    if (!link.externalUrl) return null;
-    return {
-      label: link.label ?? link.externalUrl,
-      href: link.externalUrl,
-      isExternal: true,
-      openInNewTab: link.openInNewTab ?? true,
-    };
+  const target = link.internal;
+
+  if (target) {
+    // La langue du document cible prime : un lien peut pointer vers une autre langue.
+    const targetLocale = isLocale(target.language) ? target.language : locale;
+
+    /*
+      La page Projets n'a pas de slug : son URL est une route calculée par
+      langue (`/projets`, `/en/work`). Les autres cibles passent par leur slug.
+    */
+    const href =
+      target._type === 'projectsPage'
+        ? projectsIndexPath(targetLocale)
+        : target.slug
+          ? target._type === 'project'
+            ? projectPath(targetLocale, target.slug)
+            : pagePath(targetLocale, target.slug)
+          : null;
+
+    if (href) {
+      return {
+        label: link.label ?? target.title ?? '',
+        href,
+        isExternal: false,
+        openInNewTab: link.openInNewTab ?? false,
+      };
+    }
   }
 
-  const target = link.internal;
-  if (!target?.slug) return null;
-
-  // La langue du document cible prime : un lien peut pointer vers une autre langue.
-  const targetLocale = isLocale(target.language) ? target.language : locale;
-  const href =
-    target._type === 'project' ? projectPath(targetLocale, target.slug) : pagePath(targetLocale, target.slug);
-
+  // Lien externe hérité : conservé au rendu tant qu'il n'a pas été rebasculé.
+  if (!link.externalUrl) return null;
   return {
-    label: link.label ?? target.title ?? '',
-    href,
-    isExternal: false,
-    openInNewTab: link.openInNewTab ?? false,
+    label: link.label ?? link.externalUrl,
+    href: link.externalUrl,
+    isExternal: /^https?:\/\//.test(link.externalUrl),
+    openInNewTab: link.openInNewTab ?? true,
   };
 }
 

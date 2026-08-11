@@ -1,3 +1,4 @@
+import { stegaClean } from '@sanity/client/stega';
 import { resolveImage } from './sanity/image';
 import { projectPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
@@ -21,7 +22,7 @@ export interface ProjectCardView {
   year: number | null;
   excerpt: string | null;
   facts: Array<{ key: string; label: string; value: string }>;
-  /** Clés de catégories — base du filtrage côté client. */
+  /** Slugs de catégories — base du filtrage côté client. */
   categoryKeys: string[];
   image: {
     src: string;
@@ -39,10 +40,11 @@ export interface CategoryView {
   count: number;
 }
 
-/** Carte de texte insérée dans la grille des projets. */
-export interface ProjectNote {
+/** Carte éditoriale insérée dans la grille des projets. */
+export interface ProjectEditorialCard {
   _key: string;
-  text: string;
+  kind: 'empty' | 'text';
+  text?: string;
   /**
    * Case occupée dans la grille : 1 pour celle en haut à gauche, puis de
    * gauche à droite et ligne après ligne.
@@ -50,7 +52,9 @@ export interface ProjectNote {
   position?: number;
 }
 
-export type CatalogEntry<T> = { kind: 'card'; value: T } | { kind: 'note'; note: ProjectNote };
+export type CatalogEntry<T> =
+  | { kind: 'card'; value: T }
+  | { kind: 'editorial'; editorial: ProjectEditorialCard };
 
 /**
  * Intercale les cartes de texte dans la grille, à la position demandée.
@@ -65,60 +69,29 @@ export type CatalogEntry<T> = { kind: 'card'; value: T } | { kind: 'note'; note:
  *
  * Une position absente ou au-delà de la grille place la carte en dernier.
  */
-export function insertProjectNotes<T>(cards: T[], notes: ProjectNote[] = []): CatalogEntry<T>[] {
+export function insertProjectEditorialCards<T>(
+  cards: T[],
+  editorialCards: ProjectEditorialCard[] = [],
+): CatalogEntry<T>[] {
   const entries: CatalogEntry<T>[] = cards.map((value) => ({ kind: 'card', value }));
 
-  const ordered = notes
-    .filter((note) => note.text?.trim())
+  const ordered = editorialCards
+    .map((card) => ({ ...card, kind: stegaClean(card.kind) }))
+    .filter((card) => card.kind === 'empty' || Boolean(card.text?.trim()))
     .slice()
     .sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER));
 
-  for (const note of ordered) {
-    const wanted = (note.position ?? entries.length + 1) - 1;
+  for (const editorial of ordered) {
+    const wanted = (editorial.position ?? entries.length + 1) - 1;
     const index = Math.min(Math.max(wanted, 0), entries.length);
-    entries.splice(index, 0, { kind: 'note', note });
+    entries.splice(index, 0, { kind: 'editorial', editorial });
   }
 
   return entries;
 }
 
-/**
- * Positions des respirations graphiques dans la grille.
- *
- * La distribution semble aléatoire, mais reste stable pour une même liste :
- * aucun saut au moment où Vue hydrate le HTML rendu par Astro.
- */
-export function getProjectSpacerPositions(ids: string[]): number[] {
-  if (ids.length < 3) return [];
-
-  const wanted = Math.max(1, Math.floor(ids.length / 5));
-  const seed = ids.join('|');
-  const hash = (value: string) => {
-    let result = 2166136261;
-    for (let index = 0; index < value.length; index += 1) {
-      result ^= value.charCodeAt(index);
-      result = Math.imul(result, 16777619);
-    }
-    return result >>> 0;
-  };
-
-  const candidates = Array.from({ length: ids.length - 1 }, (_, index) => index)
-    .sort((a, b) => hash(`${seed}:${a}`) - hash(`${seed}:${b}`));
-  const selected: number[] = [];
-
-  for (const position of candidates) {
-    if (selected.some((current) => Math.abs(current - position) <= 1)) continue;
-    selected.push(position);
-    if (selected.length === wanted) break;
-  }
-
-  return selected.sort((a, b) => a - b);
-}
-
 export function toProjectCardView(card: ProjectCard, locale: Locale, index = 0): ProjectCardView {
-  // La vignette prime ; à défaut on retombe sur la couverture du projet.
-  const source = card.thumbnail?.asset ? card.thumbnail : card.coverImage;
-  const image = resolveImage(source, { width: 900, ratio: 'portrait' });
+  const image = resolveImage(card.thumbnail, { width: 900 });
 
   return {
     id: card._id,
@@ -134,7 +107,7 @@ export function toProjectCardView(card: ProjectCard, locale: Locale, index = 0):
       )
       .slice(0, 5)
       .map((fact) => ({ key: fact._key, label: fact.label.trim(), value: fact.value.trim() })),
-    categoryKeys: (card.categories ?? []).map((category) => category.key).filter(Boolean),
+    categoryKeys: (card.categories ?? []).map((category) => category.slug).filter(Boolean),
     image: image ? { ...image, alt: image.alt || card.title, lqip: image.lqip ?? null } : null,
   };
 }
@@ -155,10 +128,10 @@ export function toCategoryViews(
   }
 
   return categories
-    .filter((category) => counts.has(category.key))
+    .filter((category) => counts.has(category.slug))
     .map((category) => ({
-      key: category.key,
+      key: category.slug,
       title: category.title,
-      count: counts.get(category.key) ?? 0,
+      count: counts.get(category.slug) ?? 0,
     }));
 }

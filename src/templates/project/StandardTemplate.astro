@@ -1,8 +1,9 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFactSheet from '~/components/project/ProjectFactSheet.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
+import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
@@ -17,20 +18,20 @@ interface Props {
 }
 
 const { project, locale } = Astro.props;
-const options = project.templateOptions ?? {};
 ---
 
 <article>
   <header class="container-wide pt-16 pb-12">
+    <ProjectBackLink locale={locale} class="mb-10" />
     <h1 class="type-titre max-w-4xl text-balance">{project.title}</h1>
-    {project.excerpt && <p class="type-copy mt-6 max-w-prose text-pretty">{project.excerpt}</p>}
+    {project.headline && <p class="type-copy mt-6 max-w-prose text-pretty">{project.headline}</p>}
   </header>
 
   {
-    project.coverImage && (
+    project.thumbnail && (
       <div class="container-wide">
         <SanityImage
-          image={project.coverImage}
+          image={project.thumbnail}
           width={1920}
           ratio="landscape"
           sizes="100vw"
@@ -47,14 +48,10 @@ const options = project.templateOptions ?? {};
       <SectionRenderer sections={project.sections} locale={locale} />
     </div>
 
-    {
-      options.showFactSheet !== false && (
-        <aside class="order-1 lg:order-2 lg:sticky lg:top-12">
-          <ProjectFactSheet project={project} locale={locale} />
-        </aside>
-      )
-    }
+    <aside class="order-1 lg:order-2 lg:sticky lg:top-12">
+      <ProjectFacts project={project} locale={locale} />
+    </aside>
   </div>
 
-  {options.showNextProject !== false && <NextProject project={project.next} locale={locale} />}
+  <NextProject project={project.next} locale={locale} />
 </article>

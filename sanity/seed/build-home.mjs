@@ -57,7 +57,6 @@ const home = {
       ],
       tagline:
         "Studio Abîme est un labo de com et d'identités sensorielles qui naissent d'une plongée sous le visible.",
-      showStamp: true,
     },
     {
       _key: 'services',
@@ -151,15 +150,12 @@ savoir si votre proposition a
 une odeur ou un son.
 C'est de savoir si vous les
 avez choisis.`,
-      measure: 'wide',
-      fullHeight: true,
     },
     {
       // Sélection laissée vide : à remplir une fois les projets créés.
       // La section ne s'affiche pas tant qu'aucun projet n'est choisi.
       _key: 'showcase',
       _type: 'projectShowcase',
-      startNumber: 1,
       projects: [],
     },
     {
@@ -184,12 +180,27 @@ const localizedSettings = {
   siteDescription:
     "Studio Abîme est un labo de com et d'identités sensorielles qui naissent d'une plongée sous le visible.",
   homePage: { _type: 'reference', _ref: HOME_ID },
-  projectsIntro: '',
   headerNav: [],
   footerNav: [],
 };
 
-const documents = [siteSettings, home, localizedSettings];
+const projectsPage = {
+  _id: 'projectsPage-fr',
+  _type: 'projectsPage',
+  language: 'fr',
+  title: 'Projets',
+  intro: '',
+  editorialCards: [
+    {
+      _key: 'empty-card-2',
+      _type: 'projectsEditorialCard',
+      kind: 'empty',
+      position: 2,
+    },
+  ],
+};
+
+const documents = [siteSettings, home, localizedSettings, projectsPage];
 const out = resolve(here, 'home.ndjson');
 
 writeFileSync(out, documents.map((doc) => JSON.stringify(doc)).join('\n') + '\n', 'utf8');

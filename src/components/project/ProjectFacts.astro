@@ -1,0 +1,200 @@
+---
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { Project, ProjectChannel } from '~/lib/sanity/types';
+
+/**
+ * Fiche projet — client, année, services, canaux.
+ *
+ * Une seule forme : une grille à deux colonnes, filets fins, intitulé au-dessus
+ * de la valeur. C'est l'étiquette d'archive du site, elle ne se règle pas.
+ *
+ * Les champs vides disparaissent : une fiche à deux lignes reste composée,
+ * là où des cases vides trahiraient un gabarit.
+ */
+interface Row {
+  label: string;
+  value?: string;
+  links?: Array<{ label: string; href: string }>;
+}
+
+interface Props {
+  project: Project;
+  locale: Locale;
+  class?: string;
+}
+
+const { project, locale, class: className } = Astro.props;
+const t = useTranslations(locale);
+
+/** Adresse lisible : l'URL sans son protocole ni sa barre finale. */
+const readableUrl = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+/* Tous les canaux tiennent dans UNE case de la grille, empilés un par ligne. */
+const channels = (project.channels ?? [])
+  .filter((channel): channel is ProjectChannel & { url: string } => Boolean(channel.url))
+  .map((channel) => ({ label: channel.label || readableUrl(channel.url), href: channel.url }));
+
+const allRows: Row[] = [
+  { label: t('project.client'), value: project.client },
+  { label: t('project.year'), value: project.year ? String(project.year) : undefined },
+  { label: t('project.services'), value: project.services?.join(', ') },
+  { label: t('project.channels'), links: channels.length > 0 ? channels : undefined },
+];
+
+const rows = allRows.filter((row) => Boolean(row.value || row.links));
+
+/*
+  Une ligne impaire laisserait la grille ouverte : filet de tête interrompu à
+  mi-largeur, filet vertical qui s'arrête. On complète donc la dernière ligne
+  par une case muette — elle ne porte que les filets.
+*/
+const needsFiller = rows.length % 2 === 1;
+
+---
+
+{
+  rows.length > 0 && (
+    /*
+      La grille se replie sur sa PROPRE largeur et non sur celle de l'écran :
+      la fiche vit tantôt en pleine colonne, tantôt dans une marge étroite. Le
+      conteneur est déclaré ici, la fiche est donc autonome où qu'on la pose.
+    */
+    <div class:list={['facts-frame', className]}>
+      <dl class="facts">
+        {rows.map((row) => (
+          <div class="facts__cell">
+            <dt class="facts__label">{row.label}</dt>
+            <dd class="facts__value">
+              {row.links ? (
+                <ul class="facts__links">
+                  {row.links.map((link) => (
+                    <li>
+                      <a href={link.href} class="facts__link" target="_blank" rel="noopener noreferrer">
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                row.value
+              )}
+            </dd>
+          </div>
+        ))}
+
+        {needsFiller && <div class="facts__cell" aria-hidden="true" />}
+      </dl>
+    </div>
+  )
+}
+
+<style>
+  /*
+    Les filets suivent l'encre du texte et non un gris fixe : la fiche reste
+    lisible aussi bien sur Papier que sur un fond inversé.
+  */
+  .facts-frame {
+    /*
+      Largeur imposée ici et non par le parent : posée dans une colonne en
+      `flex`, la fiche se réduirait sinon à la largeur de son texte.
+    */
+    width: 100%;
+    container-type: inline-size;
+  }
+
+  .facts {
+    --facts-rule: color-mix(in oklab, var(--color-ink) 55%, transparent);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    /* Le filet de pied ferme la grille sous la dernière ligne. */
+    border-bottom: 1px solid var(--facts-rule);
+  }
+
+  .facts__cell {
+    padding: 0.9rem 1.1rem 1.4rem;
+    border-top: 1px solid var(--facts-rule);
+  }
+
+  /* La case muette n'a pas de contenu : sans hauteur minimale, pas de filet. */
+  .facts__cell:empty {
+    padding-block: 0;
+  }
+
+  /* Le filet vertical sépare les deux colonnes, sur toute la hauteur de la case. */
+  .facts__cell:nth-child(2n) {
+    border-left: 1px solid var(--facts-rule);
+  }
+
+  .facts__cell:nth-child(2n + 1) {
+    padding-left: 0;
+  }
+
+  .facts__label {
+    font-family: var(--font-sous-titre);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Le deux-points appartient à la mise en forme, pas au contenu traduit. */
+  .facts__label::after {
+    content: ':';
+  }
+
+  .facts__value {
+    margin: 0.7rem 0 0;
+    font-family: var(--font-annotation);
+    font-size: 1.0625rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    line-height: 1.3;
+    text-wrap: pretty;
+  }
+
+  /* Un canal par ligne : la liste s'empile, elle ne se met pas en ligne. */
+  .facts__links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .facts__link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.28em;
+    transition: opacity 0.25s ease;
+  }
+
+  .facts__link:hover {
+    opacity: 0.55;
+  }
+
+  /* Sous ~26 rem de large, la grille n'a plus la place de tenir deux colonnes. */
+  @container (max-width: 26rem) {
+    .facts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .facts__cell:nth-child(2n) {
+      border-left: 0;
+    }
+
+    .facts__cell {
+      padding-inline: 0;
+    }
+
+    /* Sur une colonne, la case muette ne compléterait rien : elle disparaît. */
+    .facts__cell:empty {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,65 @@
+---
+import { projectsIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+
+/**
+ * Retour à la liste des projets.
+ *
+ * Un simple lien de texte, sans cadre : la page projet commence par son titre,
+ * un bouton dessiné y prendrait le pas. Seule la flèche bouge au survol.
+ */
+interface Props {
+  locale: Locale;
+  class?: string;
+}
+
+const { locale, class: className } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<a href={projectsIndexPath(locale)} class:list={['back-link', className]}>
+  <span class="back-link__arrow" aria-hidden="true">←</span>
+  <span>{t('project.backToProjects')}</span>
+</a>
+
+<style>
+  .back-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5em;
+    color: var(--color-ink);
+    font-family: var(--font-annotation);
+    font-size: 1rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    line-height: 1.25;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .back-link:hover {
+    opacity: 0.55;
+  }
+
+  .back-link__arrow {
+    display: inline-block;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .back-link:hover .back-link__arrow {
+    transform: translateX(-0.25em);
+  }
+
+  .back-link:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .back-link__arrow,
+    .back-link:hover .back-link__arrow {
+      transform: none;
+    }
+  }
+</style>

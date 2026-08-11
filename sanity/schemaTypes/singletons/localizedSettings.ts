@@ -10,11 +10,11 @@ import { languageField, sameLanguageFilter } from '../../lib/i18n';
  */
 export const localizedSettings = defineType({
   name: 'localizedSettings',
-  title: 'Réglages du site',
+  title: 'Textes et SEO',
   type: 'document',
   groups: [
     { name: 'general', title: 'Général', default: true },
-    { name: 'navigation', title: 'Navigation' },
+    { name: 'seo', title: 'SEO' },
   ],
   fields: [
     languageField,
@@ -31,15 +31,18 @@ export const localizedSettings = defineType({
       title: 'Description du site',
       type: 'text',
       rows: 3,
-      group: 'general',
+      group: 'seo',
       description: 'Méta description par défaut, utilisée quand une page n’en définit pas.',
+      validation: (rule) =>
+        rule.max(180).warning('Au-delà de 180 caractères, la description est généralement tronquée.'),
     }),
     defineField({
       name: 'defaultSeoImage',
-      title: 'Image de partage par défaut',
+      title: 'Image sociale par défaut (Open Graph)',
       type: 'image',
-      group: 'general',
+      group: 'seo',
       options: { hotspot: true },
+      description: 'Utilisée lorsqu’une page ou un projet ne définit pas sa propre image. Format recommandé : 1200 × 630 px.',
     }),
     defineField({
       name: 'homePage',
@@ -53,18 +56,19 @@ export const localizedSettings = defineType({
     }),
     defineField({
       name: 'projectsIntro',
-      title: 'Introduction du portfolio',
+      title: 'Texte d’introduction',
       type: 'text',
-      rows: 3,
-      group: 'general',
-      description: 'Texte affiché en tête de la page listant les projets.',
+      rows: 4,
+      hidden: true,
+      deprecated: { reason: 'Ce contenu a été déplacé dans Pages → Page Projets.' },
     }),
 
     defineField({
       name: 'projectsNotes',
       title: 'Cartes de texte — page Projets',
       type: 'array',
-      group: 'general',
+      hidden: true,
+      deprecated: { reason: 'Ces cartes ont été déplacées dans Pages → Page Projets.' },
       description:
         'Chaque texte occupe une case de la grille à la place d’un projet — les projets suivants se décalent, aucun n’est masqué. Le texte s’affiche en bas à droite de la case, en italique.',
       of: [
@@ -103,26 +107,32 @@ export const localizedSettings = defineType({
       title: 'Menu principal',
       type: 'array',
       of: [defineArrayMember({ type: 'link' })],
-      group: 'navigation',
+      readOnly: true,
+      hidden: true,
+      deprecated: { reason: 'La navigation n’est plus administrée depuis le Studio.' },
     }),
     defineField({
       name: 'footerNav',
       title: 'Menu de pied de page',
       type: 'array',
       of: [defineArrayMember({ type: 'link' })],
-      group: 'navigation',
+      readOnly: true,
+      hidden: true,
+      deprecated: { reason: 'La navigation n’est plus administrée depuis le Studio.' },
     }),
     defineField({
       name: 'footerText',
       title: 'Texte de pied de page',
       type: 'richText',
-      group: 'navigation',
+      readOnly: true,
+      hidden: true,
+      deprecated: { reason: 'La navigation n’est plus administrée depuis le Studio.' },
     }),
   ],
   preview: {
     select: { title: 'siteTitle', language: 'language' },
     prepare: ({ title, language }) => ({
-      title: `Réglages — ${language?.toUpperCase() ?? '—'}`,
+      title: `Contenu du site — ${language?.toUpperCase() ?? '—'}`,
       subtitle: title,
     }),
   },

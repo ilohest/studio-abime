@@ -43,7 +43,8 @@ export const projectTemplateOptions = defineType({
       type: 'url',
       description: 'Fichier .mp4 en lecture automatique et muette. Remplace la couverture fixe.',
       validation: (rule) => rule.uri({ scheme: ['https'] }),
-      hidden: forTemplate('immersive'),
+      hidden: true,
+      deprecated: { reason: 'Le champ est désormais disponible dans l’onglet Contenu.' },
     }),
 
     /* Éditorial */
@@ -55,22 +56,5 @@ export const projectTemplateOptions = defineType({
       hidden: forTemplate('editorial'),
     }),
 
-    /* Standard + Éditorial */
-    defineField({
-      name: 'showFactSheet',
-      title: 'Afficher la fiche projet',
-      type: 'boolean',
-      initialValue: true,
-      description: 'Client, année, services et catégories.',
-      hidden: forTemplate('standard', 'editorial'),
-    }),
-
-    /* Tous modèles */
-    defineField({
-      name: 'showNextProject',
-      title: 'Afficher le projet suivant',
-      type: 'boolean',
-      initialValue: true,
-    }),
   ],
 });

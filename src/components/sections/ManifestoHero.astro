@@ -1,7 +1,6 @@
 ---
 import Wordmark from '~/components/brand/Wordmark.astro';
 import Stamp from '~/components/brand/Stamp.astro';
-import { resolveImage } from '~/lib/sanity/image';
 import { getLocaleMeta, type Locale } from '~/i18n/config';
 import type { ManifestoHero } from '~/lib/sanity/types';
 
@@ -45,16 +44,9 @@ const metaLines = (section.metaLines ?? []).map((line) => {
   const value = line.autoDate ? today : (line.value ?? '');
   return { label: line.label, value, href: hrefFor(value) };
 });
-
-// Texture éditoriale si l'éditeur en fournit une, sinon celle de la charte.
-const background = resolveImage(section.background, { width: 1600 });
-const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
 ---
 
-<section
-  class="manifesto surface-paper relative isolate flex min-h-[100svh] flex-col overflow-hidden"
-  style={`--paper-texture:url('${textureUrl}')`}
->
+<section class="manifesto surface-paper relative isolate flex min-h-[100svh] flex-col overflow-hidden">
   <div class="surface-paper-grain"></div>
 
   {/*
@@ -113,13 +105,9 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
           )
         }
 
-        {
-          section.showStamp !== false && (
-            <div class="manifesto-stamp-mobile ml-auto mr-2 md:hidden">
-              <Stamp variant="labo" class="w-24 text-ink" rotate={-8} />
-            </div>
-          )
-        }
+        <div class="manifesto-stamp-mobile ml-auto mr-2 md:hidden">
+          <Stamp variant="labo" class="w-24 text-ink" rotate={-8} />
+        </div>
 
         {
           (section.intention?.length ?? 0) > 0 && (
@@ -136,13 +124,9 @@ const textureUrl = background?.src ?? '/textures/papier-froisse.jpg';
         }
       </div>
 
-      {
-        section.showStamp !== false && (
-          <div class="mt-10 hidden md:mt-0 md:block">
-            <Stamp variant="labo" class="w-20 text-ink md:w-28" rotate={-8} />
-          </div>
-        )
-      }
+      <div class="mt-10 hidden md:mt-0 md:block">
+        <Stamp variant="labo" class="w-20 text-ink md:w-28" rotate={-8} />
+      </div>
     </div>
 
     {/* ── Page de droite ──────────────────────────────────────────────── */}

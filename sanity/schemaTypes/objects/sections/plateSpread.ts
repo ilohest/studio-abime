@@ -38,13 +38,18 @@ export const plateSpread = defineType({
               fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
               validation: (rule) => rule.required(),
             }),
-            defineField({ name: 'number', title: 'Numéro', type: 'string', description: 'Ex. « fig.01 ».' }),
-            defineField({ name: 'caption', title: 'Légende', type: 'string' }),
+            defineField({
+              name: 'caption',
+              title: 'Légende',
+              type: 'string',
+              description:
+                'Ex. « fig.01 — Fam. des ranunculaceæ ». Le repère de tête est mis en forme automatiquement.',
+            }),
           ],
           preview: {
-            select: { number: 'number', caption: 'caption', media: 'image' },
-            prepare: ({ number, caption, media }) => ({
-              title: [number, caption].filter(Boolean).join(' — ') || 'Figure',
+            select: { caption: 'caption', media: 'image' },
+            prepare: ({ caption, media }) => ({
+              title: caption || 'Figure',
               media,
             }),
           },

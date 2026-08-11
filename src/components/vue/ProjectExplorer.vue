@@ -15,11 +15,10 @@
  */
 import { computed, onMounted, ref, watch } from 'vue';
 import {
-  getProjectSpacerPositions,
-  insertProjectNotes,
+  insertProjectEditorialCards,
   type CategoryView,
+  type ProjectEditorialCard,
   type ProjectCardView,
-  type ProjectNote,
 } from '~/lib/viewModels';
 
 const props = defineProps<{
@@ -32,8 +31,8 @@ const props = defineProps<{
     count: string;
     viewProject: string;
   };
-  /** Cartes de texte intercalées dans la grille, à leur rang. */
-  notes?: ProjectNote[];
+  /** Cartes éditoriales intercalées dans la grille, à leur rang. */
+  editorialCards?: ProjectEditorialCard[];
   /** Nom du paramètre d'URL, traduit selon la langue. */
   queryParam?: string;
 }>();
@@ -48,27 +47,20 @@ const filteredProjects = computed(() =>
     : props.projects.filter((project) => project.categoryKeys.includes(activeKey.value)),
 );
 
-type CatalogItem =
-  | { kind: 'project'; key: string; project: ProjectCardView }
-  | { kind: 'spacer'; key: string };
+type CatalogItem = { kind: 'project'; key: string; project: ProjectCardView };
 
 /*
-  Les cartes de texte sont réinsérées APRÈS filtrage : leur rang se lit donc
+  Les cartes éditoriales sont réinsérées APRÈS filtrage : leur rang se lit donc
   sur la grille réellement affichée, et non sur la liste complète des projets.
 */
 const catalogItems = computed(() => {
-  const spacers = new Set(
-    getProjectSpacerPositions(filteredProjects.value.map((project) => project.id)),
-  );
+  const cards: CatalogItem[] = filteredProjects.value.map((project) => ({
+    kind: 'project',
+    key: `project-${project.id}`,
+    project,
+  }));
 
-  const cards: CatalogItem[] = filteredProjects.value.flatMap((project, index) => [
-    { kind: 'project' as const, key: `project-${project.id}`, project },
-    ...(spacers.has(index)
-      ? [{ kind: 'spacer' as const, key: `spacer-${project.id}` }]
-      : []),
-  ]);
-
-  return insertProjectNotes(cards, props.notes ?? []);
+  return insertProjectEditorialCards(cards, props.editorialCards ?? []);
 });
 
 /** Restaure le filtre depuis l'URL au montage (lien partagé, retour arrière). */
@@ -146,25 +138,30 @@ function isActive(key: string) {
     >
       <li
         v-for="entry in catalogItems"
-        :key="entry.kind === 'note' ? `note-${entry.note._key}` : entry.value.key"
+        :key="entry.kind === 'editorial' ? `editorial-${entry.editorial._key}` : entry.value.key"
         class="project-item project-catalog-item"
-        :aria-hidden="entry.kind !== 'note' && entry.value.kind === 'spacer' ? 'true' : undefined"
+        :aria-hidden="entry.kind === 'editorial' && entry.editorial.kind === 'empty' ? 'true' : undefined"
       >
         <div
-          v-if="entry.kind === 'note'"
+          v-if="entry.kind === 'editorial' && entry.editorial.kind === 'text'"
           class="project-catalog-card project-catalog-state-card project-catalog-state-quote"
         >
-          <p>{{ entry.note.text }}</p>
+          <p>{{ entry.editorial.text }}</p>
         </div>
 
         <div
-          v-else-if="entry.value.kind === 'spacer'"
+          v-else-if="entry.kind === 'editorial'"
           class="project-catalog-card project-catalog-spacer"
         >
           <span class="project-catalog-diagonal"></span>
         </div>
 
-        <a v-else :href="entry.value.project.href" class="project-catalog-card group">
+        <a
+          v-else
+          :href="entry.value.project.href"
+          class="project-catalog-card group"
+          :class="{ 'project-catalog-card--no-facts': entry.value.project.facts.length === 0 }"
+        >
           <header class="project-catalog-heading">
             <span class="project-catalog-number">{{ entry.value.project.number }}</span>
             <h3>{{ entry.value.project.title }}</h3>

@@ -1,11 +1,23 @@
-import type { StructureBuilder, StructureResolver } from 'sanity/structure';
+import type {
+  StructureBuilder,
+  StructureResolver,
+  StructureResolverContext,
+} from 'sanity/structure';
 import { locales, localeMeta } from '../../src/i18n/config';
 
 /** Identifiant figé du document de réglages globaux (instance unique). */
 export const SITE_SETTINGS_ID = 'siteSettings';
 
 /** Types pilotés par une entrée dédiée : on les retire de la liste générique. */
-const HANDLED_TYPES = ['page', 'project', 'category', 'siteSettings', 'localizedSettings', 'translation.metadata'];
+const HANDLED_TYPES = [
+  'page',
+  'project',
+  'category',
+  'projectsPage',
+  'siteSettings',
+  'localizedSettings',
+  'translation.metadata',
+];
 
 /**
  * Liste de documents d'un type, éclatée par langue dès qu'il y en a plusieurs.
@@ -36,20 +48,101 @@ function byLanguage(S: StructureBuilder, schemaType: string, title: string) {
     );
 }
 
+/** Ouvre directement la page d’accueil référencée pour une langue donnée. */
+async function homePageDocument(
+  S: StructureBuilder,
+  context: StructureResolverContext,
+  locale: string,
+) {
+  const documentId = await context
+    .getClient({ apiVersion: '2025-02-19' })
+    .fetch<string | null>(
+      '*[_type == "localizedSettings" && language == $locale && defined(homePage)][0].homePage._ref',
+      { locale },
+    );
+
+  const fallbackId = locale === 'fr' ? 'page.accueil.fr' : `page.home.${locale}`;
+
+  return S.document()
+    .schemaType('page')
+    .documentId(documentId ?? fallbackId)
+    .initialValueTemplate(`page-${locale}`)
+    .title(`Page d’accueil${locales.length > 1 ? ` — ${locale.toUpperCase()}` : ''}`);
+}
+
+function homePageByLanguage(S: StructureBuilder, context: StructureResolverContext) {
+  if (locales.length === 1) {
+    return () => homePageDocument(S, context, locales[0]);
+  }
+
+  return S.list()
+    .title('Page d’accueil')
+    .items(
+      locales.map((locale) =>
+        S.listItem()
+          .title(localeMeta[locale]?.label ?? locale)
+          .id(locale)
+          .child(() => homePageDocument(S, context, locale)),
+      ),
+    );
+}
+
+/** Un document unique par langue, ouvert directement sans liste intermédiaire. */
+function localizedSingleton(S: StructureBuilder, schemaType: string, title: string) {
+  if (locales.length === 1) {
+    const locale = locales[0];
+    return S.document()
+      .schemaType(schemaType)
+      .documentId(`${schemaType}-${locale}`)
+      .initialValueTemplate(`${schemaType}-${locale}`)
+      .title(title);
+  }
+
+  return S.list()
+    .title(title)
+    .items(
+      locales.map((locale) =>
+        S.listItem()
+          .title(localeMeta[locale]?.label ?? locale)
+          .id(locale)
+          .child(
+            S.document()
+              .schemaType(schemaType)
+              .documentId(`${schemaType}-${locale}`)
+              .initialValueTemplate(`${schemaType}-${locale}`)
+              .title(`${title} — ${locale.toUpperCase()}`),
+          ),
+      ),
+    );
+}
+
 /**
  * Structure du back-office.
  *
  * Objectif : que l'éditeur voie « Contenu » puis « Réglages », et jamais la
  * plomberie (métadonnées de traduction, types techniques).
  */
-export const structure: StructureResolver = (S) =>
+export const structure: StructureResolver = (S, context) =>
   S.list()
     .title('Studio Abîme')
     .items([
       S.listItem()
         .title('Pages')
         .id('pages')
-        .child(byLanguage(S, 'page', 'Pages')),
+        .child(
+          S.list()
+            .title('Pages')
+            .items([
+              S.listItem()
+                .title('Page d’accueil')
+                .id('homePage')
+                .child(homePageByLanguage(S, context)),
+              S.listItem()
+                .title('Page Projets')
+                .id('projectsPage')
+                .child(localizedSingleton(S, 'projectsPage', 'Page Projets')),
+            ]),
+        ),
 
       S.listItem()
         .title('Projets')
@@ -65,21 +158,31 @@ export const structure: StructureResolver = (S) =>
 
       S.listItem()
         .title('Réglages du site')
-        .id('localizedSettings')
+        .id('settings')
         .child(
-          locales.length === 1
-            ? S.documentTypeList('localizedSettings').title('Réglages du site')
-            : byLanguage(S, 'localizedSettings', 'Réglages du site'),
-        ),
-
-      S.listItem()
-        .title('Réglages globaux')
-        .id('siteSettings')
-        .child(
-          S.document()
-            .schemaType('siteSettings')
-            .documentId(SITE_SETTINGS_ID)
-            .title('Réglages globaux'),
+          S.list()
+            .title('Réglages du site')
+            .items([
+              S.listItem()
+                .title('Textes et SEO')
+                .id('localizedSettings')
+                .child(
+                  localizedSingleton(
+                    S,
+                    'localizedSettings',
+                    'Textes et SEO',
+                  ),
+                ),
+              S.listItem()
+                .title('Logo et réseaux sociaux')
+                .id('siteSettings')
+                .child(
+                  S.document()
+                    .schemaType('siteSettings')
+                    .documentId(SITE_SETTINGS_ID)
+                    .title('Logo et réseaux sociaux'),
+                ),
+            ]),
         ),
 
       S.divider(),

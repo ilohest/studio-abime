@@ -56,6 +56,13 @@ const locations: PresentationPluginOptions['resolve'] = {
       }),
     }),
 
+    projectsPage: defineLocations({
+      select: { language: 'language' },
+      resolve: (doc: Selected | null) => ({
+        locations: [{ title: 'Page Projets', href: projectsIndexPath(toLocale(doc?.language)) }],
+      }),
+    }),
+
     localizedSettings: defineLocations({
       select: { language: 'language' },
       resolve: (doc: Selected | null) => ({
@@ -74,6 +81,11 @@ const locations: PresentationPluginOptions['resolve'] = {
       const projects = getSegment('projects', locale);
 
       return [
+        {
+          route: `${prefix}/${projects}`,
+          filter: `_type == "projectsPage" && language == $language`,
+          params: { language: locale },
+        },
         {
           route: `${prefix}/${projects}/:slug`,
           filter: `_type == "project" && slug.current == $slug && language == $language`,

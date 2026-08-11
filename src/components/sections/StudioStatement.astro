@@ -2,6 +2,9 @@
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SmartLink from '~/components/primitives/SmartLink.astro';
+import { stegaClean } from '@sanity/client/stega';
+
+import { figureLabel } from '~/lib/figureLabel';
 import type { Locale } from '~/i18n/config';
 import type { StudioStatement } from '~/lib/sanity/types';
 
@@ -19,7 +22,18 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
-const figures = section.figures ?? [];
+
+/*
+  Repère et texte sont saisis dans un seul champ ; `figureLabel()` en extrait le
+  repère de tête pour lui garder sa mise en forme. Les anciens champs séparés
+  sont recomposés au passage, sans migration de contenu.
+*/
+const note = figureLabel(section.noteNumber, section.note);
+
+const figures = (section.figures ?? []).map((figure) => ({
+  ...figure,
+  label: figureLabel(figure.number, figure.caption),
+}));
 ---
 
 <section class="statement" data-statement-intro>
@@ -34,12 +48,10 @@ const figures = section.figures ?? [];
           <div class="statement__lede">
             <p class="type-declaration statement__text">{section.statement}</p>
 
-            {section.note && (
+            {(note.reference || note.text) && (
               <p class="statement__note">
-                {section.noteNumber && (
-                  <span class="statement__ref">{section.noteNumber}</span>
-                )}
-                <span class="statement__note-text">{section.note}</span>
+                {note.reference && <span class="statement__ref">{note.reference}</span>}
+                <span class="statement__note-text">{note.text}</span>
               </p>
             )}
           </div>
@@ -53,7 +65,7 @@ const figures = section.figures ?? [];
                 {figures.map((figure) => (
                   <figure
                     class="statement__figure"
-                    data-bleed={figure.bleed ?? 'none'}
+                    data-bleed={stegaClean(figure.bleed) ?? 'none'}
                     data-push={figure.pushRight ? '' : undefined}
                     style={`--span:${Math.min(Math.max(figure.span ?? 3, 1), 12)}`}
                   >
@@ -82,12 +94,12 @@ const figures = section.figures ?? [];
                       )
                     )}
 
-                    {(figure.number || figure.caption) && (
+                    {(figure.label.reference || figure.label.text) && (
                       <figcaption class="statement__caption">
-                        {figure.number && (
-                          <span class="statement__ref">{figure.number}</span>
+                        {figure.label.reference && (
+                          <span class="statement__ref">{figure.label.reference}</span>
                         )}
-                        {figure.caption}
+                        {figure.label.text}
                       </figcaption>
                     )}
                   </figure>

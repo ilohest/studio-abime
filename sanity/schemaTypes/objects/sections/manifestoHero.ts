@@ -15,7 +15,6 @@ export const manifestoHero = defineType({
   groups: [
     { name: 'header', title: 'En-tête', default: true },
     { name: 'body', title: 'Textes' },
-    { name: 'art', title: 'Direction artistique' },
   ],
   fields: [
     /* ── Bloc de mentions, en haut à gauche ─────────────────────────────── */
@@ -98,31 +97,12 @@ export const manifestoHero = defineType({
       group: 'body',
       description: 'Phrase de présentation, en bas à droite sous le logo.',
     }),
-
-    /* ── Direction artistique ───────────────────────────────────────────── */
-    defineField({
-      name: 'background',
-      title: 'Texture de fond',
-      type: 'image',
-      group: 'art',
-      description:
-        'Papier utilisé en fond. Vide = texture de la charte livrée avec le site.',
-      fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
-    }),
-    defineField({
-      name: 'showStamp',
-      title: 'Afficher le tampon',
-      type: 'boolean',
-      group: 'art',
-      initialValue: true,
-    }),
   ],
   preview: {
-    select: { hypothesis: 'hypothesis', media: 'background' },
-    prepare: ({ hypothesis, media }) => ({
+    select: { hypothesis: 'hypothesis' },
+    prepare: ({ hypothesis }) => ({
       title: 'Hero — manifeste',
       subtitle: hypothesis,
-      media,
     }),
   },
 });

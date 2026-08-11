@@ -414,27 +414,68 @@
   .project-catalog-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(0.45rem, 0.8vw, 0.9rem);
+    column-gap: 0;
+    row-gap: clamp(0.45rem, 0.8vw, 0.9rem);
   }
 
   .project-catalog-item {
+    --project-card-line-color: color-mix(
+      in srgb,
+      var(--color-ink) 70%,
+      transparent
+    );
+    --project-card-right-line: linear-gradient(transparent, transparent);
+    display: flex;
     min-width: 0;
+  }
+
+  .project-catalog-item:nth-child(2n),
+  .project-catalog-item:last-child {
+    --project-card-right-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+  }
+
+  /*
+    Même logique que les filets verticaux : un seul trait entre deux projets.
+    Chaque fiche porte son filet de PIED ; seule la première ligne porte en
+    plus un filet de tête, sans quoi deux traits se doubleraient entre les
+    lignes. Le nombre de fiches sur la première ligne suit les colonnes.
+  */
+  .project-catalog-item:nth-child(-n + 2) {
+    --project-card-top-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
   }
 
   .project-catalog-card {
     --corner-gap: clamp(0.7rem, 1vw, 1rem);
     position: relative;
     display: flex;
+    width: 100%;
     min-height: 100%;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: clamp(0.65rem, 1vw, 1rem);
     padding: clamp(0.55rem, 1vw, 0.9rem);
     color: var(--color-ink);
     background:
-      linear-gradient(currentColor, currentColor) top center / calc(100% - var(--corner-gap) * 2) 1px no-repeat,
-      linear-gradient(currentColor, currentColor) bottom center / calc(100% - var(--corner-gap) * 2) 1px no-repeat,
-      linear-gradient(currentColor, currentColor) left center / 1px calc(100% - var(--corner-gap) * 2) no-repeat,
-      linear-gradient(currentColor, currentColor) right center / 1px calc(100% - var(--corner-gap) * 2) no-repeat;
+      var(--project-card-top-line, linear-gradient(transparent, transparent))
+        top center / calc(100% - var(--corner-gap) * 2) 1px no-repeat,
+      linear-gradient(
+          var(--project-card-line-color),
+          var(--project-card-line-color)
+        )
+        bottom center / calc(100% - var(--corner-gap) * 2) 1px no-repeat,
+      linear-gradient(
+          var(--project-card-line-color),
+          var(--project-card-line-color)
+        )
+        left center / 1px calc(100% - var(--corner-gap) * 2) no-repeat,
+      var(--project-card-right-line) right center / 1px
+        calc(100% - var(--corner-gap) * 2) no-repeat;
     text-decoration: none;
   }
 
@@ -443,7 +484,6 @@
     grid-template-columns: auto minmax(0, 1fr);
     gap: 0.75rem;
     align-items: baseline;
-    min-height: 2.2rem;
     font-family: var(--font-titre);
   }
 
@@ -466,20 +506,44 @@
 
   .project-catalog-media {
     width: 100%;
-    aspect-ratio: 3 / 4;
     overflow: hidden;
     background: var(--color-sable);
+  }
+
+  /*
+   * La grille réserve la même hauteur à chaque visuel, mais l'image reste
+   * entièrement visible dans son ratio d'origine. Son bord inférieur est
+   * ancré sur une base commune, quelle que soit sa proportion.
+   */
+  .project-catalog-item .project-catalog-media {
+    display: flex;
+    aspect-ratio: 3 / 4;
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+    /*
+      Toutes les fiches d'une ligne ont la même hauteur, mais pas la même
+      quantité de texte. Le surplus est absorbé ICI, au-dessus du visuel, et
+      non sous le texte : la légende reste collée à son image et le bas de la
+      fiche ne s'ouvre pas sur un vide.
+    */
+    flex: 1 1 auto;
   }
 
   .project-catalog-image {
     display: block;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
     filter: grayscale(1);
     transition:
       filter 0.45s ease,
       transform 0.7s ease-out;
+  }
+
+  .project-catalog-item .project-catalog-image {
+    width: auto;
+    max-width: 100%;
+    max-height: 100%;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -490,6 +554,27 @@
     }
   }
 
+  /*
+    Soulignement du titre au survol : un trait qui se déploie de gauche à
+    droite plutôt qu'un soulignement qui s'allume d'un coup. Il est peint en
+    fond et non en `text-decoration`, seul moyen d'en animer la longueur.
+  */
+  .project-catalog-heading h3 {
+    justify-self: start;
+    max-width: 100%;
+    padding-bottom: 0.2em;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1px;
+    transition: background-size 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  a.project-catalog-card:hover .project-catalog-heading h3,
+  a.project-catalog-card:focus-visible .project-catalog-heading h3 {
+    background-size: 100% 1px;
+  }
+
   .project-catalog-spacer,
   .project-catalog-empty,
   .project-catalog-state-image-card {
@@ -498,8 +583,8 @@
   }
 
   .project-catalog-state-card {
-    height: clamp(15rem, 32vw, 31rem);
-    min-height: 0;
+    height: auto;
+    min-height: 100%;
   }
 
   .project-catalog-diagonal {
@@ -588,9 +673,32 @@
     line-height: 1.25;
   }
 
+  .project-catalog-card--no-facts .project-catalog-copy {
+    margin-top: 0;
+  }
+
   @media (min-width: 900px) {
     .project-catalog-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .project-catalog-item:nth-child(2n) {
+      --project-card-right-line: linear-gradient(transparent, transparent);
+    }
+
+    .project-catalog-item:nth-child(-n + 3) {
+      --project-card-top-line: linear-gradient(
+        var(--project-card-line-color),
+        var(--project-card-line-color)
+      );
+    }
+
+    .project-catalog-item:nth-child(3n),
+    .project-catalog-item:last-child {
+      --project-card-right-line: linear-gradient(
+        var(--project-card-line-color),
+        var(--project-card-line-color)
+      );
     }
   }
 
@@ -598,11 +706,31 @@
     .project-catalog-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+
+    .project-catalog-item:nth-child(2n),
+    .project-catalog-item:nth-child(3n) {
+      --project-card-right-line: linear-gradient(transparent, transparent);
+    }
+
+    .project-catalog-item:nth-child(-n + 4) {
+      --project-card-top-line: linear-gradient(
+        var(--project-card-line-color),
+        var(--project-card-line-color)
+      );
+    }
+
+    .project-catalog-item:nth-child(4n),
+    .project-catalog-item:last-child {
+      --project-card-right-line: linear-gradient(
+        var(--project-card-line-color),
+        var(--project-card-line-color)
+      );
+    }
   }
 
   @media (max-width: 767px) {
     .project-catalog-grid {
-      gap: 0.35rem;
+      row-gap: 0.35rem;
     }
 
     .project-catalog-card {
@@ -649,8 +777,8 @@
     }
 
     .project-catalog-state-card {
-      height: 11rem;
-      min-height: 0;
+      height: auto;
+      min-height: 100%;
     }
 
     .project-catalog-empty p {

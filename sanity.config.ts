@@ -8,6 +8,11 @@ import { schemaTypes } from './sanity/schemaTypes';
 import { structure } from './sanity/structure';
 import { baseLanguage, supportedLanguages, TRANSLATED_DOCUMENT_TYPES } from './sanity/lib/i18n';
 import { resolvePresentationLocations } from './sanity/lib/presentation';
+import {
+  createProjectDuplicateAction,
+  ProjectPublishAction,
+} from './sanity/actions/projectPublishAction';
+import type { DuplicateDocumentActionComponent } from 'sanity';
 
 /**
  * Configuration du Studio Sanity.
@@ -16,17 +21,32 @@ import { resolvePresentationLocations } from './sanity/lib/presentation';
  * ce qui garantit que le CMS et le site partagent la même origine — condition
  * la plus simple pour que l'édition visuelle fonctionne sans configuration CORS.
  */
-const projectId = process.env.PUBLIC_SANITY_PROJECT_ID ?? '';
-const dataset = process.env.PUBLIC_SANITY_DATASET ?? 'production';
-const apiVersion = process.env.PUBLIC_SANITY_API_VERSION ?? '2025-02-19';
+// Le Studio embarqué charge cette configuration dans le navigateur via Vite,
+// tandis que la CLI Sanity l'exécute dans Node.js.
+const env = {
+  ...(typeof process !== 'undefined' ? process.env : {}),
+  ...(import.meta.env ?? {}),
+};
+
+const projectId = env.PUBLIC_SANITY_PROJECT_ID ?? '';
+const dataset = env.PUBLIC_SANITY_DATASET ?? 'production';
+const apiVersion = env.PUBLIC_SANITY_API_VERSION ?? '2025-02-19';
 
 /** Origine du site prévisualisé dans le Presentation Tool. */
-const previewOrigin = process.env.PUBLIC_SITE_URL ?? 'http://localhost:4321';
+const previewOrigin = env.PUBLIC_SITE_URL ?? 'http://localhost:4321';
+
+/** Libellés sobres pour les modèles localisés quand une seule langue est active. */
+const creationTitles: Record<string, string> = {
+  page: 'Page',
+  project: 'Projet',
+  category: 'Catégorie',
+  localizedSettings: 'Réglages du site',
+  projectsPage: 'Page Projets',
+};
 
 export default defineConfig({
   name: 'studio-abime',
   title: 'Studio Abîme',
-  basePath: '/studio',
 
   projectId,
   dataset,
@@ -80,11 +100,63 @@ export default defineConfig({
   ],
 
   document: {
+    /**
+     * Le plugin i18n ajoute un modèle par langue (`project-fr`) en plus du
+     * modèle natif (`project`). On masque le modèle natif, qui créerait un
+     * document sans langue, ainsi que le modèle paramétré réservé au plugin.
+     * En monolingue, « Français Projet » redevient simplement « Projet ».
+     */
+    newDocumentOptions: (prev) =>
+      prev
+        .filter(
+          ({ templateId }) =>
+            templateId !== 'projectsPage' &&
+            !templateId.startsWith('projectsPage-') &&
+            templateId !== 'localizedSettings' &&
+            !templateId.startsWith('localizedSettings-'),
+        )
+        .filter(
+          ({ templateId }) =>
+            !TRANSLATED_DOCUMENT_TYPES.some(
+              (schemaType) => templateId === schemaType || templateId === `${schemaType}-parameterized`,
+            ),
+        )
+        .map((item) => {
+          if (supportedLanguages.length !== 1) return item;
+
+          const schemaType = TRANSLATED_DOCUMENT_TYPES.find(
+            (type) => item.templateId === `${type}-${baseLanguage}`,
+          );
+
+          return schemaType ? { ...item, title: creationTitles[schemaType] } : item;
+        }),
+
     // Les singletons ne doivent pas être dupliqués ni supprimés par erreur.
-    actions: (prev, { schemaType }) =>
-      schemaType === 'siteSettings'
-        ? prev.filter(({ action }) => action !== 'duplicate' && action !== 'delete' && action !== 'unpublish')
-        : prev,
+    actions: (prev, { schemaType }) => {
+      if (
+        schemaType === 'siteSettings' ||
+        schemaType === 'localizedSettings' ||
+        schemaType === 'projectsPage'
+      ) {
+        return prev.filter(
+          ({ action }) => action !== 'duplicate' && action !== 'delete' && action !== 'unpublish',
+        );
+      }
+
+      if (schemaType === 'project') {
+        return prev.map((originalAction) => {
+          if (originalAction.action === 'publish') return ProjectPublishAction;
+          if (originalAction.action === 'duplicate') {
+            return createProjectDuplicateAction(
+              originalAction as DuplicateDocumentActionComponent,
+            );
+          }
+          return originalAction;
+        });
+      }
+
+      return prev;
+    },
   },
 });
 

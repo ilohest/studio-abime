@@ -1,0 +1,223 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import SectionRenderer from '~/components/sections/SectionRenderer.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
+import NextProject from '~/components/project/NextProject.astro';
+import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+
+import { projectGallery } from '~/lib/projectGallery';
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle BANDEAU — le titre ouvre la page, les images la ferment.
+ *
+ * Trois temps qui se lisent de haut en bas : le titre seul en ouverture, puis
+ * le texte et la fiche côte à côte, puis la planche d'images en bandeau. Rien
+ * n'est fixe — c'est le pendant horizontal du modèle Colonne fixe, pour les
+ * projets dont le texte est court et les visuels larges.
+ *
+ * La planche est une trame à trois cases ; un visuel réglé sur « pleine
+ * largeur » les occupe toutes (`gallery[].span`). Les visuels d'une même
+ * ligne s'alignent par le bas, chacun gardant son format d'origine.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+
+/* La trame de ce modèle compte 3 colonnes : une largeur plus grande y est bornée. */
+const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(item.span, 3) }));
+---
+
+<article class="banner">
+  <div class="banner__inner container-wide">
+    <ProjectBackLink locale={locale} />
+
+    {/*
+      Deux colonnes de haut en bas : le titre et le texte tiennent dans la
+      colonne de gauche, la fiche occupe celle de droite. Le titre ne déborde
+      donc jamais au-dessus de la grille.
+    */}
+    <div class="banner__band">
+      <div class="banner__column">
+        {/*
+          Le nom du projet passe en mention, entre parenthèses : c'est le titre
+          affiché qui porte la page. Sans titre affiché, le nom reprend sa
+          place — la page garde toujours son `h1`.
+        */}
+        <header class="banner__header">
+          {project.headline && <p class="banner__eyebrow">({project.title})</p>}
+          <h1 class="banner__title text-balance">{project.headline || project.title}</h1>
+        </header>
+
+        <div class="banner__body">
+          <SectionRenderer sections={project.sections} locale={locale} />
+        </div>
+      </div>
+
+      <ProjectFacts project={project} locale={locale} class="banner__facts" />
+    </div>
+
+    {
+      items.length > 0 && (
+        <div class="banner__gallery">
+          {items.map((item) => (
+            <figure class="banner__figure" style={`--span:${item.span}`}>
+              <SanityImage
+                image={item.image}
+                width={1400}
+                sizes="(min-width: 900px) 32vw, 100vw"
+                class="banner__image"
+              />
+              {item.caption && <figcaption class="banner__caption">{item.caption}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      )
+    }
+  </div>
+
+  <NextProject project={project.next} locale={locale} />
+</article>
+
+<style>
+  .banner__inner {
+    padding-block: clamp(2rem, 4vw, 4rem) clamp(3rem, 8vw, 6rem);
+  }
+
+  .banner__header {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  /* Même police que le texte courant : la mention se lit comme une note. */
+  .banner__eyebrow {
+    margin: 0;
+    font-family: var(--font-copy);
+    font-size: 0.9375rem;
+    font-weight: 400;
+    letter-spacing: var(--tracking-copy);
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  /*
+    Le titre quitte la casse forcée et le mono des titres de section : ici
+    c'est une phrase qui se lit, pas une enseigne.
+  */
+  .banner__title {
+    margin: 0.9rem 0 0;
+    font-family: var(--font-copy);
+    font-size: clamp(1.75rem, 3.6vw, 3.1rem);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.12;
+    text-transform: none;
+  }
+
+  /*
+    Le texte et la fiche se répondent par le BAS : la colonne la plus longue
+    donne la hauteur, l'autre s'y raccroche. C'est ce pied commun qui tient les
+    deux colonnes ensemble au-dessus de la planche.
+  */
+  .banner__band {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: clamp(2rem, 6vw, 6rem);
+    margin-top: clamp(1rem, 3vw, 2rem);
+  }
+
+  .banner__body {
+    margin-top: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  /*
+    Les blocs de contenu sont écrits pour la pleine page : ils portent leur
+    propre conteneur et un rythme vertical de section entière. Dans une colonne,
+    on leur retire les deux — la colonne EST déjà le conteneur.
+  */
+  .banner__body :global(section) {
+    padding-block: 0;
+  }
+
+  .banner__body :global(.container-wide),
+  .banner__body :global(.container-content) {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .banner__body :global(section) + :global(section) {
+    margin-top: clamp(2rem, 5vw, 3rem);
+  }
+
+  /* ── Planche en bandeau ─────────────────────────────────────────────────── */
+  /*
+    La planche vit dans le conteneur du contenu : elle a donc exactement la
+    largeur du texte et de la fiche, bord à bord.
+  */
+  .banner__gallery {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.35rem, 0.8vw, 0.75rem);
+    margin-top: clamp(3rem, 9vw, 7rem);
+  }
+
+  /*
+    Une figure = UNE case de la trame. Elle occupait auparavant deux rangées
+    (visuel puis légende) empruntées à la grille : l'écart de la grille se
+    comptait alors deux fois entre deux lignes d'images, et les lignes
+    s'éloignaient plus que les colonnes.
+
+    La figure s'étire donc sur toute la hauteur de sa case et pousse son
+    visuel vers le bas — c'est ce qui aligne les visuels d'une même ligne.
+  */
+  .banner__figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .banner__figure {
+    grid-column: span var(--span, 1);
+  }
+
+  /*
+    `:global` : le visuel est rendu par le composant `SanityImage`, il ne porte
+    donc pas la marque de portée de ce fichier. Sans cela, l'image garde sa
+    taille naturelle — ni pleine largeur, ni calée en bas de sa rangée.
+  */
+  .banner__figure :global(.banner__image) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .banner__caption {
+    margin-top: 0.5rem;
+    font-family: var(--font-annotation);
+    font-size: 0.9375rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 899px) {
+    .banner__band {
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(2.5rem, 8vw, 4rem);
+    }
+
+    .banner__body {
+      max-width: none;
+    }
+
+    .banner__gallery {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
+

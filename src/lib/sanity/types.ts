@@ -47,7 +47,7 @@ export interface SanityLink {
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
-    _type: 'page' | 'project';
+    _type: 'page' | 'project' | 'projectsPage';
     title?: string;
     slug?: string;
     language?: Locale;
@@ -79,8 +79,6 @@ export interface ManifestoHero extends SectionBase {
   intentionLabel?: string;
   intention?: string[];
   tagline?: string;
-  background?: SanityImage;
-  showStamp?: boolean;
 }
 
 export interface ServicesMenu extends SectionBase {
@@ -92,6 +90,7 @@ export interface ServicesMenu extends SectionBase {
 export interface StudioStatement extends SectionBase {
   _type: 'studioStatement';
   statement: string;
+  /** Ancien champ séparé, encore présent sur les documents antérieurs. */
   noteNumber?: string;
   note?: string;
   marker?: string;
@@ -117,8 +116,6 @@ export interface StudioStatement extends SectionBase {
 export interface PullQuote extends SectionBase {
   _type: 'pullQuote';
   text: string;
-  measure?: 'narrow' | 'default' | 'wide';
-  fullHeight?: boolean;
 }
 
 export interface PlateSpread extends SectionBase {
@@ -138,7 +135,13 @@ export interface PlateSpread extends SectionBase {
 export interface ProjectShowcase extends SectionBase {
   _type: 'projectShowcase';
   projects?: ProjectCard[];
-  startNumber?: number;
+  /** Le CMS n'impose ni titre ni image : une entrée incomplète est ignorée au rendu. */
+  placeholderItems?: Array<{
+    _key: string;
+    title?: string;
+    href?: string;
+    image?: SanityImage;
+  }>;
   /**
    * Projets factices, réservés au contenu d'amorçage tant qu'aucun projet réel
    * n'existe dans Sanity. Jamais renseignés par le CMS.
@@ -154,7 +157,6 @@ export interface ProjectShowcase extends SectionBase {
 export interface FullBleedImage extends SectionBase {
   _type: 'fullBleedImage';
   image?: SanityImage;
-  caption?: string;
   /** Visuel de repli, réservé au contenu d'amorçage. */
   fallbackImage?: ImageMetadata;
 }
@@ -173,7 +175,6 @@ export interface RichTextSection extends SectionBase {
   eyebrow?: string;
   heading?: string;
   body: PortableTextBlock[];
-  width?: 'narrow' | 'default' | 'wide';
 }
 
 export interface MediaSection extends SectionBase {
@@ -224,8 +225,8 @@ export type Section =
 export interface CategorySummary {
   _id: string;
   title: string;
-  /** Clé stable et non traduite : sert d'identifiant de filtre côté client. */
-  key: string;
+  /** Slug unique dans la langue courante : identifiant du filtre côté client. */
+  slug: string;
 }
 
 export interface ProjectCard {
@@ -233,25 +234,43 @@ export interface ProjectCard {
   title: string;
   slug: string;
   language: Locale;
+  /** Position dans la page Projets, selon son ordre éditorial courant. */
+  number?: number;
   client?: string;
   year?: number;
   excerpt?: string;
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   thumbnail?: SanityImage | null;
-  coverImage?: SanityImage | null;
   categories: CategorySummary[];
 }
 
 /** Templates de page projet disponibles. Voir `src/templates/project/`. */
-export type ProjectTemplate = 'standard' | 'immersive' | 'editorial';
+export type ProjectTemplate = 'standard' | 'immersive' | 'editorial' | 'split' | 'banner';
 
 /** Options conditionnelles du modèle sélectionné (voir `projectTemplateOptions`). */
 export interface ProjectTemplateOptions {
   accent?: 'lumiere' | 'ciel' | 'sable' | 'papier';
+  /** Ancien emplacement, conservé temporairement pour les documents existants. */
   coverVideoUrl?: string;
   showMarginNotes?: boolean;
-  showFactSheet?: boolean;
-  showNextProject?: boolean;
+}
+
+/** Canal de diffusion du projet — site, réseau social, boutique… */
+export interface ProjectChannel {
+  _key: string;
+  label?: string;
+  url?: string;
+}
+
+/** Visuel de la colonne défilante du modèle « Colonne fixe ». */
+export interface ProjectGalleryItem {
+  _key: string;
+  image?: SanityImage;
+  /** Largeur sur la trame de 2 du modèle Colonne fixe. `half`/`full` : ancien couple. */
+  span?: '1' | '2' | 'half' | 'full';
+  /** Largeur sur la trame de 3 du modèle Bandeau. */
+  spanWide?: '1' | '2' | '3';
+  caption?: string;
 }
 
 export interface Project {
@@ -262,12 +281,16 @@ export interface Project {
   slug: string;
   template: ProjectTemplate;
   templateOptions?: ProjectTemplateOptions;
+  coverVideoUrl?: string;
   client?: string;
   year?: number;
+  /** Grande phrase de tête de la page projet. À défaut, le titre reprend la place. */
+  headline?: string;
   excerpt?: string;
   services?: string[];
+  channels?: ProjectChannel[];
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
-  coverImage?: SanityImage;
+  gallery?: ProjectGalleryItem[];
   thumbnail?: SanityImage;
   categories: CategorySummary[];
   sections: Section[];
@@ -282,6 +305,21 @@ export interface Page {
   title: string;
   slug: string;
   sections: Section[];
+  seo?: Seo;
+}
+
+export interface ProjectsPage {
+  _id: string;
+  _type: 'projectsPage';
+  language: Locale;
+  title: string;
+  intro?: string;
+  editorialCards: Array<{
+    _key: string;
+    kind: 'empty' | 'text';
+    text?: string;
+    position?: number;
+  }>;
   seo?: Seo;
 }
 
@@ -305,9 +343,6 @@ export interface LocalizedSettings {
   footerText?: PortableTextBlock[];
   /** Slug de la page désignée comme accueil : sert à l'exclure des routes `/slug`. */
   homePageSlug?: string | null;
-  projectsIntro?: string;
-  /** Cartes de texte intercalées dans la grille de la page Projets. */
-  projectsNotes?: Array<{ _key: string; text: string; position?: number }>;
 }
 
 /** Données communes à toutes les pages, injectées par le layout. */

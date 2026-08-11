@@ -18,20 +18,6 @@ export const richTextSection = defineType({
       type: 'richText',
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: 'width',
-      title: 'Largeur',
-      type: 'string',
-      initialValue: 'default',
-      options: {
-        list: [
-          { value: 'narrow', title: 'Étroite (lecture)' },
-          { value: 'default', title: 'Standard' },
-          { value: 'wide', title: 'Large' },
-        ],
-        layout: 'radio',
-      },
-    }),
   ],
   preview: {
     select: { heading: 'heading', eyebrow: 'eyebrow' },

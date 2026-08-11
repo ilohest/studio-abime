@@ -12,7 +12,7 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
  */
 export const siteSettings = defineType({
   name: 'siteSettings',
-  title: 'Réglages globaux',
+  title: 'Logo et réseaux sociaux',
   type: 'document',
   fields: [
     defineField({
@@ -51,6 +51,6 @@ export const siteSettings = defineType({
     }),
   ],
   preview: {
-    prepare: () => ({ title: 'Réglages globaux' }),
+    prepare: () => ({ title: 'Logo et réseaux sociaux' }),
   },
 });

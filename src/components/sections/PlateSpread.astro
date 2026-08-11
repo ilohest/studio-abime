@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import { figureLabel } from '~/lib/figureLabel';
 import type { PlateSpread } from '~/lib/sanity/types';
 
 /**
@@ -18,7 +19,11 @@ interface Props {
 }
 
 const { section } = Astro.props;
-const figures = section.figures ?? [];
+/* Repère et légende tiennent dans un seul champ — voir `figureLabel()`. */
+const figures = (section.figures ?? []).map((figure) => ({
+  ...figure,
+  label: figureLabel(figure.number, figure.caption),
+}));
 const hasSanityBackground = Boolean(section.background?.asset);
 ---
 
@@ -83,10 +88,12 @@ const hasSanityBackground = Boolean(section.background?.asset);
               )
             )}
 
-            {(figure.number || figure.caption) && (
+            {(figure.label.reference || figure.label.text) && (
               <figcaption class="plate__caption">
-                {figure.number && <span class="plate__ref">{figure.number}</span>}
-                {figure.caption}
+                {figure.label.reference && (
+                  <span class="plate__ref">{figure.label.reference}</span>
+                )}
+                {figure.label.text}
               </figcaption>
             )}
           </figure>

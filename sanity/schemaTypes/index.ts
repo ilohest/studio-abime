@@ -8,6 +8,7 @@ import { category } from './documents/category';
 // Singletons
 import { siteSettings } from './singletons/siteSettings';
 import { localizedSettings } from './singletons/localizedSettings';
+import { projectsPage } from './singletons/projectsPage';
 
 // Objets réutilisables
 import { link } from './objects/link';
@@ -29,6 +30,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   // Singletons
   siteSettings,
   localizedSettings,
+  projectsPage,
 
   // Objets
   link,

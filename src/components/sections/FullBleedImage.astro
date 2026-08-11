@@ -35,8 +35,6 @@ const hasSanityImage = Boolean(section.image?.asset);
         )
       )
     }
-
-    {section.caption && <figcaption class="bleed__caption">{section.caption}</figcaption>}
   </figure>
 </section>
 
@@ -53,14 +51,5 @@ const hasSanityImage = Boolean(section.image?.asset);
     display: block;
     width: 100%;
     height: auto;
-  }
-
-  .bleed__caption {
-    padding: 0.9rem clamp(1.5rem, 4vw, 4rem) 0;
-    font-family: var(--font-annotation);
-    font-style: italic;
-    font-size: 0.75rem;
-    letter-spacing: var(--tracking-annotation);
-    color: var(--color-ink);
   }
 </style>

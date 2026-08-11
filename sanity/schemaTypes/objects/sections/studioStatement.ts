@@ -26,18 +26,13 @@ export const studioStatement = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'noteNumber',
-      title: 'Numéro de la note',
-      type: 'string',
-      group: 'text',
-      description: 'Ex. « fig.04 ».',
-    }),
-    defineField({
       name: 'note',
       title: 'Note',
       type: 'text',
       rows: 3,
       group: 'text',
+      description:
+        'Ex. « fig.04 — On étudie la communication… ». Le repère de tête est mis en forme automatiquement.',
     }),
     defineField({
       name: 'marker',
@@ -71,12 +66,12 @@ export const studioStatement = defineType({
               validation: (rule) => rule.required(),
             }),
             defineField({
-              name: 'number',
-              title: 'Numéro',
+              name: 'caption',
+              title: 'Légende',
               type: 'string',
-              description: 'Ex. « fig.05 ».',
+              description:
+                'Ex. « fig.05 — Compréhension de la constitution ». Le repère de tête est mis en forme automatiquement.',
             }),
-            defineField({ name: 'caption', title: 'Légende', type: 'string' }),
             defineField({
               name: 'span',
               title: 'Largeur',
@@ -109,9 +104,9 @@ export const studioStatement = defineType({
             }),
           ],
           preview: {
-            select: { number: 'number', caption: 'caption', media: 'image' },
-            prepare: ({ number, caption, media }) => ({
-              title: [number, caption].filter(Boolean).join(' — ') || 'Figure',
+            select: { caption: 'caption', media: 'image' },
+            prepare: ({ caption, media }) => ({
+              title: caption || 'Figure',
               media,
             }),
           },

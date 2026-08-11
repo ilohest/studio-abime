@@ -27,13 +27,12 @@ export const fullBleedImage = defineType({
       ],
       validation: (rule) => rule.required(),
     }),
-    defineField({ name: 'caption', title: 'Légende', type: 'string' }),
   ],
   preview: {
-    select: { caption: 'caption', media: 'image' },
-    prepare: ({ caption, media }) => ({
+    select: { media: 'image', alt: 'image.alt' },
+    prepare: ({ media, alt }) => ({
       title: 'Image pleine largeur',
-      subtitle: caption,
+      subtitle: alt,
       media,
     }),
   },

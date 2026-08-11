@@ -26,35 +26,47 @@ export const project = defineType({
   title: 'Projet',
   type: 'document',
   groups: [
-    { name: 'content', title: 'Contenu', default: true },
-    { name: 'meta', title: 'Fiche projet' },
+    { name: 'meta', title: 'Fiche projet', default: true },
+    { name: 'content', title: 'Contenu' },
     { name: 'template', title: 'Modèle de page' },
-    { name: 'seo', title: 'Référencement' },
+    { name: 'seo', title: 'SEO' },
   ],
   fields: [
     languageField,
     defineField({
       name: 'title',
-      title: 'Titre',
+      title: 'Nom du projet',
       type: 'string',
-      group: 'content',
+      group: 'meta',
+      description: 'Affiché entre parenthèses au-dessus du titre, et dans les listes.',
       validation: (rule) => rule.required(),
     }),
     defineField({
       name: 'slug',
-      title: 'Slug',
+      title: 'Identifiant d’URL',
       type: 'slug',
-      group: 'content',
+      hidden: true,
       options: { source: 'title', maxLength: 96 },
-      validation: (rule) => rule.required(),
+      description: 'Généré automatiquement à la première publication.',
+    }),
+    defineField({
+      name: 'headline',
+      title: 'Titre affiché',
+      type: 'text',
+      rows: 2,
+      group: 'meta',
+      description:
+        'Grande phrase en tête de la page projet, sous le nom entre parenthèses. Vide = le nom du projet.',
+      validation: (rule) => rule.max(160),
     }),
     defineField({
       name: 'excerpt',
       title: 'Accroche',
       type: 'text',
       rows: 3,
-      group: 'content',
-      description: "Résumé court affiché dans les listes de projets et les partages.",
+      group: 'meta',
+      description:
+        "Résumé court affiché dans les listes de projets et les partages. N'apparaît pas sur la page du projet.",
       validation: (rule) => rule.max(280),
     }),
 
@@ -74,6 +86,42 @@ export const project = defineType({
       of: [defineArrayMember({ type: 'string' })],
       options: { layout: 'tags' },
       group: 'meta',
+    }),
+    defineField({
+      name: 'channels',
+      title: 'Canaux',
+      type: 'array',
+      group: 'meta',
+      description:
+        'Où le projet est visible : site, compte Instagram, boutique… Affiché dans la fiche projet.',
+      of: [
+        defineArrayMember({
+          name: 'channel',
+          title: 'Canal',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'label',
+              title: 'Intitulé',
+              type: 'string',
+              description: 'Ex. Site, Instagram, Boutique.',
+            }),
+            defineField({
+              name: 'url',
+              title: 'URL',
+              type: 'url',
+              validation: (rule) => rule.uri({ scheme: ['http', 'https', 'mailto'] }),
+            }),
+          ],
+          preview: {
+            select: { title: 'label', subtitle: 'url' },
+            prepare: ({ title, subtitle }) => ({
+              title: title || 'Canal sans intitulé',
+              subtitle: subtitle || 'Aucune URL — ce canal ne sera pas affiché',
+            }),
+          },
+        }),
+      ],
     }),
     defineField({
       name: 'listingFacts',
@@ -132,16 +180,107 @@ export const project = defineType({
       type: 'image',
       group: 'meta',
       options: { hotspot: true },
-      description: 'Visuel utilisé dans les listes. À défaut, la couverture est reprise.',
+      description: 'Visuel du projet dans les listes et en tête de page.',
       fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
     }),
     defineField({
-      name: 'coverImage',
-      title: 'Couverture',
-      type: 'image',
-      group: 'meta',
-      options: { hotspot: true },
-      fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
+      name: 'coverVideoUrl',
+      title: 'Vidéo de couverture',
+      type: 'url',
+      group: 'content',
+      description: 'Fichier .mp4 en lecture automatique et muette. Remplace le visuel de tête.',
+      validation: (rule) => rule.uri({ scheme: ['https'] }),
+      hidden: ({ document }) =>
+        ((document?.template as string | undefined) ?? 'standard') !== 'immersive',
+    }),
+
+    /* ── Corps de la page ─────────────────────────────────────────────────── */
+    /*
+      Liste volontairement restreinte : les blocs du site sont écrits pour la
+      pleine page (Hero manifeste, Menu des services, Planche…) et n'ont pas de
+      sens dans la colonne d'une page projet. On ne propose donc que ceux qui y
+      tiennent vraiment.
+    */
+    definePageBuilder({
+      title: 'Contenu du projet',
+      group: 'content',
+      allowed: ['richTextSection', 'fullBleedImage'],
+    }),
+
+    /* ── Planche d'images (modèles « Colonne fixe » et « Bandeau ») ───────── */
+    defineField({
+      name: 'gallery',
+      title: 'Images du projet',
+      type: 'array',
+      group: 'content',
+      description:
+        'Visuels de la planche, dans l’ordre de la liste. Chaque image occupe une case de la trame ou toute la largeur.',
+      hidden: ({ document }) =>
+        !['split', 'banner'].includes((document?.template as string | undefined) ?? ''),
+      of: [
+        defineArrayMember({
+          name: 'galleryItem',
+          title: 'Visuel',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'image',
+              title: 'Image',
+              type: 'image',
+              options: { hotspot: true },
+              fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
+            }),
+            /*
+              Deux champs plutôt qu'un : les deux modèles n'ont pas la même
+              trame, et une liste d'options ne peut pas varier selon le
+              document. Chacun ne voit donc que les largeurs qui existent
+              vraiment chez lui.
+            */
+            defineField({
+              name: 'span',
+              title: 'Largeur',
+              type: 'string',
+              initialValue: '1',
+              options: {
+                list: [
+                  { value: '1', title: '1 colonne' },
+                  { value: '2', title: '2 colonnes' },
+                ],
+                layout: 'radio',
+                direction: 'horizontal',
+              },
+              description: 'Sur les 2 colonnes de la planche du modèle Colonne fixe.',
+              hidden: ({ document }) => (document?.template as string | undefined) !== 'split',
+            }),
+            defineField({
+              name: 'spanWide',
+              title: 'Largeur',
+              type: 'string',
+              initialValue: '1',
+              options: {
+                list: [
+                  { value: '1', title: '1 colonne' },
+                  { value: '2', title: '2 colonnes' },
+                  { value: '3', title: '3 colonnes' },
+                ],
+                layout: 'radio',
+                direction: 'horizontal',
+              },
+              description: 'Sur les 3 colonnes de la planche du modèle Bandeau.',
+              hidden: ({ document }) => (document?.template as string | undefined) !== 'banner',
+            }),
+            defineField({ name: 'caption', title: 'Légende', type: 'string' }),
+          ],
+          preview: {
+            select: { caption: 'caption', span: 'span', spanWide: 'spanWide', media: 'image' },
+            prepare: ({ caption, span, spanWide, media }) => ({
+              title: caption || 'Visuel',
+              subtitle: `${Number(spanWide ?? span) || (span === 'full' ? 3 : 1)} colonne(s)`,
+              media,
+            }),
+          },
+        }),
+      ],
     }),
 
     /* ── Modèle de page ───────────────────────────────────────────────────── */
@@ -165,10 +304,13 @@ export const project = defineType({
       group: 'template',
     }),
 
-    /* ── Corps de la page ─────────────────────────────────────────────────── */
-    definePageBuilder({ title: 'Contenu du projet' }),
-
-    defineField({ name: 'seo', title: 'Référencement', type: 'seo', group: 'seo' }),
+    defineField({
+      name: 'seo',
+      title: 'SEO',
+      type: 'seo',
+      group: 'seo',
+      options: { collapsible: false },
+    }),
   ],
   orderings: [
     {
@@ -187,12 +329,11 @@ export const project = defineType({
       year: 'year',
       language: 'language',
       media: 'thumbnail',
-      cover: 'coverImage',
     },
-    prepare: ({ title, client, year, language, media, cover }) => ({
+    prepare: ({ title, client, year, language, media }) => ({
       title,
       subtitle: [language?.toUpperCase(), client, year].filter(Boolean).join(' · '),
-      media: media ?? cover,
+      media,
     }),
   },
 });

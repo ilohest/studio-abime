@@ -19,7 +19,7 @@ export const page = defineType({
   type: 'document',
   groups: [
     { name: 'content', title: 'Contenu', default: true },
-    { name: 'seo', title: 'Référencement' },
+    { name: 'seo', title: 'SEO' },
   ],
   fields: [
     languageField,
@@ -71,8 +71,8 @@ export const page = defineType({
           return true;
         }),
     }),
-    definePageBuilder(),
-    defineField({ name: 'seo', title: 'Référencement', type: 'seo', group: 'seo' }),
+    definePageBuilder({ group: 'content' }),
+    defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' }),
   ],
   preview: {
     select: { title: 'title', slug: 'slug.current', language: 'language' },

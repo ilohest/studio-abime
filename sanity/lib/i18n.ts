@@ -18,7 +18,13 @@ import type { ReferenceFilterResolver } from '@sanity/types';
 import { defaultLocale, locales, localeMeta } from '../../src/i18n/config';
 
 /** Types de documents soumis à la traduction. */
-export const TRANSLATED_DOCUMENT_TYPES = ['page', 'project', 'category', 'localizedSettings'] as const;
+export const TRANSLATED_DOCUMENT_TYPES = [
+  'page',
+  'project',
+  'category',
+  'localizedSettings',
+  'projectsPage',
+] as const;
 
 /** Configuration attendue par le plugin document-internationalization. */
 export const supportedLanguages = locales.map((id) => ({

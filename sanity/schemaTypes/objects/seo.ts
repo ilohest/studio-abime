@@ -9,7 +9,7 @@ import { defineField, defineType } from 'sanity';
  */
 export const seo = defineType({
   name: 'seo',
-  title: 'Référencement',
+  title: 'SEO',
   type: 'object',
   options: { collapsible: true, collapsed: true },
   fields: [
@@ -30,16 +30,18 @@ export const seo = defineType({
     }),
     defineField({
       name: 'image',
-      title: 'Image de partage',
+      title: 'Image sociale (Open Graph)',
       type: 'image',
       description: 'Affichée sur les réseaux sociaux. Format recommandé : 1200 × 630 px.',
       options: { hotspot: true },
+      hidden: ({ document }) => document?._type === 'project',
     }),
     defineField({
       name: 'noIndex',
       title: 'Exclure des moteurs de recherche',
       type: 'boolean',
       initialValue: false,
+      hidden: true,
     }),
   ],
 });

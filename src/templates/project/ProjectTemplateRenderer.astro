@@ -1,7 +1,11 @@
 ---
+import { stegaClean } from '@sanity/client/stega';
+
 import StandardTemplate from './StandardTemplate.astro';
 import ImmersiveTemplate from './ImmersiveTemplate.astro';
 import EditorialTemplate from './EditorialTemplate.astro';
+import SplitTemplate from './SplitTemplate.astro';
+import BannerTemplate from './BannerTemplate.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
@@ -26,11 +30,15 @@ const { project, locale } = Astro.props;
 
 {
   (() => {
-    switch (project.template) {
+    switch (stegaClean(project.template)) {
       case 'immersive':
         return <ImmersiveTemplate project={project} locale={locale} />;
       case 'editorial':
         return <EditorialTemplate project={project} locale={locale} />;
+      case 'split':
+        return <SplitTemplate project={project} locale={locale} />;
+      case 'banner':
+        return <BannerTemplate project={project} locale={locale} />;
       case 'standard':
       default:
         return <StandardTemplate project={project} locale={locale} />;

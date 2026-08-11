@@ -1,4 +1,5 @@
 ---
+import { stegaClean } from '@sanity/client/stega';
 import type { PullQuote } from '~/lib/sanity/types';
 
 interface Props {
@@ -6,10 +7,12 @@ interface Props {
 }
 
 const { section } = Astro.props;
-const measure = section.measure ?? 'narrow';
+// L'animation manipule la chaîne : les marqueurs invisibles de Visual Editing
+// doivent être retirés pour ne pas être comptés comme des lettres.
+const cleanText = stegaClean(section.text);
 
 let charIndex = 0;
-const textLines = section.text.split(/\n+/).map((line) => ({
+const textLines = cleanText.split(/\n+/).map((line) => ({
   segments: line
     .trim()
     .split(/(\s+)/)
@@ -28,17 +31,12 @@ const textLines = section.text.split(/\n+/).map((line) => ({
 }));
 ---
 
-<section
-  class="pull-quote surface-paper"
-  data-letter-reveal
-  data-measure={measure}
-  data-full-height={section.fullHeight !== false ? '' : undefined}
->
+<section class="pull-quote surface-paper" data-letter-reveal>
   <div class="pull-quote__grain surface-paper-grain"></div>
 
   <div class="pull-quote__inner">
-    <blockquote class="pull-quote__text" aria-label={section.text}>
-      <span aria-hidden="true">
+    <blockquote class="pull-quote__text" aria-label={cleanText}>
+      <span class="pull-quote__lines" aria-hidden="true">
         {
           textLines.map((line, lineIndex) => (
             <>
@@ -71,13 +69,18 @@ const textLines = section.text.split(/\n+/).map((line) => ({
     position: relative;
     isolation: isolate;
     display: grid;
+    /*
+      `minmax(0, 1fr)` et non la colonne implicite : une colonne `auto` se
+      dimensionne sur le contenu, et comme `place-items: center` empêche
+      l'étirement, le bloc de citation prenait la largeur du texte mis sur une
+      seule ligne — plusieurs milliers de pixels — au lieu de celle de la page.
+      Les lignes n'avaient alors aucune largeur à laquelle se borner.
+    */
+    grid-template-columns: minmax(0, 1fr);
     place-items: center;
     overflow: hidden;
-    padding-block: clamp(5rem, 12vh, 9rem);
-  }
-
-  .pull-quote[data-full-height] {
     min-height: 100svh;
+    padding-block: clamp(5rem, 12vh, 9rem);
   }
 
   .pull-quote__grain {
@@ -92,79 +95,21 @@ const textLines = section.text.split(/\n+/).map((line) => ({
     padding-inline: clamp(1.5rem, 4vw, 4rem);
   }
 
-  .pull-quote[data-measure='narrow'] .pull-quote__inner {
-    max-width: 52rem;
-  }
-
-  .pull-quote[data-measure='default'] .pull-quote__inner {
-    max-width: 64rem;
-  }
-
-  .pull-quote[data-measure='wide'] .pull-quote__inner {
-    max-width: none;
-  }
-
   .pull-quote__text {
     font-family: var(--font-titre);
     font-size: clamp(1.7rem, 4.15vw, 4.35rem);
     font-weight: 400;
     line-height: 1.07;
     letter-spacing: -0.035em;
-    text-align: left;
+    text-align: center;
   }
 
-  /*
-    Composition volontairement irrégulière : chaque ligne reste centrée sur
-    le même axe, puis glisse légèrement à gauche ou à droite. Les amplitudes
-    restent modestes pour conserver une lecture continue.
-  */
+  /* Chaque ligne garde la largeur de son texte et se centre. */
   .pull-quote__line {
     display: block;
     width: max-content;
     max-width: 100%;
     margin-inline: auto;
-    transform: translateX(var(--line-offset, 0));
-  }
-
-  .pull-quote__line:nth-child(10n + 1) {
-    /* Première ligne volontairement rentrée, comme une ouverture de paragraphe. */
-    --line-offset: 4vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 2) {
-    --line-offset: -5vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 3) {
-    --line-offset: -3vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 4) {
-    --line-offset: -5vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 5) {
-    --line-offset: -8vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 6) {
-    --line-offset: -2vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 7) {
-    --line-offset: -11vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 8) {
-    --line-offset: -3vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 9) {
-    --line-offset: -18vw;
-  }
-
-  .pull-quote__line:nth-child(10n + 10) {
-    --line-offset: -1vw;
   }
 
   /*
@@ -174,8 +119,6 @@ const textLines = section.text.split(/\n+/).map((line) => ({
   .pull-quote__word,
   .pull-quote__char {
     display: inline-block;
-    /* Le retrait appartient au paragraphe, jamais aux fragments internes. */
-    text-indent: 0;
   }
 
   .pull-quote__word {
@@ -192,7 +135,7 @@ const textLines = section.text.split(/\n+/).map((line) => ({
     Sable n'est activé qu'une fois la progression de scroll initialisée.
   */
   .pull-quote[data-reveal-ready] .pull-quote__char {
-    color: var(--color-sable);
+    color: color-mix(in srgb, var(--color-ink) 20%, transparent);
   }
 
   .pull-quote__char::after {
@@ -214,7 +157,6 @@ const textLines = section.text.split(/\n+/).map((line) => ({
       font-size: clamp(1.65rem, 7.8vw, 2.45rem);
       line-height: 1.1;
       letter-spacing: -0.03em;
-      text-indent: 2em;
     }
 
     .pull-quote__line {
@@ -222,7 +164,6 @@ const textLines = section.text.split(/\n+/).map((line) => ({
       width: auto;
       max-width: none;
       margin: 0;
-      transform: none;
     }
   }
 </style>
@@ -253,10 +194,13 @@ const textLines = section.text.split(/\n+/).map((line) => ({
   let ticking = false;
 
   const setProgress = ({ chars }: RevealSection, progress: number) => {
-    const sweep = progress * chars.length;
+    // Une petite zone de fondu adoucit le front de révélation, comme sur la
+    // référence où plusieurs lettres sont simultanément entre 20 % et 100 %.
+    const feather = 6;
+    const sweep = progress * (chars.length + feather);
 
     chars.forEach((char, index) => {
-      const reveal = Math.min(Math.max(sweep - index, 0), 1);
+      const reveal = Math.min(Math.max((sweep - index) / feather, 0), 1);
       char.style.setProperty('--char-reveal', reveal.toFixed(3));
     });
   };
@@ -272,17 +216,15 @@ const textLines = section.text.split(/\n+/).map((line) => ({
         continue;
       }
 
-      /* Le déclencheur suit le texte, pas la section pleine hauteur autour. */
       const top = reveal.text.getBoundingClientRect().top;
       const viewport = window.innerHeight;
 
       /*
-        La lecture commence quand le bloc entre par le bas (93 % de l'écran)
-        et se déploie jusqu'à 15 % : cette plage plus longue laisse chaque
-        lettre respirer sans retarder l'apparition du premier mot.
+        Même rythme que la référence : le balayage commence quand le texte
+        entre franchement dans l’écran et se termine autour de son tiers haut.
       */
-      const start = viewport * 0.93;
-      const end = viewport * 0.15;
+      const start = viewport * 0.9;
+      const end = viewport * 0.2;
       const progress = Math.min(Math.max((start - top) / (start - end), 0), 1);
 
       setProgress(reveal, progress);

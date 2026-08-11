@@ -41,14 +41,17 @@ export const sectionTypeNames = sectionTypes.map((section) => section.name);
  * `allowed` permet de restreindre les blocs autorisés sur un type de document
  * précis, sans dupliquer la définition.
  */
-export function definePageBuilder(options: { name?: string; title?: string; allowed?: string[] } = {}) {
-  const { name = 'sections', title = 'Contenu de la page', allowed } = options;
+export function definePageBuilder(
+  options: { name?: string; title?: string; allowed?: string[]; group?: string | string[] } = {},
+) {
+  const { name = 'sections', title = 'Contenu de la page', allowed, group } = options;
   const names = allowed ?? sectionTypeNames;
 
   return defineField({
     name,
     title,
     type: 'array',
+    group,
     of: names.map((type) => defineArrayMember({ type })),
     options: { insertMenu: { filter: true, showIcons: true } },
   });

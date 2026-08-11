@@ -41,7 +41,6 @@ const sections: Record<string, Section[]> = {
       ],
       tagline:
         "Studio Abime est un labo de com et d'identités sensorielles qui naissent d'une plongée sous le visible.",
-      showStamp: true,
     },
     {
       _key: 'services',
@@ -141,13 +140,10 @@ savoir si votre proposition a
 une odeur ou un son.
 C'est de savoir si vous les
 avez choisis.`,
-      measure: 'wide',
-      fullHeight: true,
     },
     {
       _key: 'showcase',
       _type: 'projectShowcase',
-      startNumber: 1,
       // Aucun projet n'existe encore dans Sanity : on montre la mise en page
       // avec des visuels de la marque. Dès qu'une sélection est faite dans le
       // CMS, ce sont les projets choisis qui s'affichent.

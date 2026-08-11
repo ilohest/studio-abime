@@ -21,27 +21,46 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
-const start = section.startNumber ?? 1;
+
+/*
+  Les visuels temporaires incomplets sont écartés : le CMS ne les impose pas
+  (ils sont masqués dès qu'un projet réel est choisi), c'est donc au rendu de
+  ne garder que les entrées exploitables.
+*/
+const placeholders = (section.placeholderItems ?? []).filter(
+  (item) => Boolean(item.image?.asset) && Boolean(item.title),
+);
 
 /** Le CMS fournit des projets ; le contenu d'amorçage, des visuels groupés. */
-const items = (section.projects?.length ?? 0) > 0
-  ? (section.projects ?? []).map((project, index) => ({
+const sources = (section.projects?.length ?? 0) > 0
+  ? (section.projects ?? []).map((project) => ({
       key: project._id,
       title: project.title,
       href: projectPath(locale, project.slug),
-      /* Même règle que la page portfolio : la vignette prime, la couverture supplée. */
-      image: project.thumbnail?.asset ? project.thumbnail : project.coverImage,
+      image: project.thumbnail,
       fallbackImage: undefined,
-      number: String(start + index).padStart(2, '0'),
     }))
-  : (section.fallbackItems ?? []).map((item, index) => ({
+  : placeholders.length > 0
+    ? placeholders.map((item) => ({
+        key: item._key,
+        title: item.title,
+        href: item.href,
+        image: item.image,
+        fallbackImage: undefined,
+      }))
+  : (section.fallbackItems ?? []).map((item) => ({
       key: item._key,
       title: item.title,
       href: item.href,
       image: null,
       fallbackImage: item.fallbackImage,
-      number: String(start + index).padStart(2, '0'),
     }));
+
+/** La numérotation suit l'ordre d'affichage de la planche. */
+const items = sources.slice(0, 5).map((item, index) => ({
+  ...item,
+  number: String(index + 1).padStart(2, '0'),
+}));
 ---
 
 {
