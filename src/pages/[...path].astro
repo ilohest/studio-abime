@@ -116,6 +116,7 @@ const title =
     : (document?.title ?? site.localized?.siteTitle ?? '');
 
 const projectsIntro = projectsPage?.intro?.trim();
+const hasProjectBackground = Boolean(project?.backgroundImage?.asset);
 
 const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type === 'servicesMenu') ?? false;
 ---
@@ -125,7 +126,10 @@ const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type 
   site={site}
   seo={route.kind === 'projectIndex' ? projectsPage?.seo : document?.seo}
   title={title}
-  bodyClass={route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : ''}
+  bodyClass={[
+    route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : '',
+    hasProjectBackground ? 'page-project-has-background' : '',
+  ].filter(Boolean).join(' ')}
   alternates={alternates}
   showServicesRail={!hasEmbeddedServicesRail}
 >

@@ -40,6 +40,12 @@ export interface CategoryView {
   count: number;
 }
 
+/** Initiales de chaque mot, utilisées comme symbole de la fiche-projet. */
+export function projectInitials(title: string): string {
+  const words = stegaClean(title).match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu) ?? [];
+  return words.map((word) => Array.from(word)[0]).join('').toLocaleUpperCase('fr');
+}
+
 /** Carte éditoriale insérée dans la grille des projets. */
 export interface ProjectEditorialCard {
   _key: string;

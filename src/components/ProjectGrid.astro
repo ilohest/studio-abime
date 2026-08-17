@@ -6,6 +6,7 @@ import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import {
   insertProjectEditorialCards,
+  projectInitials,
   toCategoryViews,
   toProjectCardView,
   type ProjectEditorialCard,
@@ -91,7 +92,10 @@ const useExplorer = showFilters && categoryViews.length > 1;
             ]}
           >
             <header class="project-catalog-heading">
-              <span class="project-catalog-number">[{String(entry.value.index + 1).padStart(2, '0')}]</span>
+              <span class="project-catalog-number">{String(entry.value.index + 1).padStart(2, '0')}</span>
+              <span class="project-catalog-symbol" aria-hidden="true">
+                {projectInitials(entry.value.project.title)}
+              </span>
               <h3>{entry.value.project.title}</h3>
             </header>
 

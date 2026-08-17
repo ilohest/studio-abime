@@ -235,6 +235,8 @@ export const projectBySlugQuery = /* groq */ `
   listingFacts[]{ _key, label, value },
   "gallery": coalesce(gallery[]{ _key, span, spanWide, caption, image ${IMAGE} }, []),
   thumbnail ${IMAGE},
+  backgroundImage ${IMAGE},
+  "backgroundOpacity": coalesce(backgroundOpacity, 100),
   "categories": coalesce(categories[]->${CATEGORY}, []),
   "sections": coalesce(${SECTIONS}, []),
   "seo": {

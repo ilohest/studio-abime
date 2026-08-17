@@ -16,6 +16,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import {
   insertProjectEditorialCards,
+  projectInitials,
   type CategoryView,
   type ProjectEditorialCard,
   type ProjectCardView,
@@ -163,7 +164,10 @@ function isActive(key: string) {
           :class="{ 'project-catalog-card--no-facts': entry.value.project.facts.length === 0 }"
         >
           <header class="project-catalog-heading">
-            <span class="project-catalog-number">{{ entry.value.project.number }}</span>
+            <span class="project-catalog-number">{{ entry.value.project.number.replace(/[\[\]]/g, '') }}</span>
+            <span class="project-catalog-symbol" aria-hidden="true">
+              {{ projectInitials(entry.value.project.title) }}
+            </span>
             <h3>{{ entry.value.project.title }}</h3>
           </header>
 

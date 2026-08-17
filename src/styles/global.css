@@ -121,6 +121,16 @@
     background-color: var(--color-lumiere);
   }
 
+  /*
+   * Une page projet avec image fixe partage le même fond sur toute la largeur
+   * du viewport. Le rail ne doit donc ajouter aucune couche colorée : lorsque
+   * son opacité baisse au survol du contenu, seul son texte s'atténue et aucune
+   * couture verticale n'apparaît au bord du menu.
+   */
+  body.page-project-has-background [data-page-rail] {
+    background-color: transparent;
+  }
+
   ::selection {
     background-color: var(--color-accent);
     color: var(--color-ink);
@@ -504,6 +514,48 @@
     white-space: nowrap;
   }
 
+  .project-catalog-symbol {
+    font-family: var(--font-titre);
+  }
+
+  .project-index .project-catalog-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    column-gap: 0.75rem;
+    row-gap: 0.15rem;
+    min-height: clamp(3.5rem, 4.5vw, 4.5rem);
+    align-items: start;
+  }
+
+  .project-index .project-catalog-number {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .project-index .project-catalog-symbol {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
+    max-width: 100%;
+    font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+    line-height: 0.85;
+    letter-spacing: -0.08em;
+    overflow-wrap: anywhere;
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  .project-index .project-catalog-heading h3 {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    font-size: 0.65rem;
+    line-height: 1.2;
+    text-align: right;
+  }
+
   .project-catalog-media {
     width: 100%;
     overflow: hidden;
@@ -544,6 +596,18 @@
     width: auto;
     max-width: 100%;
     max-height: 100%;
+  }
+
+  .project-index .project-catalog-media {
+    aspect-ratio: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  .project-index .project-catalog-image {
+    width: 76%;
+    max-width: 76%;
+    max-height: none;
   }
 
   @media (hover: hover) and (pointer: fine) {
@@ -677,6 +741,123 @@
     margin-top: 0;
   }
 
+  /*
+   * Index des projets : la trame reste discrète, tandis que ses points de
+   * construction sont renforcés comme sur une grille de mise en page. Les
+   * croix sont peintes sur chaque cellule : aux jonctions elles se superposent
+   * exactement, y compris lorsque le nombre de colonnes change.
+   */
+  .project-index .project-catalog-grid {
+    row-gap: 0;
+  }
+
+  .project-index .project-catalog-item {
+    --project-card-line-color: color-mix(
+      in srgb,
+      var(--color-ink) 24%,
+      transparent
+    );
+    --project-card-cross-color: color-mix(
+      in srgb,
+      var(--color-ink) 72%,
+      var(--color-lumiere)
+    );
+    --project-card-top-right-cross-color: transparent;
+    --project-card-bottom-left-cross-color: transparent;
+    --project-card-bottom-right-cross-color: transparent;
+    position: relative;
+  }
+
+  .project-index .project-catalog-card {
+    --corner-gap: 0px;
+  }
+
+  .project-index .project-catalog-diagonal {
+    color: var(--project-card-line-color);
+  }
+
+  .project-index .project-catalog-item::before {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--project-card-cross-color), var(--project-card-cross-color)) left top 6px / 14px 2px no-repeat,
+      linear-gradient(var(--project-card-cross-color), var(--project-card-cross-color)) left 6px top / 2px 14px no-repeat,
+      linear-gradient(var(--project-card-top-right-cross-color), var(--project-card-top-right-cross-color)) right top 6px / 14px 2px no-repeat,
+      linear-gradient(var(--project-card-top-right-cross-color), var(--project-card-top-right-cross-color)) right 6px top / 2px 14px no-repeat;
+  }
+
+  .project-index .project-catalog-item::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    z-index: 2;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--project-card-bottom-left-cross-color), var(--project-card-bottom-left-cross-color)) left bottom 6px / 14px 2px no-repeat,
+      linear-gradient(var(--project-card-bottom-left-cross-color), var(--project-card-bottom-left-cross-color)) left 6px bottom / 2px 14px no-repeat,
+      linear-gradient(var(--project-card-bottom-right-cross-color), var(--project-card-bottom-right-cross-color)) right bottom 6px / 14px 2px no-repeat,
+      linear-gradient(var(--project-card-bottom-right-cross-color), var(--project-card-bottom-right-cross-color)) right 6px bottom / 2px 14px no-repeat;
+  }
+
+  /*
+   * Chaque sommet n'est peint qu'une seule fois. Les sélecteurs ci-dessous
+   * ajoutent uniquement les sommets du bord droit et de la dernière rangée,
+   * selon le nombre de colonnes actif.
+   */
+  @media (max-width: 899px) {
+    .project-index .project-catalog-item:nth-child(2n),
+    .project-index .project-catalog-item:last-child {
+      --project-card-top-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:last-child {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+      --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:nth-last-child(2):nth-child(2n + 1) {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    }
+  }
+
+  @media (min-width: 900px) and (max-width: 1439px) {
+    .project-index .project-catalog-item:nth-child(3n),
+    .project-index .project-catalog-item:last-child {
+      --project-card-top-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:last-child {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+      --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:nth-last-child(2):not(:nth-child(3n)),
+    .project-index .project-catalog-item:nth-last-child(3):nth-child(3n + 1) {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .project-index .project-catalog-item:nth-child(4n),
+    .project-index .project-catalog-item:last-child {
+      --project-card-top-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:last-child {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+      --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+    }
+
+    .project-index .project-catalog-item:nth-last-child(2):not(:nth-child(4n)),
+    .project-index .project-catalog-item:nth-last-child(3):is(:nth-child(4n + 1), :nth-child(4n + 2)),
+    .project-index .project-catalog-item:nth-last-child(4):nth-child(4n + 1) {
+      --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    }
+  }
+
   @media (min-width: 900px) {
     .project-catalog-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -733,6 +914,10 @@
       row-gap: 0.35rem;
     }
 
+    .project-index .project-catalog-grid {
+      row-gap: 0;
+    }
+
     .project-catalog-card {
       --corner-gap: 0.55rem;
       gap: 0.5rem;
@@ -742,6 +927,11 @@
     .project-catalog-heading {
       display: block;
       min-height: 2.8rem;
+    }
+
+    .project-index .project-catalog-heading {
+      display: grid;
+      min-height: 3.5rem;
     }
 
     .project-catalog-heading h3,
@@ -755,6 +945,11 @@
 
     .project-catalog-image {
       filter: none;
+    }
+
+    .project-index .project-catalog-image {
+      width: 82%;
+      max-width: 82%;
     }
 
     .project-catalog-facts {
