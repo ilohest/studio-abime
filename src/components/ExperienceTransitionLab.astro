@@ -244,8 +244,13 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
   .motion-lab {
     --motion-line: color-mix(in srgb, var(--color-ink) 36%, transparent);
     margin-top: clamp(2.5rem, 6vw, 6rem);
-    /* L'ancre vise le début de la piste : la table est alors entière. */
-    scroll-margin-top: clamp(5rem, 10vw, 9rem);
+    /*
+      Zéro, contrairement au reste du site : la scène est collante et fait une
+      hauteur d'écran pile. La moindre marge la décale vers le bas et lui coupe
+      ses dernières lignes. Elle réserve elle-même, en interne, la place de
+      l'en-tête et de sa ligne de titre.
+    */
+    scroll-margin-top: 0;
   }
 
   .motion-lab__runway {
