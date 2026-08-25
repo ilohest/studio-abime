@@ -1,0 +1,116 @@
+---
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import type { SanityImage as SanityImageType } from '~/lib/sanity/types';
+
+/**
+ * Renvoi vers l'entrée suivante — projet ou article.
+ *
+ * La fiche reprend la carte des sections d'archive : filets sur les quatre
+ * bords, croix de construction aux sommets, numéro en haut à gauche et cote en
+ * grand à droite. C'est la classe `project-index` qui porte tout ce traitement ;
+ * l'enveloppe la rétablit ici pour une carte isolée, sans dupliquer une seule
+ * règle.
+ *
+ * La légende se tient à gauche de la fiche, calée sur son pied, et suit la
+ * convention typographique du site : le repère `fig. 02` en italique
+ * d'annotation, le reste en copy — voir `FigureCaption`.
+ */
+interface Props {
+  href: string;
+  /** « Projet suivant », « Article suivant »… Sert de légende et de nom accessible. */
+  label: string;
+  /** Rang de l'entrée, déjà formaté sur deux chiffres. */
+  number: string;
+  /** Cote imprimée en grand : initiales du projet, date de l'article. */
+  symbol: string;
+  title: string;
+  image?: SanityImageType | null;
+  class?: string;
+}
+
+const { href, label, number, symbol, title, image, class: className } = Astro.props;
+---
+
+<nav class:list={['next-entry container-wide', className]} aria-label={label}>
+  <div class="next-entry__layout">
+    <p class="next-entry__caption" aria-hidden="true">
+      <FigureCaption as="span" value={`fig. ${number} ${label}`} />
+    </p>
+
+    <div class="next-entry__frame project-index">
+      <div class="project-catalog-item next-entry__item">
+        <a href={href} class="project-catalog-card group" aria-label={`${label} : ${title}`}>
+          <header class="project-catalog-heading">
+            <span class="project-catalog-number">{number}</span>
+            <span class="project-catalog-symbol" aria-hidden="true">{symbol}</span>
+            <h3>{title}</h3>
+          </header>
+
+          {image?.asset && (
+            <div class="project-catalog-media">
+              <SanityImage
+                image={image}
+                width={640}
+                sizes="22rem"
+                alt={image.alt || title}
+                class="project-catalog-image"
+              />
+            </div>
+          )}
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .next-entry {
+    padding-block: var(--spacing-section);
+  }
+
+  .next-entry__layout {
+    display: grid;
+    width: 100%;
+    grid-template-columns: auto auto;
+    align-items: end;
+    justify-content: end;
+    gap: clamp(1rem, 3vw, 3rem);
+  }
+
+  .next-entry__caption {
+    padding-bottom: 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  /*
+    Les croix débordent de 7 px hors de la fiche : sans cette réserve, celles du
+    bord droit seraient rognées par la gouttière de la page.
+  */
+  .next-entry__frame {
+    padding: 7px;
+  }
+
+  .next-entry__item {
+    width: clamp(15rem, 22vw, 20rem);
+  }
+
+  /* Sous 640 px, la fiche prend la largeur et la légende repasse au-dessus. */
+  @media (max-width: 639px) {
+    .next-entry__layout {
+      grid-template-columns: minmax(0, 1fr);
+      justify-content: stretch;
+      gap: 0.6rem;
+    }
+
+    .next-entry__caption {
+      white-space: normal;
+    }
+
+    .next-entry__item {
+      width: 100%;
+    }
+  }
+</style>

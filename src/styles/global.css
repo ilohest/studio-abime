@@ -175,6 +175,13 @@
    */
   :root {
     --rail-width: 16rem;
+    /*
+      Hauteur réservée en haut de l'écran par le repère de marque et le bouton
+      de menu, qui y sont fixés en mobile. Tout élément qui ouvre une page —
+      un lien de retour, par exemple — doit démarrer sous cette réserve.
+      Nulle au-delà de 767 px, où la barre n'existe plus.
+    */
+    --mobile-brand-clearance: 0px;
   }
 
   body.has-services-rail > main,
@@ -239,6 +246,7 @@
   @media (max-width: 767px) {
     :root {
       --rail-width: 0px;
+      --mobile-brand-clearance: 5rem;
     }
 
     body.has-services-rail > main,

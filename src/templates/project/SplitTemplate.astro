@@ -122,7 +122,9 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     align-items: flex-start;
     max-width: 34rem;
     margin-inline: auto;
-    padding: clamp(2rem, 4vw, 4rem) clamp(1rem, 1.8vw, 1.75rem);
+    /* La colonne démarre sous la barre de marque, fixée en haut en mobile. */
+    padding: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance))
+      clamp(1rem, 1.8vw, 1.75rem) clamp(2rem, 4vw, 4rem);
   }
 
   .split__header {

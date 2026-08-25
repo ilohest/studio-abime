@@ -61,7 +61,7 @@ const accentClass = {
       )
     }
 
-    <ProjectBackLink locale={locale} class="absolute top-8 left-6 z-10 md:left-10" />
+    <ProjectBackLink locale={locale} class="immersive__back absolute left-6 z-10 md:left-10" />
 
     <div class="relative container-wide pb-20">
       <h1
@@ -82,3 +82,10 @@ const accentClass = {
 
   <NextProject project={project.next} locale={locale} />
 </article>
+
+<style>
+  /* Le lien démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
+  .immersive__back {
+    top: max(2rem, var(--mobile-brand-clearance));
+  }
+</style>

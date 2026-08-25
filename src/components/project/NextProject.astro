@@ -1,10 +1,19 @@
 ---
-import SanityImage from '~/components/primitives/SanityImage.astro';
+import NextEntry from '~/components/NextEntry.astro';
+
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
+import { projectInitials } from '~/lib/viewModels';
 import type { Locale } from '~/i18n/config';
 import type { ProjectCard } from '~/lib/sanity/types';
 
+/**
+ * Renvoi vers le projet suivant.
+ *
+ * La composition est partagée avec l'article suivant du Journal
+ * (`NextEntry.astro`) : les deux fins de lecture se ressemblent parce qu'elles
+ * font la même chose.
+ */
 interface Props {
   project?: ProjectCard | null;
   locale: Locale;
@@ -12,83 +21,17 @@ interface Props {
 
 const { project, locale } = Astro.props;
 const t = useTranslations(locale);
-const facts = (project?.listingFacts ?? [])
-  .filter((fact) => fact.label?.trim() && fact.value?.trim())
-  .slice(0, 5);
-const projectNumber = String(project?.number ?? 1).padStart(2, '0');
 ---
 
 {
   project && (
-    <nav class="container-wide flex justify-end py-(--spacing-section)" aria-label={t('project.next')}>
-      <div class="next-project-layout">
-        <p class="next-project-caption" aria-hidden="true">
-          fig. {projectNumber} {t('project.next')}
-        </p>
-
-        <a
-          href={projectPath(locale, project.slug)}
-          class="project-catalog-card next-project-card group"
-          aria-label={`${t('project.next')} : ${project.title}`}
-        >
-          <header class="project-catalog-heading next-project-heading">
-            <h3>{project.title}</h3>
-          </header>
-
-          <div class="project-catalog-media">
-            <SanityImage
-              image={project.thumbnail}
-              width={640}
-              sizes="18rem"
-              alt={project.title}
-              class="project-catalog-image"
-            />
-          </div>
-
-          {facts.length > 0 && (
-            <dl class="project-catalog-facts">
-              {facts.map((fact) => (
-                <div>
-                  <dt>{fact.label}</dt>
-                  <dd>{fact.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-        </a>
-      </div>
-    </nav>
+    <NextEntry
+      href={projectPath(locale, project.slug)}
+      label={t('project.next')}
+      number={String(project.number ?? 1).padStart(2, '0')}
+      symbol={projectInitials(project.title)}
+      title={project.title}
+      image={project.thumbnail}
+    />
   )
 }
-
-<style>
-  .next-project-layout {
-    display: grid;
-    width: 100%;
-    grid-template-columns: auto minmax(0, 18rem);
-    align-items: end;
-    justify-content: end;
-    gap: clamp(1rem, 3vw, 3rem);
-  }
-
-  .next-project-caption {
-    padding-bottom: 0.15rem;
-    font-family: var(--font-annotation);
-    font-size: 0.75rem;
-    font-style: italic;
-    line-height: 1.25;
-    letter-spacing: var(--tracking-annotation);
-    text-transform: lowercase;
-    white-space: nowrap;
-  }
-
-  .next-project-card {
-    width: 100%;
-    min-height: 0;
-  }
-
-  .next-project-heading {
-    display: block;
-    min-height: 0;
-  }
-</style>

@@ -87,8 +87,10 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
 </article>
 
 <style>
+  /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
   .banner__inner {
-    padding-block: clamp(2rem, 4vw, 4rem) clamp(3rem, 8vw, 6rem);
+    padding-block: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance))
+      clamp(3rem, 8vw, 6rem);
   }
 
   .banner__header {

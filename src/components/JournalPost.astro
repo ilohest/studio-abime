@@ -1,22 +1,22 @@
 ---
+import { stegaClean } from '@sanity/client/stega';
+
 import JournalComposition from '~/components/journal/JournalComposition.astro';
+import NextEntry from '~/components/NextEntry.astro';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { journalIndexPath, postPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
-import { getJournalCategory } from '~/content/journalCategories';
-import { stegaClean } from '@sanity/client/stega';
-
-import { formatJournalStamp, postCategory, postFreeFacts } from '~/lib/journal';
+import { formatJournalStamp } from '~/lib/journal';
 import type { Locale } from '~/i18n/config';
 import type { Post } from '~/lib/sanity/types';
 
 /**
  * Article du Journal.
  *
- * La rubrique et la date sont annoncées une seule fois, en tête. La fiche
- * détaillée appartient à la grille du Journal : la répéter ici ferait précéder
- * la lecture d'un inventaire que le lecteur vient de traverser.
+ * L'article s'ouvre sur son titre, sans appareil préalable. La rubrique, la
+ * date et la fiche appartiennent à la grille du Journal : les répéter ici
+ * ferait précéder la lecture d'un inventaire que le lecteur vient de traverser.
  *
  * Deux modèles, une seule saisie :
  *
@@ -37,37 +37,23 @@ const { post, locale } = Astro.props;
 const t = useTranslations(locale);
 
 const template = stegaClean(post.template) === 'planche' ? 'planche' : 'revue';
-const category = getJournalCategory(postCategory(post));
-const dateStamp = formatJournalStamp(post.publishedAt);
-const dateIso = post.publishedAt?.slice(0, 10);
 
 const next = post.next ?? null;
-const nextCategory = next ? getJournalCategory(postCategory(next)) : null;
-const nextFacts = next
-  ? [
-      ...(nextCategory ? [{ key: 'category', label: t('journal.category'), value: nextCategory.title }] : []),
-      ...postFreeFacts(next),
-    ].slice(0, 4)
-  : [];
 ---
 
 <article class="journal-post" data-template={template}>
-  <header class="journal-post__header container-content">
+  {/*
+    Le retour se tient en haut à gauche, hors de la colonne de titre — la même
+    place que sur une page projet. Il quitte l'article, il n'en fait pas partie.
+  */}
+  <div class="journal-post__top container-wide">
     <a href={journalIndexPath(locale)} class="button-minimal journal-post__back">
       <span class="button-minimal__label">{t('journal.backToJournal')}</span>
       <span class="button-minimal__arrow journal-post__back-arrow" aria-hidden="true">↲</span>
     </a>
+  </div>
 
-    <p class="journal-post__eyebrow type-sous-titre">
-      {category?.title}
-      {dateStamp && (
-        <>
-          <span aria-hidden="true"> — </span>
-          <time datetime={dateIso}>{dateStamp}</time>
-        </>
-      )}
-    </p>
-
+  <header class="journal-post__header container-content">
     <h1 class="journal-post__title type-titre text-balance" data-text-reveal>{post.title}</h1>
 
     {post.standfirst && (
@@ -94,69 +80,31 @@ const nextFacts = next
   </div>
 
   {next && (
-    <nav class="journal-post__next container-wide" aria-label={t('journal.next')}>
-      <p class="journal-post__next-caption" aria-hidden="true">{t('journal.next')}</p>
-
-      <a
-        href={postPath(locale, next.slug)}
-        class="project-catalog-card journal-post__next-card group"
-        aria-label={`${t('journal.next')} : ${next.title}`}
-      >
-        <header class="project-catalog-heading journal-post__next-heading">
-          <h3>{next.title}</h3>
-        </header>
-
-        {next.coverImage?.asset && (
-          <div class="project-catalog-media">
-            <SanityImage
-              image={next.coverImage}
-              width={640}
-              sizes="18rem"
-              alt={next.coverImage.alt || next.title}
-              class="project-catalog-image"
-            />
-          </div>
-        )}
-
-        {nextFacts.length > 0 && (
-          <dl class="project-catalog-facts">
-            {nextFacts.map((fact) => (
-              <div>
-                <dt>{fact.label}</dt>
-                <dd>{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </a>
-    </nav>
+    <NextEntry
+      href={postPath(locale, next.slug)}
+      label={t('journal.next')}
+      number={String(next.number ?? 1).padStart(2, '0')}
+      symbol={formatJournalStamp(next.publishedAt)}
+      title={next.title}
+      image={next.coverImage}
+    />
   )}
 </article>
 
 <style>
-  /*
-    Le repère de marque et le bouton de menu sont fixés en haut de l'écran en
-    mobile : l'en-tête de l'article démarre donc sous eux, au même rythme que
-    l'index des Expériences.
-  */
+  /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
+  .journal-post__top {
+    padding-top: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance));
+  }
+
   .journal-post__header {
-    padding-top: clamp(var(--spacing-section), 8vw, 7.5rem);
+    padding-top: clamp(2rem, 5vw, 3.5rem);
     padding-bottom: clamp(2rem, 5vw, 3.5rem);
     text-align: center;
   }
 
-  .journal-post__back {
-    margin-bottom: clamp(2rem, 5vw, 3.5rem);
-  }
-
   .journal-post__back:hover .journal-post__back-arrow {
     transform: translate(-0.18em, 0.1em);
-  }
-
-  .journal-post__eyebrow {
-    color: var(--color-muted);
-    font-size: clamp(0.8rem, 2.4vw, var(--text-sous-titre));
-    text-transform: uppercase;
   }
 
   /*
@@ -201,31 +149,6 @@ const nextFacts = next
 
   .journal-post__body {
     margin-top: clamp(3rem, 7vw, 5rem);
-  }
-
-  .journal-post__next {
-    display: grid;
-    justify-items: end;
-    padding-block: var(--spacing-section);
-    gap: 0.6rem;
-  }
-
-  .journal-post__next-caption {
-    font-family: var(--font-annotation);
-    font-size: 0.75rem;
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
-    text-transform: lowercase;
-  }
-
-  .journal-post__next-card {
-    width: min(18rem, 100%);
-    min-height: 0;
-  }
-
-  .journal-post__next-heading {
-    display: block;
-    min-height: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -352,6 +352,8 @@ export interface PostCard {
   slug: string;
   language: Locale;
   category: JournalCategory;
+  /** Rang dans le Journal, du plus récent au plus ancien. */
+  number?: number;
   /** Date de publication, au format ISO (`2026-08-25`). */
   publishedAt: string;
   excerpt?: string;

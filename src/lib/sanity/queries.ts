@@ -92,6 +92,12 @@ const POST_CARD = /* groq */ `{
   title,
   "slug": slug.current,
   language,
+  "number": count(*[
+    _type == "post" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(publishedAt, _createdAt) > coalesce(^.publishedAt, ^._createdAt)
+  ]) + 1,
   "category": coalesce(category, "cahier-de-recherche"),
   "publishedAt": coalesce(publishedAt, _createdAt),
   excerpt,
