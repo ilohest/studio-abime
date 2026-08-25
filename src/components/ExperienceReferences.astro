@@ -1,0 +1,132 @@
+---
+import { buildClientFootnotes } from '~/lib/references';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { Client, ProjectCard } from '~/lib/sanity/types';
+
+/**
+ * Références — note de bas de page.
+ *
+ * Le geste : ce que la table des éléments range en initiales, cette note le
+ * développe en toutes lettres, comme l'appareil critique d'un livre. L'appel de
+ * note n'est pas un compteur mais le NUMÉRO ATOMIQUE de la case occupée : la
+ * note et la table se lisent l'une par l'autre.
+ *
+ * Ne sont listés que les clients sans page projet : les projets publiés se
+ * lisent déjà dans la table et dans la grille.
+ */
+interface Props {
+  projects: ProjectCard[];
+  clients?: Client[];
+  locale: Locale;
+}
+
+const { projects, clients = [], locale } = Astro.props;
+const t = useTranslations(locale);
+
+const footnotes = buildClientFootnotes(projects, clients);
+const hasNumberedEntries = footnotes.some((entry) => entry.atomicNumber);
+---
+
+{
+  footnotes.length > 0 && (
+    <aside class="references" aria-labelledby="references-title">
+      <h2 id="references-title" class="references__title type-note">
+        {t('references.title')}
+      </h2>
+
+      <ul class="references__list" role="list">
+        {footnotes.map(({ client, atomicNumber }) => (
+          <li class="references__item type-note">
+            <span class="references__marker" aria-hidden="true">
+              {atomicNumber ?? '—'}
+            </span>
+            <span class="references__body">
+              <span class="references__name">{client.name}</span>
+              {client.projectName && (
+                <span class="references__project type-annotation">, {client.projectName}</span>
+              )}
+              {client.sector && <span class="references__sector">{client.sector}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {hasNumberedEntries && (
+        <p class="references__legend type-note">{t('references.legend')}</p>
+      )}
+    </aside>
+  )
+}
+
+<style>
+  .references {
+    padding-block: clamp(3rem, 7vw, 6rem) clamp(4rem, 9vw, 8rem);
+  }
+
+  /* Le filet court des notes de bas de page, pas une règle pleine largeur. */
+  .references__title {
+    max-width: 22rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--color-ink);
+    margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .references__list {
+    display: grid;
+    gap: 0.55rem clamp(1.5rem, 4vw, 3.5rem);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .references__item {
+    display: grid;
+    align-items: baseline;
+    gap: 0.6rem;
+    grid-template-columns: 2.1rem 1fr;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .references__marker {
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* Flux de texte, pas une grille : la virgule doit coller au nom. */
+  .references__body {
+    min-width: 0;
+  }
+
+  .references__name {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .references__project {
+    color: var(--color-muted);
+  }
+
+  .references__sector {
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+  }
+
+  /* Le point médian sépare le secteur sans l'écrire dans le contenu. */
+  .references__sector::before {
+    content: ' · ';
+    color: var(--color-line);
+  }
+
+  .references__legend {
+    max-width: 34rem;
+    margin-top: clamp(1.5rem, 3vw, 2.25rem);
+    color: var(--color-muted);
+  }
+</style>

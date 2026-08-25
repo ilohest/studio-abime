@@ -44,6 +44,23 @@ const CATEGORY = /* groq */ `{
   "slug": coalesce(slug.current, key.current)
 }`;
 
+/**
+ * Un projet masqué (`visible: false`) n'existe plus nulle part sur le site :
+ * ni liste, ni sélection, ni page. Le champ étant récent, `coalesce` traite les
+ * documents antérieurs comme visibles.
+ */
+const VISIBLE_PROJECT = /* groq */ `_type == "project" && language == $locale && defined(slug.current) && coalesce(visible, true) == true`;
+
+/**
+ * Projets marqués « favori ». Une seule case à cocher, dans la fiche projet,
+ * décide de la table des éléments, de la sélection de l'accueil et de l'archive
+ * du Labo. Sans aucun favori, chaque section retombe sur les plus récents.
+ */
+const FEATURED_PROJECT = /* groq */ `${VISIBLE_PROJECT} && featured == true`;
+
+/** Ordre éditorial de référence : du plus récent au plus ancien. */
+const PROJECT_ORDER = /* groq */ `order(coalesce(year, 0) desc, _createdAt desc)`;
+
 const PROJECT_CARD = /* groq */ `{
   _id,
   title,
@@ -53,12 +70,15 @@ const PROJECT_CARD = /* groq */ `{
     _type == "project" &&
     language == ^.language &&
     defined(slug.current) &&
+    coalesce(visible, true) == true &&
     (
       coalesce(year, 0) > coalesce(^.year, 0) ||
       (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
     )
   ]) + 1,
   client,
+  sector,
+  "featured": featured == true,
   year,
   excerpt,
   listingFacts[]{ _key, label, value },
@@ -129,9 +149,8 @@ const SECTIONS = /* groq */ `sections[]{
   },
   _type == "projectShowcase" => {
     "projects": select(
-      count(projects) > 0 => projects[0...5]->${PROJECT_CARD},
-      *[_type == "project" && language == $locale && defined(slug.current)]
-        | order(coalesce(year, 0) desc, _createdAt desc)[0...5] ${PROJECT_CARD}
+      count(*[${FEATURED_PROJECT}]) > 0 => *[${FEATURED_PROJECT}] | ${PROJECT_ORDER}[0...5] ${PROJECT_CARD},
+      *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER}[0...5] ${PROJECT_CARD}
     ),
     placeholderItems[0...5]{
       _key,
@@ -162,8 +181,7 @@ const SECTIONS = /* groq */ `sections[]{
   },
   _type == "projectListSection" => {
     "manualProjects": projects[]->${PROJECT_CARD},
-    "latestProjects": *[_type == "project" && language == $locale && defined(slug.current)]
-      | order(coalesce(year, 0) desc, _createdAt desc)[0...24] ${PROJECT_CARD},
+    "latestProjects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER}[0...24] ${PROJECT_CARD},
     "categories": *[_type == "category" && language == $locale] | order(title asc) ${CATEGORY}
   }
 }`;
@@ -201,7 +219,11 @@ export const localizedSettingsQuery = /* groq */ `
  * Alimente `getStaticPaths()` — c'est la SEULE requête non filtrée par langue.
  */
 export const routeManifestQuery = /* groq */ `{
-  "documents": *[_type in ["page", "project", "post"] && defined(slug.current)]{
+  "documents": *[
+    _type in ["page", "project", "post"] &&
+    defined(slug.current) &&
+    (_type != "project" || coalesce(visible, true) == true)
+  ]{
     _type,
     "slug": slug.current,
     language
@@ -244,6 +266,8 @@ export const projectBySlugQuery = /* groq */ `
   templateOptions,
   "coverVideoUrl": coalesce(coverVideoUrl, templateOptions.coverVideoUrl),
   client,
+  sector,
+  "featured": featured == true,
   year,
   headline,
   excerpt,
@@ -262,14 +286,12 @@ export const projectBySlugQuery = /* groq */ `
     "image": thumbnail ${IMAGE},
     "noIndex": false
   },
-  "next": *[_type == "project" && language == $locale && defined(slug.current) && _id != ^._id]
-    | order(coalesce(year, 0) desc, _createdAt desc)[0] ${PROJECT_CARD}
+  "next": *[${VISIBLE_PROJECT} && _id != ^._id] | ${PROJECT_ORDER}[0] ${PROJECT_CARD}
 }`;
 
 /** Index portfolio : tous les projets + toutes les catégories de la langue. */
 export const projectsIndexQuery = /* groq */ `{
-  "projects": *[_type == "project" && language == $locale && defined(slug.current)]
-    | order(coalesce(year, 0) desc, _createdAt desc) ${PROJECT_CARD},
+  "projects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER} ${PROJECT_CARD},
   "categories": *[_type == "category" && language == $locale] | order(title asc) ${CATEGORY}
 }`;
 
@@ -280,8 +302,11 @@ export const projectsIndexQuery = /* groq */ `{
  * publié et que le contenu de repli de la page est utilisé.
  */
 export const laboArchiveProjectsQuery = /* groq */ `
-*[_type == "project" && language == $locale && defined(slug.current) && defined(thumbnail.asset)]
-  | order(coalesce(year, 0) desc, _createdAt desc)[0...6] ${PROJECT_CARD}
+select(
+  count(*[${FEATURED_PROJECT} && defined(thumbnail.asset)]) > 0 =>
+    *[${FEATURED_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD},
+  *[${VISIBLE_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD}
+)
 `;
 
 /** Contenu éditorial de la page Expériences, singleton propre à chaque langue. */
@@ -295,6 +320,15 @@ export const projectsPageQuery = /* groq */ `
   "editorialCards": coalesce(editorialCards[]{ _key, kind, text, position }, []),
   seo ${SEO}
 }`;
+
+/**
+ * Clients sans page projet, dans leur ORDRE D'ENCODAGE : c'est lui qui décide
+ * quelle case de la table des éléments revient à qui, une fois les projets
+ * favoris placés.
+ */
+export const clientsQuery = /* groq */ `
+*[_type == "client" && language == $locale && defined(name)]
+  | order(_createdAt asc){ _id, name, sector, projectName }`;
 
 /** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
 export const laboPageQuery = /* groq */ `
@@ -316,9 +350,9 @@ export const laboPageQuery = /* groq */ `
   cta ${LINK},
   archiveTitle,
   "archiveProjects": select(
-    count(archiveProjects) > 0 => archiveProjects[0...6]->${PROJECT_CARD},
-    *[_type == "project" && language == $locale && defined(slug.current) && defined(thumbnail.asset)]
-      | order(coalesce(year, 0) desc, _createdAt desc)[0...6] ${PROJECT_CARD}
+    count(*[${FEATURED_PROJECT} && defined(thumbnail.asset)]) > 0 =>
+      *[${FEATURED_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD},
+    *[${VISIBLE_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD}
   ),
   seo ${SEO}
 }`;

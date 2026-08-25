@@ -19,10 +19,15 @@ export const projectShowcase = defineType({
   fields: [
     defineField({
       name: 'projects',
-      title: 'Projets affichés',
+      title: 'Projets affichés (ancien champ)',
       type: 'array',
       description:
-        'Sélectionner jusqu’à 5 projets. L’ordre de la liste est celui de l’affichage. Si la sélection reste vide, les 5 projets les plus récents sont affichés automatiquement.',
+        'Remplacé par la case « Projet favori » de la fiche projet : les 5 premiers favoris sont désormais affichés ici. Ce champ n’est plus lu.',
+      deprecated: {
+        reason: 'Remplacé par la case « Projet favori » de la fiche projet.',
+      },
+      readOnly: true,
+      hidden: ({ value }) => value === undefined,
       of: [
         defineArrayMember({
           type: 'reference',

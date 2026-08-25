@@ -13,6 +13,7 @@ const HANDLED_TYPES = [
   'page',
   'project',
   'category',
+  'client',
   'post',
   'projectsPage',
   'laboPage',
@@ -26,9 +27,21 @@ const HANDLED_TYPES = [
  * Liste de documents d'un type, éclatée par langue dès qu'il y en a plusieurs.
  * En monolingue, on affiche la liste à plat : aucun niveau de navigation inutile.
  */
-function byLanguage(S: StructureBuilder, schemaType: string, title: string) {
+function byLanguage(
+  S: StructureBuilder,
+  schemaType: string,
+  title: string,
+  /* Tri par défaut de la liste. Sert aux types dont l'ordre a un sens à
+     l'affichage : la liste montre alors ce que le site montrera. */
+  defaultOrdering?: Array<{ field: string; direction: 'asc' | 'desc' }>,
+) {
+  const list = (listTitle: string) => {
+    const documents = S.documentTypeList(schemaType).title(listTitle);
+    return defaultOrdering ? documents.defaultOrdering(defaultOrdering) : documents;
+  };
+
   if (locales.length === 1) {
-    return S.documentTypeList(schemaType).title(title);
+    return list(title);
   }
 
   return S.list()
@@ -42,8 +55,7 @@ function byLanguage(S: StructureBuilder, schemaType: string, title: string) {
             // La création d'une traduction passe par le sélecteur de langue du
             // plugin document-internationalization (dans le document lui-même),
             // qui garantit le lien entre versions.
-            S.documentTypeList(schemaType)
-              .title(`${title} — ${locale.toUpperCase()}`)
+            list(`${title} — ${locale.toUpperCase()}`)
               .filter('_type == $type && language == $locale')
               .params({ type: schemaType, locale }),
           ),
@@ -159,6 +171,13 @@ export const structure: StructureResolver = (S, context) =>
         .title('Projets')
         .id('projects')
         .child(byLanguage(S, 'project', 'Projets')),
+
+      S.listItem()
+        .title('Clients')
+        .id('clients')
+        // Ordre d'encodage : c'est lui qui remplit les cases de la table des
+        // éléments de la page Expériences.
+        .child(byLanguage(S, 'client', 'Clients', [{ field: '_createdAt', direction: 'asc' }])),
 
       S.listItem()
         .title('Journal')

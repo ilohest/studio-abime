@@ -5,6 +5,7 @@ import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer
 import LaboPageView from '~/components/LaboPage.astro';
 import ContactPage from '~/components/ContactPage.astro';
 import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro';
+import ExperienceReferences from '~/components/ExperienceReferences.astro';
 import JournalIndex from '~/components/JournalIndex.astro';
 import JournalPost from '~/components/JournalPost.astro';
 import { stegaClean } from '@sanity/client/stega';
@@ -19,6 +20,7 @@ import {
   projectBySlugQuery,
   projectsIndexQuery,
   projectsPageQuery,
+  clientsQuery,
   laboPageQuery,
   laboArchiveProjectsQuery,
   journalIndexQuery,
@@ -30,6 +32,7 @@ import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
 import type {
   CategorySummary,
+  Client,
   JournalPage,
   LaboPage,
   Page,
@@ -82,6 +85,7 @@ let project: Project | null = null;
 let projects: ProjectCard[] = [];
 let categories: CategorySummary[] = [];
 let projectsPage: ProjectsPage | null = null;
+let clients: Client[] = [];
 let laboPage: LaboPage | null = null;
 let journalPage: JournalPage | null = null;
 let posts: PostCard[] = [];
@@ -142,17 +146,19 @@ if (route.kind === 'labo') {
     fallback: null,
   });
 } else {
-  const [data, pageContent] = await Promise.all([
+  const [data, pageContent, clientList] = await Promise.all([
     loadQuery<{ projects: ProjectCard[]; categories: CategorySummary[] }>({
       query: projectsIndexQuery,
       locale,
       fallback: { projects: [], categories: [] },
     }),
     loadQuery<ProjectsPage | null>({ query: projectsPageQuery, locale, fallback: null }),
+    loadQuery<Client[]>({ query: clientsQuery, locale, fallback: [] }),
   ]);
   projects = data.projects;
   categories = data.categories;
   projectsPage = pageContent;
+  clients = clientList;
 }
 
 // Contenu supprimé ou dépublié depuis la génération du manifeste.
@@ -297,7 +303,10 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
           categories={categories}
           locale={locale}
           editorialCards={projectsPage?.editorialCards ?? []}
+          clients={clients}
         />
+
+        <ExperienceReferences projects={projects} clients={clients} locale={locale} />
       </div>
     )
   }

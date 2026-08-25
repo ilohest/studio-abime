@@ -136,10 +136,16 @@ export const laboPage = defineType({
     }),
     defineField({
       name: 'archiveProjects',
-      title: 'Projets de l’archive',
+      title: 'Projets de l’archive (ancien champ)',
       type: 'array',
       group: 'archive',
-      description: 'Jusqu’à 6 projets. Si la liste est vide, les 6 plus récents sont utilisés.',
+      description:
+        'Remplacé par la case « Projet favori » de la fiche projet : les 6 premiers favoris sont désormais affichés ici. Ce champ n’est plus lu.',
+      deprecated: {
+        reason: 'Remplacé par la case « Projet favori » de la fiche projet.',
+      },
+      readOnly: true,
+      hidden: ({ value }) => value === undefined,
       of: [
         defineArrayMember({
           type: 'reference',

@@ -2,6 +2,10 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField, sameLanguageFilter } from '../../lib/i18n';
 import { definePageBuilder } from '../objects/sections';
 import { PROJECT_TEMPLATES } from '../../lib/projectTemplates';
+import { MAX_FEATURED_PROJECTS } from '../../../src/lib/references';
+
+const API_VERSION = '2025-02-19';
+
 /**
  * Projet du portfolio.
  *
@@ -48,6 +52,57 @@ export const project = defineType({
       options: { source: 'title', maxLength: 96 },
       description: 'Généré automatiquement à la première publication.',
     }),
+
+    /* ── Diffusion ────────────────────────────────────────────────────────── */
+    defineField({
+      name: 'visible',
+      title: 'Visible sur le site',
+      type: 'boolean',
+      group: 'meta',
+      initialValue: true,
+      description:
+        'Désactivé, le projet disparaît de tout le site : grille des Expériences, page d’accueil, archive du Labo, et sa page n’est plus publiée.',
+    }),
+    defineField({
+      name: 'featured',
+      title: 'Projet favori',
+      type: 'boolean',
+      group: 'meta',
+      initialValue: false,
+      description:
+        `Les ${MAX_FEATURED_PROJECTS} premiers favoris (du plus récent au plus ancien) occupent les cases réservées de la table des éléments, la sélection de la page d’accueil et l’archive du Labo.`,
+      /*
+        Un avertissement, pas une erreur : la limite dépend des AUTRES documents.
+        Une erreur bloquerait la publication d'un projet à cause d'un état que
+        l'éditeur ne voit pas depuis cette fiche. Au rendu, seuls les
+        MAX_FEATURED_PROJECTS premiers favoris sont retenus.
+      */
+      validation: (rule) =>
+        rule
+          .custom(async (value, context) => {
+            if (value !== true) return true;
+
+            const document = context.document;
+            const language = typeof document?.language === 'string' ? document.language : 'fr';
+            const publishedId = (document?._id ?? '').replace(/^drafts\./, '');
+            const client = context.getClient({ apiVersion: API_VERSION });
+            const others = await client.fetch<number>(
+              /* groq */ `count(*[
+                _type == "project" &&
+                language == $language &&
+                featured == true &&
+                coalesce(visible, true) == true &&
+                !(_id in [$publishedId, "drafts." + $publishedId])
+              ])`,
+              { language, publishedId },
+            );
+
+            return others >= MAX_FEATURED_PROJECTS
+              ? `Déjà ${others} projets favoris : au-delà de ${MAX_FEATURED_PROJECTS}, seuls les plus récents seront affichés.`
+              : true;
+          })
+          .warning(),
+    }),
     defineField({
       name: 'headline',
       title: 'Titre affiché',
@@ -71,6 +126,15 @@ export const project = defineType({
 
     /* ── Fiche projet ─────────────────────────────────────────────────────── */
     defineField({ name: 'client', title: 'Client', type: 'string', group: 'meta' }),
+    defineField({
+      name: 'sector',
+      title: 'Secteur',
+      type: 'string',
+      group: 'meta',
+      description:
+        'Domaine d’activité du client — ex. Gastronomie, Édition, Musique. Affiché sous l’initiale dans la table des éléments, à la place du mot « élément ».',
+      validation: (rule) => rule.max(40),
+    }),
     defineField({
       name: 'year',
       title: 'Année',
@@ -348,12 +412,28 @@ export const project = defineType({
       client: 'client',
       year: 'year',
       language: 'language',
+      featured: 'featured',
+      visible: 'visible',
       media: 'thumbnail',
     },
-    prepare: ({ title, client, year, language, media }) => ({
-      title,
-      subtitle: [language?.toUpperCase(), client, year].filter(Boolean).join(' · '),
-      media,
-    }),
+    prepare: ({ title, client, year, language, featured, visible, media }) => {
+      /*
+        Deux repères lus d'un coup d'œil dans la liste : ★ favori, ⊘ masqué.
+        Le mot « Masqué » reste dans le sous-titre — un projet retiré du site
+        est un état exceptionnel, il ne doit pas dépendre d'un glyphe à
+        déchiffrer.
+      */
+      const marks = [featured ? '★' : null, visible === false ? '⊘' : null]
+        .filter(Boolean)
+        .join(' ');
+
+      return {
+        title: marks ? `${marks} ${title}` : title,
+        subtitle: [language?.toUpperCase(), client, year, visible === false ? 'Masqué' : null]
+          .filter(Boolean)
+          .join(' · '),
+        media,
+      };
+    },
   },
 });

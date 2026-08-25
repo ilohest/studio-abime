@@ -238,6 +238,10 @@ export interface ProjectCard {
   /** Position dans la page Expériences, selon son ordre éditorial courant. */
   number?: number;
   client?: string;
+  /** Domaine d'activité — affiché dans la table des éléments. */
+  sector?: string;
+  /** Marqué favori : table des éléments, accueil et archive du Labo. */
+  featured?: boolean;
   year?: number;
   excerpt?: string;
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
@@ -311,6 +315,15 @@ export interface Page {
   slug: string;
   sections: Section[];
   seo?: Seo;
+}
+
+/** Client sans page projet — document propre, listé dans « Clients ». */
+export interface Client {
+  _id: string;
+  name: string;
+  sector?: string;
+  /** Nom du projet mené pour ce client, quand il mérite d'être cité. */
+  projectName?: string;
 }
 
 export interface ProjectsPage {

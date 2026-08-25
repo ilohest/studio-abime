@@ -3,14 +3,17 @@ import ProjectGrid from '~/components/ProjectGrid.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { projectInitials, type ProjectEditorialCard } from '~/lib/viewModels';
+import { buildReferenceSlots, referenceName, referenceSector } from '~/lib/references';
 import type { Locale } from '~/i18n/config';
-import type { CategorySummary, ProjectCard } from '~/lib/sanity/types';
+import type { CategorySummary, Client, ProjectCard } from '~/lib/sanity/types';
 
 interface Props {
   projects: ProjectCard[];
   categories: CategorySummary[];
   locale: Locale;
   editorialCards?: ProjectEditorialCard[];
+  /** Clients sans page projet — ils complètent les cases réservées. */
+  clients?: Client[];
 }
 
 interface ElementCell {
@@ -20,7 +23,7 @@ interface ElementCell {
   column: number;
 }
 
-const { projects, categories, locale, editorialCards = [] } = Astro.props;
+const { projects, categories, locale, editorialCards = [], clients = [] } = Astro.props;
 
 const mainRows: Array<Array<[number | string, string, number]>> = [
   [[1, 'H', 1], [2, 'He', 18]],
@@ -49,9 +52,13 @@ actinides.forEach((symbol, index) => {
 const columns = Array.from({ length: 18 }, (_, columnIndex) =>
   elements.filter((element) => element.column === columnIndex + 1),
 );
-const previewProjects = projects.slice(0, 8);
-const projectAtoms = [22, 26, 29, 47, 79, 6, 8, 13];
-const projectByAtom = new Map(projectAtoms.map((atom, index) => [atom, previewProjects[index]]));
+/*
+  Les sept cases réservées : projets favoris d'abord, puis clients sans page
+  projet. Une case sans référence garde son élément chimique — la table ne
+  simule jamais une signature qu'elle n'a pas.
+*/
+const referenceSlots = buildReferenceSlots(projects, clients);
+const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot]));
 ---
 
 <section
@@ -81,24 +88,33 @@ const projectByAtom = new Map(projectAtoms.map((atom, index) => [atom, previewPr
                   const element = column.find((candidate) => candidate.row === row);
                   if (!element) return <span class="element-table__gap" aria-hidden="true"></span>;
 
-                  const linkedProject = typeof element.number === 'number'
-                    ? projectByAtom.get(element.number)
+                  const slot = typeof element.number === 'number'
+                    ? slotByAtom.get(element.number)
                     : undefined;
+                  const reference = slot?.source;
+                  const linkedProject = reference?.kind === 'project' ? reference.project : undefined;
+                  const name = reference ? referenceName(reference) : undefined;
+                  const sector = reference ? referenceSector(reference) : undefined;
                   const Tag = linkedProject ? 'a' : 'span';
 
                   return (
                     <Tag
-                      class:list={['element-cell', { 'element-cell--project': linkedProject }]}
+                      class:list={[
+                        'element-cell',
+                        { 'element-cell--reference': reference, 'element-cell--project': linkedProject },
+                      ]}
                       href={linkedProject ? projectPath(locale, linkedProject.slug) : undefined}
                       aria-label={linkedProject ? `Voir l’expérience ${linkedProject.title}` : undefined}
                     >
                       <span class="element-cell__number">{element.number}</span>
                       <strong class="element-cell__symbol">
-                        {linkedProject ? projectInitials(linkedProject.title) : element.symbol}
+                        {name ? projectInitials(name) : element.symbol}
                       </strong>
                       <span class="element-cell__name">
-                        {linkedProject?.title ?? (element.symbol === '—' ? 'série' : 'élément')}
+                        {sector ?? name ?? (element.symbol === '—' ? 'série' : 'élément')}
                       </span>
+                      {/* L'initiale seule est illisible à la voix : on donne le nom entier. */}
+                      {name && !linkedProject && <span class="sr-only">{name}</span>}
                     </Tag>
                   );
                 })}
@@ -297,9 +313,13 @@ const projectByAtom = new Map(projectAtoms.map((atom, index) => [atom, previewPr
     overflow: hidden;
   }
 
-  .element-cell--project {
+  .element-cell--reference {
     border-color: var(--color-ink);
     background: var(--color-ciel);
+  }
+
+  .element-cell--reference .element-cell__name {
+    text-transform: lowercase;
   }
 
   .element-cell--project:hover,
