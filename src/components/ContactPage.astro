@@ -9,17 +9,8 @@ import papier from '~/assets/sections/papier-lumiere.webp';
 import planche from '~/assets/sections/planche-main.webp';
 import binderClip from '~/assets/contact/binder-clip.webp';
 
-import type { SiteContext } from '~/lib/sanity/types';
-
-interface Props {
-  site: SiteContext;
-}
-
-const { site } = Astro.props;
 const email = 'elodie@studioabime.com';
-const socialLinks = site.settings?.socialLinks ?? [];
-const instagramUrl = socialLinks.find((item) => item.platform.toLowerCase() === 'instagram')?.url
-  ?? 'https://www.instagram.com/studioabime/';
+const instagramUrl = 'https://www.instagram.com/studioabime/';
 
 const photographs = [
   { src: atelier, alt: 'Bandes de papier suspendues dans l’atelier' },
@@ -56,7 +47,7 @@ const phases = [
         </p>
         <p class="contact-information-copy__mail">
           Le formulaire vous fait peur&nbsp;? Envoyez vos mots à&nbsp;<a
-            class="contact-social-link"
+            class="contact-social-link contact-email-link"
             href={`mailto:${email}`}
           ><span class="contact-social-link__label">{email}</span></a>
         </p>
@@ -275,7 +266,7 @@ const phases = [
         </form>
 
         <div class="contact-confirmation" data-contact-confirmation hidden tabindex="-1">
-          <p class="type-note uppercase">Message envoyé</p>
+          <FigureCaption as="p" value="fig. 02 - message envoyé" />
           <p class="type-annotation">
             «&nbsp;Nous avons bien reçu votre message, merci. Parfois quelques jours, parfois un peu
             plus quand un projet en cours demande toute notre attention. Si vous êtes sans nouvelles
@@ -301,6 +292,15 @@ const phases = [
     const status = form.querySelector<HTMLElement>('[data-form-status]');
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     const confirmation = form.parentElement?.querySelector<HTMLElement>('[data-contact-confirmation]');
+    const panel = form.closest<HTMLElement>('.contact-form-panel');
+    const transitionItems = Array.from(
+      form.querySelectorAll<HTMLElement>('.contact-field, .contact-form-footer'),
+    );
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    transitionItems.forEach((item, index) => {
+      item.style.setProperty('--contact-exit-index', String(index));
+    });
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -319,10 +319,23 @@ const phases = [
 
         if (!response.ok) throw new Error('Contact form submission failed');
 
+        if (panel) {
+          panel.style.setProperty('--contact-confirmed-height', `${panel.offsetHeight}px`);
+        }
+
+        if (!reducedMotion.matches) {
+          form.classList.add('is-leaving');
+          const transitionTime = 460 + Math.max(0, transitionItems.length - 1) * 70;
+          await new Promise((resolve) => window.setTimeout(resolve, transitionTime));
+        }
+
         form.reset();
         form.hidden = true;
+        form.classList.remove('is-leaving');
+        panel?.setAttribute('data-confirmed', '');
         confirmation.hidden = false;
-        confirmation.focus();
+        if (!reducedMotion.matches) confirmation.classList.add('is-entering');
+        confirmation.focus({ preventScroll: true });
       } catch {
         status.innerHTML =
           'Le message n’a pas pu partir. Écrivez-nous directement à <a href="mailto:elodie@studioabime.com">elodie@studioabime.com</a>.';
@@ -403,6 +416,15 @@ const phases = [
     gap: 0.45em;
     align-items: baseline;
     text-decoration: none;
+  }
+
+  .contact-email-link {
+    font-family: var(--font-annotation);
+    font-style: italic;
+  }
+
+  .contact-email-link .contact-social-link__label {
+    background-size: 100% 1px;
   }
 
   .contact-social-link__label {
@@ -662,6 +684,17 @@ const phases = [
     padding-top: 2rem;
   }
 
+  .contact-form.is-leaving {
+    pointer-events: none;
+  }
+
+  .contact-form.is-leaving > .contact-field,
+  .contact-form.is-leaving > .contact-form-footer {
+    animation: contact-field-exit 0.46s cubic-bezier(0.55, 0, 0.35, 1) both;
+    animation-delay: calc(var(--contact-exit-index, 0) * 70ms);
+    will-change: transform, opacity;
+  }
+
   .contact-form-status {
     max-width: 42rem;
     color: var(--color-muted);
@@ -678,10 +711,19 @@ const phases = [
   }
 
   .contact-confirmation {
+    width: 100%;
     max-width: 62rem;
     padding: clamp(3rem, 6vw, 6rem) 0;
-    border-top: 1px solid var(--color-line);
-    border-bottom: 1px solid var(--color-line);
+  }
+
+  .contact-form-panel[data-confirmed] {
+    display: grid;
+    min-height: var(--contact-confirmed-height);
+    align-items: center;
+  }
+
+  .contact-confirmation.is-entering {
+    animation: contact-confirmation-enter 0.65s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .contact-confirmation .type-annotation {
@@ -711,6 +753,25 @@ const phases = [
     40%, 59.99% { z-index: 10; transform: translate(-44%, -47%) rotate(3.2deg); }
     60%, 79.99% { z-index: 8; transform: translate(-53%, -45%) rotate(-2.2deg); }
     80%, 100% { z-index: 6; transform: translate(-47%, -48%) rotate(1.7deg); }
+  }
+
+  @keyframes contact-field-exit {
+    to {
+      opacity: 0;
+      transform: translateX(clamp(5rem, 18vw, 16rem));
+    }
+  }
+
+  @keyframes contact-confirmation-enter {
+    from {
+      opacity: 0;
+      transform: translateY(1.5rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @media (max-width: 1199px) {
@@ -805,6 +866,9 @@ const phases = [
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .contact-form.is-leaving > .contact-field,
+    .contact-form.is-leaving > .contact-form-footer,
+    .contact-confirmation.is-entering,
     .photo-stack__image,
     .photo-stack:hover .photo-stack__image,
     .photo-stack:focus-visible .photo-stack__image,

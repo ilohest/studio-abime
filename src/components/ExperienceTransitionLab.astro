@@ -1,0 +1,1097 @@
+---
+import SanityImage from '~/components/primitives/SanityImage.astro';
+
+import { projectPath } from '~/i18n/routes';
+import { projectInitials } from '~/lib/viewModels';
+import type { Locale } from '~/i18n/config';
+import type { ProjectCard } from '~/lib/sanity/types';
+
+interface Props {
+  projects: ProjectCard[];
+  locale: Locale;
+}
+
+interface ElementCell {
+  number: number | string;
+  symbol: string;
+  row: number;
+  column: number;
+}
+
+const { projects, locale } = Astro.props;
+const requestedMode = Astro.url.searchParams.get('motion');
+const initialMode = requestedMode === 'zoom' || requestedMode === 'hover' ? requestedMode : 'columns';
+
+const mainRows: Array<Array<[number | string, string, number]>> = [
+  [[1, 'H', 1], [2, 'He', 18]],
+  [[3, 'Li', 1], [4, 'Be', 2], [5, 'B', 13], [6, 'C', 14], [7, 'N', 15], [8, 'O', 16], [9, 'F', 17], [10, 'Ne', 18]],
+  [[11, 'Na', 1], [12, 'Mg', 2], [13, 'Al', 13], [14, 'Si', 14], [15, 'P', 15], [16, 'S', 16], [17, 'Cl', 17], [18, 'Ar', 18]],
+  [[19, 'K', 1], [20, 'Ca', 2], [21, 'Sc', 3], [22, 'Ti', 4], [23, 'V', 5], [24, 'Cr', 6], [25, 'Mn', 7], [26, 'Fe', 8], [27, 'Co', 9], [28, 'Ni', 10], [29, 'Cu', 11], [30, 'Zn', 12], [31, 'Ga', 13], [32, 'Ge', 14], [33, 'As', 15], [34, 'Se', 16], [35, 'Br', 17], [36, 'Kr', 18]],
+  [[37, 'Rb', 1], [38, 'Sr', 2], [39, 'Y', 3], [40, 'Zr', 4], [41, 'Nb', 5], [42, 'Mo', 6], [43, 'Tc', 7], [44, 'Ru', 8], [45, 'Rh', 9], [46, 'Pd', 10], [47, 'Ag', 11], [48, 'Cd', 12], [49, 'In', 13], [50, 'Sn', 14], [51, 'Sb', 15], [52, 'Te', 16], [53, 'I', 17], [54, 'Xe', 18]],
+  [[55, 'Cs', 1], [56, 'Ba', 2], ['57–71', '—', 3], [72, 'Hf', 4], [73, 'Ta', 5], [74, 'W', 6], [75, 'Re', 7], [76, 'Os', 8], [77, 'Ir', 9], [78, 'Pt', 10], [79, 'Au', 11], [80, 'Hg', 12], [81, 'Tl', 13], [82, 'Pb', 14], [83, 'Bi', 15], [84, 'Po', 16], [85, 'At', 17], [86, 'Rn', 18]],
+  [[87, 'Fr', 1], [88, 'Ra', 2], ['89–103', '—', 3], [104, 'Rf', 4], [105, 'Db', 5], [106, 'Sg', 6], [107, 'Bh', 7], [108, 'Hs', 8], [109, 'Mt', 9], [110, 'Ds', 10], [111, 'Rg', 11], [112, 'Cn', 12], [113, 'Nh', 13], [114, 'Fl', 14], [115, 'Mc', 15], [116, 'Lv', 16], [117, 'Ts', 17], [118, 'Og', 18]],
+];
+
+const lanthanides = ['La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu'];
+const actinides = ['Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr'];
+
+const elements: ElementCell[] = mainRows.flatMap((row, rowIndex) =>
+  row.map(([number, symbol, column]) => ({ number, symbol, row: rowIndex + 1, column })),
+);
+
+lanthanides.forEach((symbol, index) => {
+  elements.push({ number: 57 + index, symbol, row: 9, column: index + 3 });
+});
+actinides.forEach((symbol, index) => {
+  elements.push({ number: 89 + index, symbol, row: 10, column: index + 3 });
+});
+
+const columns = Array.from({ length: 18 }, (_, columnIndex) =>
+  elements.filter((element) => element.column === columnIndex + 1),
+);
+const previewProjects = projects.slice(0, 8);
+const projectAtoms = [22, 26, 29, 47, 79, 6, 8, 13];
+const projectByAtom = new Map(projectAtoms.map((atom, index) => [atom, previewProjects[index]]));
+---
+
+<section
+  class="motion-lab"
+  data-experience-motion
+  data-motion-mode={initialMode}
+  aria-labelledby="motion-lab-title"
+>
+  <div class="motion-lab__toolbar">
+    <div>
+      <p class="type-note">PROTOTYPES DE TRANSITION</p>
+      <p id="motion-lab-title" class="motion-lab__instruction type-copy">
+        Choisir une chorégraphie, puis faire défiler la table.
+      </p>
+    </div>
+
+    <div class="motion-lab__switch" role="group" aria-label="Choisir l’animation à tester">
+      <button
+        type="button"
+        class="motion-lab__choice type-note"
+        data-motion-choice="zoom"
+        aria-pressed={initialMode === 'zoom' ? 'true' : 'false'}
+      >
+        01. Zoom
+      </button>
+      <button
+        type="button"
+        class="motion-lab__choice type-note"
+        data-motion-choice="columns"
+        aria-pressed={initialMode === 'columns' ? 'true' : 'false'}
+      >
+        02. Colonnes
+      </button>
+      <button
+        type="button"
+        class="motion-lab__choice type-note"
+        data-motion-choice="hover"
+        aria-pressed={initialMode === 'hover' ? 'true' : 'false'}
+      >
+        03. Survol
+      </button>
+    </div>
+  </div>
+
+  <div class="motion-lab__runway" data-motion-runway>
+    <div class="motion-lab__stage" data-motion-stage>
+      <div class="motion-lab__meta type-note" aria-hidden="true">
+        <span>TABLE DES ÉLÉMENTS</span>
+        <span data-motion-state>VUE D’ENSEMBLE</span>
+      </div>
+
+      <div class="motion-lab__table-layer" data-table-layer>
+        <div class="element-table" aria-label="Table des éléments du Studio Abîme">
+          {
+            columns.map((column, columnIndex) => (
+              <div
+                class="element-table__column"
+                data-element-column
+                data-column-index={columnIndex}
+              >
+                {Array.from({ length: 10 }, (_, rowIndex) => {
+                  if (rowIndex === 7) return <span class="element-table__spacer" aria-hidden="true"></span>;
+                  const row = rowIndex + 1;
+                  const element = column.find((candidate) => candidate.row === row);
+                  if (!element) return <span class="element-table__gap" aria-hidden="true"></span>;
+
+                  const linkedProject = typeof element.number === 'number'
+                    ? projectByAtom.get(element.number)
+                    : undefined;
+                  const Tag = linkedProject ? 'a' : 'span';
+
+                  return (
+                    <Tag
+                      class:list={['element-cell', { 'element-cell--project': linkedProject }]}
+                      href={linkedProject ? projectPath(locale, linkedProject.slug) : undefined}
+                      aria-label={linkedProject ? `Voir l’expérience ${linkedProject.title}` : undefined}
+                      data-project-preview={linkedProject?._id}
+                    >
+                      <span class="element-cell__number">{element.number}</span>
+                      <strong class="element-cell__symbol">
+                        {linkedProject ? projectInitials(linkedProject.title) : element.symbol}
+                      </strong>
+                      <span class="element-cell__name">
+                        {linkedProject?.title ?? (element.symbol === '—' ? 'série' : 'élément')}
+                      </span>
+                    </Tag>
+                  );
+                })}
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class="hover-preview-layer" data-hover-preview-layer aria-hidden="true">
+        {
+          previewProjects.map((project, projectIndex) => (
+            <article
+              class="hover-preview-card"
+              data-hover-preview-card
+              data-project-id={project._id}
+            >
+              <div class="hover-preview-card__corner hover-preview-card__corner--tl"></div>
+              <div class="hover-preview-card__corner hover-preview-card__corner--tr"></div>
+              <div class="hover-preview-card__corner hover-preview-card__corner--bl"></div>
+              <div class="hover-preview-card__corner hover-preview-card__corner--br"></div>
+
+              <header class="hover-preview-card__header">
+                <span class="hover-preview-card__number type-copy">
+                  {String(projectIndex + 1).padStart(2, '0')}
+                </span>
+                <div class="hover-preview-card__identity">
+                  <strong>{projectInitials(project.title)}</strong>
+                  <span>{project.title}</span>
+                </div>
+              </header>
+
+              <div class="hover-preview-card__body">
+                <div class="hover-preview-card__media">
+                  {project.thumbnail && (
+                    <SanityImage
+                      image={project.thumbnail}
+                      width={1100}
+                      sizes="(min-width: 900px) 48vw, 82vw"
+                      alt=""
+                      class="hover-preview-card__image"
+                    />
+                  )}
+                </div>
+                <div class="hover-preview-card__copy">
+                  <p class="type-note">EXPÉRIENCE / {String(projectIndex + 1).padStart(2, '0')}</p>
+                  {project.excerpt && <p class="type-copy">{project.excerpt}</p>}
+                  <span class="type-note">CLIQUER POUR OUVRIR ↗</span>
+                </div>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+
+      <div class="motion-lab__projects-layer" data-projects-layer aria-hidden="true">
+        <div class="motion-project-grid">
+          {
+            previewProjects.map((project, projectIndex) => (
+              <article
+                class="motion-project-card"
+                data-project-card
+                data-project-index={projectIndex}
+              >
+                <header class="motion-project-card__heading">
+                  <span>{String(projectIndex + 1).padStart(2, '0')}</span>
+                  <strong aria-hidden="true">{projectInitials(project.title)}</strong>
+                  <span>{project.title}</span>
+                </header>
+                <div class="motion-project-card__media">
+                  {project.thumbnail && (
+                    <SanityImage
+                      image={project.thumbnail}
+                      width={640}
+                      sizes="(min-width: 1440px) 25vw, (min-width: 900px) 33vw, 50vw"
+                      alt=""
+                      class="motion-project-card__image"
+                    />
+                  )}
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class="motion-lab__progress" aria-hidden="true">
+        <span data-motion-progress></span>
+      </div>
+    </div>
+  </div>
+
+  <p class="motion-lab__handoff type-note">
+    <span data-scroll-handoff>LA TABLE DEVIENT GRILLE — LES EXPÉRIENCES RESTENT ACCESSIBLES CI-DESSOUS.</span>
+    <span data-hover-handoff>SURVOLER UNE CASE COLORÉE — CLIQUER POUR OUVRIR L’EXPÉRIENCE.</span>
+  </p>
+</section>
+
+<script>
+  const clamp = (value: number, min = 0, max = 1) => Math.min(Math.max(value, min), max);
+  const range = (value: number, start: number, end: number) => clamp((value - start) / (end - start));
+  const ease = (value: number) => value * value * (3 - 2 * value);
+
+  document.querySelectorAll('[data-experience-motion]').forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
+    root.dataset.motionReady = 'true';
+
+    const runway = root.querySelector('[data-motion-runway]');
+    const tableLayer = root.querySelector('[data-table-layer]');
+    const projectsLayer = root.querySelector('[data-projects-layer]');
+    const elementColumns = [...root.querySelectorAll('[data-element-column]')];
+    const tableLinks = [...root.querySelectorAll('.element-cell--project')];
+    const projectCards = [...root.querySelectorAll('[data-project-card]')];
+    const hoverCards = [...root.querySelectorAll('[data-hover-preview-card]')];
+    const choices = [...root.querySelectorAll('[data-motion-choice]')];
+    const progressBar = root.querySelector('[data-motion-progress]');
+    const stateLabel = root.querySelector('[data-motion-state]');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0;
+    let hoverIntentTimer = 0;
+
+    const cancelHoverIntent = () => {
+      if (!hoverIntentTimer) return;
+      window.clearTimeout(hoverIntentTimer);
+      hoverIntentTimer = 0;
+    };
+
+    const clearPreview = () => {
+      cancelHoverIntent();
+      root.removeAttribute('data-preview-open');
+      hoverCards.forEach((card) => card.removeAttribute('data-active'));
+    };
+
+    const showPreview = (projectId: string | null) => {
+      if (root.dataset.motionMode !== 'hover' || !projectId) return;
+      root.setAttribute('data-preview-open', '');
+      hoverCards.forEach((card) => {
+        card.toggleAttribute('data-active', card.getAttribute('data-project-id') === projectId);
+      });
+    };
+
+    const schedulePreview = (projectId: string | null) => {
+      cancelHoverIntent();
+      if (root.dataset.motionMode !== 'hover' || !projectId) return;
+      hoverIntentTimer = window.setTimeout(() => {
+        hoverIntentTimer = 0;
+        showPreview(projectId);
+      }, 180);
+    };
+
+    const setMode = (mode: 'zoom' | 'columns' | 'hover', reset = false) => {
+      clearPreview();
+      root.dataset.motionMode = mode;
+      choices.forEach((choice) => {
+        choice.setAttribute('aria-pressed', String(choice.getAttribute('data-motion-choice') === mode));
+      });
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('motion', mode);
+      window.history.replaceState({}, '', url);
+
+      if (reset && runway instanceof HTMLElement) {
+        runway.scrollIntoView({ behavior: reducedMotion.matches ? 'auto' : 'smooth', block: 'start' });
+      }
+      update();
+    };
+
+    const renderColumns = (progress: number) => {
+      if (tableLayer instanceof HTMLElement) {
+        tableLayer.style.transform = 'none';
+        tableLayer.style.opacity = '1';
+      }
+      if (projectsLayer instanceof HTMLElement) {
+        projectsLayer.style.transform = 'none';
+        projectsLayer.style.opacity = '1';
+      }
+
+      const totalOutgoing = Math.max(1, elementColumns.length - 1);
+      elementColumns.forEach((column, index) => {
+        if (!(column instanceof HTMLElement)) return;
+        const rightToLeft = (totalOutgoing - index) / totalOutgoing;
+        const columnProgress = ease(range(progress, 0.05 + rightToLeft * 0.26, 0.46 + rightToLeft * 0.26));
+        column.style.transform = `translate3d(0, ${(-118 * columnProgress).toFixed(3)}vh, 0)`;
+        column.style.opacity = String(1 - range(columnProgress, 0.72, 1));
+      });
+
+      const columnCount = window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2;
+      const totalIncoming = Math.max(1, columnCount - 1);
+      projectCards.forEach((card, index) => {
+        if (!(card instanceof HTMLElement)) return;
+        const columnIndex = index % columnCount;
+        const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
+        const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.7 + rightToLeft * 0.22));
+        card.style.transform = `translate3d(0, ${(112 * (1 - columnProgress)).toFixed(3)}vh, 0) scale(${(0.92 + columnProgress * 0.08).toFixed(4)})`;
+        card.style.opacity = String(range(columnProgress, 0.04, 0.32));
+      });
+    };
+
+    const renderZoom = (progress: number) => {
+      elementColumns.forEach((column) => {
+        if (!(column instanceof HTMLElement)) return;
+        column.style.transform = 'none';
+        column.style.opacity = '1';
+      });
+      projectCards.forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        card.style.transform = 'none';
+        card.style.opacity = '1';
+      });
+
+      const tableProgress = ease(range(progress, 0.06, 0.72));
+      const tableExit = range(progress, 0.55, 0.76);
+      const projectsProgress = ease(range(progress, 0.48, 0.9));
+
+      if (tableLayer instanceof HTMLElement) {
+        tableLayer.style.transform = `translate3d(${(-20 * tableProgress).toFixed(3)}%, ${(5 * tableProgress).toFixed(3)}%, 0) scale(${(1 + tableProgress * 2.8).toFixed(4)})`;
+        tableLayer.style.opacity = String(1 - tableExit);
+      }
+      if (projectsLayer instanceof HTMLElement) {
+        projectsLayer.style.transform = `translate3d(0, ${(22 * (1 - projectsProgress)).toFixed(3)}vh, 0) scale(${(0.72 + projectsProgress * 0.28).toFixed(4)})`;
+        projectsLayer.style.opacity = String(range(projectsProgress, 0.06, 0.72));
+      }
+    };
+
+    const renderHover = () => {
+      elementColumns.forEach((column) => {
+        if (!(column instanceof HTMLElement)) return;
+        column.style.transform = 'none';
+        column.style.opacity = '1';
+      });
+      projectCards.forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        card.style.transform = 'none';
+        card.style.opacity = '0';
+      });
+      if (tableLayer instanceof HTMLElement) {
+        tableLayer.style.transform = 'none';
+        tableLayer.style.opacity = '1';
+      }
+    };
+
+    const update = () => {
+      frame = 0;
+      if (!(runway instanceof HTMLElement)) return;
+
+      const rect = runway.getBoundingClientRect();
+      const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
+      const mode = root.dataset.motionMode === 'zoom'
+        ? 'zoom'
+        : root.dataset.motionMode === 'hover'
+          ? 'hover'
+          : 'columns';
+      const progress = mode === 'hover' ? 0 : reducedMotion.matches ? 1 : clamp(-rect.top / distance);
+      const tableIsInteractive = mode === 'hover' || (!reducedMotion.matches && progress < 0.12);
+
+      if (mode === 'zoom') renderZoom(progress);
+      else if (mode === 'hover') renderHover();
+      else renderColumns(progress);
+
+      if (tableLayer instanceof HTMLElement) {
+        tableLayer.style.pointerEvents = tableIsInteractive ? 'auto' : 'none';
+        tableLayer.setAttribute('aria-hidden', String(!tableIsInteractive));
+      }
+      tableLinks.forEach((link) => {
+        if (link instanceof HTMLElement) link.tabIndex = tableIsInteractive ? 0 : -1;
+      });
+
+      if (progressBar instanceof HTMLElement) {
+        progressBar.style.transform = `scaleX(${progress.toFixed(4)})`;
+      }
+      if (stateLabel instanceof HTMLElement) {
+        stateLabel.textContent = mode === 'hover'
+          ? 'EXPLORATION LIBRE'
+          : progress < 0.22
+            ? 'VUE D’ENSEMBLE'
+            : progress < 0.76
+              ? 'TRANSFORMATION'
+              : 'EXPÉRIENCES';
+      }
+    };
+
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+
+    choices.forEach((choice) => {
+      choice.addEventListener('click', () => {
+        const choiceMode = choice.getAttribute('data-motion-choice');
+        setMode(choiceMode === 'zoom' ? 'zoom' : choiceMode === 'hover' ? 'hover' : 'columns', true);
+      });
+    });
+    tableLinks.forEach((link) => {
+      link.addEventListener('pointerenter', () => schedulePreview(link.getAttribute('data-project-preview')));
+      link.addEventListener('pointerleave', () => {
+        if (document.activeElement !== link) clearPreview();
+      });
+      link.addEventListener('focusin', () => {
+        cancelHoverIntent();
+        showPreview(link.getAttribute('data-project-preview'));
+      });
+      link.addEventListener('focusout', clearPreview);
+    });
+    root.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') clearPreview();
+    });
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate, { passive: true });
+    reducedMotion.addEventListener('change', requestUpdate);
+
+    const requestedMode = new URL(window.location.href).searchParams.get('motion');
+    setMode(requestedMode === 'zoom' ? 'zoom' : requestedMode === 'hover' ? 'hover' : 'columns');
+  });
+</script>
+
+<style>
+  .motion-lab {
+    --motion-line: color-mix(in srgb, var(--color-ink) 36%, transparent);
+    margin-top: clamp(2.5rem, 6vw, 6rem);
+  }
+
+  .motion-lab__toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    padding-block: 1rem;
+    border-block: 1px solid var(--motion-line);
+  }
+
+  .motion-lab__instruction {
+    max-width: 35rem;
+    margin-top: 0.25rem;
+    font-size: clamp(0.9rem, 1.2vw, 1.1rem);
+  }
+
+  .motion-lab__switch {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.45rem;
+  }
+
+  .motion-lab__choice {
+    min-height: 2.75rem;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--motion-line);
+    background: transparent;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .motion-lab__choice[aria-pressed='true'] {
+    background: var(--color-ink);
+    color: var(--color-lumiere);
+  }
+
+  .motion-lab__runway {
+    position: relative;
+    height: 300vh;
+  }
+
+  .motion-lab[data-motion-mode='hover'] .motion-lab__runway {
+    height: 100svh;
+  }
+
+  .motion-lab__stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    min-height: 38rem;
+    overflow: hidden;
+    background: var(--color-lumiere);
+    isolation: isolate;
+  }
+
+  .motion-lab__meta {
+    position: absolute;
+    inset: 1rem 0 auto;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .motion-lab__table-layer,
+  .motion-lab__projects-layer {
+    position: absolute;
+    inset: clamp(3.4rem, 7vh, 5.25rem) 0 clamp(2.2rem, 5vh, 3.5rem);
+    transform-origin: 72% 42%;
+    will-change: transform, opacity;
+  }
+
+  .motion-lab__table-layer {
+    transition:
+      opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .motion-lab[data-motion-mode='hover'] .motion-lab__stage {
+    position: relative;
+  }
+
+  .motion-lab[data-motion-mode='hover'] .motion-lab__table-layer {
+    opacity: 1 !important;
+    filter: none;
+    transform: none !important;
+  }
+
+  .motion-lab[data-motion-mode='hover'][data-preview-open] .motion-lab__table-layer {
+    opacity: 0.24 !important;
+    filter: none;
+  }
+
+  .motion-lab[data-motion-mode='hover'] .motion-lab__projects-layer,
+  .motion-lab[data-motion-mode='hover'] .motion-lab__progress {
+    display: none;
+  }
+
+  .element-table {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(18, minmax(0, 1fr));
+    gap: clamp(0.12rem, 0.25vw, 0.3rem);
+  }
+
+  .element-table__column {
+    display: grid;
+    min-width: 0;
+    grid-template-rows: repeat(7, minmax(0, 1fr)) 0.34fr repeat(2, minmax(0, 1fr));
+    gap: clamp(0.12rem, 0.25vw, 0.3rem);
+    will-change: transform, opacity;
+  }
+
+  .element-table__gap,
+  .element-table__spacer {
+    display: block;
+  }
+
+  .element-cell {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(0.12rem, 0.3vw, 0.28rem);
+    border: 1px solid var(--motion-line);
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    line-height: 1;
+    text-decoration: none;
+    overflow: hidden;
+  }
+
+  .element-cell--project {
+    border-color: var(--color-ink);
+    background: var(--color-ciel);
+  }
+
+  .element-cell--project:hover,
+  .element-cell--project:focus-visible {
+    background: var(--color-ink);
+    color: var(--color-lumiere);
+  }
+
+  .element-cell__number {
+    font-size: clamp(0.28rem, 0.48vw, 0.52rem);
+  }
+
+  .element-cell__symbol {
+    align-self: center;
+    max-width: 100%;
+    font-size: clamp(0.48rem, 1vw, 1.05rem);
+    font-weight: 400;
+    letter-spacing: -0.08em;
+    overflow-wrap: anywhere;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .element-cell__name {
+    display: block;
+    width: 100%;
+    font-size: clamp(0.2rem, 0.34vw, 0.38rem);
+    line-height: 1.05;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .motion-lab__projects-layer {
+    z-index: 2;
+    opacity: 0;
+  }
+
+  .hover-preview-layer {
+    position: absolute;
+    inset: clamp(4.2rem, 8vh, 6rem) 0 clamp(2rem, 4vh, 3rem);
+    z-index: 3;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .motion-lab[data-motion-mode='hover'] .hover-preview-layer {
+    display: flex;
+  }
+
+  .hover-preview-card {
+    position: absolute;
+    display: grid;
+    width: min(67rem, 86%);
+    height: min(74vh, 47rem);
+    min-height: 32rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: clamp(1rem, 2vw, 1.8rem);
+    border: 1px solid var(--motion-line);
+    background: color-mix(in srgb, var(--color-lumiere) 96%, white);
+    opacity: 0;
+    transform: translate3d(0, 1.2rem, 0) scale(0.965);
+    transition:
+      opacity 0.32s ease-out,
+      transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hover-preview-card[data-active] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  .hover-preview-card__corner {
+    position: absolute;
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .hover-preview-card__corner::before,
+  .hover-preview-card__corner::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background: var(--color-ink);
+    transform: translate(-50%, -50%);
+  }
+
+  .hover-preview-card__corner::before {
+    width: 100%;
+    height: 2px;
+  }
+
+  .hover-preview-card__corner::after {
+    width: 2px;
+    height: 100%;
+  }
+
+  .hover-preview-card__corner--tl {
+    top: -0.8rem;
+    left: -0.8rem;
+  }
+
+  .hover-preview-card__corner--tr {
+    top: -0.8rem;
+    right: -0.8rem;
+  }
+
+  .hover-preview-card__corner--bl {
+    bottom: -0.8rem;
+    left: -0.8rem;
+  }
+
+  .hover-preview-card__corner--br {
+    right: -0.8rem;
+    bottom: -0.8rem;
+  }
+
+  .hover-preview-card__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    padding-bottom: clamp(0.8rem, 1.5vw, 1.3rem);
+  }
+
+  .hover-preview-card__number {
+    font-size: clamp(1rem, 1.4vw, 1.35rem);
+  }
+
+  .hover-preview-card__identity {
+    justify-self: end;
+    font-family: var(--font-titre);
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  .hover-preview-card__identity strong {
+    display: block;
+    max-width: 8ch;
+    margin-left: auto;
+    font-size: clamp(3rem, 6.8vw, 6.4rem);
+    font-weight: 400;
+    letter-spacing: -0.08em;
+    line-height: 0.82;
+    overflow-wrap: anywhere;
+  }
+
+  .hover-preview-card__identity span {
+    display: block;
+    margin-top: 0.55rem;
+    font-size: clamp(0.68rem, 1vw, 0.95rem);
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .hover-preview-card__body {
+    display: grid;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1.55fr) minmax(14rem, 0.75fr);
+    gap: clamp(0.7rem, 1.25vw, 1.2rem);
+  }
+
+  .hover-preview-card__media {
+    display: flex;
+    min-height: 0;
+    align-items: center;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  :global(.hover-preview-card__image) {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: right center;
+    background-image: none !important;
+    filter: grayscale(1);
+  }
+
+  .hover-preview-card__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-bottom: 0.2rem;
+  }
+
+  .hover-preview-card__copy .type-copy {
+    font-size: clamp(0.9rem, 1.25vw, 1.15rem);
+    line-height: 1.35;
+  }
+
+  .motion-project-grid {
+    display: grid;
+    height: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .motion-project-card {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: clamp(0.45rem, 0.8vw, 0.75rem);
+    border-left: 1px solid var(--motion-line);
+    border-bottom: 1px solid var(--motion-line);
+    will-change: transform, opacity;
+  }
+
+  .motion-project-card:nth-child(4n) {
+    border-right: 1px solid var(--motion-line);
+  }
+
+  .motion-project-card:nth-child(-n + 4) {
+    border-top: 1px solid var(--motion-line);
+  }
+
+  .motion-project-card__heading {
+    display: grid;
+    min-height: 2.8rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.15rem 0.6rem;
+    font-family: var(--font-titre);
+    font-size: clamp(0.45rem, 0.65vw, 0.68rem);
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .motion-project-card__heading strong {
+    justify-self: end;
+    font-size: clamp(1.2rem, 2.4vw, 2.4rem);
+    font-weight: 400;
+    letter-spacing: -0.08em;
+  }
+
+  .motion-project-card__heading span:last-child {
+    grid-column: 2;
+    justify-self: end;
+    text-align: right;
+  }
+
+  .motion-project-card__media {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    align-items: flex-end;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  :global(.motion-project-card__image) {
+    display: block;
+    width: 76%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: right bottom;
+    filter: grayscale(1);
+  }
+
+  .motion-lab__progress {
+    position: absolute;
+    inset: auto 0 1rem;
+    z-index: 5;
+    height: 1px;
+    background: var(--motion-line);
+  }
+
+  .motion-lab__progress span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--color-ink);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .motion-lab__handoff {
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--motion-line);
+    text-align: right;
+  }
+
+  [data-hover-handoff] {
+    display: none;
+  }
+
+  .motion-lab[data-motion-mode='hover'] [data-scroll-handoff] {
+    display: none;
+  }
+
+  .motion-lab[data-motion-mode='hover'] [data-hover-handoff] {
+    display: inline;
+  }
+
+  @media (max-width: 899px) {
+    .motion-lab__toolbar {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .motion-lab__switch {
+      justify-content: flex-start;
+    }
+
+    .motion-lab__runway {
+      height: 220vh;
+    }
+
+    .motion-lab[data-motion-mode='hover'] .motion-lab__runway {
+      height: 100svh;
+    }
+
+    .motion-lab__stage {
+      min-height: 32rem;
+    }
+
+    .motion-lab__table-layer {
+      inset-inline: -10%;
+      width: 120%;
+    }
+
+    .motion-project-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(4, minmax(0, 1fr));
+    }
+
+    .motion-project-card:nth-child(4n) {
+      border-right: 0;
+    }
+
+    .motion-project-card:nth-child(2n) {
+      border-right: 1px solid var(--motion-line);
+    }
+
+    .motion-project-card:nth-child(-n + 4) {
+      border-top: 0;
+    }
+
+    .motion-project-card:nth-child(-n + 2) {
+      border-top: 1px solid var(--motion-line);
+    }
+
+    .hover-preview-card {
+      width: min(37rem, 92%);
+      height: min(72vh, 42rem);
+      min-height: 30rem;
+    }
+
+    .hover-preview-card__body {
+      grid-template-columns: minmax(0, 1.25fr) minmax(10rem, 0.75fr);
+      gap: 1rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .motion-lab__stage::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto;
+      z-index: 4;
+      height: 4.2rem;
+      background: var(--color-lumiere);
+      pointer-events: none;
+    }
+
+    .motion-lab__meta {
+      inset-block-start: 4.5rem;
+      font-size: 0.58rem;
+    }
+
+    .motion-lab__table-layer,
+    .motion-lab__projects-layer {
+      inset-block: 6.3rem 3.2rem;
+    }
+
+    .motion-lab__table-layer {
+      inset-inline: 0;
+      width: 100%;
+    }
+
+    .element-table {
+      gap: 1px;
+    }
+
+    .element-table__column {
+      gap: 1px;
+    }
+
+    .element-cell {
+      padding: 1px;
+    }
+
+    .element-cell__name {
+      display: none;
+    }
+
+    .hover-preview-layer {
+      inset-block: 6.3rem 3.2rem;
+    }
+
+    .hover-preview-card {
+      width: calc(100% - 1.8rem);
+      height: min(68vh, 34rem);
+      min-height: 0;
+      padding: 0.8rem;
+    }
+
+    .hover-preview-card__header {
+      padding-bottom: 0.65rem;
+    }
+
+    .hover-preview-card__identity strong {
+      font-size: clamp(2.3rem, 14vw, 3.5rem);
+    }
+
+    .hover-preview-card__body {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    :global(.hover-preview-card__image) {
+      width: 100%;
+      object-position: center;
+    }
+
+    .hover-preview-card__copy {
+      gap: 0.35rem;
+    }
+
+    .hover-preview-card__copy .type-copy {
+      display: none;
+    }
+  }
+
+  @media (hover: none) {
+    .hover-preview-layer {
+      display: none !important;
+    }
+
+    .motion-lab[data-motion-mode='hover'][data-preview-open] .motion-lab__table-layer {
+      opacity: 1 !important;
+      filter: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion-lab__runway {
+      height: auto;
+    }
+
+    .motion-lab__stage {
+      position: relative;
+      height: min(82vh, 50rem);
+    }
+
+    .motion-lab__table-layer {
+      display: none;
+    }
+
+    .motion-lab__projects-layer {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    .motion-project-card {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  @media (min-width: 900px) and (max-width: 1439px) {
+    .motion-project-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(3, minmax(0, 1fr));
+    }
+
+    .motion-project-card:nth-child(4n) {
+      border-right: 0;
+    }
+
+    .motion-project-card:nth-child(3n) {
+      border-right: 1px solid var(--motion-line);
+    }
+
+    .motion-project-card:nth-child(-n + 4) {
+      border-top: 0;
+    }
+
+    .motion-project-card:nth-child(-n + 3) {
+      border-top: 1px solid var(--motion-line);
+    }
+  }
+</style>

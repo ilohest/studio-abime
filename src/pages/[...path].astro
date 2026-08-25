@@ -5,6 +5,7 @@ import ProjectGrid from '~/components/ProjectGrid.astro';
 import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer.astro';
 import LaboPageView from '~/components/LaboPage.astro';
 import ContactPage from '~/components/ContactPage.astro';
+import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
@@ -201,12 +202,13 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
   ].filter(Boolean).join(' ')}
   alternates={alternates}
   showServicesRail={!hasEmbeddedServicesRail}
+  enableVisualEditing={route.kind !== 'contact'}
 >
   {project && <ProjectTemplateRenderer project={project} locale={locale} />}
 
   {laboPage && <LaboPageView page={laboPage} locale={locale} />}
 
-  {route.kind === 'contact' && <ContactPage site={site} />}
+  {route.kind === 'contact' && <ContactPage />}
 
   {page && <SectionRenderer sections={pageSections} locale={locale} />}
 
@@ -219,6 +221,8 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
           </h1>
           {projectsIntro && <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>}
         </header>
+
+        <ExperienceTransitionLab projects={projects} locale={locale} />
 
         <ProjectGrid
           projects={projects}

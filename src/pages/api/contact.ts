@@ -1,4 +1,10 @@
 import type { APIRoute } from 'astro';
+import {
+  contactConfirmationEmail,
+  contactNotificationEmail,
+  type ContactEmail,
+  type ContactSubmission,
+} from '~/lib/email/contactEmails';
 
 export const prerender = false;
 
@@ -8,18 +14,26 @@ const allowedPhases = new Set(['idee', 'germe', 'evoluer', 'muter']);
 const asText = (form: FormData, key: string, limit: number) =>
   String(form.get(key) ?? '').trim().slice(0, limit);
 
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-
 const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  });
+
+interface ResendPayload extends ContactEmail {
+  from: string;
+  to: string[];
+  reply_to?: string;
+}
+
+const sendEmail = (apiKey: string, payload: ResendPayload) =>
+  fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   });
 
 export const POST: APIRoute = async ({ request }) => {
@@ -34,7 +48,7 @@ export const POST: APIRoute = async ({ request }) => {
   const form = await request.formData();
   if (asText(form, 'company', 200)) return json({ ok: true });
 
-  const submission = {
+  const submission: ContactSubmission = {
     fullName: asText(form, 'fullName', 120),
     contact: asText(form, 'contact', 180),
     project: asText(form, 'project', 280),
@@ -52,59 +66,42 @@ export const POST: APIRoute = async ({ request }) => {
   const apiKey = import.meta.env.RESEND_API_KEY;
   const from = import.meta.env.CONTACT_FROM_EMAIL;
   const to = import.meta.env.CONTACT_TO_EMAIL || 'elodie@studioabime.com';
+  const replyToStudio = import.meta.env.CONTACT_REPLY_TO_EMAIL || to;
 
   if (!apiKey || !from) {
     console.error('[contact] RESEND_API_KEY ou CONTACT_FROM_EMAIL manquant.');
     return json({ error: 'Service d’envoi non configuré.' }, 503);
   }
 
-  const phaseLabels: Record<string, string> = {
-    idee: 'L’idée',
-    germe: 'Germe',
-    evoluer: 'Il existe mais doit évoluer',
-    muter: 'Il existe mais doit muter',
-  };
-
-  const entries = [
-    ['Nom & prénom', submission.fullName],
-    ['Contact', submission.contact],
-    ['Projet', submission.project],
-    ['Phase', phaseLabels[submission.phase] ?? submission.phase],
-    ['Ce qui ne se dit pas encore', submission.unsaid],
-    ['Ressources', submission.resources],
-    ['Début souhaité', submission.start],
-    ['Temps disponible', submission.availability],
-  ];
-
-  const text = entries.map(([label, value]) => `${label}\n${value}`).join('\n\n');
-  const html = entries
-    .map(
-      ([label, value]) =>
-        `<p><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value).replaceAll('\n', '<br>')}</p>`,
-    )
-    .join('');
-
-  const replyTo = submission.contact.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject: `Nouvelle enquête — ${submission.fullName}`,
-      text,
-      html,
-      ...(replyTo ? { reply_to: replyTo } : {}),
-    }),
+  const clientEmail = submission.contact.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
+  const notification = contactNotificationEmail(submission);
+  const notificationResponse = await sendEmail(apiKey, {
+    from,
+    to: [to],
+    ...notification,
+    ...(clientEmail ? { reply_to: clientEmail } : {}),
   });
 
-  if (!response.ok) {
-    console.error('[contact] Échec de l’envoi Resend :', response.status);
+  if (!notificationResponse.ok) {
+    console.error('[contact] Échec de la notification à Élodie :', notificationResponse.status);
     return json({ error: 'Le message n’a pas pu être envoyé.' }, 502);
   }
 
-  return json({ ok: true });
+  let confirmationSent = false;
+  if (clientEmail) {
+    const confirmation = contactConfirmationEmail(submission);
+    const confirmationResponse = await sendEmail(apiKey, {
+      from,
+      to: [clientEmail],
+      reply_to: replyToStudio,
+      ...confirmation,
+    });
+
+    confirmationSent = confirmationResponse.ok;
+    if (!confirmationResponse.ok) {
+      console.error('[contact] Échec de la confirmation client :', confirmationResponse.status);
+    }
+  }
+
+  return json({ ok: true, confirmationSent });
 };
