@@ -47,7 +47,7 @@ export interface SanityLink {
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
-    _type: 'page' | 'project' | 'projectsPage';
+    _type: 'page' | 'project' | 'projectsPage' | 'laboPage';
     title?: string;
     slug?: string;
     language?: Locale;
@@ -234,7 +234,7 @@ export interface ProjectCard {
   title: string;
   slug: string;
   language: Locale;
-  /** Position dans la page Projets, selon son ordre éditorial courant. */
+  /** Position dans la page Expériences, selon son ordre éditorial courant. */
   number?: number;
   client?: string;
   year?: number;
@@ -327,6 +327,34 @@ export interface ProjectsPage {
   seo?: Seo;
 }
 
+export interface LaboService {
+  _key: string;
+  title: string;
+  description: string;
+}
+
+/** Page éditoriale Labo, structurée comme une seule expérience narrative. */
+export interface LaboPage {
+  _id: string;
+  _type: 'laboPage';
+  language: Locale;
+  title: string;
+  eyebrow: string;
+  philosophy: string[];
+  whyTitle?: string;
+  whyLead?: string;
+  principles: string[];
+  whyClosing?: string;
+  servicesTitle?: string;
+  services: LaboService[];
+  note?: string;
+  closingLines: string[];
+  cta?: SanityLink;
+  archiveTitle?: string;
+  archiveProjects: ProjectCard[];
+  seo?: Seo;
+}
+
 export interface NavigationItem extends SanityLink {
   _key: string;
 }
@@ -362,6 +390,8 @@ export interface SiteContext {
 
 export type RouteEntry =
   | { kind: 'home'; locale: Locale; path: string }
+  | { kind: 'labo'; locale: Locale; path: string }
+  | { kind: 'contact'; locale: Locale; path: string }
   | { kind: 'page'; locale: Locale; path: string; slug: string }
   | { kind: 'projectIndex'; locale: Locale; path: string }
   | { kind: 'project'; locale: Locale; path: string; slug: string };

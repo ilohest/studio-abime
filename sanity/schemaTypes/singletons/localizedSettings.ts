@@ -60,15 +60,15 @@ export const localizedSettings = defineType({
       type: 'text',
       rows: 4,
       hidden: true,
-      deprecated: { reason: 'Ce contenu a été déplacé dans Pages → Page Projets.' },
+      deprecated: { reason: 'Ce contenu a été déplacé dans Pages → Page Expériences.' },
     }),
 
     defineField({
       name: 'projectsNotes',
-      title: 'Cartes de texte — page Projets',
+      title: 'Cartes de texte — page Expériences',
       type: 'array',
       hidden: true,
-      deprecated: { reason: 'Ces cartes ont été déplacées dans Pages → Page Projets.' },
+      deprecated: { reason: 'Ces cartes ont été déplacées dans Pages → Page Expériences.' },
       description:
         'Chaque texte occupe une case de la grille à la place d’un projet — les projets suivants se décalent, aucun n’est masqué. Le texte s’affiche en bas à droite de la case, en italique.',
       of: [

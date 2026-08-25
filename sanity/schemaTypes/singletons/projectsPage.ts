@@ -1,10 +1,10 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField } from '../../lib/i18n';
 
-/** Contenu éditorial propre à la page qui liste les projets. */
+/** Contenu éditorial propre à la page Expériences. */
 export const projectsPage = defineType({
   name: 'projectsPage',
-  title: 'Page Projets',
+  title: 'Page Expériences',
   type: 'document',
   groups: [
     { name: 'content', title: 'Contenu', default: true },
@@ -17,7 +17,7 @@ export const projectsPage = defineType({
       title: 'Titre de la page',
       type: 'string',
       group: 'content',
-      initialValue: 'Projets',
+      initialValue: 'Expériences',
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -99,7 +99,7 @@ export const projectsPage = defineType({
   preview: {
     select: { language: 'language' },
     prepare: ({ language }) => ({
-      title: 'Page Projets',
+      title: 'Page Expériences',
       subtitle: language?.toUpperCase() ?? '—',
     }),
   },

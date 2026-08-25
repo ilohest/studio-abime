@@ -107,7 +107,7 @@ export const locales = ['fr', 'en'] as const;
 C'est **la seule modification de code nécessaire**. En découlent automatiquement :
 
 - le routage Astro et les URLs préfixées (`/en/…`) ;
-- les segments de section traduits (`/projets` → `/en/work`, table dans `src/i18n/routes.ts`) ;
+- les segments de section traduits (`/experiences` → `/en/work`, table dans `src/i18n/routes.ts`) ;
 - le sélecteur de langue et les balises `hreflang` ;
 - le filtre de langue dans le back-office ;
 - la création de traductions depuis chaque document.
@@ -153,14 +153,14 @@ Les options propres à un modèle (couleur d'accent, vidéo de couverture, notes
 
 Un fichier — `src/pages/[...path].astro` — sert **tout** le site public, en déléguant à `src/lib/routing.ts`.
 
-Ce choix vient d'une contrainte : les segments d'URL sont traduits et le préfixe de langue est conditionnel. Une arborescence figée (`src/pages/[locale]/projets/[slug].astro`) obligerait à dupliquer des fichiers à chaque langue ajoutée. Ici, ni l'ajout d'une langue ni le renommage d'un segment ne touche un fichier de route.
+Ce choix vient d'une contrainte : les segments d'URL sont traduits et le préfixe de langue est conditionnel. Une arborescence figée (`src/pages/[locale]/experiences/[slug].astro`) obligerait à dupliquer des fichiers à chaque langue ajoutée. Ici, ni l'ajout d'une langue ni le renommage d'un segment ne touche un fichier de route.
 
 | Route | Résolution |
 | --- | --- |
 | `/` | page désignée comme accueil dans les réglages |
 | `/<slug>` | document `page` (slug imbriqué possible : `agence/equipe`) |
-| `/projets` | index du portfolio |
-| `/projets/<slug>` | document `project`, rendu selon son modèle |
+| `/experiences` | index du portfolio |
+| `/experiences/<slug>` | document `project`, rendu selon son modèle |
 
 ---
 

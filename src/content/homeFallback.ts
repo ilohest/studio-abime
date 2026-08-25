@@ -1,7 +1,6 @@
 import etudeLune from '~/assets/sections/etude-lune.webp';
 import papierLumiere from '~/assets/sections/papier-lumiere.webp';
 import atelierBandes from '~/assets/sections/atelier-bandes.webp';
-import plancheFond from '~/assets/sections/planche-fond.webp';
 import plancheMain from '~/assets/sections/planche-main.webp';
 import plancheCercle from '~/assets/sections/planche-cercle.webp';
 import laboDeCom from '~/assets/sections/labo-de-com.webp';
@@ -101,32 +100,27 @@ const sections: Record<string, Section[]> = {
           pushRight: true,
           fallbackImage: atelierBandes,
         },
+        {
+          _key: 'f8',
+          number: 'fig.08',
+          caption: 'Compréhension de la constitution',
+          span: 3,
+          fallbackImage: plancheMain,
+        },
+        {
+          _key: 'f9',
+          number: 'fig.09',
+          caption: 'Compréhension de la constitution',
+          span: 5,
+          fallbackImage: plancheCercle,
+        },
       ],
       cta: {
         kind: 'external',
         label: 'Entrer dans le studio →',
-        externalUrl: '/projets',
+        externalUrl: '/experiences',
         openInNewTab: false,
       },
-    },
-    {
-      _key: 'plate',
-      _type: 'plateSpread',
-      fallbackBackground: plancheFond,
-      figures: [
-        {
-          _key: 'p1',
-          number: 'fig.01',
-          caption: 'Fam. des ranunculaceæ — Ancolie (Aquilegia)',
-          fallbackImage: plancheMain,
-        },
-        {
-          _key: 'p2',
-          number: 'fig.02',
-          caption: 'Fam. des liliaceæ — Asphodèle (Asphodelus)',
-          fallbackImage: plancheCercle,
-        },
-      ],
     },
     {
       _key: 'sensory-quote',

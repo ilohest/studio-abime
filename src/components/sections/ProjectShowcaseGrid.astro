@@ -1,0 +1,129 @@
+---
+import { Image } from 'astro:assets';
+import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import { projectInitials } from '~/lib/viewModels';
+import type { Locale } from '~/i18n/config';
+import type { ProjectShowcase } from '~/lib/sanity/types';
+
+/**
+ * Variante comparative du showcase, construite avec la même trame que
+ * l'index `/experiences`. Elle consomme la sélection existante : aucun contenu
+ * n'est dupliqué dans Sanity pendant la phase de choix.
+ */
+interface Props {
+  section: ProjectShowcase;
+  locale: Locale;
+}
+
+const { section, locale } = Astro.props;
+const projects = section.projects ?? [];
+const placeholders = (section.placeholderItems ?? [])
+  .filter((item) => Boolean(item.image?.asset) && Boolean(item.title))
+  .map((item) => ({
+    key: item._key,
+    title: item.title ?? '',
+    href: item.href,
+    image: item.image,
+    fallbackImage: undefined,
+  }));
+const fallbackItems = (section.fallbackItems ?? []).map((item) => ({
+  key: item._key,
+  title: item.title,
+  href: item.href,
+  image: undefined,
+  fallbackImage: item.fallbackImage,
+}));
+const previewItems = (placeholders.length > 0 ? placeholders : fallbackItems).slice(0, 5);
+const hasItems = projects.length > 0 || previewItems.length > 0;
+const itemCount = projects.length > 0 ? projects.length : previewItems.length;
+---
+
+{
+  hasItems && (
+    <section
+      class="showcase-grid project-index surface-paper"
+      aria-label="Sélection de projets — variante en grille"
+      data-project-showcase-grid
+    >
+      <div class="showcase-grid__grain surface-paper-grain"></div>
+
+      <ProjectCatalogRail
+        projects={projects}
+        locale={locale}
+        ariaLabel="Sélection de projets"
+        itemCount={itemCount}
+        contained
+        revealText
+      >
+        {projects.length === 0 && (
+          <ul class="project-catalog-grid">
+            {previewItems.map((item, index) => (
+              <li class="project-catalog-item">
+                <a
+                  href={item.href}
+                  class:list={[
+                    'project-catalog-card project-catalog-card--no-facts',
+                    { group: Boolean(item.href) },
+                  ]}
+                  aria-disabled={!item.href ? 'true' : undefined}
+                >
+                  <header class="project-catalog-heading">
+                    <span class="project-catalog-number" data-text-reveal>
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span class="project-catalog-symbol" aria-hidden="true">
+                      {projectInitials(item.title)}
+                    </span>
+                    <h3 data-text-reveal>{item.title}</h3>
+                  </header>
+
+                  <div class="project-catalog-media">
+                    {item.image ? (
+                      <SanityImage
+                        image={item.image}
+                        width={900}
+                        sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
+                        alt={item.title}
+                        class="project-catalog-image"
+                      />
+                    ) : (
+                      item.fallbackImage && (
+                        <Image
+                          src={item.fallbackImage}
+                          alt={item.title}
+                          widths={[400, 900]}
+                          sizes="(min-width: 1440px) 22vw, (min-width: 900px) 30vw, 50vw"
+                          loading="lazy"
+                          class="project-catalog-image"
+                        />
+                      )
+                    )}
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ProjectCatalogRail>
+    </section>
+  )
+}
+
+<style>
+  .showcase-grid {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block: clamp(4rem, 10vh, 8rem);
+  }
+
+  .showcase-grid__grain {
+    z-index: 0;
+  }
+
+  .showcase-grid :global(.project-catalog-rail) {
+    position: relative;
+    z-index: 1;
+  }
+</style>

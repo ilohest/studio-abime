@@ -3,6 +3,9 @@ import BaseLayout from '~/layouts/BaseLayout.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import ProjectGrid from '~/components/ProjectGrid.astro';
 import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer.astro';
+import LaboPageView from '~/components/LaboPage.astro';
+import ContactPage from '~/components/ContactPage.astro';
+import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
 import { getSiteContext } from '~/lib/siteContext';
@@ -14,10 +17,13 @@ import {
   projectBySlugQuery,
   projectsIndexQuery,
   projectsPageQuery,
+  laboPageQuery,
+  laboArchiveProjectsQuery,
 } from '~/lib/sanity/queries';
 import { getHomeFallback } from '~/content/homeFallback';
+import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
-import type { CategorySummary, Page, Project, ProjectCard, ProjectsPage } from '~/lib/sanity/types';
+import type { CategorySummary, LaboPage, Page, Project, ProjectCard, ProjectsPage } from '~/lib/sanity/types';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -26,8 +32,8 @@ import type { CategorySummary, Page, Project, ProjectCard, ProjectsPage } from '
  * Un seul fichier sert l'intégralité du site public : accueil, pages
  * institutionnelles, index portfolio et pages projet — dans toutes les langues.
  *
- * Pourquoi pas une arborescence `src/pages/[locale]/projets/[slug].astro` ?
- * Parce que les segments d'URL sont traduits (`/projets` ↔ `/en/work`) et que
+ * Pourquoi pas une arborescence `src/pages/[locale]/experiences/[slug].astro` ?
+ * Parce que les segments d'URL sont traduits (`/experiences` ↔ `/en/work`) et que
  * le préfixe de langue est conditionnel. Une arborescence figée obligerait à
  * dupliquer des fichiers à chaque nouvelle langue. Ici, `src/lib/routing.ts`
  * porte toute la logique : ajouter une langue ne touche AUCUN fichier de route.
@@ -42,7 +48,7 @@ export async function getStaticPaths() {
   const routes = await buildRouteManifest();
 
   return routes.map((route) => ({
-    // '/' → path undefined (racine) ; '/projets/abime' → 'projets/abime'.
+    // '/' → path undefined (racine) ; '/experiences/abime' → 'experiences/abime'.
     params: { path: route.path === '/' ? undefined : route.path.slice(1) },
   }));
 }
@@ -61,8 +67,30 @@ let project: Project | null = null;
 let projects: ProjectCard[] = [];
 let categories: CategorySummary[] = [];
 let projectsPage: ProjectsPage | null = null;
+let laboPage: LaboPage | null = null;
 
-if (route.kind === 'home') {
+if (route.kind === 'labo') {
+  const [pageContent, latestProjects] = await Promise.all([
+    loadQuery<LaboPage | null>({
+      query: laboPageQuery,
+      locale,
+      fallback: null,
+    }),
+    loadQuery<ProjectCard[]>({
+      query: laboArchiveProjectsQuery,
+      locale,
+      fallback: [],
+    }),
+  ]);
+
+  laboPage = pageContent ?? getLaboFallback(locale);
+  if (laboPage.archiveProjects.length === 0 && latestProjects.length > 0) {
+    laboPage = { ...laboPage, archiveProjects: latestProjects };
+  }
+} else if (route.kind === 'contact') {
+  // La page contact est une expérience de marque dédiée : son contenu essentiel
+  // reste disponible même lorsque Sanity est momentanément indisponible.
+} else if (route.kind === 'home') {
   page = await loadQuery<Page | null>({ query: homePageQuery, locale, fallback: null });
   // Tant qu'aucune page d'accueil n'est désignée dans Sanity, on sert le
   // contenu d'amorçage plutôt qu'un 404 sur la racine du site.
@@ -96,7 +124,7 @@ if (route.kind === 'home') {
 }
 
 // Contenu supprimé ou dépublié depuis la génération du manifeste.
-if (route.kind !== 'projectIndex' && !page && !project) {
+if (route.kind !== 'projectIndex' && route.kind !== 'contact' && !page && !project && !laboPage) {
   return Astro.rewrite('/404');
 }
 
@@ -106,28 +134,69 @@ const document = project ?? page;
 const alternates =
   route.kind === 'projectIndex'
     ? getStaticAlternates('projectIndex')
+    : route.kind === 'contact'
+      ? getStaticAlternates('contact')
+    : route.kind === 'labo'
+      ? getStaticAlternates('labo')
     : route.kind === 'home'
       ? getStaticAlternates('home')
       : await getDocumentAlternates(document?._id, locale);
 
+const projectIndexTitleSource = projectsPage?.title?.trim();
+const projectIndexTitleClean = stegaClean(projectIndexTitleSource ?? '');
+const projectIndexTitle = !projectIndexTitleSource
+  ? t('nav.projects')
+  : projectIndexTitleClean.toLocaleLowerCase(locale) === 'projets'
+    ? projectIndexTitleSource.replace(projectIndexTitleClean, t('nav.projects'))
+    : projectIndexTitleSource;
+
 const title =
   route.kind === 'projectIndex'
-    ? (projectsPage?.title ?? t('nav.projects'))
-    : (document?.title ?? site.localized?.siteTitle ?? '');
+    ? projectIndexTitle
+    : route.kind === 'contact'
+      ? 'Contact'
+    : route.kind === 'labo'
+      ? (laboPage?.title ?? 'Le Labo')
+      : (document?.title ?? site.localized?.siteTitle ?? '');
 
 const projectsIntro = projectsPage?.intro?.trim();
 const hasProjectBackground = Boolean(project?.backgroundImage?.asset);
 
-const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type === 'servicesMenu') ?? false;
+// L'ancienne planche autonome fournissait les deux derniers médias de la
+// composition. Sur l'accueil, on les rattache au manifeste avant de retirer
+// seulement son enveloppe `plateSpread`. Un manifeste déjà complet n'est pas
+// dupliqué : on ne remplit que les emplacements manquants jusqu'à cinq.
+const pageSections = route.kind === 'home'
+  ? (() => {
+      const sections = page?.sections ?? [];
+      const legacyPlate = sections.find((section) => section._type === 'plateSpread');
+
+      return sections.flatMap((section) => {
+        if (section._type === 'plateSpread') return [];
+        if (section._type !== 'studioStatement' || !legacyPlate?.figures?.length) {
+          return [section];
+        }
+
+        const figures = section.figures ?? [];
+        const missingFigures = legacyPlate.figures.slice(0, Math.max(0, 5 - figures.length));
+
+        return [{ ...section, figures: [...figures, ...missingFigures] }];
+      });
+    })()
+  : page?.sections;
+
+const hasEmbeddedServicesRail = pageSections?.some((section) => section._type === 'servicesMenu') ?? false;
 ---
 
 <BaseLayout
   locale={locale}
   site={site}
-  seo={route.kind === 'projectIndex' ? projectsPage?.seo : document?.seo}
+  seo={route.kind === 'projectIndex' ? projectsPage?.seo : route.kind === 'labo' ? laboPage?.seo : document?.seo}
   title={title}
   bodyClass={[
     route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : '',
+    route.kind === 'labo' ? 'page-labo' : '',
+    route.kind === 'contact' ? 'page-contact' : '',
     hasProjectBackground ? 'page-project-has-background' : '',
   ].filter(Boolean).join(' ')}
   alternates={alternates}
@@ -135,13 +204,19 @@ const hasEmbeddedServicesRail = page?.sections?.some((section) => section._type 
 >
   {project && <ProjectTemplateRenderer project={project} locale={locale} />}
 
-  {page && <SectionRenderer sections={page.sections} locale={locale} />}
+  {laboPage && <LaboPageView page={laboPage} locale={locale} />}
+
+  {route.kind === 'contact' && <ContactPage site={site} />}
+
+  {page && <SectionRenderer sections={pageSections} locale={locale} />}
 
   {
     route.kind === 'projectIndex' && (
       <div class="project-index container-wide py-(--spacing-section)">
         <header class="project-index__header">
-          <h1 class="project-index__title type-titre text-balance">{projectsPage?.title ?? t('nav.projects')}</h1>
+          <h1 class="project-index__title type-titre text-balance" data-text-reveal>
+            02. {projectIndexTitle}
+          </h1>
           {projectsIntro && <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>}
         </header>
 

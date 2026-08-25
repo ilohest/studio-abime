@@ -64,10 +64,13 @@ const accentClass = {
     <ProjectBackLink locale={locale} class="absolute top-8 left-6 z-10 md:left-10" />
 
     <div class="relative container-wide pb-20">
-      <h1 class:list={['type-titre max-w-5xl text-balance text-[clamp(2.5rem,7vw,5rem)]', accentClass]}>
+      <h1
+        class:list={['type-titre max-w-5xl text-balance text-[clamp(2.5rem,7vw,5rem)]', accentClass]}
+        data-text-reveal
+      >
         {project.title}
       </h1>
-      {project.headline && <p class="type-copy mt-6 max-w-prose text-pretty">{project.headline}</p>}
+      {project.headline && <p class="type-copy mt-6 max-w-prose text-pretty" data-text-reveal>{project.headline}</p>}
     </div>
   </header>
 

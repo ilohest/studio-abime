@@ -23,8 +23,8 @@ const { project, locale } = Astro.props;
 <article>
   <header class="container-wide pt-16 pb-12">
     <ProjectBackLink locale={locale} class="mb-10" />
-    <h1 class="type-titre max-w-4xl text-balance">{project.title}</h1>
-    {project.headline && <p class="type-copy mt-6 max-w-prose text-pretty">{project.headline}</p>}
+    <h1 class="type-titre max-w-4xl text-balance" data-text-reveal>{project.title}</h1>
+    {project.headline && <p class="type-copy mt-6 max-w-prose text-pretty" data-text-reveal>{project.headline}</p>}
   </header>
 
   {

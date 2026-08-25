@@ -7,6 +7,7 @@ import Footer from '~/components/Footer.astro';
 import Seo from '~/components/Seo.astro';
 import CustomCursor from '~/components/CustomCursor.astro';
 import ServicesRail from '~/components/ServicesRail.astro';
+import TextReveal from '~/components/TextReveal.astro';
 
 import { getLocaleMeta, type Locale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
@@ -82,6 +83,8 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
     }
 
     <slot name="head" />
+
+    <TextReveal />
   </head>
 
   <body class={resolvedBodyClass}>
@@ -97,7 +100,7 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
       `src/components/Header.astro` reste disponible si une barre de navigation
       devient nécessaire sur les pages intérieures.
     */}
-    {showServicesRail && <ServicesRail mode="page" homeHref={localizedPath(locale)} />}
+    {showServicesRail && <ServicesRail locale={locale} mode="page" homeHref={localizedPath(locale)} />}
 
     <main id="contenu" data-page-content={showServicesRail ? '' : undefined}>
       <slot />

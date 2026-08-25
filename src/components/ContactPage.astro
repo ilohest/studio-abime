@@ -1,0 +1,815 @@
+---
+import { Image } from 'astro:assets';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
+
+import atelier from '~/assets/sections/atelier-bandes.webp';
+import lune from '~/assets/sections/etude-lune.webp';
+import labo from '~/assets/sections/labo-de-com.webp';
+import papier from '~/assets/sections/papier-lumiere.webp';
+import planche from '~/assets/sections/planche-main.webp';
+import binderClip from '~/assets/contact/binder-clip.webp';
+
+import type { SiteContext } from '~/lib/sanity/types';
+
+interface Props {
+  site: SiteContext;
+}
+
+const { site } = Astro.props;
+const email = 'elodie@studioabime.com';
+const socialLinks = site.settings?.socialLinks ?? [];
+const instagramUrl = socialLinks.find((item) => item.platform.toLowerCase() === 'instagram')?.url
+  ?? 'https://www.instagram.com/studioabime/';
+
+const photographs = [
+  { src: atelier, alt: 'Bandes de papier suspendues dans l’atelier' },
+  { src: lune, alt: 'Étude graphique de la lune sur papier' },
+  { src: labo, alt: 'Composition imprimée du Labo de Com' },
+  { src: papier, alt: 'Papier translucide traversé par la lumière' },
+  { src: planche, alt: 'Planche botanique issue des archives du studio' },
+];
+
+const phases = [
+  { value: 'idee', label: 'L’idée' },
+  { value: 'germe', label: 'Germe' },
+  { value: 'evoluer', label: 'Il existe mais doit évoluer' },
+  { value: 'muter', label: 'Il existe mais doit muter' },
+];
+---
+
+<article class="contact-page">
+  <div class="contact-intro">
+    <header class="contact-heading">
+      <h1 class="contact-page-title type-titre" data-text-reveal>05. Contact</h1>
+    </header>
+
+    <section id="informations" class="contact-information-section" aria-labelledby="contact-information-title">
+      <span class="contact-information-index type-note">[01 — Informations]</span>
+      <div class="contact-information-copy">
+        <h2 id="contact-information-title" class="sr-only">Informations</h2>
+        <p class="contact-information-copy__opening">Bienvenue dans le Studio,</p>
+        <p>Écrire ici, c’est déjà commencer.</p>
+        <p>On vous lit et on répond en quelques jours.</p>
+        <p>
+          Si ce que vous décrivez ne relève pas de nos services, on vous le dit, et on vous
+          oriente.
+        </p>
+        <p class="contact-information-copy__mail">
+          Le formulaire vous fait peur&nbsp;? Envoyez vos mots à&nbsp;<a
+            class="contact-social-link"
+            href={`mailto:${email}`}
+          ><span class="contact-social-link__label">{email}</span></a>
+        </p>
+        <p class="contact-information-copy__social type-note">
+          <a class="contact-social-link" href={instagramUrl} target="_blank" rel="noopener noreferrer">
+            <span class="contact-social-link__label">Instagram</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <section id="enquete" class="contact-enquiry-section" aria-labelledby="form-title">
+    <header class="contact-enquiry-heading">
+      <span class="type-note">[02 — Enquête]</span>
+      <h2 id="form-title" class="sr-only">Enquête</h2>
+    </header>
+
+    <div class="contact-enquiry-layout">
+      <figure class="contact-archive" aria-labelledby="archive-caption">
+        <button
+          class="photo-stack"
+          type="button"
+          data-photo-stack
+          aria-describedby="archive-caption"
+          aria-pressed="false"
+          data-cursor-interactive
+        >
+          <span class="sr-only">Feuilleter rapidement les images du studio</span>
+          {
+            photographs.map((photograph, index) => (
+              <Image
+                class="photo-stack__image"
+                style={`--photo-index: ${index}`}
+                src={photograph.src}
+                alt={photograph.alt}
+                widths={[360, 560, 760]}
+                sizes="(max-width: 767px) 82vw, (max-width: 1199px) 58vw, 34vw"
+                loading={index === 0 ? 'eager' : 'lazy'}
+                fetchpriority={index === 0 ? 'high' : 'auto'}
+              />
+            ))
+          }
+          <svg
+            class="photo-stack__clip"
+            viewBox="0 0 760 816"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <filter id="remove-clip-background" color-interpolation-filters="sRGB">
+              <feColorMatrix
+                type="matrix"
+                values="1 0 0 0 0
+                        0 1 0 0 0
+                        0 0 1 0 0
+                        -0.333 -0.333 -0.333 0 0.98"
+              />
+            </filter>
+            <image
+              href={binderClip.src}
+              width="760"
+              height="816"
+              filter="url(#remove-clip-background)"
+              preserveAspectRatio="xMidYMid meet"
+            />
+          </svg>
+        </button>
+
+        <FigureCaption
+          id="archive-caption"
+          value="Fig. 01 — Fragments de recherche"
+          class="contact-archive__caption"
+        />
+      </figure>
+
+      <div class="contact-form-panel">
+        <form class="contact-form" action="/api/contact" method="post" data-contact-form>
+      <div class="contact-field">
+        <label for="contact-name">Nom &amp; Prénom</label>
+        <input
+          id="contact-name"
+          name="fullName"
+          type="text"
+          autocomplete="name"
+          placeholder="Nom, prénom"
+          maxlength="120"
+          required
+        />
+      </div>
+
+      <div class="contact-field">
+        <div class="contact-label-group">
+          <label for="contact-method">Comment vous contacter</label>
+          <p id="contact-method-note" class="contact-field__note">Réponse par le canal indiqué.</p>
+        </div>
+        <input
+          id="contact-method"
+          name="contact"
+          type="text"
+          autocomplete="email"
+          placeholder="Mail ou téléphone"
+          maxlength="180"
+          aria-describedby="contact-method-note"
+          required
+        />
+      </div>
+
+      <div class="contact-field">
+        <label for="contact-project">Votre projet, en une phrase</label>
+        <input
+          id="contact-project"
+          name="project"
+          type="text"
+          placeholder="Quelques mots suffisent"
+          maxlength="280"
+          required
+        />
+      </div>
+
+      <div
+        class="contact-field contact-field--choices"
+        role="radiogroup"
+        aria-labelledby="contact-phase-label"
+      >
+        <p id="contact-phase-label" class="contact-field__label">
+          À quelle phase de développement se trouve-t-il&nbsp;?
+        </p>
+        <div class="contact-options">
+          {
+            phases.map((phase) => (
+              <label class="contact-option">
+                <input type="radio" name="phase" value={phase.value} required />
+                <span aria-hidden="true"></span>
+                {phase.label}
+              </label>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class="contact-field contact-field--textarea">
+        <div class="contact-label-group">
+          <label for="contact-unsaid">Qu’est-ce qui ne se dit pas encore&nbsp;?</label>
+          <p id="contact-unsaid-note" class="contact-field__note">
+            La chose que vous savez de votre projet et que vous avez l’impression qu’on ne voit pas.
+          </p>
+        </div>
+        <textarea
+          id="contact-unsaid"
+          name="unsaid"
+          rows="5"
+          maxlength="2400"
+          aria-describedby="contact-unsaid-note"
+          placeholder="Écrivez librement…"
+          required
+        ></textarea>
+      </div>
+
+      <div class="contact-field contact-field--textarea">
+        <div class="contact-label-group">
+          <label for="contact-resources">De quoi disposez-vous comme ressources&nbsp;?</label>
+          <p id="contact-resources-note" class="contact-field__note">
+            Du temps, un budget, une équipe, des images déjà faites. On part de là, pas d’ailleurs.
+          </p>
+        </div>
+        <textarea
+          id="contact-resources"
+          name="resources"
+          rows="4"
+          maxlength="1600"
+          aria-describedby="contact-resources-note"
+          placeholder="Ce qui est déjà là…"
+          required
+        ></textarea>
+      </div>
+
+      <div class="contact-field">
+        <label for="contact-start">Quand aimeriez-vous commencer&nbsp;?</label>
+        <input
+          id="contact-start"
+          name="start"
+          type="text"
+          placeholder="Une date, une période"
+          maxlength="180"
+          required
+        />
+      </div>
+
+      <div class="contact-field contact-field--textarea contact-field--last">
+        <label for="contact-availability">
+          Et quel temps avez-vous à consacrer à la création de votre communication&nbsp;?
+        </label>
+        <textarea
+          id="contact-availability"
+          name="availability"
+          rows="3"
+          maxlength="1000"
+          placeholder="Votre rythme, vos disponibilités…"
+          required
+        ></textarea>
+      </div>
+
+      <div class="sr-only" aria-hidden="true">
+        <label for="contact-company">Ne pas remplir ce champ</label>
+        <input id="contact-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <footer class="contact-form-footer">
+        <p class="contact-form-status type-note" role="status" aria-live="polite" data-form-status></p>
+        <button class="button-minimal contact-submit" type="submit" data-cursor-interactive>
+          <span class="button-minimal__label">Envoyer</span>
+          <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+        </button>
+      </footer>
+        </form>
+
+        <div class="contact-confirmation" data-contact-confirmation hidden tabindex="-1">
+          <p class="type-note uppercase">Message envoyé</p>
+          <p class="type-annotation">
+            «&nbsp;Nous avons bien reçu votre message, merci. Parfois quelques jours, parfois un peu
+            plus quand un projet en cours demande toute notre attention. Si vous êtes sans nouvelles
+            au bout de deux semaines, votre message s’est perdu quelque part&nbsp;: réécrivez-nous sans
+            hésiter.&nbsp;»
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</article>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-photo-stack]').forEach((stack) => {
+    stack.addEventListener('click', () => {
+      const active = stack.toggleAttribute('data-active');
+      stack.setAttribute('aria-pressed', String(active));
+    });
+  });
+
+  document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach((form) => {
+    const status = form.querySelector<HTMLElement>('[data-form-status]');
+    const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const confirmation = form.parentElement?.querySelector<HTMLElement>('[data-contact-confirmation]');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity() || !status || !submit || !confirmation) return;
+
+      submit.disabled = true;
+      submit.setAttribute('aria-busy', 'true');
+      status.textContent = 'Envoi en cours…';
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) throw new Error('Contact form submission failed');
+
+        form.reset();
+        form.hidden = true;
+        confirmation.hidden = false;
+        confirmation.focus();
+      } catch {
+        status.innerHTML =
+          'Le message n’a pas pu partir. Écrivez-nous directement à <a href="mailto:elodie@studioabime.com">elodie@studioabime.com</a>.';
+      } finally {
+        submit.disabled = false;
+        submit.removeAttribute('aria-busy');
+      }
+    });
+  });
+</script>
+
+<style>
+  .contact-page {
+    --contact-page-top: clamp(5.5rem, 8vw, 8rem);
+    min-height: 100svh;
+    padding: var(--contact-page-top) clamp(1.25rem, 4vw, 4.5rem) clamp(6rem, 10vw, 10rem);
+    overflow-x: clip;
+  }
+
+  .contact-intro {
+    display: flex;
+    min-height: calc(100svh - var(--contact-page-top));
+    flex-direction: column;
+  }
+
+  .contact-heading {
+    margin-bottom: clamp(5rem, 10vw, 10rem);
+  }
+
+  .contact-page-title {
+    margin-top: 0.35rem;
+    text-align: center;
+  }
+
+  .contact-information-section {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto 1fr;
+    min-height: clamp(22rem, 36vw, 32rem);
+    flex: 1;
+    column-gap: clamp(2rem, 3.5vw, 4rem);
+  }
+
+  .contact-information-section,
+  .contact-enquiry-section {
+    scroll-margin-top: 2rem;
+  }
+
+  .contact-information-index {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .contact-information-copy {
+    grid-column: 3;
+    align-self: center;
+    max-width: 32rem;
+    font-family: var(--font-titre);
+    font-size: clamp(0.78rem, 0.9vw, 0.94rem);
+    line-height: 1.42;
+    letter-spacing: 0.01em;
+  }
+
+  .contact-information-copy__mail {
+    margin-top: 1.5rem;
+  }
+
+  .contact-information-copy__opening {
+    text-indent: clamp(2rem, 4vw, 4rem);
+  }
+
+  .contact-information-copy__social {
+    margin-top: 2rem;
+  }
+
+  .contact-social-link {
+    display: inline-flex;
+    gap: 0.45em;
+    align-items: baseline;
+    text-decoration: none;
+  }
+
+  .contact-social-link__label {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: left calc(100% - 0.04em);
+    background-repeat: no-repeat;
+    background-size: 0 1px;
+    transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .contact-social-link:hover .contact-social-link__label,
+  .contact-social-link:focus-visible .contact-social-link__label {
+    background-size: 100% 1px;
+  }
+
+  .contact-information-copy a,
+  .contact-form-status a {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
+
+  .contact-enquiry-section {
+    margin-top: 0;
+  }
+
+  .contact-enquiry-heading {
+    margin-bottom: clamp(3rem, 6vw, 6rem);
+  }
+
+  .contact-enquiry-layout {
+    display: grid;
+    grid-template-columns: minmax(15rem, 0.5fr) minmax(38rem, 1.5fr);
+    gap: clamp(2rem, 3vw, 4rem);
+    align-items: start;
+  }
+
+  .contact-archive {
+    position: sticky;
+    top: max(2rem, calc(50svh - 17rem));
+    margin: 0;
+  }
+
+  .photo-stack {
+    position: relative;
+    display: block;
+    width: min(100%, 25rem);
+    aspect-ratio: 0.82;
+    margin-inline: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .photo-stack__image {
+    --rest-x: 0%;
+    --rest-y: 0%;
+    --rest-rotation: 0deg;
+    position: absolute;
+    top: 54%;
+    left: 50%;
+    z-index: calc(10 - var(--photo-index));
+    width: 69%;
+    height: 75%;
+    border: clamp(0.28rem, 0.6vw, 0.48rem) solid var(--color-surface);
+    background: var(--color-surface-alt);
+    box-shadow: 0 0.8rem 1.8rem color-mix(in oklab, var(--color-ink) 18%, transparent);
+    object-fit: cover;
+    transform: translate(calc(-50% + var(--rest-x)), calc(-50% + var(--rest-y))) rotate(var(--rest-rotation));
+    transform-origin: 50% 8%;
+    will-change: transform;
+  }
+
+  .photo-stack__image:nth-of-type(1) { --rest-x: -4%; --rest-y: 2%; --rest-rotation: -2.5deg; }
+  .photo-stack__image:nth-of-type(2) { --rest-x: 4%; --rest-y: 1%; --rest-rotation: 2.2deg; }
+  .photo-stack__image:nth-of-type(3) { --rest-x: -1%; --rest-y: -1%; --rest-rotation: -0.7deg; }
+  .photo-stack__image:nth-of-type(4) { --rest-x: 2%; --rest-y: 2%; --rest-rotation: 1.1deg; }
+  .photo-stack__image:nth-of-type(5) { --rest-x: 0%; --rest-y: 0%; --rest-rotation: 0deg; }
+
+  .photo-stack__clip {
+    position: absolute;
+    z-index: 30;
+    top: -7%;
+    left: 50%;
+    width: 39%;
+    height: auto;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+
+  .contact-archive__caption {
+    width: 69%;
+    margin: 1.25rem auto 0;
+    font-size: 0.75rem;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .contact-form-panel {
+    min-width: 0;
+    padding: clamp(1.25rem, 2vw, 2rem) 0;
+    background: transparent;
+  }
+
+  .contact-form {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .contact-field {
+    display: grid;
+    grid-template-columns: minmax(14.5rem, 0.8fr) minmax(0, 1.2fr);
+    gap: clamp(1.25rem, 1.8vw, 2.25rem);
+    align-items: start;
+    min-width: 0;
+    margin: 0;
+    padding: 1.05rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .contact-field > label,
+  .contact-field > legend,
+  .contact-field__label,
+  .contact-label-group > label {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-titre);
+    font-size: clamp(0.7rem, 0.76vw, 0.84rem);
+    line-height: 1.3;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .contact-control,
+  .contact-label-group {
+    min-width: 0;
+  }
+
+  .contact-field input[type='text'],
+  .contact-field textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-annotation);
+    font-size: clamp(1rem, 1.25vw, 1.18rem);
+    font-style: italic;
+    line-height: 1.35;
+    letter-spacing: var(--tracking-annotation);
+    text-align: right;
+  }
+
+  .contact-field input[type='text'] {
+    min-height: 1.75rem;
+  }
+
+  .contact-field textarea {
+    min-height: 6rem;
+    resize: vertical;
+  }
+
+  .contact-field input::placeholder,
+  .contact-field textarea::placeholder {
+    color: var(--color-muted);
+    opacity: 0.62;
+  }
+
+  .contact-field input:focus-visible,
+  .contact-field textarea:focus-visible {
+    outline: 0;
+    box-shadow: 0 2px 0 var(--color-ink);
+  }
+
+  .contact-field__note {
+    max-width: 40rem;
+    margin-top: 0.55rem;
+    color: var(--color-muted);
+    font-family: var(--font-annotation);
+    font-size: 0.88rem;
+    font-style: italic;
+    line-height: 1.35;
+    letter-spacing: var(--tracking-annotation);
+  }
+
+  .contact-control .contact-field__note {
+    text-align: right;
+  }
+
+  .contact-field--textarea {
+    min-height: 8rem;
+  }
+
+  .contact-field--last {
+    min-height: 6rem;
+  }
+
+  .contact-field--choices {
+    padding-top: 1.6rem;
+    padding-bottom: 1.6rem;
+  }
+
+  .contact-options {
+    display: grid;
+    grid-template-columns: max-content;
+    justify-content: flex-end;
+    gap: 0.2rem;
+  }
+
+  .contact-option {
+    position: relative;
+    display: inline-flex;
+    min-height: 1.5rem;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: clamp(0.82rem, 0.9vw, 0.96rem);
+    line-height: 1.2;
+    cursor: pointer;
+  }
+
+  .contact-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .contact-option > span {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: none;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .contact-option input:checked + span {
+    background: currentColor;
+    box-shadow: inset 0 0 0 2px var(--color-surface);
+  }
+
+  .contact-option input:focus-visible + span {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  .contact-form-footer {
+    display: flex;
+    gap: 2rem;
+    align-items: start;
+    justify-content: space-between;
+    padding-top: 2rem;
+  }
+
+  .contact-form-status {
+    max-width: 42rem;
+    color: var(--color-muted);
+  }
+
+  .contact-submit {
+    flex: none;
+    cursor: pointer;
+  }
+
+  .contact-submit:disabled {
+    cursor: wait;
+    opacity: 0.45;
+  }
+
+  .contact-confirmation {
+    max-width: 62rem;
+    padding: clamp(3rem, 6vw, 6rem) 0;
+    border-top: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .contact-confirmation .type-annotation {
+    margin-top: 2rem;
+    font-size: clamp(1.35rem, 2.4vw, 2.2rem);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .photo-stack:hover .photo-stack__image,
+    .photo-stack:focus-visible .photo-stack__image,
+    .photo-stack[data-active] .photo-stack__image {
+      animation: shuffle-photographs 1s steps(1, end) infinite;
+      animation-delay: calc(var(--photo-index) * -0.2s);
+    }
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .photo-stack[data-active] .photo-stack__image {
+      animation: shuffle-photographs 1s steps(1, end) infinite;
+      animation-delay: calc(var(--photo-index) * -0.2s);
+    }
+  }
+
+  @keyframes shuffle-photographs {
+    0%, 19.99% { z-index: 16; transform: translate(-50%, -53%) rotate(-0.5deg) scale(1.02); }
+    20%, 39.99% { z-index: 12; transform: translate(-57%, -49%) rotate(-4deg); }
+    40%, 59.99% { z-index: 10; transform: translate(-44%, -47%) rotate(3.2deg); }
+    60%, 79.99% { z-index: 8; transform: translate(-53%, -45%) rotate(-2.2deg); }
+    80%, 100% { z-index: 6; transform: translate(-47%, -48%) rotate(1.7deg); }
+  }
+
+  @media (max-width: 1199px) {
+    .contact-information-section {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-height: clamp(22rem, 40vw, 30rem);
+    }
+
+    .contact-information-index,
+    .contact-information-copy {
+      grid-column: 2;
+    }
+
+    .contact-enquiry-layout {
+      grid-template-columns: 1fr;
+      gap: clamp(5rem, 10vw, 8rem);
+    }
+
+    .contact-archive {
+      position: static;
+    }
+
+    .photo-stack {
+      width: min(100%, 32rem);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .contact-information-section {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto;
+      min-height: auto;
+      gap: 4rem;
+      margin-bottom: clamp(4rem, 10vw, 6rem);
+    }
+
+    .contact-information-index,
+    .contact-information-copy {
+      grid-column: 1;
+      justify-self: start;
+    }
+
+    .contact-information-copy {
+      max-width: 34rem;
+    }
+
+    .contact-field {
+      grid-template-columns: 1fr;
+    }
+
+    .contact-field {
+      gap: 1.2rem;
+    }
+
+    .contact-options {
+      justify-content: flex-start;
+    }
+
+    .contact-field input[type='text'],
+    .contact-field textarea,
+    .contact-control .contact-field__note {
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .contact-page {
+      --contact-page-top: 7rem;
+    }
+
+    .photo-stack {
+      width: min(100%, 30rem);
+    }
+
+    .contact-enquiry-heading {
+      margin-bottom: 3rem;
+    }
+
+    .contact-field--textarea,
+    .contact-field--last {
+      min-height: 0;
+    }
+
+    .contact-form-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .contact-submit {
+      align-self: flex-end;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .photo-stack__image,
+    .photo-stack:hover .photo-stack__image,
+    .photo-stack:focus-visible .photo-stack__image,
+    .photo-stack[data-active] .photo-stack__image {
+      animation: none;
+    }
+  }
+</style>

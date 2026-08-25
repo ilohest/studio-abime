@@ -35,8 +35,8 @@ export const link = defineType({
       title: 'Destination',
       type: 'reference',
       /*
-        La page Projets n'a pas de slug — sa route est calculée par langue
-        (`/projets`, `/en/work`). Elle est malgré tout référençable ici : c'est
+        La page Expériences n'a pas de slug — sa route est calculée par langue
+        (`/experiences`, `/en/work`). Elle est malgré tout référençable ici : c'est
         `resolveLink()` qui traduit le document en URL.
       */
       to: [{ type: 'page' }, { type: 'project' }, { type: 'projectsPage' }],

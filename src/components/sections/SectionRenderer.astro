@@ -4,7 +4,7 @@ import ServicesMenu from './ServicesMenu.astro';
 import StudioStatement from './StudioStatement.astro';
 import PullQuote from './PullQuote.astro';
 import PlateSpread from './PlateSpread.astro';
-import ProjectShowcase from './ProjectShowcase.astro';
+import ProjectShowcaseGrid from './ProjectShowcaseGrid.astro';
 import FullBleedImage from './FullBleedImage.astro';
 import HeroSection from './HeroSection.astro';
 import RichTextSection from './RichTextSection.astro';
@@ -64,7 +64,7 @@ if (import.meta.env.DEV) {
       case 'plateSpread':
         return <PlateSpread section={section} />;
       case 'projectShowcase':
-        return <ProjectShowcase section={section} locale={locale} />;
+        return <ProjectShowcaseGrid section={section} locale={locale} />;
       case 'fullBleedImage':
         return <FullBleedImage section={section} />;
       case 'heroSection':

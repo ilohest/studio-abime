@@ -1,7 +1,7 @@
 import { defineDocuments, defineLocations } from 'sanity/presentation';
 import type { PresentationPluginOptions } from 'sanity/presentation';
 import { defaultLocale, isLocale, locales } from '../../src/i18n/config';
-import { getSegment, localizedPath, pagePath, projectPath, projectsIndexPath } from '../../src/i18n/routes';
+import { getSegment, laboPath, localizedPath, pagePath, projectPath, projectsIndexPath } from '../../src/i18n/routes';
 
 /**
  * Câblage du Presentation Tool ↔ routes du site.
@@ -43,7 +43,7 @@ const locations: PresentationPluginOptions['resolve'] = {
         return {
           locations: [
             { title: doc.title || 'Projet', href: projectPath(locale, doc.slug) },
-            { title: 'Tous les projets', href: projectsIndexPath(locale) },
+            { title: 'Toutes les expériences', href: projectsIndexPath(locale) },
           ],
         };
       },
@@ -59,7 +59,14 @@ const locations: PresentationPluginOptions['resolve'] = {
     projectsPage: defineLocations({
       select: { language: 'language' },
       resolve: (doc: Selected | null) => ({
-        locations: [{ title: 'Page Projets', href: projectsIndexPath(toLocale(doc?.language)) }],
+        locations: [{ title: 'Page Expériences', href: projectsIndexPath(toLocale(doc?.language)) }],
+      }),
+    }),
+
+    laboPage: defineLocations({
+      select: { language: 'language' },
+      resolve: (doc: Selected | null) => ({
+        locations: [{ title: 'Page Labo', href: laboPath(toLocale(doc?.language)) }],
       }),
     }),
 
@@ -79,8 +86,14 @@ const locations: PresentationPluginOptions['resolve'] = {
     locales.flatMap((locale) => {
       const prefix = localizedPath(locale) === '/' ? '' : `/${locale}`;
       const projects = getSegment('projects', locale);
+      const labo = getSegment('labo', locale);
 
       return [
+        {
+          route: `${prefix}/${labo}`,
+          filter: `_type == "laboPage" && language == $language`,
+          params: { language: locale },
+        },
         {
           route: `${prefix}/${projects}`,
           filter: `_type == "projectsPage" && language == $language`,

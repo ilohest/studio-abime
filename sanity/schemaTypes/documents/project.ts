@@ -129,7 +129,7 @@ export const project = defineType({
       type: 'array',
       group: 'meta',
       description:
-        "Jusqu’à 5 lignes libres affichées entre l’image et l’accroche sur la page Projets. Une ligne incomplète n’est pas affichée.",
+        "Jusqu’à 5 lignes libres affichées entre l’image et l’accroche sur la page Expériences. Une ligne incomplète n’est pas affichée.",
       of: [
         defineArrayMember({
           name: 'listingFact',

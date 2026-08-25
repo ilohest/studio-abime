@@ -1,5 +1,6 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
@@ -50,7 +51,7 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
         */}
         <header class="banner__header">
           {project.headline && <p class="banner__eyebrow">({project.title})</p>}
-          <h1 class="banner__title text-balance">{project.headline || project.title}</h1>
+          <h1 class="banner__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
         </header>
 
         <div class="banner__body">
@@ -72,7 +73,9 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
                 sizes="(min-width: 900px) 32vw, 100vw"
                 class="banner__image"
               />
-              {item.caption && <figcaption class="banner__caption">{item.caption}</figcaption>}
+              {item.caption && (
+                <FigureCaption value={item.caption} class="banner__caption" />
+              )}
             </figure>
           ))}
         </div>
@@ -198,10 +201,7 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
 
   .banner__caption {
     margin-top: 0.5rem;
-    font-family: var(--font-annotation);
     font-size: 0.9375rem;
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
     color: var(--color-muted);
   }
 
@@ -220,4 +220,3 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
     }
   }
 </style>
-

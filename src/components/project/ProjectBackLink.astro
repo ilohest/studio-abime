@@ -6,8 +6,8 @@ import type { Locale } from '~/i18n/config';
 /**
  * Retour à la liste des projets.
  *
- * Un simple lien de texte, sans cadre : la page projet commence par son titre,
- * un bouton dessiné y prendrait le pas. Seule la flèche bouge au survol.
+ * Reprend le langage minimal des CTA, avec une flèche coudée inversée pour
+ * rendre immédiatement perceptible le retour vers l'index.
  */
 interface Props {
   locale: Locale;
@@ -18,42 +18,18 @@ const { locale, class: className } = Astro.props;
 const t = useTranslations(locale);
 ---
 
-<a href={projectsIndexPath(locale)} class:list={['back-link', className]}>
-  <span class="back-link__arrow" aria-hidden="true">←</span>
-  <span>{t('project.backToProjects')}</span>
+<a href={projectsIndexPath(locale)} class:list={['button-minimal back-link', className]}>
+  <span class="button-minimal__label">{t('project.backToProjects')}</span>
+  <span class="button-minimal__arrow back-link__arrow" aria-hidden="true">↲</span>
 </a>
 
 <style>
   .back-link {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.5em;
     color: var(--color-ink);
-    font-family: var(--font-annotation);
-    font-size: 1rem;
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
-    line-height: 1.25;
-    text-decoration: none;
-    transition: opacity 0.3s ease;
-  }
-
-  .back-link:hover {
-    opacity: 0.55;
-  }
-
-  .back-link__arrow {
-    display: inline-block;
-    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .back-link:hover .back-link__arrow {
-    transform: translateX(-0.25em);
-  }
-
-  .back-link:focus-visible {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 3px;
+    transform: translate(-0.18em, 0.1em);
   }
 
   @media (prefers-reduced-motion: reduce) {

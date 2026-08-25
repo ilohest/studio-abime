@@ -141,7 +141,9 @@ const metaLines = (section.metaLines ?? []).map((line) => {
 
       {
         section.tagline && (
-          <p class="type-note mx-auto max-w-[46ch] text-center text-balance">{section.tagline}</p>
+          <p class="type-note mx-auto max-w-[46ch] text-center text-balance" data-text-reveal>
+            {section.tagline}
+          </p>
         )
       }
     </div>

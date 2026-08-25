@@ -1,5 +1,6 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
@@ -51,7 +52,7 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
         */}
         <header class="split__header">
           {project.headline && <p class="split__eyebrow">({project.title})</p>}
-          <h1 class="split__title text-balance">{project.headline || project.title}</h1>
+          <h1 class="split__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
         </header>
 
         <ProjectFacts project={project} locale={locale} class="split__facts" />
@@ -75,7 +76,9 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
                   sizes={columnSizes}
                   class="split__image"
                 />
-                {item.caption && <figcaption class="split__caption">{item.caption}</figcaption>}
+                {item.caption && (
+                  <FigureCaption value={item.caption} class="split__caption" />
+                )}
               </figure>
             ))}
           </div>
@@ -245,10 +248,7 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
 
   .split__caption {
     margin-top: 0.5rem;
-    font-family: var(--font-annotation);
     font-size: 0.9375rem;
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
     color: var(--color-muted);
   }
 
@@ -271,4 +271,3 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     }
   }
 </style>
-

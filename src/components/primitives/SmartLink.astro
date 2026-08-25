@@ -13,11 +13,15 @@ interface Props {
   class?: string;
   /** Libellé de repli si le CMS n'en fournit pas. */
   fallbackLabel?: string;
+  /** Ajoute la flèche coudée commune aux appels à l'action. */
+  arrow?: boolean;
 }
 
-const { link, locale, class: className, fallbackLabel } = Astro.props;
+const { link, locale, class: className, fallbackLabel, arrow = false } = Astro.props;
 const resolved = resolveLink(link, locale);
 const label = resolved?.label || fallbackLabel;
+// Les anciens contenus pouvaient inclure leur propre flèche dans le libellé.
+const visibleLabel = arrow ? label?.replace(/\s*(?:→|↳)\s*/gu, '') : label;
 ---
 
 {
@@ -27,7 +31,10 @@ const label = resolved?.label || fallbackLabel;
       class={className}
       {...(resolved.openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
     >
-      <slot>{label}</slot>
+      <slot>
+        <span class={arrow ? 'button-minimal__label' : undefined}>{visibleLabel}</span>
+        {arrow && <span class="button-minimal__arrow" aria-hidden="true">↳</span>}
+      </slot>
     </a>
   )
 }

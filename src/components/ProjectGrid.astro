@@ -28,11 +28,23 @@ interface Props {
   categories: CategorySummary[];
   locale: Locale;
   showFilters?: boolean;
+  /** Anime le cartouche typographique des projets à son entrée dans le viewport. */
+  revealText?: boolean;
+  /** Affiche les métadonnées et le résumé sous l’image. */
+  showDetails?: boolean;
   /** Cartes éditoriales intercalées dans la grille, à leur rang. */
   editorialCards?: ProjectEditorialCard[];
 }
 
-const { projects, categories, locale, showFilters = false, editorialCards = [] } = Astro.props;
+const {
+  projects,
+  categories,
+  locale,
+  showFilters = false,
+  revealText = false,
+  showDetails = true,
+  editorialCards = [],
+} = Astro.props;
 const t = useTranslations(locale);
 
 const projectViews = projects.map((project, index) => toProjectCardView(project, locale, index));
@@ -92,11 +104,19 @@ const useExplorer = showFilters && categoryViews.length > 1;
             ]}
           >
             <header class="project-catalog-heading">
-              <span class="project-catalog-number">{String(entry.value.index + 1).padStart(2, '0')}</span>
-              <span class="project-catalog-symbol" aria-hidden="true">
+              <span
+                class="project-catalog-number"
+                data-text-reveal={revealText ? '' : undefined}
+              >
+                {String(entry.value.index + 1).padStart(2, '0')}
+              </span>
+              <span
+                class="project-catalog-symbol"
+                aria-hidden="true"
+              >
                 {projectInitials(entry.value.project.title)}
               </span>
-              <h3>{entry.value.project.title}</h3>
+              <h3 data-text-reveal={revealText ? '' : undefined}>{entry.value.project.title}</h3>
             </header>
 
             <div class="project-catalog-media">
@@ -109,7 +129,7 @@ const useExplorer = showFilters && categoryViews.length > 1;
               />
             </div>
 
-            {entry.value.facts.length > 0 && (
+            {showDetails && entry.value.facts.length > 0 && (
               <dl class="project-catalog-facts">
                 {entry.value.facts.map((fact) => (
                   <div>
@@ -120,7 +140,7 @@ const useExplorer = showFilters && categoryViews.length > 1;
               </dl>
             )}
 
-            {entry.value.project.excerpt && <p class="project-catalog-copy">{entry.value.project.excerpt}</p>}
+            {showDetails && entry.value.project.excerpt && <p class="project-catalog-copy">{entry.value.project.excerpt}</p>}
             <span class="sr-only">{t('projects.viewProject')}</span>
           </a>
         </li>

@@ -110,33 +110,28 @@ const home = {
           pushRight: true,
           image: asset('atelier-bandes.webp'),
         },
+        {
+          _key: 'f8',
+          number: 'fig.08',
+          caption: 'Compréhension de la constitution',
+          span: 3,
+          image: asset('planche-main.webp'),
+        },
+        {
+          _key: 'f9',
+          number: 'fig.09',
+          caption: 'Compréhension de la constitution',
+          span: 5,
+          image: asset('planche-cercle.webp'),
+        },
       ],
       cta: {
         _type: 'link',
         kind: 'external',
         label: 'Entrer dans le studio →',
-        externalUrl: '/projets',
+        externalUrl: '/experiences',
         openInNewTab: false,
       },
-    },
-    {
-      _key: 'plate',
-      _type: 'plateSpread',
-      background: asset('planche-fond.webp'),
-      figures: [
-        {
-          _key: 'p1',
-          number: 'fig.01',
-          caption: 'Fam. des ranunculaceæ — Ancolie (Aquilegia)',
-          image: asset('planche-main.webp'),
-        },
-        {
-          _key: 'p2',
-          number: 'fig.02',
-          caption: 'Fam. des liliaceæ — Asphodèle (Asphodelus)',
-          image: asset('planche-cercle.webp'),
-        },
-      ],
     },
     {
       _key: 'sensory-quote',
@@ -152,8 +147,8 @@ C'est de savoir si vous les
 avez choisis.`,
     },
     {
-      // Sélection laissée vide : à remplir une fois les projets créés.
-      // La section ne s'affiche pas tant qu'aucun projet n'est choisi.
+      // Sélection laissée vide : les cinq projets les plus récents sont alors
+      // récupérés automatiquement par la requête de la page d'accueil.
       _key: 'showcase',
       _type: 'projectShowcase',
       projects: [],
@@ -188,7 +183,7 @@ const projectsPage = {
   _id: 'projectsPage-fr',
   _type: 'projectsPage',
   language: 'fr',
-  title: 'Projets',
+  title: 'Expériences',
   intro: '',
   editorialCards: [
     {

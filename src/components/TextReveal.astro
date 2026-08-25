@@ -1,0 +1,109 @@
+<script is:inline>
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.documentElement.classList.add('text-reveal-booting');
+    window.setTimeout(() => document.documentElement.classList.remove('text-reveal-booting'), 3500);
+  }
+</script>
+
+<style is:global>
+  html.text-reveal-booting [data-text-reveal]:not([data-text-reveal-ready]) {
+    visibility: hidden;
+  }
+
+  [data-text-reveal] {
+    text-wrap: wrap;
+  }
+
+  .text-reveal-word-mask {
+    display: inline-block;
+    overflow: clip;
+    vertical-align: bottom;
+  }
+
+  .text-reveal-word {
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html.text-reveal-booting [data-text-reveal] {
+      visibility: visible;
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { ScrollTrigger } from 'gsap/ScrollTrigger';
+  import { SplitText } from 'gsap/SplitText';
+  import { stegaClean } from '@sanity/client/stega';
+
+  gsap.registerPlugin(ScrollTrigger, SplitText);
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  const initialiseTextReveals = async () => {
+    // Dans le Presentation Tool, conserver le texte stega intact afin que
+    // chaque champ reste cliquable et éditable dans Sanity.
+    if (window.self !== window.top) {
+      document.documentElement.classList.remove('text-reveal-booting');
+      return;
+    }
+
+    const elements = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-text-reveal]:not([data-text-reveal-ready])'),
+    );
+
+    if (elements.length === 0 || reducedMotion.matches) {
+      document.documentElement.classList.remove('text-reveal-booting');
+      return;
+    }
+
+    await document.fonts.ready;
+
+    for (const element of elements) {
+      // Les métadonnées stega peuvent traverser plusieurs nœuds de texte :
+      // nettoyer le contenu complet avant le découpage évite de créer des
+      // centaines de faux « mots » invisibles.
+      element.textContent = stegaClean(element.textContent ?? '');
+
+      SplitText.create(element, {
+        /*
+          Le masque par ligne dépend d'une mesure de largeur au démarrage.
+          Certaines compositions éditoriales (notamment le hero du Labo)
+          changent de largeur après cette mesure et pouvaient alors figer le
+          paragraphe en colonnes très étroites. Les mots restent dans le flux
+          inline natif : le retour à la ligne demeure entièrement piloté par
+          le CSS, même si le conteneur se redimensionne.
+        */
+        type: 'words',
+        mask: 'words',
+        aria: 'auto',
+        wordsClass: 'text-reveal-word',
+        onSplit: (split) => {
+          gsap.set(split.words, { yPercent: 105, force3D: true });
+          element.setAttribute('data-text-reveal-ready', '');
+
+          return gsap.to(split.words, {
+            yPercent: 0,
+            duration: 1.05,
+            stagger: 0.04,
+            ease: 'power4.out',
+            force3D: true,
+            scrollTrigger: {
+              trigger: element,
+              start: 'top 86%',
+              once: true,
+            },
+          });
+        },
+      });
+    }
+
+    document.documentElement.classList.remove('text-reveal-booting');
+    ScrollTrigger.refresh();
+  };
+
+  initialiseTextReveals().catch(() => {
+    document.documentElement.classList.remove('text-reveal-booting');
+  });
+</script>

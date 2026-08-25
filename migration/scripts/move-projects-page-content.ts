@@ -55,13 +55,13 @@ async function main() {
       _id: documentId,
       _type: 'projectsPage',
       language,
-      title: 'Projets',
+      title: 'Expériences',
       ...(settings.projectsIntro?.trim() ? { intro: settings.projectsIntro.trim() } : {}),
       editorialCards: initialCards,
     });
   } else {
     const missing: Record<string, unknown> = {};
-    if (!current.title) missing.title = 'Projets';
+    if (!current.title) missing.title = 'Expériences';
     if (!current.intro && settings.projectsIntro?.trim()) missing.intro = settings.projectsIntro.trim();
     if (!current.editorialCards?.length) missing.editorialCards = initialCards;
     if (Object.keys(missing).length > 0) transaction.patch(documentId, (patch) => patch.set(missing));

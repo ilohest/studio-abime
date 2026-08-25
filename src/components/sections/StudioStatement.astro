@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SmartLink from '~/components/primitives/SmartLink.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { figureLabel } from '~/lib/figureLabel';
@@ -11,10 +12,9 @@ import type { StudioStatement } from '~/lib/sanity/types';
 /**
  * Manifeste illustré — déclaration, note, planche de figures, appel à action.
  *
- * La planche repose sur une grille de 12 colonnes : chaque figure déclare le
- * nombre de colonnes qu'elle occupe et son éventuel débord hors marge. La
- * composition reste donc pilotable depuis le CMS sans exposer de positions
- * absolues, qui seraient ingérables en responsive.
+ * La planche repose sur une grille de 12 colonnes. Ses cinq premières figures
+ * suivent la composition éditoriale de référence (trois en haut, deux en bas),
+ * tandis que les médias et leurs légendes restent pilotés depuis le CMS.
  */
 interface Props {
   section: StudioStatement;
@@ -22,6 +22,14 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
+
+/**
+ * Les trois notions structurantes de la déclaration reçoivent la voix
+ * manuscrite de l'exemple, sans transformer le champ Sanity en contenu riche.
+ * La chaîne originale — et ses marqueurs d'édition visuelle — reste intacte.
+ */
+const statementParts = section.statement.split(/(les outils|les langages|espace)/gi);
+const emphasizedStatementParts = new Set(['espace', 'les outils', 'les langages']);
 
 /*
   Repère et texte sont saisis dans un seul champ ; `figureLabel()` en extrait le
@@ -46,13 +54,23 @@ const figures = (section.figures ?? []).map((figure) => ({
             gauches restent alignés, quelle que soit la largeur de composition.
           */}
           <div class="statement__lede">
-            <p class="type-declaration statement__text">{section.statement}</p>
+            <p class="type-declaration statement__text">
+              {statementParts.map((part) =>
+                emphasizedStatementParts.has(part.toLocaleLowerCase('fr')) ? (
+                  <em class="statement__emphasis">{part}</em>
+                ) : (
+                  part
+                ),
+              )}
+            </p>
 
             {(note.reference || note.text) && (
-              <p class="statement__note">
-                {note.reference && <span class="statement__ref">{note.reference}</span>}
-                <span class="statement__note-text">{note.text}</span>
-              </p>
+              <FigureCaption
+                as="p"
+                reference={note.reference}
+                text={note.text}
+                class="statement__note"
+              />
             )}
           </div>
         </div>
@@ -61,8 +79,11 @@ const figures = (section.figures ?? []).map((figure) => ({
           {/* ── Planche de figures ────────────────────────────────────── */}
           {
             figures.length > 0 && (
-              <div class="statement__plate">
-                {figures.map((figure) => (
+              <div
+                class="statement__plate"
+                data-lower-row={figures.length >= 4 ? '' : undefined}
+              >
+                {figures.map((figure, figureIndex) => (
                   <figure
                     class="statement__figure"
                     data-bleed={stegaClean(figure.bleed) ?? 'none'}
@@ -72,8 +93,10 @@ const figures = (section.figures ?? []).map((figure) => ({
                     {figure.image?.asset ? (
                       <SanityImage
                         image={figure.image}
-                        width={900}
-                        sizes="(min-width: 768px) 25vw, 80vw"
+                        width={figureIndex === 4 ? 1200 : 900}
+                        sizes={figureIndex === 4
+                          ? '(min-width: 768px) 36vw, 80vw'
+                          : '(min-width: 768px) 25vw, 80vw'}
                         class="statement__image"
                       />
                     ) : (
@@ -86,8 +109,10 @@ const figures = (section.figures ?? []).map((figure) => ({
                         <Image
                           src={figure.fallbackImage}
                           alt=""
-                          widths={[400, 900]}
-                          sizes="(min-width: 768px) 25vw, 80vw"
+                          widths={figureIndex === 4 ? [400, 900, 1200] : [400, 900]}
+                          sizes={figureIndex === 4
+                            ? '(min-width: 768px) 36vw, 80vw'
+                            : '(min-width: 768px) 25vw, 80vw'}
                           loading="lazy"
                           class="statement__image"
                         />
@@ -95,12 +120,11 @@ const figures = (section.figures ?? []).map((figure) => ({
                     )}
 
                     {(figure.label.reference || figure.label.text) && (
-                      <figcaption class="statement__caption">
-                        {figure.label.reference && (
-                          <span class="statement__ref">{figure.label.reference}</span>
-                        )}
-                        {figure.label.text}
-                      </figcaption>
+                      <FigureCaption
+                        reference={figure.label.reference}
+                        text={figure.label.text}
+                        class="statement__caption"
+                      />
                     )}
                   </figure>
                 ))}
@@ -111,7 +135,7 @@ const figures = (section.figures ?? []).map((figure) => ({
 
                 {/* Placé dans la planche pour venir sous la dernière figure. */}
                 <div class="statement__actions">
-                  <SmartLink link={section.cta} locale={locale} class="button-outline" />
+                  <SmartLink link={section.cta} locale={locale} class="button-minimal" arrow />
                 </div>
               </div>
             )
@@ -209,6 +233,13 @@ const figures = (section.figures ?? []).map((figure) => ({
     text-indent: 3em;
   }
 
+  :global(.statement__emphasis) {
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: var(--tracking-annotation);
+  }
+
   /*
     Largeur volontairement plus étroite que la déclaration, pour que la note
     tienne sur deux lignes. `balance` répartit ensuite les mots entre elles
@@ -220,37 +251,24 @@ const figures = (section.figures ?? []).map((figure) => ({
     text-wrap: balance;
   }
 
-  .statement__note-text {
-    font-family: var(--font-annotation);
-    font-style: italic;
+  .statement__note {
     font-size: 0.75rem;
     line-height: 1.25;
-    letter-spacing: 0;
     color: var(--color-ink);
-  }
-
-  /* Référence de figure en fonte d'annotation. */
-  .statement__ref {
-    font-family: var(--font-annotation);
-    font-style: italic;
-    font-size: 0.75rem;
-    line-height: 1.25;
-    letter-spacing: var(--tracking-annotation);
-    margin-inline-end: 0.35em;
   }
 
   /* ── Planche ──────────────────────────────────────────────────────────── */
   .statement__plate {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: clamp(1rem, 2vw, 2rem);
-    align-items: end;
+    column-gap: clamp(1rem, 2vw, 2rem);
+    row-gap: clamp(7rem, 12vw, 12rem);
+    align-items: start;
     margin-top: clamp(3rem, 9vh, 7rem);
   }
 
   .statement__figure {
     grid-column: span var(--span);
-    grid-row: 1;
     min-width: 0;
   }
 
@@ -271,6 +289,37 @@ const figures = (section.figures ?? []).map((figure) => ({
     grid-column: span var(--span) / -1;
   }
 
+  /*
+    Composition desktop de la planche de référence : les blancs font partie
+    du rythme au même titre que les images. Les positions restent exprimées en
+    grille, jamais en pixels absolus, pour suivre naturellement la largeur du
+    contenu et le rail latéral.
+  */
+  .statement__figure:nth-child(1) {
+    grid-column: 1 / span 3;
+    grid-row: 1;
+  }
+
+  .statement__figure:nth-child(2) {
+    grid-column: 4 / span 3;
+    grid-row: 1;
+  }
+
+  .statement__figure:nth-child(3) {
+    grid-column: 10 / span 3;
+    grid-row: 1;
+  }
+
+  .statement__figure:nth-child(4) {
+    grid-column: 1 / span 3;
+    grid-row: 2;
+  }
+
+  .statement__figure:nth-child(5) {
+    grid-column: 7 / span 5;
+    grid-row: 2;
+  }
+
   .statement__image {
     display: block;
     width: 100%;
@@ -279,16 +328,9 @@ const figures = (section.figures ?? []).map((figure) => ({
 
   .statement__caption {
     margin-top: 0.6rem;
-    font-family: var(--font-annotation);
-    font-style: italic;
     font-size: 0.75rem;
     line-height: 1.25;
-    letter-spacing: 0;
     color: var(--color-ink);
-  }
-
-  .statement__caption .statement__ref {
-    margin-inline-end: 0.2em;
   }
 
   /*
@@ -310,6 +352,12 @@ const figures = (section.figures ?? []).map((figure) => ({
     display: flex;
     justify-content: flex-start;
     margin-top: clamp(1.5rem, 4vh, 2.5rem);
+  }
+
+  .statement__plate[data-lower-row] .statement__actions {
+    grid-column: 2 / span 3;
+    grid-row: 3;
+    margin-top: calc(-1 * clamp(2rem, 4vw, 4rem));
   }
 
   /* ── Mobile : la planche s'empile, plus de débord ─────────────────────── */
@@ -355,10 +403,12 @@ const figures = (section.figures ?? []).map((figure) => ({
 
     .statement__plate {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      row-gap: clamp(2.5rem, 8vh, 4rem);
       align-items: start;
     }
 
-    .statement__figure {
+    .statement__figure,
+    .statement__figure:nth-child(n) {
       grid-column: span 1;
       grid-row: auto;
     }
@@ -378,9 +428,11 @@ const figures = (section.figures ?? []).map((figure) => ({
       text-align: left;
     }
 
-    .statement__actions {
+    .statement__actions,
+    .statement__plate[data-lower-row] .statement__actions {
       grid-column: span 2;
       grid-row: auto;
+      margin-top: 0;
     }
   }
 

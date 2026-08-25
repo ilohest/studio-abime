@@ -1,5 +1,5 @@
 import { isLocale, locales, type Locale } from '~/i18n/config';
-import { pagePath, projectPath, projectsIndexPath, localizedPath } from '~/i18n/routes';
+import { contactPath, pagePath, projectPath, projectsIndexPath, laboPath, localizedPath } from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
 
@@ -43,13 +43,19 @@ export async function getDocumentAlternates(
 }
 
 /** Alternates des routes générées par le code (accueil, index portfolio). */
-export function getStaticAlternates(kind: 'home' | 'projectIndex'): Partial<Record<Locale, string>> {
+export function getStaticAlternates(kind: 'home' | 'projectIndex' | 'labo' | 'contact'): Partial<Record<Locale, string>> {
   if (locales.length < 2) return {};
 
   return Object.fromEntries(
     locales.map((locale) => [
       locale,
-      kind === 'home' ? localizedPath(locale) : projectsIndexPath(locale),
+      kind === 'home'
+        ? localizedPath(locale)
+        : kind === 'contact'
+          ? contactPath(locale)
+        : kind === 'labo'
+          ? laboPath(locale)
+          : projectsIndexPath(locale),
     ]),
   );
 }

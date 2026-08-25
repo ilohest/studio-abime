@@ -3,14 +3,16 @@
  *
  * Les segments de section (ex. l'index portfolio) sont traduits par langue afin
  * que chaque marché ait des URLs naturelles et indexables :
- *   FR → /projets/nom-du-projet
+ *   FR → /experiences/nom-du-projet
  *   EN → /en/work/project-name
  */
 import { defaultLocale, prefixDefaultLocale, type Locale } from './config';
 
 /** Segments réservés par section. Pré-remplis pour les langues à venir. */
 export const routeSegments = {
-  projects: { fr: 'projets', en: 'work', nl: 'werk', de: 'arbeiten' },
+  projects: { fr: 'experiences', en: 'work', nl: 'werk', de: 'arbeiten' },
+  labo: { fr: 'labo', en: 'lab', nl: 'lab', de: 'labor' },
+  contact: { fr: 'contact', en: 'contact', nl: 'contact', de: 'kontakt' },
 } satisfies Record<string, Record<string, string>>;
 
 export type RouteKey = keyof typeof routeSegments;
@@ -28,7 +30,7 @@ export function getReservedSegments(locale: Locale): string[] {
 
 /**
  * Construit un chemin absolu localisé.
- * `localizedPath('fr', 'projets', 'abime')` → `/projets/abime`
+ * `localizedPath('fr', 'experiences', 'abime')` → `/experiences/abime`
  * `localizedPath('en', 'work', 'abime')`    → `/en/work/abime`
  */
 export function localizedPath(locale: Locale, ...segments: (string | undefined | null)[]): string {
@@ -44,6 +46,16 @@ export function localizedPath(locale: Locale, ...segments: (string | undefined |
 /** URL de l'index portfolio pour une langue. */
 export function projectsIndexPath(locale: Locale): string {
   return localizedPath(locale, getSegment('projects', locale));
+}
+
+/** URL de la page Labo, route éditoriale structurée et localisée. */
+export function laboPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('labo', locale));
+}
+
+/** URL de la page Contact, expérience dédiée et localisée. */
+export function contactPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('contact', locale));
 }
 
 /** URL d'un projet. */

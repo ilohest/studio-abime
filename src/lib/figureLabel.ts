@@ -9,12 +9,19 @@
  * recomposées avant analyse, ce qui rend la bascule invisible côté contenu.
  */
 const REFERENCE = /^\s*((?:fig|pl|réf|ref|n°|no)\.?\s?\d+[a-z]?)\s*(?:[—–-]\s*)?/i;
+const FIGURE_REFERENCE = /^fig\.?\s*(\d+[a-z]?)$/i;
 
 export interface FigureLabel {
   /** Repère de tête, s'il y en a un. */
   reference?: string;
   /** Reste de la ligne. */
   text?: string;
+}
+
+/** Uniformise les variantes « Fig.01 » et « fig 01 » en « fig. 01 ». */
+function normalizeReference(reference: string): string {
+  const figure = reference.match(FIGURE_REFERENCE);
+  return figure ? `fig. ${figure[1]}` : reference;
 }
 
 /**
@@ -35,5 +42,5 @@ export function figureLabel(...parts: Array<string | undefined | null>): FigureL
   if (!match) return { text: raw };
 
   const text = raw.slice(match[0].length).trim();
-  return { reference: match[1], text: text || undefined };
+  return { reference: normalizeReference(match[1]), text: text || undefined };
 }

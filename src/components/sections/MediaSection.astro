@@ -1,5 +1,6 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import type { MediaSection } from '~/lib/sanity/types';
 
 interface Props {
@@ -39,7 +40,9 @@ const sizes = {
                 sizes={sizes}
                 class="w-full object-cover"
               />
-              {item.caption && <figcaption class="type-annotation mt-3 text-muted">{item.caption}</figcaption>}
+              {item.caption && (
+                <FigureCaption value={item.caption} class="mt-3 text-muted" />
+              )}
             </figure>
           </li>
         ))

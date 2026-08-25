@@ -45,14 +45,15 @@ const layout = section.layout ?? 'centered';
     ]}
   >
     <div class:list={[layout === 'centered' && 'mx-auto max-w-3xl']}>
-      <h1 class="type-titre text-balance">{section.heading}</h1>
+      <h1 class="type-titre text-balance" data-text-reveal>{section.heading}</h1>
 
-      {section.subheading && <p class="type-copy mt-6 max-w-prose text-pretty">{section.subheading}</p>}
+      {section.subheading && <p class="type-copy mt-6 max-w-prose text-pretty" data-text-reveal>{section.subheading}</p>}
 
       <SmartLink
         link={section.cta}
         locale={locale}
-        class="type-sous-titre mt-8 inline-block border-b border-current pb-1 hover:opacity-60"
+        class="button-minimal mt-8"
+        arrow
       />
     </div>
 

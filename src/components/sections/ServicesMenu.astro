@@ -30,7 +30,6 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
-const groups = section.groups ?? [];
 ---
 
 <section class="services" data-services-menu>
@@ -69,7 +68,7 @@ const groups = section.groups ?? [];
         horizontal. Une fois ancré, c'est la page qui fournit le papier.
       */}
       <ServicesRail
-        groups={groups}
+        locale={locale}
         mode="embedded"
         homeHref={localizedPath(locale)}
         class="services__panel"

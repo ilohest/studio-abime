@@ -115,7 +115,11 @@ const SECTIONS = /* groq */ `sections[]{
     }
   },
   _type == "projectShowcase" => {
-    "projects": coalesce(projects[0...5]->${PROJECT_CARD}, []),
+    "projects": select(
+      count(projects) > 0 => projects[0...5]->${PROJECT_CARD},
+      *[_type == "project" && language == $locale && defined(slug.current)]
+        | order(coalesce(year, 0) desc, _createdAt desc)[0...5] ${PROJECT_CARD}
+    ),
     placeholderItems[0...5]{
       _key,
       title,
@@ -256,7 +260,18 @@ export const projectsIndexQuery = /* groq */ `{
   "categories": *[_type == "category" && language == $locale] | order(title asc) ${CATEGORY}
 }`;
 
-/** Contenu éditorial de la page Projets, singleton propre à chaque langue. */
+/**
+ * Projets publiés utilisés par l'archive du Labo.
+ * Cette requête reste indépendante du singleton éditorial : les vrais
+ * projets continuent ainsi d'être affichés lorsque celui-ci n'est pas encore
+ * publié et que le contenu de repli de la page est utilisé.
+ */
+export const laboArchiveProjectsQuery = /* groq */ `
+*[_type == "project" && language == $locale && defined(slug.current) && defined(thumbnail.asset)]
+  | order(coalesce(year, 0) desc, _createdAt desc)[0...6] ${PROJECT_CARD}
+`;
+
+/** Contenu éditorial de la page Expériences, singleton propre à chaque langue. */
 export const projectsPageQuery = /* groq */ `
 *[_type == "projectsPage" && language == $locale][0]{
   _id,
@@ -265,6 +280,33 @@ export const projectsPageQuery = /* groq */ `
   title,
   intro,
   "editorialCards": coalesce(editorialCards[]{ _key, kind, text, position }, []),
+  seo ${SEO}
+}`;
+
+/** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
+export const laboPageQuery = /* groq */ `
+*[_type == "laboPage" && language == $locale][0]{
+  _id,
+  _type,
+  language,
+  title,
+  eyebrow,
+  "philosophy": coalesce(philosophy, []),
+  whyTitle,
+  whyLead,
+  "principles": coalesce(principles, []),
+  whyClosing,
+  servicesTitle,
+  "services": coalesce(services[]{ _key, title, description }, []),
+  note,
+  "closingLines": coalesce(closingLines, []),
+  cta ${LINK},
+  archiveTitle,
+  "archiveProjects": select(
+    count(archiveProjects) > 0 => archiveProjects[0...6]->${PROJECT_CARD},
+    *[_type == "project" && language == $locale && defined(slug.current) && defined(thumbnail.asset)]
+      | order(coalesce(year, 0) desc, _createdAt desc)[0...6] ${PROJECT_CARD}
+  ),
   seo ${SEO}
 }`;
 

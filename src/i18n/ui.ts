@@ -11,7 +11,7 @@ const fr = {
   'nav.skipToContent': 'Aller au contenu',
   'nav.menu': 'Menu',
   'nav.close': 'Fermer',
-  'nav.projects': 'Projets',
+  'nav.projects': 'Expériences',
   'locale.switch': 'Changer de langue',
   'projects.all': 'Tous',
   'projects.filterBy': 'Filtrer par',

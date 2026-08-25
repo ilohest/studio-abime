@@ -14,14 +14,15 @@ const { section, locale } = Astro.props;
 <section class="py-(--spacing-section)">
   <div class="container-wide">
     <div class="border-y border-line py-16 text-center">
-      <h2 class="type-titre mx-auto max-w-3xl text-balance">{section.heading}</h2>
+      <h2 class="type-titre mx-auto max-w-3xl text-balance" data-text-reveal>{section.heading}</h2>
 
-      {section.body && <p class="type-copy mx-auto mt-6 max-w-prose text-pretty">{section.body}</p>}
+      {section.body && <p class="type-copy mx-auto mt-6 max-w-prose text-pretty" data-text-reveal>{section.body}</p>}
 
       <SmartLink
         link={section.cta}
         locale={locale}
-        class="type-sous-titre mt-10 inline-block border-b border-current pb-1 hover:opacity-60"
+        class="button-minimal mt-10"
+        arrow
       />
     </div>
   </div>

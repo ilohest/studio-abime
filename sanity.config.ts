@@ -41,7 +41,8 @@ const creationTitles: Record<string, string> = {
   project: 'Projet',
   category: 'Catégorie',
   localizedSettings: 'Réglages du site',
-  projectsPage: 'Page Projets',
+  projectsPage: 'Page Expériences',
+  laboPage: 'Page Labo',
 };
 
 export default defineConfig({
@@ -112,6 +113,8 @@ export default defineConfig({
           ({ templateId }) =>
             templateId !== 'projectsPage' &&
             !templateId.startsWith('projectsPage-') &&
+            templateId !== 'laboPage' &&
+            !templateId.startsWith('laboPage-') &&
             templateId !== 'localizedSettings' &&
             !templateId.startsWith('localizedSettings-'),
         )
@@ -136,7 +139,8 @@ export default defineConfig({
       if (
         schemaType === 'siteSettings' ||
         schemaType === 'localizedSettings' ||
-        schemaType === 'projectsPage'
+        schemaType === 'projectsPage' ||
+        schemaType === 'laboPage'
       ) {
         return prev.filter(
           ({ action }) => action !== 'duplicate' && action !== 'delete' && action !== 'unpublish',

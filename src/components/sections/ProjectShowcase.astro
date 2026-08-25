@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { projectPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
 import type { ProjectShowcase } from '~/lib/sanity/types';
@@ -110,10 +111,7 @@ const items = sources.slice(0, 5).map((item, index) => ({
               )}
             </a>
 
-            <figcaption class="showcase__caption">
-              <span>fig.</span>
-              <span>({item.number})</span>
-            </figcaption>
+            <FigureCaption value={`fig. ${item.number}`} class="showcase__caption" />
           </figure>
         ))}
       </div>
@@ -228,13 +226,8 @@ const items = sources.slice(0, 5).map((item, index) => ({
   }
 
   .showcase__caption {
-    display: flex;
-    gap: clamp(2rem, 6vw, 6rem);
     margin-top: 0.9rem;
-    font-family: var(--font-annotation);
-    font-style: italic;
     font-size: clamp(0.95rem, 1.4vw, 1.35rem);
-    letter-spacing: var(--tracking-annotation);
     color: var(--color-ink);
   }
 

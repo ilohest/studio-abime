@@ -1,25 +1,75 @@
 ---
-import type { ServicesMenu as ServicesMenuSection } from '~/lib/sanity/types';
 import Wordmark from '~/components/brand/Wordmark.astro';
+import { contactPath, laboPath, pagePath, projectsIndexPath } from '~/i18n/routes';
+import type { Locale } from '~/i18n/config';
 
 interface Props {
-  groups?: ServicesMenuSection['groups'];
+  locale: Locale;
   mode?: 'embedded' | 'page';
   homeHref?: string;
   class?: string;
 }
 
-const DEFAULT_GROUPS: NonNullable<ServicesMenuSection['groups']> = [
-  { _key: 'g1', title: 'Labo de com', items: ['Recherche de Sens', 'Accompagnement', 'Audit'] },
-  { _key: 'g2', title: 'Définition', items: ['Direction artistique', 'Conception rédaction'] },
-  { _key: 'g3', title: 'Production', items: ['Identité sensorielle', 'Graphisme', 'Visuels', 'Rédaction'] },
-  { _key: 'g4', title: 'Expansion', items: ['Déploiement', 'Ateliers & formations', 'Conférences', 'Outils de com'] },
+const { locale, mode = 'page', homeHref = '/', class: className } = Astro.props;
+const laboHref = laboPath(locale);
+const experiencesHref = projectsIndexPath(locale);
+const journalHref = pagePath(locale, 'journal');
+const shopHref = pagePath(locale, 'shop');
+const contactHref = contactPath(locale);
+const groups = [
+  {
+    _key: 'labo',
+    title: 'Le Labo',
+    href: laboHref,
+    items: [
+      { label: 'Services', href: `${laboHref}#services` },
+      { label: 'Philosophie', href: `${laboHref}#philosophie` },
+      { label: 'Archives', href: `${laboHref}#archives` },
+    ],
+  },
+  {
+    _key: 'experiences',
+    title: 'Expériences',
+    href: experiencesHref,
+    items: [
+      { label: 'Cas d’étude', href: `${experiencesHref}#cas-etude` },
+      { label: 'Références', href: `${experiencesHref}#references` },
+    ],
+  },
+  {
+    _key: 'journal',
+    title: 'Journal',
+    href: journalHref,
+    items: [
+      { label: 'Cahier de recherche', href: `${journalHref}#cahier-de-recherche` },
+      { label: 'Actualités', href: `${journalHref}#actualites` },
+      { label: 'Publications', href: `${journalHref}#publications` },
+    ],
+  },
+  {
+    _key: 'shop',
+    title: 'Shop',
+    href: shopHref,
+    items: [
+      { label: 'Impressions', href: `${shopHref}#impressions` },
+      { label: 'Outils de com', href: `${shopHref}#outils-de-com` },
+    ],
+  },
+  {
+    _key: 'contact',
+    title: 'Contact',
+    href: contactHref,
+    items: [
+      { label: 'Informations', href: `${contactHref}#informations` },
+      { label: 'Enquête', href: `${contactHref}#enquete` },
+    ],
+  },
 ];
-
-const { groups = DEFAULT_GROUPS, mode = 'page', homeHref = '/', class: className } = Astro.props;
+const currentPath = Astro.url.pathname;
 const numbered = groups.map((group, index) => ({
   ...group,
   number: String(index + 1).padStart(2, '0'),
+  isCurrent: currentPath === group.href || currentPath.startsWith(`${group.href}/`),
 }));
 const panelId = `services-menu-${mode}`;
 ---
@@ -28,7 +78,7 @@ const panelId = `services-menu-${mode}`;
   class:list={['services-rail', `services-rail--${mode}`, className]}
   data-services-rail
   data-page-rail
-  aria-label="Services"
+  aria-label="Navigation principale"
 >
   <button
     class="services-rail__mobile-toggle"
@@ -56,17 +106,30 @@ const panelId = `services-menu-${mode}`;
     <ol class="services-rail__groups">
       {
         numbered.map((group) => (
-          <li class="services-rail__group">
+          <li class:list={['services-rail__group', { 'is-current': group.isCurrent }]}>
             <div class="services-rail__label">
-              <span class="type-note block">{group.number}</span>
-              <p class="type-note uppercase">{group.title}</p>
+              <span class="type-note">{group.number}.</span>
+              <a
+                class="type-note uppercase"
+                href={group.href}
+                aria-current={group.isCurrent ? 'page' : undefined}
+                data-cursor-interactive
+              >
+                {group.title}
+              </a>
             </div>
 
-            <ul class="services-rail__items">
-              {group.items?.map((item) => (
-                <li class="type-note" data-cursor-interactive>{item}</li>
-              ))}
-            </ul>
+            {
+              group.items.length > 0 && (
+                <ul class="services-rail__items">
+                  {group.items.map((item) => (
+                    <li class="type-note">
+                      <a href={item.href} data-cursor-interactive>{item.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              )
+            }
           </li>
         ))
       }
@@ -148,29 +211,49 @@ const panelId = `services-menu-${mode}`;
   .services-rail__group {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
   }
 
   .services-rail__label {
-    display: contents;
+    display: flex;
+    grid-column: 1;
+    grid-row: 1;
+    align-items: baseline;
+    gap: 0.55em;
     white-space: nowrap;
   }
 
   .services-rail__label > span {
-    grid-column: 1;
-    grid-row: 1;
+    position: relative;
+    flex: none;
   }
 
-  .services-rail__label p {
-    grid-column: 1;
-    grid-row: 2;
-    align-self: start;
-    margin-top: 0.35em;
+  .services-rail__label > a {
+    text-decoration: none;
+    transition: opacity 0.25s ease-out;
+  }
+
+  .services-rail__group.is-current .services-rail__label > span::before {
+    content: '•';
+    position: absolute;
+    inset-inline-end: calc(100% + 0.45em);
+    color: currentColor;
+    font-size: 1.25em;
+    line-height: 1;
+  }
+
+  .services-rail__label > a:hover,
+  .services-rail__label > a:focus-visible {
+    opacity: 0.55;
+  }
+
+  .services-rail__label > a[aria-current='page'] {
+    opacity: 1;
   }
 
   .services-rail__items {
     grid-column: 1;
-    grid-row: 3;
+    grid-row: 2;
     align-self: start;
     display: flex;
     flex-direction: column;
@@ -181,29 +264,17 @@ const panelId = `services-menu-${mode}`;
   }
 
   .services-rail__items li {
-    position: relative;
     white-space: nowrap;
   }
 
-  .services-rail__items li::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: calc(var(--menu-indent) * -0.62);
-    width: 4px;
-    height: 4px;
-    margin-top: -2px;
-    border-radius: 50%;
-    background-color: currentColor;
-    opacity: 0;
+  .services-rail__items a {
+    text-decoration: none;
     transition: opacity 0.25s ease-out;
   }
 
-  .services-rail__items li:hover::before,
-  .services-rail__items li:focus-within::before,
-  .services-rail__items li[aria-current]::before,
-  .services-rail__items li[data-active]::before {
-    opacity: 1;
+  .services-rail__items a:hover,
+  .services-rail__items a:focus-visible {
+    opacity: 0.55;
   }
 
   @media (max-width: 767px) {
@@ -346,9 +417,12 @@ const panelId = `services-menu-${mode}`;
       margin: auto;
     }
 
-    .services-rail__group,
-    .services-rail__label {
+    .services-rail__group {
       display: block;
+    }
+
+    .services-rail__label {
+      display: flex;
     }
 
     .services-rail__items {

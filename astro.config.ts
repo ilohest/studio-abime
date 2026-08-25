@@ -24,6 +24,10 @@ export default defineConfig({
   site: PUBLIC_SITE_URL || 'https://studio-abime.com',
   trailingSlash: 'never',
 
+  redirects: {
+    '/projets': '/experiences',
+  },
+
   /**
    * Statique par défaut (performance maximale).
    * L'adaptateur Node permet de basculer certaines routes en rendu à la demande

@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { figureLabel } from '~/lib/figureLabel';
 import type { PlateSpread } from '~/lib/sanity/types';
 
@@ -89,12 +90,11 @@ const hasSanityBackground = Boolean(section.background?.asset);
             )}
 
             {(figure.label.reference || figure.label.text) && (
-              <figcaption class="plate__caption">
-                {figure.label.reference && (
-                  <span class="plate__ref">{figure.label.reference}</span>
-                )}
-                {figure.label.text}
-              </figcaption>
+              <FigureCaption
+                reference={figure.label.reference}
+                text={figure.label.text}
+                class="plate__caption"
+              />
             )}
           </figure>
         ))}
@@ -196,15 +196,9 @@ const hasSanityBackground = Boolean(section.background?.asset);
 
   .plate__caption {
     margin-top: 0.6rem;
-    font-family: var(--font-annotation);
-    font-style: italic;
     font-size: 0.7rem;
     line-height: 1.4;
     color: var(--color-ink);
-  }
-
-  .plate__ref {
-    margin-inline-end: 0.35em;
   }
 
   /* ── Mobile : la double page s'empile en une colonne ──────────────────── */

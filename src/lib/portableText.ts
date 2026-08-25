@@ -1,6 +1,7 @@
 import { toHTML, type PortableTextHtmlComponents } from '@portabletext/to-html';
 import { resolveImage } from './sanity/image';
 import { resolveLink } from './routing';
+import { figureLabel } from './figureLabel';
 import type { PortableTextBlock, SanityImage, SanityLink } from './sanity/types';
 import type { Locale } from '~/i18n/config';
 
@@ -29,9 +30,17 @@ function components(locale: Locale): Partial<PortableTextHtmlComponents> {
 
         const img = `<img src="${escapeHtml(resolved.src)}" srcset="${escapeHtml(resolved.srcset)}" sizes="100vw" width="${resolved.width}" height="${resolved.height}" alt="${escapeHtml(resolved.alt)}" loading="lazy" decoding="async" />`;
 
-        return image.caption
-          ? `<figure>${img}<figcaption>${escapeHtml(image.caption)}</figcaption></figure>`
-          : `<figure>${img}</figure>`;
+        if (!image.caption) return `<figure>${img}</figure>`;
+
+        const label = figureLabel(image.caption);
+        const prefix = label.reference
+          ? `<span class="figure-caption__prefix"><span class="figure-caption__reference">${escapeHtml(label.reference)}</span>${label.text ? '<span class="figure-caption__separator"> - </span>' : ''}</span>`
+          : '';
+        const text = label.text
+          ? `<span class="figure-caption__text">${escapeHtml(label.text)}</span>`
+          : '';
+
+        return `<figure>${img}<figcaption class="figure-caption">${prefix}${text}</figcaption></figure>`;
       },
     },
     marks: {

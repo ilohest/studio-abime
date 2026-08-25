@@ -10,7 +10,7 @@
  * aucune modification de l'arborescence `src/pages/`.
  */
 import { defaultLocale, isLocale, locales, prefixDefaultLocale, type Locale } from '~/i18n/config';
-import { getSegment, localizedPath, pagePath, projectPath, projectsIndexPath } from '~/i18n/routes';
+import { contactPath, getSegment, laboPath, localizedPath, pagePath, projectPath, projectsIndexPath } from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { routeManifestQuery } from './sanity/queries';
 import type { ResolvedLink, RouteEntry, SanityLink } from './sanity/types';
@@ -39,6 +39,8 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
   for (const locale of locales) {
     // Accueil + index portfolio existent pour chaque langue active.
     routes.push({ kind: 'home', locale, path: localizedPath(locale) });
+    routes.push({ kind: 'labo', locale, path: laboPath(locale) });
+    routes.push({ kind: 'contact', locale, path: contactPath(locale) });
     routes.push({ kind: 'projectIndex', locale, path: projectsIndexPath(locale) });
   }
 
@@ -98,7 +100,19 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return { kind: 'home', locale, path };
   }
 
-  // 3. Section portfolio (segment traduit par langue).
+  // 3. Page Labo (segment traduit par langue).
+  const laboSegment = getSegment('labo', locale);
+  if (rest[0] === laboSegment) {
+    return rest.length === 1 ? { kind: 'labo', locale, path } : null;
+  }
+
+  // 4. Contact : expérience dédiée, indépendante du page builder.
+  const contactSegment = getSegment('contact', locale);
+  if (rest[0] === contactSegment) {
+    return rest.length === 1 ? { kind: 'contact', locale, path } : null;
+  }
+
+  // 5. Section portfolio (segment traduit par langue).
   const projectsSegment = getSegment('projects', locale);
   if (rest[0] === projectsSegment) {
     if (rest.length === 1) return { kind: 'projectIndex', locale, path };
@@ -106,7 +120,7 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return null;
   }
 
-  // 4. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
+  // 6. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
   //    (`agence/equipe`) : on le reconstruit tel quel.
   return { kind: 'page', locale, path, slug: rest.join('/') };
 }
@@ -128,8 +142,8 @@ export function resolveLink(link: SanityLink | undefined | null, locale: Locale)
     const targetLocale = isLocale(target.language) ? target.language : locale;
 
     /*
-      La page Projets n'a pas de slug : son URL est une route calculée par
-      langue (`/projets`, `/en/work`). Les autres cibles passent par leur slug.
+      La page Expériences n'a pas de slug : son URL est une route calculée par
+      langue (`/experiences`, `/en/work`). Les autres cibles passent par leur slug.
     */
     const href =
       target._type === 'projectsPage'

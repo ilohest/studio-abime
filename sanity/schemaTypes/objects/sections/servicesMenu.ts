@@ -1,18 +1,18 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 
 /**
- * Menu des services — visuel à gauche, prestations numérotées à droite.
+ * Menu principal — visuel à gauche, navigation numérotée à droite.
  *
  * Cette section joue aussi le rôle de MENU : au défilement, le visuel sort par
  * la gauche et la colonne des prestations vient s'ancrer sur le bord gauche.
  * L'animation est portée par le composant ; le CMS ne pilote que le contenu.
  *
- * Les numéros (01, 02…) sont générés à l'affichage depuis l'ordre des groupes :
- * réordonner ne demande donc aucune renumérotation manuelle.
+ * La structure de navigation est désormais pilotée par le site. L'ancien
+ * contenu des groupes reste conservé ci-dessous pour ne perdre aucune donnée.
  */
 export const servicesMenu = defineType({
   name: 'servicesMenu',
-  title: 'Menu des services',
+  title: 'Menu principal',
   type: 'object',
   fields: [
     defineField({
@@ -25,9 +25,13 @@ export const servicesMenu = defineType({
     }),
     defineField({
       name: 'groups',
-      title: 'Pôles',
+      title: 'Ancienne liste de services',
       type: 'array',
-      validation: (rule) => rule.min(1),
+      deprecated: {
+        reason: 'La navigation principale est maintenant structurelle et gérée par le site.',
+      },
+      readOnly: true,
+      hidden: ({ value }) => value === undefined,
       of: [
         defineArrayMember({
           type: 'object',
@@ -60,8 +64,8 @@ export const servicesMenu = defineType({
   preview: {
     select: { groups: 'groups', media: 'image' },
     prepare: ({ groups, media }) => ({
-      title: 'Menu des services',
-      subtitle: `${groups?.length ?? 0} pôle(s)`,
+      title: 'Menu principal',
+      subtitle: groups?.length ? 'Ancienne liste conservée' : 'Navigation du site',
       media,
     }),
   },

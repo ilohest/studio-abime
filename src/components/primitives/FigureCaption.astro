@@ -1,0 +1,41 @@
+---
+import { figureLabel } from '~/lib/figureLabel';
+
+interface Props {
+  /** Légende complète, telle qu'elle est saisie dans Sanity. */
+  value?: string;
+  /** Compatibilité avec les anciens contenus à deux champs. */
+  reference?: string;
+  text?: string;
+  as?: 'figcaption' | 'p' | 'span';
+  class?: string;
+  id?: string;
+}
+
+const {
+  value,
+  reference,
+  text,
+  as: Tag = 'figcaption',
+  class: className,
+  ...attributes
+} = Astro.props as Props;
+
+const label = value === undefined
+  ? figureLabel(reference, text)
+  : figureLabel(value);
+---
+
+{
+  (label.reference || label.text) && (
+    <Tag class:list={['figure-caption', className]} {...attributes}>
+      {label.reference && (
+        <span class="figure-caption__prefix">
+          <span class="figure-caption__reference">{label.reference}</span>
+          {label.text && <span class="figure-caption__separator"> - </span>}
+        </span>
+      )}
+      {label.text && <span class="figure-caption__text">{label.text}</span>}
+    </Tag>
+  )
+}

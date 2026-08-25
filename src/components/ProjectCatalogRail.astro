@@ -1,0 +1,224 @@
+---
+import ProjectGrid from '~/components/ProjectGrid.astro';
+import type { Locale } from '~/i18n/config';
+import type { ProjectCard } from '~/lib/sanity/types';
+
+interface Props {
+  projects?: ProjectCard[];
+  locale: Locale;
+  ariaLabel: string;
+  /** Nombre de cartes lorsque le contenu est fourni par le slot de repli. */
+  itemCount?: number;
+  /** Aligne le rail sur les gouttières globales, comme sur l'accueil. */
+  contained?: boolean;
+  revealText?: boolean;
+}
+
+const {
+  projects = [],
+  locale,
+  ariaLabel,
+  itemCount = projects.length,
+  contained = false,
+  revealText = true,
+} = Astro.props;
+---
+
+<div class="project-catalog-rail" data-project-catalog-rail>
+  <div
+    class:list={['project-catalog-rail__track', { 'container-wide': contained }]}
+    data-project-catalog-rail-track
+    tabindex="0"
+    role="group"
+    aria-label={ariaLabel}
+  >
+    {projects.length > 0 ? (
+      <ProjectGrid
+        projects={projects}
+        categories={[]}
+        locale={locale}
+        showFilters={false}
+        showDetails={false}
+        revealText={revealText}
+      />
+    ) : (
+      <slot />
+    )}
+  </div>
+
+  {itemCount > 1 && (
+    <div
+      class:list={['project-catalog-rail__controls', { 'container-wide': contained }]}
+      aria-label="Faire défiler les projets"
+    >
+      <button
+        class="project-catalog-rail__arrow"
+        type="button"
+        data-project-catalog-rail-previous
+        data-cursor-interactive
+        aria-label="Projet précédent"
+        disabled
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      <button
+        class="project-catalog-rail__arrow"
+        type="button"
+        data-project-catalog-rail-next
+        data-cursor-interactive
+        aria-label="Projet suivant"
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+  )}
+</div>
+
+<style>
+  .project-catalog-rail {
+    min-width: 0;
+  }
+
+  .project-catalog-rail__track {
+    --rail-cross-safe-area: calc(0.75rem + 7px);
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-behavior: auto;
+    padding-block: 0.75rem;
+    padding-inline: var(--rail-cross-safe-area);
+    scroll-padding-inline: var(--rail-cross-safe-area);
+    scrollbar-width: none;
+  }
+
+  .project-catalog-rail__track.container-wide {
+    padding-inline: max(var(--spacing-gutter), var(--rail-cross-safe-area));
+  }
+
+  .project-catalog-rail__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-catalog-rail__track:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: -2px;
+  }
+
+  .project-catalog-rail__controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    padding-top: clamp(0.8rem, 1.4vw, 1.25rem);
+  }
+
+  .project-catalog-rail__arrow {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--color-ink) 28%, transparent);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    font-size: 1.15rem;
+    line-height: 1;
+    transition:
+      opacity 0.25s ease-out,
+      border-color 0.25s ease-out;
+  }
+
+  .project-catalog-rail__arrow:hover,
+  .project-catalog-rail__arrow:focus-visible {
+    border-color: currentColor;
+  }
+
+  .project-catalog-rail__arrow:disabled {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .project-catalog-rail :global(.project-catalog-grid) {
+    display: flex;
+    width: max-content;
+    row-gap: 0;
+  }
+
+  .project-catalog-rail :global(.project-catalog-item) {
+    --project-card-top-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+    --project-card-right-line: linear-gradient(transparent, transparent);
+    --project-card-top-right-cross-color: transparent;
+    --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-right-cross-color: transparent;
+    width: clamp(16rem, 24vw, 24rem);
+    flex: 0 0 clamp(16rem, 24vw, 24rem);
+  }
+
+  .project-catalog-rail :global(.project-catalog-item:last-child) {
+    --project-card-right-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+    --project-card-top-right-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+  }
+
+  .project-catalog-rail :global(.project-catalog-card[aria-disabled='true']) {
+    pointer-events: none;
+  }
+
+  .project-catalog-rail :global(.project-catalog-image) {
+    -webkit-user-drag: none;
+    user-select: none;
+  }
+
+  @media (max-width: 767px) {
+    .project-catalog-rail :global(.project-catalog-item) {
+      width: min(78vw, 20rem);
+      flex-basis: min(78vw, 20rem);
+    }
+  }
+</style>
+
+<script>
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  document
+    .querySelectorAll<HTMLElement>('[data-project-catalog-rail]:not([data-controls-ready])')
+    .forEach((rail) => {
+      const track = rail.querySelector<HTMLElement>('[data-project-catalog-rail-track]');
+      const previous = rail.querySelector<HTMLButtonElement>('[data-project-catalog-rail-previous]');
+      const next = rail.querySelector<HTMLButtonElement>('[data-project-catalog-rail-next]');
+
+      if (!track || !previous || !next) return;
+      rail.dataset.controlsReady = '';
+
+      const updateControls = () => {
+        const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+        previous.disabled = track.scrollLeft <= 1;
+        next.disabled = track.scrollLeft >= maxScroll - 1;
+      };
+
+      const moveOneCard = (direction: -1 | 1) => {
+        const card = track.querySelector<HTMLElement>('.project-catalog-item');
+        if (!card) return;
+
+        track.scrollBy({
+          left: direction * card.getBoundingClientRect().width,
+          behavior: reducedMotion.matches ? 'auto' : 'smooth',
+        });
+      };
+
+      previous.addEventListener('click', () => moveOneCard(-1));
+      next.addEventListener('click', () => moveOneCard(1));
+      track.addEventListener('scroll', updateControls, { passive: true });
+
+      const resizeObserver = new ResizeObserver(updateControls);
+      resizeObserver.observe(track);
+      requestAnimationFrame(updateControls);
+    });
+</script>

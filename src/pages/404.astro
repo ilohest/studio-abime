@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { getSiteContext } from '~/lib/siteContext';
 import { defaultLocale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
@@ -56,14 +57,17 @@ const canvasCopy = phrases.join(' ');
           preload="metadata"
           aria-label="Collage animé de l'univers visuel de Studio Abîme"
         ></video>
-        <figcaption class="video-caption">
-          <span class="video-ref">fig.404</span>
-          La trace d'une page qui n'est plus ici
-        </figcaption>
+        <FigureCaption
+          value="fig.404 — La trace d'une page qui n'est plus ici"
+          class="video-caption"
+        />
       </figure>
 
       <div class="return-action">
-        <a class="button-outline" href={homeHref}>Remonter à la surface →</a>
+        <a class="button-minimal" href={homeHref}>
+          <span class="button-minimal__label">Remonter à la surface</span>
+          <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+        </a>
       </div>
     </div>
   </section>
@@ -155,15 +159,8 @@ const canvasCopy = phrases.join(' ');
     padding-top: 0.55rem;
     background: var(--color-papier);
     color: var(--color-ink);
-    font-family: var(--font-titre);
     font-size: 0.7rem;
-    font-style: italic;
-    letter-spacing: -0.02em;
     line-height: 1.2;
-  }
-
-  .video-ref {
-    margin-inline-end: 0.45em;
   }
 
   .return-action {

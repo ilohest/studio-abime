@@ -137,7 +137,7 @@
   }
 
   /*
-    Page Projets : son fond EST l'accent Lumière, un surlignage de la même
+    Page Expériences : son fond EST l'accent Lumière, un surlignage de la même
     teinte y serait donc invisible. La sélection bascule sur Ciel, le second
     accent de la palette.
   */
@@ -347,33 +347,95 @@
   font-weight: 400;
 }
 
-/** Bouton contour commun aux appels à l'action du site. */
-@utility button-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  pointer-events: auto;
-  padding: 0.7em 1.4em;
-  border: 1px solid var(--color-ink);
-  border-radius: 0;
-  background-color: var(--color-papier);
-  color: var(--color-ink);
+/**
+ * Légende de figure : seul le repère est en italique. Le tiret et le texte
+ * reviennent au corps romain, y compris dans les légendes issues de Sanity.
+ */
+.figure-caption {
+  font-family: var(--font-copy);
+  font-style: normal;
+  letter-spacing: var(--tracking-copy);
+}
+
+.figure-caption__reference {
   font-family: var(--font-annotation);
-  font-size: 1rem;
   font-style: italic;
-  font-weight: 400;
   letter-spacing: var(--tracking-annotation);
-  line-height: 1.25;
+}
+
+.figure-caption__prefix {
+  white-space: nowrap;
+}
+
+.figure-caption__separator,
+.figure-caption__text {
+  font-family: var(--font-copy);
+  font-style: normal;
+  letter-spacing: var(--tracking-copy);
+}
+
+/**
+ * Appel à l'action éditorial — volontairement réduit au libellé et à son
+ * signe directionnel. Fonctionne sur un lien comme sur un bouton natif.
+ */
+@utility button-minimal {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+  pointer-events: auto;
+  padding: 0.2em 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-titre);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: var(--tracking-copy);
+  line-height: 1.35;
   text-transform: none;
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+  text-decoration: none;
 }
 
 @layer utilities {
-  .button-outline:hover {
-    background-color: var(--color-ink);
-    color: var(--color-ink-invert);
+  .button-minimal__label {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: left calc(100% - 0.04em);
+    background-repeat: no-repeat;
+    background-size: 0 1px;
+    transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .button-minimal:hover .button-minimal__label,
+  .button-minimal:focus-visible .button-minimal__label {
+    background-size: 100% 1px;
+  }
+
+  .button-minimal:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 0.35rem;
+  }
+
+  .button-minimal__arrow {
+    display: inline-block;
+    font-size: 1.1em;
+    line-height: 1;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .button-minimal:hover .button-minimal__arrow {
+    transform: translate(0.18em, 0.1em);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .button-minimal__label {
+      transition: none;
+    }
+
+    .button-minimal__arrow,
+    .button-minimal:hover .button-minimal__arrow {
+      transform: none;
+    }
   }
 }
 

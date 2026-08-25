@@ -34,8 +34,8 @@ const marginNotes = [
     <p class="type-sous-titre text-muted">
       {[project.client, project.year].filter(Boolean).join(' — ')}
     </p>
-    <h1 class="type-titre mt-6 text-balance">{project.title}</h1>
-    {project.headline && <p class="type-annotation mx-auto mt-8 max-w-prose text-pretty">{project.headline}</p>}
+    <h1 class="type-titre mt-6 text-balance" data-text-reveal>{project.title}</h1>
+    {project.headline && <p class="type-annotation mx-auto mt-8 max-w-prose text-pretty" data-text-reveal>{project.headline}</p>}
   </header>
 
   {
