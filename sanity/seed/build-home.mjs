@@ -14,7 +14,12 @@
  * ne les duplique pas — Sanity dédoublonne sur l'empreinte du fichier.
  *
  * Les `_id` sont fixes et volontairement lisibles : réexécuter l'import met à
- * jour les mêmes documents au lieu d'en créer de nouveaux.
+ * jour les mêmes documents au lieu d'en créer de nouveaux. Ils ne contiennent
+ * JAMAIS de point : Sanity traite un tel identifiant comme un chemin privé (le
+ * mécanisme de `drafts.`), et le document devient illisible depuis l'API
+ * publique — donc invisible sur le site. Ils suivent la forme attendue par le
+ * back-office (`sanity/structure/index.ts`), sans quoi le Studio ouvrirait un
+ * document vide à côté de celui qui a été importé.
  */
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -30,7 +35,7 @@ const asset = (file, alt = '') => ({
   ...(alt ? { alt } : {}),
 });
 
-const HOME_ID = 'page.accueil.fr';
+const HOME_ID = 'page-accueil-fr';
 
 const home = {
   _id: HOME_ID,
@@ -168,7 +173,7 @@ const siteSettings = {
 };
 
 const localizedSettings = {
-  _id: 'localizedSettings.fr',
+  _id: 'localizedSettings-fr',
   _type: 'localizedSettings',
   language: 'fr',
   siteTitle: 'Studio Abîme',

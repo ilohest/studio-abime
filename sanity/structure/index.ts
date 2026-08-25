@@ -76,7 +76,14 @@ async function homePageDocument(
       { locale },
     );
 
-  const fallbackId = locale === 'fr' ? 'page.accueil.fr' : `page.home.${locale}`;
+  /*
+    Jamais de point dans un identifiant figé : Sanity traite tout `_id` qui en
+    contient comme un chemin privé — le même mécanisme que `drafts.`. Le
+    document reste visible dans le Studio, mais l'API publique le renvoie vide
+    et la page n'existe pas sur le site. Des tirets, donc, ici comme dans
+    `sanity/seed/build-home.mjs`, qui doit produire le MÊME identifiant.
+  */
+  const fallbackId = locale === 'fr' ? 'page-accueil-fr' : `page-home-${locale}`;
 
   return S.document()
     .schemaType('page')
