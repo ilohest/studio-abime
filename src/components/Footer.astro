@@ -72,13 +72,9 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
             <ul class="flex flex-col gap-1">
               {social.map((item) => (
                 <li>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="underline-offset-2 hover:underline"
-                  >
-                    {item.platform}
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" class="footer-external">
+                    <span class="footer-external__label">{item.platform}</span>
+                    <span aria-hidden="true">↗</span>
                   </a>
                 </li>
               ))}
@@ -86,13 +82,9 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
           )
         }
 
-        <a
-          href={CREDIT.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline-offset-2 hover:underline"
-        >
-          {CREDIT.label}
+        <a href={CREDIT.href} target="_blank" rel="noopener noreferrer" class="footer-external">
+          <span class="footer-external__label">{CREDIT.label}</span>
+          <span aria-hidden="true">↗</span>
         </a>
 
         <LocaleSwitcher locale={locale} alternates={alternates} />
@@ -111,3 +103,26 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
     </div>
   </div>
 </footer>
+
+<style>
+  /*
+    Liens sortants du pied de page. Ils reprennent le signe de la page Contact :
+    une flèche oblique annonce qu'on quitte le site, et seul le libellé porte le
+    soulignement — la flèche reste un signe, pas un mot souligné.
+  */
+  .footer-external {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45em;
+    text-decoration: none;
+  }
+
+  .footer-external__label {
+    text-underline-offset: 2px;
+  }
+
+  .footer-external:hover .footer-external__label,
+  .footer-external:focus-visible .footer-external__label {
+    text-decoration: underline;
+  }
+</style>

@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '~/layouts/BaseLayout.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectGrid from '~/components/ProjectGrid.astro';
 import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer.astro';
 import LaboPageView from '~/components/LaboPage.astro';
 import ContactPage from '~/components/ContactPage.astro';
 import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro';
+import JournalIndex from '~/components/JournalIndex.astro';
+import JournalPost from '~/components/JournalPost.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
@@ -20,11 +21,24 @@ import {
   projectsPageQuery,
   laboPageQuery,
   laboArchiveProjectsQuery,
+  journalIndexQuery,
+  journalPageQuery,
+  postBySlugQuery,
 } from '~/lib/sanity/queries';
 import { getHomeFallback } from '~/content/homeFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
-import type { CategorySummary, LaboPage, Page, Project, ProjectCard, ProjectsPage } from '~/lib/sanity/types';
+import type {
+  CategorySummary,
+  JournalPage,
+  LaboPage,
+  Page,
+  Post,
+  PostCard,
+  Project,
+  ProjectCard,
+  ProjectsPage,
+} from '~/lib/sanity/types';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -69,6 +83,9 @@ let projects: ProjectCard[] = [];
 let categories: CategorySummary[] = [];
 let projectsPage: ProjectsPage | null = null;
 let laboPage: LaboPage | null = null;
+let journalPage: JournalPage | null = null;
+let posts: PostCard[] = [];
+let post: Post | null = null;
 
 if (route.kind === 'labo') {
   const [pageContent, latestProjects] = await Promise.all([
@@ -88,6 +105,20 @@ if (route.kind === 'labo') {
   if (laboPage.archiveProjects.length === 0 && latestProjects.length > 0) {
     laboPage = { ...laboPage, archiveProjects: latestProjects };
   }
+} else if (route.kind === 'journal') {
+  const [journalPosts, pageContent] = await Promise.all([
+    loadQuery<PostCard[]>({ query: journalIndexQuery, locale, fallback: [] }),
+    loadQuery<JournalPage | null>({ query: journalPageQuery, locale, fallback: null }),
+  ]);
+  posts = journalPosts;
+  journalPage = pageContent;
+} else if (route.kind === 'post') {
+  post = await loadQuery<Post | null>({
+    query: postBySlugQuery,
+    params: { slug: route.slug },
+    locale,
+    fallback: null,
+  });
 } else if (route.kind === 'contact') {
   // La page contact est une expérience de marque dédiée : son contenu essentiel
   // reste disponible même lorsque Sanity est momentanément indisponible.
@@ -125,16 +156,26 @@ if (route.kind === 'labo') {
 }
 
 // Contenu supprimé ou dépublié depuis la génération du manifeste.
-if (route.kind !== 'projectIndex' && route.kind !== 'contact' && !page && !project && !laboPage) {
+if (
+  route.kind !== 'projectIndex' &&
+  route.kind !== 'contact' &&
+  route.kind !== 'journal' &&
+  !page &&
+  !project &&
+  !post &&
+  !laboPage
+) {
   return Astro.rewrite('/404');
 }
 
 /* ── Métadonnées communes ─────────────────────────────────────────────────── */
 
-const document = project ?? page;
+const document = project ?? post ?? page;
 const alternates =
   route.kind === 'projectIndex'
     ? getStaticAlternates('projectIndex')
+    : route.kind === 'journal'
+      ? getStaticAlternates('journal')
     : route.kind === 'contact'
       ? getStaticAlternates('contact')
     : route.kind === 'labo'
@@ -151,14 +192,20 @@ const projectIndexTitle = !projectIndexTitleSource
     ? projectIndexTitleSource.replace(projectIndexTitleClean, t('nav.projects'))
     : projectIndexTitleSource;
 
+const journalTitle = journalPage?.title?.trim() || t('journal.title');
+
 const title =
   route.kind === 'projectIndex'
     ? projectIndexTitle
+    : route.kind === 'journal'
+      ? journalTitle
     : route.kind === 'contact'
       ? 'Contact'
     : route.kind === 'labo'
       ? (laboPage?.title ?? 'Le Labo')
       : (document?.title ?? site.localized?.siteTitle ?? '');
+
+const journalIntro = journalPage?.intro?.trim();
 
 const projectsIntro = projectsPage?.intro?.trim();
 const hasProjectBackground = Boolean(project?.backgroundImage?.asset);
@@ -192,11 +239,20 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
 <BaseLayout
   locale={locale}
   site={site}
-  seo={route.kind === 'projectIndex' ? projectsPage?.seo : route.kind === 'labo' ? laboPage?.seo : document?.seo}
+  seo={
+    route.kind === 'projectIndex'
+      ? projectsPage?.seo
+      : route.kind === 'journal'
+        ? journalPage?.seo
+        : route.kind === 'labo'
+          ? laboPage?.seo
+          : document?.seo
+  }
   title={title}
   bodyClass={[
     route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : '',
     route.kind === 'labo' ? 'page-labo' : '',
+    route.kind === 'journal' || route.kind === 'post' ? 'page-journal' : '',
     route.kind === 'contact' ? 'page-contact' : '',
     hasProjectBackground ? 'page-project-has-background' : '',
   ].filter(Boolean).join(' ')}
@@ -207,6 +263,20 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
   {project && <ProjectTemplateRenderer project={project} locale={locale} />}
 
   {laboPage && <LaboPageView page={laboPage} locale={locale} />}
+
+  {post && <JournalPost post={post} locale={locale} />}
+
+  {
+    route.kind === 'journal' && (
+      <JournalIndex
+        posts={posts}
+        locale={locale}
+        title={journalTitle}
+        number="03."
+        intro={journalIntro}
+      />
+    )
+  }
 
   {route.kind === 'contact' && <ContactPage />}
 
@@ -222,14 +292,11 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
           {projectsIntro && <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>}
         </header>
 
-        <ExperienceTransitionLab projects={projects} locale={locale} />
-
-        <ProjectGrid
+        <ExperienceTransitionLab
           projects={projects}
           categories={categories}
           locale={locale}
           editorialCards={projectsPage?.editorialCards ?? []}
-          showFilters
         />
       </div>
     )

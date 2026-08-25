@@ -1,6 +1,6 @@
 ---
 import Wordmark from '~/components/brand/Wordmark.astro';
-import { contactPath, laboPath, pagePath, projectsIndexPath } from '~/i18n/routes';
+import { contactPath, journalIndexPath, laboPath, pagePath, projectsIndexPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 const { locale, mode = 'page', homeHref = '/', class: className } = Astro.props;
 const laboHref = laboPath(locale);
 const experiencesHref = projectsIndexPath(locale);
-const journalHref = pagePath(locale, 'journal');
+const journalHref = journalIndexPath(locale);
 const shopHref = pagePath(locale, 'shop');
 const contactHref = contactPath(locale);
 const groups = [
@@ -43,7 +43,6 @@ const groups = [
     items: [
       { label: 'Cahier de recherche', href: `${journalHref}#cahier-de-recherche` },
       { label: 'Actualités', href: `${journalHref}#actualites` },
-      { label: 'Publications', href: `${journalHref}#publications` },
     ],
   },
   {

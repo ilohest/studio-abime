@@ -5,7 +5,7 @@ import {
   type DuplicateDocumentActionComponent,
 } from 'sanity';
 
-type ProjectDocument = {
+type SluggedDocument = {
   title?: string;
   slug?: { current?: string };
 };
@@ -21,13 +21,17 @@ function slugify(value: string) {
     .replace(/-+/g, '-');
 }
 
-/** Génère l'URL technique à la première publication, sans champ à gérer dans le Studio. */
-export const ProjectPublishAction: DocumentActionComponent = (props) => {
+/**
+ * Génère l'URL technique à la première publication, sans champ à gérer dans le
+ * Studio. Partagé par les projets et les articles du Journal : dans les deux
+ * cas, l'éditeur saisit un titre, jamais un slug.
+ */
+export const SlugOnPublishAction: DocumentActionComponent = (props) => {
   const { patch, publish } = useDocumentOperation(props.id, props.type);
   const [isPublishing, setIsPublishing] = useState(false);
-  const project = (props.draft ?? props.published) as ProjectDocument | null;
-  const existingSlug = project?.slug?.current;
-  const generatedSlug = project?.title ? slugify(project.title) : '';
+  const document = (props.draft ?? props.published) as SluggedDocument | null;
+  const existingSlug = document?.slug?.current;
+  const generatedSlug = document?.title ? slugify(document.title) : '';
 
   useEffect(() => {
     if (isPublishing && !props.draft) setIsPublishing(false);
@@ -48,21 +52,22 @@ export const ProjectPublishAction: DocumentActionComponent = (props) => {
   };
 };
 
-ProjectPublishAction.action = 'publish';
+SlugOnPublishAction.action = 'publish';
 
 /** Une copie doit recevoir sa propre URL lors de sa première publication. */
-export function createProjectDuplicateAction(
+export function createSlugAwareDuplicateAction(
   originalAction: DuplicateDocumentActionComponent,
+  { label, fallbackTitle }: { label: string; fallbackTitle: string },
 ): DuplicateDocumentActionComponent {
-  return function ProjectDuplicateAction(props) {
+  return function SlugAwareDuplicateAction(props) {
     const action = originalAction({
       ...props,
       mapDocument: ({ slug: _slug, title, ...document }) => ({
         ...document,
-        title: title ? `${title} — copie` : 'Projet sans titre — copie',
+        title: title ? `${title} — copie` : `${fallbackTitle} — copie`,
       }),
     });
 
-    return action ? { ...action, label: 'Dupliquer le projet' } : null;
+    return action ? { ...action, label } : null;
   };
 }

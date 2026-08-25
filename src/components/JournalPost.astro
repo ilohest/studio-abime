@@ -1,0 +1,237 @@
+---
+import JournalComposition from '~/components/journal/JournalComposition.astro';
+import SanityImage from '~/components/primitives/SanityImage.astro';
+
+import { journalIndexPath, postPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import { getJournalCategory } from '~/content/journalCategories';
+import { stegaClean } from '@sanity/client/stega';
+
+import { formatJournalStamp, postCategory, postFreeFacts } from '~/lib/journal';
+import type { Locale } from '~/i18n/config';
+import type { Post } from '~/lib/sanity/types';
+
+/**
+ * Article du Journal.
+ *
+ * La rubrique et la date sont annoncées une seule fois, en tête. La fiche
+ * détaillée appartient à la grille du Journal : la répéter ici ferait précéder
+ * la lecture d'un inventaire que le lecteur vient de traverser.
+ *
+ * Deux modèles, une seule saisie :
+ *
+ *  - « Article de revue »    — colonne de lecture étroite, figures réduites.
+ *    Le visuel de tête est lui aussi ramené à l'échelle d'une planche : un
+ *    article scientifique ne s'ouvre pas sur une image pleine largeur.
+ *
+ *  - « Planche illustrée »   — colonne plus large, visuel de tête déployé.
+ *
+ * Voir `JournalComposition.astro` pour l'appareil de notes et de figures.
+ */
+interface Props {
+  post: Post;
+  locale: Locale;
+}
+
+const { post, locale } = Astro.props;
+const t = useTranslations(locale);
+
+const template = stegaClean(post.template) === 'planche' ? 'planche' : 'revue';
+const category = getJournalCategory(postCategory(post));
+const dateStamp = formatJournalStamp(post.publishedAt);
+const dateIso = post.publishedAt?.slice(0, 10);
+
+const next = post.next ?? null;
+const nextCategory = next ? getJournalCategory(postCategory(next)) : null;
+const nextFacts = next
+  ? [
+      ...(nextCategory ? [{ key: 'category', label: t('journal.category'), value: nextCategory.title }] : []),
+      ...postFreeFacts(next),
+    ].slice(0, 4)
+  : [];
+---
+
+<article class="journal-post" data-template={template}>
+  <header class="journal-post__header container-content">
+    <a href={journalIndexPath(locale)} class="button-minimal journal-post__back">
+      <span class="button-minimal__label">{t('journal.backToJournal')}</span>
+      <span class="button-minimal__arrow journal-post__back-arrow" aria-hidden="true">↲</span>
+    </a>
+
+    <p class="journal-post__eyebrow type-sous-titre">
+      {category?.title}
+      {dateStamp && (
+        <>
+          <span aria-hidden="true"> — </span>
+          <time datetime={dateIso}>{dateStamp}</time>
+        </>
+      )}
+    </p>
+
+    <h1 class="journal-post__title type-titre text-balance" data-text-reveal>{post.title}</h1>
+
+    {post.standfirst && (
+      <p class="journal-post__standfirst type-annotation text-pretty" data-text-reveal>{post.standfirst}</p>
+    )}
+  </header>
+
+  {post.coverImage?.asset && (
+    <figure class="journal-post__cover container-wide">
+      <SanityImage
+        image={post.coverImage}
+        width={template === 'planche' ? 1600 : 1100}
+        sizes={template === 'planche' ? '(min-width: 1440px) 90rem, 100vw' : '(min-width: 1024px) 44rem, 90vw'}
+        loading="eager"
+        fetchpriority="high"
+        alt={post.coverImage.alt || post.title}
+        class="journal-post__cover-image"
+      />
+    </figure>
+  )}
+
+  <div class="journal-post__body container-wide">
+    <JournalComposition blocks={post.blocks} template={template} locale={locale} />
+  </div>
+
+  {next && (
+    <nav class="journal-post__next container-wide" aria-label={t('journal.next')}>
+      <p class="journal-post__next-caption" aria-hidden="true">{t('journal.next')}</p>
+
+      <a
+        href={postPath(locale, next.slug)}
+        class="project-catalog-card journal-post__next-card group"
+        aria-label={`${t('journal.next')} : ${next.title}`}
+      >
+        <header class="project-catalog-heading journal-post__next-heading">
+          <h3>{next.title}</h3>
+        </header>
+
+        {next.coverImage?.asset && (
+          <div class="project-catalog-media">
+            <SanityImage
+              image={next.coverImage}
+              width={640}
+              sizes="18rem"
+              alt={next.coverImage.alt || next.title}
+              class="project-catalog-image"
+            />
+          </div>
+        )}
+
+        {nextFacts.length > 0 && (
+          <dl class="project-catalog-facts">
+            {nextFacts.map((fact) => (
+              <div>
+                <dt>{fact.label}</dt>
+                <dd>{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </a>
+    </nav>
+  )}
+</article>
+
+<style>
+  /*
+    Le repère de marque et le bouton de menu sont fixés en haut de l'écran en
+    mobile : l'en-tête de l'article démarre donc sous eux, au même rythme que
+    l'index des Expériences.
+  */
+  .journal-post__header {
+    padding-top: clamp(var(--spacing-section), 8vw, 7.5rem);
+    padding-bottom: clamp(2rem, 5vw, 3.5rem);
+    text-align: center;
+  }
+
+  .journal-post__back {
+    margin-bottom: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .journal-post__back:hover .journal-post__back-arrow {
+    transform: translate(-0.18em, 0.1em);
+  }
+
+  .journal-post__eyebrow {
+    color: var(--color-muted);
+    font-size: clamp(0.8rem, 2.4vw, var(--text-sous-titre));
+    text-transform: uppercase;
+  }
+
+  /*
+    Un titre d'article est bien plus long qu'un nom de projet : la taille de
+    titre de la charte devient sa borne haute, atteinte dès qu'il y a la place.
+  */
+  .journal-post__title {
+    margin-top: clamp(1.2rem, 3vw, 2rem);
+    font-size: clamp(1.75rem, 5.5vw, var(--text-titre));
+  }
+
+  .journal-post__standfirst {
+    max-width: 34ch;
+    margin-inline: auto;
+    margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  /*
+    Un visuel au fond transparent laisserait paraître la couleur de la page à
+    travers l'image. La figure porte donc sa propre surface, comme les vignettes
+    de la grille.
+  */
+  .journal-post__cover {
+    background: var(--color-surface-alt);
+  }
+
+  /*
+    En modèle revue, le visuel de tête est une planche, pas une bannière : il
+    reste à l'échelle de la colonne de lecture, centré.
+  */
+  .journal-post[data-template='revue'] .journal-post__cover {
+    width: 100%;
+    max-width: 44rem;
+    margin-inline: auto;
+  }
+
+  .journal-post__cover-image {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .journal-post__body {
+    margin-top: clamp(3rem, 7vw, 5rem);
+  }
+
+  .journal-post__next {
+    display: grid;
+    justify-items: end;
+    padding-block: var(--spacing-section);
+    gap: 0.6rem;
+  }
+
+  .journal-post__next-caption {
+    font-family: var(--font-annotation);
+    font-size: 0.75rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    text-transform: lowercase;
+  }
+
+  .journal-post__next-card {
+    width: min(18rem, 100%);
+    min-height: 0;
+  }
+
+  .journal-post__next-heading {
+    display: block;
+    min-height: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .journal-post__back-arrow,
+    .journal-post__back:hover .journal-post__back-arrow {
+      transform: none;
+    }
+  }
+</style>

@@ -2,7 +2,6 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField, sameLanguageFilter } from '../../lib/i18n';
 import { definePageBuilder } from '../objects/sections';
 import { PROJECT_TEMPLATES } from '../../lib/projectTemplates';
-
 /**
  * Projet du portfolio.
  *

@@ -4,12 +4,14 @@ import type { SchemaTypeDefinition } from 'sanity';
 import { page } from './documents/page';
 import { project } from './documents/project';
 import { category } from './documents/category';
+import { post } from './documents/post';
 
 // Singletons
 import { siteSettings } from './singletons/siteSettings';
 import { localizedSettings } from './singletons/localizedSettings';
 import { projectsPage } from './singletons/projectsPage';
 import { laboPage } from './singletons/laboPage';
+import { journalPage } from './singletons/journalPage';
 
 // Objets réutilisables
 import { link } from './objects/link';
@@ -17,6 +19,7 @@ import { seo } from './objects/seo';
 import { richText, inlineImage } from './objects/richText';
 import { projectTemplateOptions } from './objects/projectTemplateOptions';
 import { sectionTypes } from './objects/sections';
+import { journalBlockTypes } from './objects/journalBlocks';
 
 /**
  * Registre unique des schémas.
@@ -27,12 +30,14 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   page,
   project,
   category,
+  post,
 
   // Singletons
   siteSettings,
   localizedSettings,
   projectsPage,
   laboPage,
+  journalPage,
 
   // Objets
   link,
@@ -43,4 +48,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
 
   // Sections du page builder
   ...sectionTypes,
+
+  // Blocs de composition d'un article du Journal
+  ...journalBlockTypes,
 ];

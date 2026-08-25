@@ -22,9 +22,11 @@ export const TRANSLATED_DOCUMENT_TYPES = [
   'page',
   'project',
   'category',
+  'post',
   'localizedSettings',
   'projectsPage',
   'laboPage',
+  'journalPage',
 ] as const;
 
 /** Configuration attendue par le plugin document-internationalization. */

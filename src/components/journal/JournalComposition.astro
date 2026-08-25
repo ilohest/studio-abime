@@ -1,0 +1,140 @@
+---
+import PortableText from '~/components/primitives/PortableText.astro';
+import JournalFigure from '~/components/journal/JournalFigure.astro';
+
+import { toJournalRows } from '~/lib/journal';
+import type { Locale } from '~/i18n/config';
+import type { JournalBlock, PostTemplate } from '~/lib/sanity/types';
+
+/**
+ * Corps d'un article du Journal.
+ *
+ * Deux colonnes : la lecture, et l'appareil — notes numérotées et figures de
+ * marge, tenus EN FACE du passage qu'ils commentent. C'est la page d'une revue
+ * savante, où le texte court sans être interrompu et où tout le reste se lit
+ * dans le blanc de la marge.
+ *
+ * Le modèle ne change que deux mesures : la largeur de la colonne de lecture
+ * et l'échelle par défaut des figures. Le contenu, lui, est identique.
+ */
+interface Props {
+  blocks: JournalBlock[];
+  template: PostTemplate;
+  locale: Locale;
+}
+
+const { blocks, template, locale } = Astro.props;
+const rows = toJournalRows(blocks);
+---
+
+<div class="journal-composition" data-template={template}>
+  {
+    rows.map((row) => (
+      <div class="journal-row">
+        <div class="journal-row__main">
+          {row.main?._type === 'journalProse' && (
+            <PortableText value={row.main.body} locale={locale} class="journal-prose" />
+          )}
+
+          {row.mainFigure && <JournalFigure figure={row.mainFigure} />}
+        </div>
+
+        {row.aside.length > 0 && (
+          <aside class="journal-row__aside">
+            {row.aside.map((entry) =>
+              entry._type === 'journalNote' ? (
+                <p class="journal-note">
+                  <span class="journal-note__index">[{entry.index}]</span>
+                  {entry.text}
+                </p>
+              ) : (
+                <JournalFigure figure={entry} variant="marge" />
+              ),
+            )}
+          </aside>
+        )}
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .journal-composition {
+    --journal-measure: 34rem;
+    --journal-aside: 11rem;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2rem, 4vw, 3.25rem);
+  }
+
+  /* La planche illustrée respire davantage : la colonne s'élargit avec elle. */
+  .journal-composition[data-template='planche'] {
+    --journal-measure: 44rem;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .journal-row {
+    display: grid;
+    grid-template-columns: minmax(0, var(--journal-measure)) var(--journal-aside);
+    column-gap: clamp(1.5rem, 3vw, 2.75rem);
+    row-gap: 1.25rem;
+    align-items: start;
+    justify-content: center;
+  }
+
+  .journal-row__main {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .journal-row__aside {
+    display: flex;
+    grid-column: 2;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+    /* La marge accompagne la lecture au lieu de la devancer. */
+    padding-top: 0.35rem;
+  }
+
+  .journal-note {
+    color: var(--color-muted);
+    font-family: var(--font-annotation);
+    font-size: 0.8rem;
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    line-height: 1.4;
+    text-wrap: pretty;
+  }
+
+  /* L'appel de note reste droit et monospacé : c'est un renvoi, pas une phrase. */
+  .journal-note__index {
+    margin-right: 0.4em;
+    font-family: var(--font-titre);
+    font-size: 0.78em;
+    font-style: normal;
+    letter-spacing: var(--tracking-copy);
+  }
+
+  /*
+    Sous 1024 px, la marge n'a plus de place où se tenir. L'appareil repasse
+    sous le texte qu'il commente, séparé par un filet — la note de bas de page
+    plutôt que la note de marge.
+  */
+  @media (max-width: 1023px) {
+    .journal-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .journal-row__main,
+    .journal-row__aside {
+      grid-column: 1;
+    }
+
+    .journal-row__aside {
+      max-width: var(--journal-measure);
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--color-line);
+    }
+  }
+</style>

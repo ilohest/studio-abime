@@ -10,13 +10,23 @@
  * aucune modification de l'arborescence `src/pages/`.
  */
 import { defaultLocale, isLocale, locales, prefixDefaultLocale, type Locale } from '~/i18n/config';
-import { contactPath, getSegment, laboPath, localizedPath, pagePath, projectPath, projectsIndexPath } from '~/i18n/routes';
+import {
+  contactPath,
+  getSegment,
+  journalIndexPath,
+  laboPath,
+  localizedPath,
+  pagePath,
+  postPath,
+  projectPath,
+  projectsIndexPath,
+} from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { routeManifestQuery } from './sanity/queries';
 import type { ResolvedLink, RouteEntry, SanityLink } from './sanity/types';
 
 interface RouteManifestResponse {
-  documents: Array<{ _type: 'page' | 'project'; slug: string; language: Locale }>;
+  documents: Array<{ _type: 'page' | 'project' | 'post'; slug: string; language: Locale }>;
   homePages: Array<{ language: Locale; slug: string | null }>;
 }
 
@@ -41,6 +51,7 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
     routes.push({ kind: 'home', locale, path: localizedPath(locale) });
     routes.push({ kind: 'labo', locale, path: laboPath(locale) });
     routes.push({ kind: 'contact', locale, path: contactPath(locale) });
+    routes.push({ kind: 'journal', locale, path: journalIndexPath(locale) });
     routes.push({ kind: 'projectIndex', locale, path: projectsIndexPath(locale) });
   }
 
@@ -54,6 +65,16 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
         kind: 'project',
         locale: doc.language,
         path: projectPath(doc.language, doc.slug),
+        slug: doc.slug,
+      });
+      continue;
+    }
+
+    if (doc._type === 'post') {
+      routes.push({
+        kind: 'post',
+        locale: doc.language,
+        path: postPath(doc.language, doc.slug),
         slug: doc.slug,
       });
       continue;
@@ -106,13 +127,21 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return rest.length === 1 ? { kind: 'labo', locale, path } : null;
   }
 
-  // 4. Contact : expérience dédiée, indépendante du page builder.
+  // 4. Journal : index éditorial + article. Même forme que la section portfolio.
+  const journalSegment = getSegment('journal', locale);
+  if (rest[0] === journalSegment) {
+    if (rest.length === 1) return { kind: 'journal', locale, path };
+    if (rest.length === 2) return { kind: 'post', locale, path, slug: rest[1]! };
+    return null;
+  }
+
+  // 5. Contact : expérience dédiée, indépendante du page builder.
   const contactSegment = getSegment('contact', locale);
   if (rest[0] === contactSegment) {
     return rest.length === 1 ? { kind: 'contact', locale, path } : null;
   }
 
-  // 5. Section portfolio (segment traduit par langue).
+  // 6. Section portfolio (segment traduit par langue).
   const projectsSegment = getSegment('projects', locale);
   if (rest[0] === projectsSegment) {
     if (rest.length === 1) return { kind: 'projectIndex', locale, path };
@@ -120,7 +149,7 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return null;
   }
 
-  // 6. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
+  // 7. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
   //    (`agence/equipe`) : on le reconstruit tel quel.
   return { kind: 'page', locale, path, slug: rest.join('/') };
 }
@@ -142,16 +171,21 @@ export function resolveLink(link: SanityLink | undefined | null, locale: Locale)
     const targetLocale = isLocale(target.language) ? target.language : locale;
 
     /*
-      La page Expériences n'a pas de slug : son URL est une route calculée par
-      langue (`/experiences`, `/en/work`). Les autres cibles passent par leur slug.
+      Les pages Expériences et Journal n'ont pas de slug : leur URL est une
+      route calculée par langue (`/experiences`, `/en/work`, `/journal`). Les
+      autres cibles passent par leur slug.
     */
     const href =
       target._type === 'projectsPage'
         ? projectsIndexPath(targetLocale)
+        : target._type === 'journalPage'
+          ? journalIndexPath(targetLocale)
         : target.slug
           ? target._type === 'project'
             ? projectPath(targetLocale, target.slug)
-            : pagePath(targetLocale, target.slug)
+            : target._type === 'post'
+              ? postPath(targetLocale, target.slug)
+              : pagePath(targetLocale, target.slug)
           : null;
 
     if (href) {

@@ -1,7 +1,16 @@
 import { defineDocuments, defineLocations } from 'sanity/presentation';
 import type { PresentationPluginOptions } from 'sanity/presentation';
 import { defaultLocale, isLocale, locales } from '../../src/i18n/config';
-import { getSegment, laboPath, localizedPath, pagePath, projectPath, projectsIndexPath } from '../../src/i18n/routes';
+import {
+  getSegment,
+  journalIndexPath,
+  laboPath,
+  localizedPath,
+  pagePath,
+  postPath,
+  projectPath,
+  projectsIndexPath,
+} from '../../src/i18n/routes';
 
 /**
  * Câblage du Presentation Tool ↔ routes du site.
@@ -49,6 +58,27 @@ const locations: PresentationPluginOptions['resolve'] = {
       },
     }),
 
+    post: defineLocations({
+      select: { title: 'title', slug: 'slug.current', language: 'language' },
+      resolve: (doc: Selected | null) => {
+        if (!doc?.slug) return null;
+        const locale = toLocale(doc.language);
+        return {
+          locations: [
+            { title: doc.title || 'Article', href: postPath(locale, doc.slug) },
+            { title: 'Tout le Journal', href: journalIndexPath(locale) },
+          ],
+        };
+      },
+    }),
+
+    journalPage: defineLocations({
+      select: { language: 'language' },
+      resolve: (doc: Selected | null) => ({
+        locations: [{ title: 'Page Journal', href: journalIndexPath(toLocale(doc?.language)) }],
+      }),
+    }),
+
     category: defineLocations({
       select: { title: 'title', language: 'language' },
       resolve: (doc: Selected | null) => ({
@@ -87,8 +117,19 @@ const locations: PresentationPluginOptions['resolve'] = {
       const prefix = localizedPath(locale) === '/' ? '' : `/${locale}`;
       const projects = getSegment('projects', locale);
       const labo = getSegment('labo', locale);
+      const journal = getSegment('journal', locale);
 
       return [
+        {
+          route: `${prefix}/${journal}`,
+          filter: `_type == "journalPage" && language == $language`,
+          params: { language: locale },
+        },
+        {
+          route: `${prefix}/${journal}/:slug`,
+          filter: `_type == "post" && slug.current == $slug && language == $language`,
+          params: { language: locale },
+        },
         {
           route: `${prefix}/${labo}`,
           filter: `_type == "laboPage" && language == $language`,

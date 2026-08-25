@@ -66,6 +66,19 @@ const PROJECT_CARD = /* groq */ `{
   "categories": coalesce(categories[]->${CATEGORY}, [])
 }`;
 
+/** Carte d'article du Journal. */
+const POST_CARD = /* groq */ `{
+  _id,
+  title,
+  "slug": slug.current,
+  language,
+  "category": coalesce(category, "cahier-de-recherche"),
+  "publishedAt": coalesce(publishedAt, _createdAt),
+  excerpt,
+  listingFacts[]{ _key, label, value },
+  "coverImage": coverImage ${IMAGE}
+}`;
+
 const PORTABLE_TEXT = /* groq */ `[]{
   ...,
   markDefs[]{
@@ -188,7 +201,7 @@ export const localizedSettingsQuery = /* groq */ `
  * Alimente `getStaticPaths()` — c'est la SEULE requête non filtrée par langue.
  */
 export const routeManifestQuery = /* groq */ `{
-  "documents": *[_type in ["page", "project"] && defined(slug.current)]{
+  "documents": *[_type in ["page", "project", "post"] && defined(slug.current)]{
     _type,
     "slug": slug.current,
     language
@@ -318,3 +331,80 @@ export const translationsQuery = /* groq */ `
     language,
     "slug": slug.current
   }`;
+
+/* -------------------------------------------------------------------------- */
+/* Journal                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Index du Journal : tous les articles de la langue, du plus récent au plus
+ * ancien. Le filtrage par rubrique se fait côté client — l'ordre chronologique
+ * reste donc la vue par défaut, y compris sans JavaScript.
+ */
+export const journalIndexQuery = /* groq */ `
+*[_type == "post" && language == $locale && defined(slug.current)]
+  | order(coalesce(publishedAt, _createdAt) desc, _createdAt desc) ${POST_CARD}`;
+
+/** Contenu éditorial de la page Journal, singleton propre à chaque langue. */
+export const journalPageQuery = /* groq */ `
+*[_type == "journalPage" && language == $locale][0]{
+  _id,
+  _type,
+  language,
+  title,
+  intro,
+  seo ${SEO}
+}`;
+
+/**
+ * Article complet.
+ *
+ * `blocks` porte la composition. Quand elle est vide, l'ancien corps de texte
+ * y est replié dans un unique bloc « Texte » : le rendu n'a donc qu'une seule
+ * forme à connaître, et aucun article écrit avant les blocs n'est amputé.
+ */
+export const postBySlugQuery = /* groq */ `
+*[_type == "post" && language == $locale && slug.current == $slug][0]{
+  _id,
+  _type,
+  language,
+  title,
+  "slug": slug.current,
+  "category": coalesce(category, "cahier-de-recherche"),
+  "publishedAt": coalesce(publishedAt, _createdAt),
+  standfirst,
+  excerpt,
+  listingFacts[]{ _key, label, value },
+  "coverImage": coverImage ${IMAGE},
+  "template": coalesce(template, "revue"),
+  "blocks": select(
+    count(blocks) > 0 => blocks[]{
+      _key,
+      _type,
+      _type == "journalProse" => { "body": body ${PORTABLE_TEXT} },
+      _type == "journalFigure" => {
+        caption,
+        "placement": coalesce(placement, "texte"),
+        "scale": coalesce(scale, "colonne"),
+        "images": images[] ${IMAGE}
+      },
+      _type == "journalNote" => { text }
+    },
+    count(body) > 0 => [{
+      "_key": "legacy-body",
+      "_type": "journalProse",
+      "body": body ${PORTABLE_TEXT}
+    }],
+    []
+  ),
+  "seo": {
+    "title": seo.title,
+    "description": coalesce(seo.description, excerpt),
+    "image": coalesce(seo.image ${IMAGE}, coverImage ${IMAGE}),
+    "noIndex": false
+  },
+  "next": *[
+    _type == "post" && language == $locale && defined(slug.current) && _id != ^._id &&
+    coalesce(publishedAt, _createdAt) < coalesce(^.publishedAt, ^._createdAt)
+  ] | order(coalesce(publishedAt, _createdAt) desc)[0] ${POST_CARD}
+}`;

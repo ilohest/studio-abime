@@ -122,6 +122,24 @@
   }
 
   /*
+    Journal : sœur de la page Expériences, mais sur le second accent de la
+    palette. Le Ciel distingue la section éditoriale du portfolio sans sortir
+    de la charte — la trame, les fiches et la typographie restent les mêmes.
+  */
+  body.page-journal,
+  body.page-journal > main,
+  body.page-journal > footer,
+  body.page-journal [data-page-rail] {
+    background-color: var(--color-ciel);
+  }
+
+  body.page-journal ::selection,
+  body.page-journal::selection {
+    background-color: var(--color-lumiere);
+    color: var(--color-ink);
+  }
+
+  /*
    * Une page projet avec image fixe partage le même fond sur toute la largeur
    * du viewport. Le rail ne doit donc ajouter aucune couche colorée : lorsque
    * son opacité baisse au survol du contenu, seul son texte s'atténue et aucune
@@ -836,6 +854,30 @@
 
   .project-index .project-catalog-diagonal {
     color: var(--project-card-line-color);
+  }
+
+  /*
+   * Grille du Journal : même trame que la page Expériences, recalée sur le
+   * fond Ciel. Seules les couleurs dérivées du fond changent — les croix de
+   * construction sont peintes par mélange avec la surface.
+   */
+  .journal-index .project-catalog-item {
+    --project-card-cross-color: color-mix(
+      in srgb,
+      var(--color-ink) 72%,
+      var(--color-ciel)
+    );
+  }
+
+  /*
+   * La cote de date remplace les initiales du projet : elle doit rester sur
+   * une seule ligne, quel que soit le format de la fiche.
+   */
+  .journal-index .project-catalog-symbol {
+    font-size: clamp(1.4rem, 2.2vw, 2.2rem);
+    letter-spacing: -0.05em;
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
 
   .project-index .project-catalog-item::before {

@@ -1,0 +1,138 @@
+---
+import { stegaClean } from '@sanity/client/stega';
+
+import SanityImage from '~/components/primitives/SanityImage.astro';
+import type { JournalFigureView } from '~/lib/journal';
+
+/**
+ * Figure d'article : une à trois images sous une légende numérotée.
+ *
+ * L'échelle est portée par une variable et non par une classe par cas : la
+ * même figure se compose donc à l'identique dans la colonne de lecture et dans
+ * la marge, seule sa largeur change.
+ */
+interface Props {
+  figure: JournalFigureView;
+  /** En marge, les images sont servies bien plus petites. */
+  variant?: 'texte' | 'marge';
+}
+
+const { figure, variant = 'texte' } = Astro.props;
+/*
+  L'échelle pilote un sélecteur d'attribut : elle doit être nettoyée des
+  marqueurs invisibles du stega, sans quoi aucune règle ne s'applique en mode
+  édition visuelle et toutes les figures retombent sur la valeur par défaut.
+*/
+const scale = stegaClean(figure.scale) || 'colonne';
+const images = (figure.images ?? []).filter((image) => image?.asset);
+const width = variant === 'marge' ? 420 : 1100;
+const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
+---
+
+{
+  images.length > 0 && (
+    <figure class:list={['journal-figure', `journal-figure--${variant}`]} data-scale={scale}>
+      <div class="journal-figure__plate" data-count={images.length}>
+        {images.map((image) => (
+          <SanityImage
+            image={image}
+            width={width}
+            sizes={sizes}
+            alt={image.alt ?? ''}
+            class="journal-figure__image"
+          />
+        ))}
+      </div>
+
+      {figure.caption && (
+        <figcaption class="journal-figure__caption">
+          {figure.label && <span class="journal-figure__label">{figure.label}</span>}
+          {figure.caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
+<style>
+  .journal-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin: 0;
+  }
+
+  /*
+    L'image d'un article scientifique n'occupe pas la mesure du texte : elle
+    est citée, pas exposée. L'échelle se lit donc en fraction de la colonne.
+  */
+  .journal-figure--texte {
+    width: 100%;
+    max-width: var(--figure-width, 72%);
+  }
+
+  .journal-figure--texte[data-scale='petite'] {
+    --figure-width: 46%;
+  }
+
+  .journal-figure--texte[data-scale='colonne'] {
+    --figure-width: 72%;
+  }
+
+  .journal-figure--texte[data-scale='pleine'] {
+    --figure-width: 100%;
+  }
+
+  .journal-figure--marge {
+    width: 100%;
+  }
+
+  .journal-figure__plate {
+    display: grid;
+    gap: 0.5rem;
+    align-items: end;
+  }
+
+  .journal-figure__plate[data-count='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journal-figure__plate[data-count='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .journal-figure__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--color-surface-alt);
+  }
+
+  .journal-figure__caption {
+    font-family: var(--font-annotation);
+    font-size: clamp(0.8rem, 0.95vw, 0.95rem);
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  /* Le numéro de planche reste romain et droit : c'est une cote, pas du texte. */
+  .journal-figure__label {
+    margin-right: 0.4em;
+    font-family: var(--font-titre);
+    font-size: 0.85em;
+    font-style: normal;
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .journal-figure--marge .journal-figure__caption {
+    font-size: 0.75rem;
+  }
+
+  @media (max-width: 767px) {
+    .journal-figure--texte {
+      max-width: 100%;
+    }
+  }
+</style>

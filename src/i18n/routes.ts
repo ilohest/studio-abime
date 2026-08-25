@@ -12,6 +12,7 @@ import { defaultLocale, prefixDefaultLocale, type Locale } from './config';
 export const routeSegments = {
   projects: { fr: 'experiences', en: 'work', nl: 'werk', de: 'arbeiten' },
   labo: { fr: 'labo', en: 'lab', nl: 'lab', de: 'labor' },
+  journal: { fr: 'journal', en: 'journal', nl: 'journaal', de: 'journal' },
   contact: { fr: 'contact', en: 'contact', nl: 'contact', de: 'kontakt' },
 } satisfies Record<string, Record<string, string>>;
 
@@ -51,6 +52,16 @@ export function projectsIndexPath(locale: Locale): string {
 /** URL de la page Labo, route éditoriale structurée et localisée. */
 export function laboPath(locale: Locale): string {
   return localizedPath(locale, getSegment('labo', locale));
+}
+
+/** URL de l'index du Journal pour une langue. */
+export function journalIndexPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('journal', locale));
+}
+
+/** URL d'un article du Journal. */
+export function postPath(locale: Locale, slug: string): string {
+  return localizedPath(locale, getSegment('journal', locale), slug);
 }
 
 /** URL de la page Contact, expérience dédiée et localisée. */

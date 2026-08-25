@@ -11,6 +11,7 @@
 import type { PortableTextBlock } from '@portabletext/types';
 import type { ImageMetadata } from 'astro';
 import type { Locale } from '~/i18n/config';
+import type { JournalCategory } from '~/content/journalCategories';
 
 export type { PortableTextBlock };
 
@@ -47,7 +48,7 @@ export interface SanityLink {
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
-    _type: 'page' | 'project' | 'projectsPage' | 'laboPage';
+    _type: 'page' | 'project' | 'post' | 'projectsPage' | 'laboPage' | 'journalPage';
     title?: string;
     slug?: string;
     language?: Locale;
@@ -327,6 +328,76 @@ export interface ProjectsPage {
   seo?: Seo;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Journal                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Article tel qu'il apparaît dans la grille du Journal. */
+export interface PostCard {
+  _id: string;
+  title: string;
+  slug: string;
+  language: Locale;
+  category: JournalCategory;
+  /** Date de publication, au format ISO (`2026-08-25`). */
+  publishedAt: string;
+  excerpt?: string;
+  /** Lignes libres de la fiche, saisies par l'éditeur (jusqu'à 5). */
+  listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
+  coverImage?: SanityImage | null;
+}
+
+/** Modèles de page d'un article. Voir `src/components/JournalPost.astro`. */
+export type PostTemplate = 'revue' | 'planche';
+
+/** Texte courant de l'article. */
+export interface JournalProse {
+  _key: string;
+  _type: 'journalProse';
+  body: PortableTextBlock[];
+}
+
+/** Une à trois images côte à côte, sous une légende commune. */
+export interface JournalFigure {
+  _key: string;
+  _type: 'journalFigure';
+  images: SanityImage[];
+  caption?: string;
+  /** `marge` place la figure à côté du texte, en tout petit. */
+  placement: 'texte' | 'marge';
+  scale: 'petite' | 'colonne' | 'pleine';
+}
+
+/** Note numérotée, renvoyée en marge du texte qui la précède. */
+export interface JournalNote {
+  _key: string;
+  _type: 'journalNote';
+  text: string;
+}
+
+export type JournalBlock = JournalProse | JournalFigure | JournalNote;
+
+export interface Post extends PostCard {
+  _type: 'post';
+  standfirst?: string;
+  template: PostTemplate;
+  /** Composition de l'article. L'ancienne saisie y est repliée par la requête. */
+  blocks: JournalBlock[];
+  seo?: Seo;
+  /** Article suivant dans l'ordre chronologique décroissant. */
+  next?: PostCard | null;
+}
+
+/** Contenu éditorial de l'index du Journal (singleton par langue). */
+export interface JournalPage {
+  _id: string;
+  _type: 'journalPage';
+  language: Locale;
+  title: string;
+  intro?: string;
+  seo?: Seo;
+}
+
 export interface LaboService {
   _key: string;
   title: string;
@@ -394,4 +465,6 @@ export type RouteEntry =
   | { kind: 'contact'; locale: Locale; path: string }
   | { kind: 'page'; locale: Locale; path: string; slug: string }
   | { kind: 'projectIndex'; locale: Locale; path: string }
-  | { kind: 'project'; locale: Locale; path: string; slug: string };
+  | { kind: 'project'; locale: Locale; path: string; slug: string }
+  | { kind: 'journal'; locale: Locale; path: string }
+  | { kind: 'post'; locale: Locale; path: string; slug: string };

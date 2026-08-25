@@ -1,0 +1,108 @@
+---
+import JournalExplorer from '~/components/vue/JournalExplorer.vue';
+
+import { JOURNAL_CATEGORIES } from '~/content/journalCategories';
+import { useTranslations } from '~/i18n/ui';
+import { toJournalCategoryViews, toPostCardView } from '~/lib/journal';
+import type { Locale } from '~/i18n/config';
+import type { PostCard } from '~/lib/sanity/types';
+
+/**
+ * Index du Journal.
+ *
+ * Même trame que la page Expériences : un titre numéroté centré, puis la
+ * grille-catalogue. Ce qui change est la matière — des articles datés plutôt
+ * que des projets — et la sélection : deux rubriques, ou l'ordre chronologique
+ * complet, qui reste la vue par défaut.
+ */
+interface Props {
+  posts: PostCard[];
+  locale: Locale;
+  title: string;
+  number: string;
+  intro?: string;
+}
+
+const { posts, locale, title, number, intro } = Astro.props;
+const t = useTranslations(locale);
+
+const postViews = posts.map((post, index) =>
+  toPostCardView(post, locale, index, t('journal.category')),
+);
+const categoryViews = toJournalCategoryViews(postViews);
+---
+
+<div class="journal-index project-index container-wide py-(--spacing-section)">
+  <header class="project-index__header">
+    <h1 class="project-index__title type-titre text-balance" data-text-reveal>
+      {number} {title}
+    </h1>
+    {intro && <p class="project-index__intro type-copy text-pretty">{intro}</p>}
+  </header>
+
+  {/*
+    Cibles des liens de rubrique du menu latéral (`/journal#cahier-de-recherche`).
+    Elles vivent hors de l'îlot Vue pour rester stables au fil des rendus, et
+    amènent le lecteur sur les filtres plutôt qu'en haut de page.
+  */}
+  <div class="journal-index__anchors" aria-hidden="true">
+    {JOURNAL_CATEGORIES.map((category) => <span id={category.value}></span>)}
+  </div>
+
+  <JournalExplorer
+    client:visible
+    posts={postViews}
+    categories={categoryViews}
+    queryParam="rubrique"
+    labels={{
+      all: t('journal.all'),
+      filterBy: t('journal.filterBy'),
+      empty: t('journal.empty'),
+      emptyAll: t('journal.emptyAll'),
+      count: t('journal.count'),
+      read: t('journal.read'),
+    }}
+  />
+</div>
+
+<style>
+  .project-index__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  .project-index__title {
+    text-align: center;
+  }
+
+  .project-index__intro {
+    max-width: 76rem;
+    margin-top: clamp(5.5rem, 12vw, 12rem);
+    margin-inline: auto;
+    text-indent: clamp(7rem, 20vw, 22rem);
+  }
+
+  /*
+    Les ancres ne portent aucun contenu : elles ne servent qu'à donner un point
+    d'arrivée au défilement, légèrement au-dessus de la barre de filtres.
+  */
+  .journal-index__anchors {
+    position: relative;
+  }
+
+  .journal-index__anchors span {
+    position: absolute;
+    top: calc(var(--spacing-section) * -0.5);
+    scroll-margin-top: 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .project-index__header {
+      margin-bottom: 3rem;
+    }
+
+    .project-index__intro {
+      margin-top: 4rem;
+      text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
+  }
+</style>

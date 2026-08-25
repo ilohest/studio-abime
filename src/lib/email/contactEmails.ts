@@ -1,3 +1,5 @@
+import wordmarkDataUrl from '~/assets/email/wordmark.png?inline';
+
 export interface ContactSubmission {
   fullName: string;
   contact: string;
@@ -13,6 +15,15 @@ export interface ContactEmail {
   subject: string;
   text: string;
   html: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    content_id: string;
+  }>;
+}
+
+interface EmailShellOptions {
+  confirmation?: boolean;
 }
 
 const phaseLabels: Record<string, string> = {
@@ -32,31 +43,48 @@ const escapeHtml = (value: string) =>
 
 const withLineBreaks = (value: string) => escapeHtml(value).replaceAll('\n', '<br>');
 
-const emailShell = (preheader: string, content: string) => `<!doctype html>
+const wordmarkBase64 = wordmarkDataUrl.slice(wordmarkDataUrl.indexOf(',') + 1);
+
+const emailShell = (
+  preheader: string,
+  content: string,
+  { confirmation = false }: EmailShellOptions = {},
+) => {
+  const fontFamily = confirmation
+    ? "'Courier New',Courier,monospace"
+    : "Georgia,'Times New Roman',serif";
+  const header = confirmation
+    ? '<img src="cid:studio-abime-wordmark" width="230" alt="Studio Abîme — Labo de Com." style="display:block;width:230px;max-width:60%;height:auto;border:0;">'
+    : 'Studio Abîme';
+  const contentBorder = confirmation ? '' : 'border-top:1px solid #bdb9b1;';
+  const footerBorder = confirmation ? '' : 'border-top:1px solid #bdb9b1;';
+  const contentSize = confirmation ? '15px' : '17px';
+
+  return `<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Studio Abîme</title>
   </head>
-  <body style="margin:0;background:#efebe2;color:#2d2a29;font-family:Georgia,'Times New Roman',serif;">
+  <body style="margin:0;background:#efebe2;color:#2d2a29;font-family:${fontFamily};">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</div>
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#efebe2;">
       <tr>
         <td align="center" style="padding:32px 16px;">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;">
             <tr>
-              <td style="padding:0 0 30px;font-family:'Courier New',monospace;font-size:20px;letter-spacing:.04em;text-transform:uppercase;">
-                Studio Abîme
+              <td style="padding:0 0 26px;font-family:'Courier New',Courier,monospace;font-size:20px;letter-spacing:.04em;text-transform:uppercase;">
+                ${header}
               </td>
             </tr>
             <tr>
-              <td style="border-top:1px solid #bdb9b1;padding:30px 0;font-size:17px;line-height:1.55;">
+              <td style="${contentBorder}padding:26px 0;font-family:${fontFamily};font-size:${contentSize};line-height:1.55;">
                 ${content}
               </td>
             </tr>
             <tr>
-              <td style="border-top:1px solid #bdb9b1;padding:22px 0 0;color:#66615d;font-family:'Courier New',monospace;font-size:12px;line-height:1.5;">
+              <td style="${footerBorder}padding:22px 0 0;color:#66615d;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.5;">
                 studio-abime.com · elodie@studioabime.com
               </td>
             </tr>
@@ -66,6 +94,7 @@ const emailShell = (preheader: string, content: string) => `<!doctype html>
     </table>
   </body>
 </html>`;
+};
 
 const submissionEntries = (submission: ContactSubmission) => [
   ['Nom & prénom', submission.fullName],
@@ -125,9 +154,17 @@ elodie@studioabime.com`;
     text,
     html: emailShell(
       'Votre message est bien arrivé au Studio.',
-      `<p style="margin:0 0 24px;">Bonjour ${escapeHtml(submission.fullName)},</p>
-       <p style="margin:0 0 24px;font-family:'Courier New',monospace;font-size:21px;line-height:1.35;">Nous avons bien reçu votre message, merci.</p>
+      `<p style="margin:0 0 20px;">Bonjour ${escapeHtml(submission.fullName)},</p>
+       <p style="margin:0 0 20px;">Nous avons bien reçu votre message, merci.</p>
        <p style="margin:0;">Parfois quelques jours, parfois un peu plus quand un projet en cours demande toute notre attention. Si vous êtes sans nouvelles au bout de deux semaines, votre message s’est perdu quelque part&nbsp;: réécrivez-nous sans hésiter.</p>`,
+      { confirmation: true },
     ),
+    attachments: [
+      {
+        content: wordmarkBase64,
+        filename: 'studio-abime-wordmark.png',
+        content_id: 'studio-abime-wordmark',
+      },
+    ],
   };
 };

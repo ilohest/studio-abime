@@ -1,10 +1,19 @@
 import { isLocale, locales, type Locale } from '~/i18n/config';
-import { contactPath, pagePath, projectPath, projectsIndexPath, laboPath, localizedPath } from '~/i18n/routes';
+import {
+  contactPath,
+  journalIndexPath,
+  laboPath,
+  localizedPath,
+  pagePath,
+  postPath,
+  projectPath,
+  projectsIndexPath,
+} from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
 
 interface Translation {
-  _type: 'page' | 'project';
+  _type: 'page' | 'project' | 'post';
   language: Locale;
   slug: string | null;
 }
@@ -36,14 +45,18 @@ export async function getDocumentAlternates(
     alternates[translation.language] =
       translation._type === 'project'
         ? projectPath(translation.language, translation.slug)
-        : pagePath(translation.language, translation.slug);
+        : translation._type === 'post'
+          ? postPath(translation.language, translation.slug)
+          : pagePath(translation.language, translation.slug);
   }
 
   return alternates;
 }
 
 /** Alternates des routes générées par le code (accueil, index portfolio). */
-export function getStaticAlternates(kind: 'home' | 'projectIndex' | 'labo' | 'contact'): Partial<Record<Locale, string>> {
+export function getStaticAlternates(
+  kind: 'home' | 'projectIndex' | 'labo' | 'contact' | 'journal',
+): Partial<Record<Locale, string>> {
   if (locales.length < 2) return {};
 
   return Object.fromEntries(
@@ -55,6 +68,8 @@ export function getStaticAlternates(kind: 'home' | 'projectIndex' | 'labo' | 'co
           ? contactPath(locale)
         : kind === 'labo'
           ? laboPath(locale)
+        : kind === 'journal'
+          ? journalIndexPath(locale)
           : projectsIndexPath(locale),
     ]),
   );

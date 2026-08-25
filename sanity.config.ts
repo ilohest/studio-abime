@@ -9,9 +9,9 @@ import { structure } from './sanity/structure';
 import { baseLanguage, supportedLanguages, TRANSLATED_DOCUMENT_TYPES } from './sanity/lib/i18n';
 import { resolvePresentationLocations } from './sanity/lib/presentation';
 import {
-  createProjectDuplicateAction,
-  ProjectPublishAction,
-} from './sanity/actions/projectPublishAction';
+  createSlugAwareDuplicateAction,
+  SlugOnPublishAction,
+} from './sanity/actions/slugOnPublishAction';
 import type { DuplicateDocumentActionComponent } from 'sanity';
 
 /**
@@ -40,9 +40,11 @@ const creationTitles: Record<string, string> = {
   page: 'Page',
   project: 'Projet',
   category: 'Catégorie',
+  post: 'Article',
   localizedSettings: 'Réglages du site',
   projectsPage: 'Page Expériences',
   laboPage: 'Page Labo',
+  journalPage: 'Page Journal',
 };
 
 export default defineConfig({
@@ -115,6 +117,8 @@ export default defineConfig({
             !templateId.startsWith('projectsPage-') &&
             templateId !== 'laboPage' &&
             !templateId.startsWith('laboPage-') &&
+            templateId !== 'journalPage' &&
+            !templateId.startsWith('journalPage-') &&
             templateId !== 'localizedSettings' &&
             !templateId.startsWith('localizedSettings-'),
         )
@@ -140,19 +144,27 @@ export default defineConfig({
         schemaType === 'siteSettings' ||
         schemaType === 'localizedSettings' ||
         schemaType === 'projectsPage' ||
-        schemaType === 'laboPage'
+        schemaType === 'laboPage' ||
+        schemaType === 'journalPage'
       ) {
         return prev.filter(
           ({ action }) => action !== 'duplicate' && action !== 'delete' && action !== 'unpublish',
         );
       }
 
-      if (schemaType === 'project') {
+      // Projets et articles partagent la même règle : l'URL technique est
+      // générée à la première publication, jamais saisie à la main.
+      if (schemaType === 'project' || schemaType === 'post') {
+        const isPost = schemaType === 'post';
+
         return prev.map((originalAction) => {
-          if (originalAction.action === 'publish') return ProjectPublishAction;
+          if (originalAction.action === 'publish') return SlugOnPublishAction;
           if (originalAction.action === 'duplicate') {
-            return createProjectDuplicateAction(
+            return createSlugAwareDuplicateAction(
               originalAction as DuplicateDocumentActionComponent,
+              isPost
+                ? { label: 'Dupliquer l’article', fallbackTitle: 'Article sans titre' }
+                : { label: 'Dupliquer le projet', fallbackTitle: 'Projet sans titre' },
             );
           }
           return originalAction;
