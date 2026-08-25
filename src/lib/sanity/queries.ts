@@ -328,7 +328,7 @@ export const projectsPageQuery = /* groq */ `
  */
 export const clientsQuery = /* groq */ `
 *[_type == "client" && language == $locale && defined(name)]
-  | order(_createdAt asc){ _id, name, sector, projectName }`;
+  | order(_createdAt asc, _id asc){ _id, name, sector, projectName }`;
 
 /** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
 export const laboPageQuery = /* groq */ `
