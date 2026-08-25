@@ -25,12 +25,11 @@ const { projects, clients = [], locale } = Astro.props;
 const t = useTranslations(locale);
 
 const footnotes = buildClientFootnotes(projects, clients);
-const hasNumberedEntries = footnotes.some((entry) => entry.atomicNumber);
 ---
 
 {
   footnotes.length > 0 && (
-    <aside class="references" aria-labelledby="references-title">
+    <aside id="references" class="references" aria-labelledby="references-title">
       <h2 id="references-title" class="references__title type-note">
         {t('references.title')}
       </h2>
@@ -51,10 +50,6 @@ const hasNumberedEntries = footnotes.some((entry) => entry.atomicNumber);
           </li>
         ))}
       </ul>
-
-      {hasNumberedEntries && (
-        <p class="references__legend type-note">{t('references.legend')}</p>
-      )}
     </aside>
   )
 }
@@ -62,13 +57,10 @@ const hasNumberedEntries = footnotes.some((entry) => entry.atomicNumber);
 <style>
   .references {
     padding-block: clamp(3rem, 7vw, 6rem) clamp(4rem, 9vw, 8rem);
+    scroll-margin-top: clamp(5rem, 10vw, 9rem);
   }
 
-  /* Le filet court des notes de bas de page, pas une règle pleine largeur. */
   .references__title {
-    max-width: 22rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid var(--color-ink);
     margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -122,11 +114,5 @@ const hasNumberedEntries = footnotes.some((entry) => entry.atomicNumber);
   .references__sector::before {
     content: ' · ';
     color: var(--color-line);
-  }
-
-  .references__legend {
-    max-width: 34rem;
-    margin-top: clamp(1.5rem, 3vw, 2.25rem);
-    color: var(--color-muted);
   }
 </style>

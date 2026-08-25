@@ -62,6 +62,7 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
 ---
 
 <section
+  id="cas-etude"
   class="motion-lab"
   data-experience-motion
   aria-label="Table des éléments et grille d’expériences"
@@ -243,6 +244,8 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
   .motion-lab {
     --motion-line: color-mix(in srgb, var(--color-ink) 36%, transparent);
     margin-top: clamp(2.5rem, 6vw, 6rem);
+    /* L'ancre vise le début de la piste : la table est alors entière. */
+    scroll-margin-top: clamp(5rem, 10vw, 9rem);
   }
 
   .motion-lab__runway {

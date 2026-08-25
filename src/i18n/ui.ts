@@ -20,8 +20,6 @@ const fr = {
   'projects.count': 'projet(s)',
   'projects.viewProject': 'Voir le projet',
   'references.title': 'Références',
-  'references.legend':
-    'Les numéros renvoient aux cases occupées dans la table des éléments ci-dessus.',
   'project.client': 'Client',
   'project.year': 'Année',
   'project.services': 'Services',
@@ -60,7 +58,6 @@ const en: Partial<Record<TranslationKey, string>> = {
   'projects.count': 'project(s)',
   'projects.viewProject': 'View project',
   'references.title': 'References',
-  'references.legend': 'Numbers refer to the cells filled in the table of elements above.',
   'project.client': 'Client',
   'project.year': 'Year',
   'project.services': 'Services',
