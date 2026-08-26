@@ -349,9 +349,28 @@ const elementNumbers = Object.fromEntries(
       Un geste de l'utilisateur pendant la descente l'interrompt : il reprend la
       main immédiatement, sans être ramené à l'arrivée.
     */
-    const SCROLL_DURATION = 1100;
+    /*
+      La descente se fait en TROIS TEMPS, pour que le trajet se lise au lieu de
+      se subir : la table se défait et devient grille, la grille se pose et
+      tient un instant, puis la note arrive. Sans ce temps d'arrêt, la courbe
+      d'accélération traverse la transformation à sa vitesse maximale — c'est
+      le milieu du parcours qui est le plus rapide — et le passage se perd.
+
+      La durée suit la distance plutôt qu'une valeur fixe : un clic donné plus
+      bas dans la page, alors que la grille est déjà formée, ne s'étire pas
+      inutilement.
+    */
+    const SCROLL_SPEED = 1000; // pixels par seconde
+    const SEGMENT_MIN = 340;
+    const SEGMENT_MAX = 2200;
+    const GRID_PAUSE = 280; // temps d'arrêt sur la grille formée
     const easeInOut = (value: number) =>
       value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
+    const segmentDuration = (delta: number) =>
+      Math.min(Math.max((Math.abs(delta) / SCROLL_SPEED) * 1000, SEGMENT_MIN), SEGMENT_MAX);
+
+    type Move = { from: number; to: number; duration: number };
+    type Hold = { hold: number };
 
     root.querySelectorAll<HTMLAnchorElement>('a.element-cell[href^="#"]').forEach((link) => {
       link.addEventListener('click', (event) => {
@@ -369,6 +388,27 @@ const elementNumbers = Object.fromEntries(
 
         event.preventDefault();
 
+        // Position de défilement où la grille achève de se poser.
+        const settled =
+          runway instanceof HTMLElement
+            ? runway.offsetTop + Math.max(1, runway.offsetHeight - window.innerHeight) * GRID_SETTLED
+            : null;
+
+        const steps: Array<Move | Hold> =
+          settled !== null && settled > from + 4 && settled < to - 4
+            ? [
+                { from, to: settled, duration: segmentDuration(settled - from) },
+                { hold: GRID_PAUSE },
+                { from: settled, to, duration: segmentDuration(to - settled) },
+              ]
+            : [{ from, to, duration: segmentDuration(to - from) }];
+
+        /*
+          La feuille globale pose `scroll-behavior: smooth` sur la racine :
+          chaque `scrollTo` deviendrait lui-même une animation lissée du
+          navigateur, et la boucle en émet une par image. Le comportement natif
+          est donc écarté pendant tout le geste, et rendu à la fin.
+        */
         const documentElement = document.documentElement;
         const previousBehavior = documentElement.style.scrollBehavior;
         documentElement.style.scrollBehavior = 'auto';
@@ -387,27 +427,44 @@ const elementNumbers = Object.fromEntries(
           events.forEach((name) => window.removeEventListener(name, interrupt));
         };
 
-        const start = performance.now();
-        const step = (now: number) => {
+        let index = 0;
+        let segmentStart = 0;
+
+        const run = (now: number) => {
           if (cancelled) {
             release();
             return;
           }
 
-          const elapsed = clamp((now - start) / SCROLL_DURATION);
-          window.scrollTo(0, from + (to - from) * easeInOut(elapsed));
-
-          if (elapsed < 1) {
-            window.requestAnimationFrame(step);
+          const step = steps[index];
+          if (!step) {
+            // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
+            window.location.hash = hash!;
+            release();
             return;
           }
 
-          // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
-          window.location.hash = hash!;
-          release();
+          if (!segmentStart) segmentStart = now;
+          const elapsed = now - segmentStart;
+
+          if ('hold' in step) {
+            if (elapsed >= step.hold) {
+              index += 1;
+              segmentStart = 0;
+            }
+          } else {
+            const progressed = clamp(elapsed / step.duration);
+            window.scrollTo(0, step.from + (step.to - step.from) * easeInOut(progressed));
+            if (progressed >= 1) {
+              index += 1;
+              segmentStart = 0;
+            }
+          }
+
+          window.requestAnimationFrame(run);
         };
 
-        window.requestAnimationFrame(step);
+        window.requestAnimationFrame(run);
       });
     });
 
