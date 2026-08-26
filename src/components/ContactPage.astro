@@ -413,6 +413,8 @@ const phases = [
 
   .contact-social-link {
     display: inline-flex;
+    /* Zone active au seuil des 24 px : le texte seul s'arrête sous la barre. */
+    min-height: 24px;
     gap: 0.45em;
     align-items: baseline;
     text-decoration: none;

@@ -414,6 +414,8 @@
 @utility button-minimal {
   display: inline-flex;
   align-items: baseline;
+  /* Zone active au seuil des 24 px : le texte seul s'arrêtait juste en dessous. */
+  min-height: 24px;
   gap: 0.55em;
   pointer-events: auto;
   padding: 0.2em 0;

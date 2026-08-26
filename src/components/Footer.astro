@@ -113,6 +113,8 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
   .footer-external {
     display: inline-flex;
     align-items: baseline;
+    /* Zone touchable au seuil des 24 px sans grossir le texte, qui n'en fait que 20. */
+    min-height: 24px;
     gap: 0.45em;
     text-decoration: none;
   }

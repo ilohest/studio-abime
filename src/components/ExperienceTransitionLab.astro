@@ -312,6 +312,11 @@ const elementNumbers = Object.fromEntries(
       */
       tableLinks.forEach((link) => {
         if (!(link instanceof HTMLElement)) return;
+        // Case privée de son lien sur écran étroit : elle reste hors du parcours.
+        if (link instanceof HTMLAnchorElement && !link.hasAttribute('href')) {
+          link.tabIndex = -1;
+          return;
+        }
         const column = link.closest('[data-element-column]');
         const travel = column instanceof HTMLElement ? Number(column.dataset.travel ?? 0) : 0;
         const geometry = linkGeometry.get(link);
@@ -467,6 +472,40 @@ const elementNumbers = Object.fromEntries(
 
         window.requestAnimationFrame(step);
       });
+    });
+
+    /*
+      Sur écran étroit, une case de la table mesure 17 px de large : dix-huit
+      colonnes tiennent dans 375 px, et aucune mise en page ne rattrapera ça.
+      C'est sous le seuil des cibles tactiles, et faute d'un `href` un lien
+      n'en est plus un — ni cliquable, ni atteignable au clavier, ni annoncé.
+
+      Rien ne se perd : les projets s'ouvrent depuis la grille juste en dessous,
+      et les clients se lisent dans la note de bas de page, en toutes lettres.
+      La table redevient ce qu'elle est à cette taille — une planche.
+    */
+    const narrowScreen = window.matchMedia('(max-width: 767px)');
+
+    const applyCellLinks = () => {
+      tableLinks.forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) return;
+        if (narrowScreen.matches) {
+          const href = link.getAttribute('href');
+          if (href) {
+            link.dataset.href = href;
+            link.removeAttribute('href');
+          }
+        } else if (link.dataset.href) {
+          link.setAttribute('href', link.dataset.href);
+          delete link.dataset.href;
+        }
+      });
+    };
+
+    applyCellLinks();
+    narrowScreen.addEventListener('change', () => {
+      applyCellLinks();
+      requestUpdate();
     });
 
     window.addEventListener('scroll', requestUpdate, { passive: true });
