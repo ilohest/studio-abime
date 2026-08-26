@@ -250,13 +250,18 @@ const panelId = `services-menu-${mode}`;
     opacity: 1;
   }
 
+  /*
+    Les sous-sections se serrent autant que le permet le seuil des cibles de
+    pointage : l'écart tombe à zéro, et c'est la garniture des liens — 24 px de
+    haut, pas un de moins — qui tient désormais seule le rythme vertical.
+  */
   .services-rail__items {
     grid-column: 1;
     grid-row: 2;
     align-self: start;
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0;
     margin-top: 0;
     padding-inline-start: 2.75rem;
     transform: var(--rail-items-transform, none);

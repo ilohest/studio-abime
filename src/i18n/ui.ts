@@ -20,6 +20,7 @@ const fr = {
   'projects.count': 'projet(s)',
   'projects.viewProject': 'Voir le projet',
   'references.title': 'Références',
+  'project.reference': 'Référence',
   'project.client': 'Client',
   'project.sector': 'Secteur',
   'project.year': 'Année',
@@ -40,6 +41,13 @@ const fr = {
   'error.notFound.title': 'Page introuvable',
   'error.notFound.body': "La page demandée n'existe pas ou a été déplacée.",
   'error.backHome': "Retour à l'accueil",
+  'shop.title': 'Shop',
+  'shop.empty': 'La boutique ouvre bientôt.',
+  'shop.soldOut': 'Épuisé',
+  'shop.from': 'À partir de',
+  'shop.view': 'Voir le tirage',
+  'shop.video': 'Vidéo',
+  'shop.noVisual': 'Visuel à venir',
 } as const;
 
 export type TranslationKey = keyof typeof fr;
@@ -57,6 +65,7 @@ const en: Partial<Record<TranslationKey, string>> = {
   'projects.count': 'project(s)',
   'projects.viewProject': 'View project',
   'references.title': 'References',
+  'project.reference': 'Reference',
   'project.client': 'Client',
   'project.sector': 'Sector',
   'project.year': 'Year',
@@ -77,6 +86,13 @@ const en: Partial<Record<TranslationKey, string>> = {
   'error.notFound.title': 'Page not found',
   'error.notFound.body': 'The requested page does not exist or has been moved.',
   'error.backHome': 'Back to home',
+  'shop.title': 'Shop',
+  'shop.empty': 'The shop opens soon.',
+  'shop.soldOut': 'Sold out',
+  'shop.from': 'From',
+  'shop.view': 'View print',
+  'shop.video': 'Video',
+  'shop.noVisual': 'Image coming',
 };
 
 const dictionaries: Record<string, Partial<Record<TranslationKey, string>>> = { fr, en };

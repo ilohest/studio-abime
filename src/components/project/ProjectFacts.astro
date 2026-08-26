@@ -1,27 +1,29 @@
 ---
 import { projectDisplayNumber } from '~/lib/references';
-import { projectInitials } from '~/lib/viewModels';
 import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { Project, ProjectChannel } from '~/lib/sanity/types';
 
 /**
- * Fiche projet — étiquette de flacon.
+ * Fiche projet — relevé technique.
  *
- * Le site range ses projets comme une table des éléments ; leur fiche est donc
- * l'étiquette collée sur l'échantillon : un cadre double, une cote et un
- * symbole en tête, les champs alignés sous des filets pointillés, la mention du
- * studio en pied comme la marque d'un préparateur.
+ * Aucun cadre, aucune matière, aucun fond : rien que des intitulés et leurs
+ * valeurs, posés en colonnes. La fiche s'efface derrière ce qu'elle énonce.
  *
- * La cote et le symbole sont ceux de la case du projet dans la table — c'est le
- * même objet, décrit trois fois : dans la table, dans la grille, ici.
+ * Chaque champ est un couple intitulé / valeur ; les couples se rangent côte à
+ * côte tant que la largeur le permet, puis passent à la ligne. Les valeurs
+ * multiples s'empilent sous leur intitulé au lieu de s'enfiler en une phrase :
+ * on lit une liste, pas une énumération.
  *
- * Les champs vides disparaissent : une étiquette à deux lignes reste composée,
- * là où des lignes vides trahiraient un gabarit.
+ * La cote ouvre le relevé — c'est le numéro de la case du projet dans la table
+ * des éléments, donné comme une donnée parmi les autres et non comme un décor.
+ *
+ * Les champs vides disparaissent : une fiche à deux lignes reste composée, là
+ * où des lignes vides trahiraient un gabarit.
  */
 interface Row {
   label: string;
-  value?: string;
+  values?: string[];
   links?: Array<{ label: string; href: string }>;
 }
 
@@ -41,219 +43,110 @@ const channels = (project.channels ?? [])
   .filter((channel): channel is ProjectChannel & { url: string } => Boolean(channel.url))
   .map((channel) => ({ label: channel.label || readableUrl(channel.url), href: channel.url }));
 
+const reference = projectDisplayNumber(project);
+
 const allRows: Row[] = [
-  { label: t('project.client'), value: project.client },
-  { label: t('project.sector'), value: project.sector },
-  { label: t('project.year'), value: project.year ? String(project.year) : undefined },
-  { label: t('project.services'), value: project.services?.join(', ') },
+  { label: t('project.reference'), values: reference !== undefined ? [`N° ${reference}`] : undefined },
+  { label: t('project.client'), values: project.client ? [project.client] : undefined },
+  { label: t('project.sector'), values: project.sector ? [project.sector] : undefined },
+  { label: t('project.year'), values: project.year ? [String(project.year)] : undefined },
+  { label: t('project.services'), values: project.services?.filter(Boolean) },
   { label: t('project.channels'), links: channels.length > 0 ? channels : undefined },
 ];
 
-const rows = allRows.filter((row) => Boolean(row.value || row.links));
-const reference = projectDisplayNumber(project);
-const symbol = projectInitials(project.title);
+const rows = allRows.filter((row) => Boolean(row.values?.length || row.links));
 ---
 
 {
   rows.length > 0 && (
-    <div class:list={['label-frame', className]}>
-      <div class="label">
-        {reference !== undefined && (
-          <p class="label__head" aria-hidden="true">
-            <span class="label__ref">N<span class="label__ord">o</span> {reference}</span>
-            <span class="label__symbol">{symbol}</span>
-          </p>
-        )}
-
-        <dl class="label__rows">
-          {rows.map((row) => (
-            <div class="label__row">
-              <dt class="label__term">{row.label}</dt>
-              <dd class="label__data">
-                {row.links ? (
-                  <ul class="label__links">
-                    {row.links.map((link) => (
-                      <li>
-                        <a href={link.href} class="label__link" target="_blank" rel="noopener noreferrer">
-                          {link.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  row.value
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-
-        <p class="label__foot" aria-hidden="true">Studio Abîme · Labo de com.</p>
-      </div>
+    <div class:list={['facts', className]}>
+      <dl class="facts__list">
+        {rows.map((row) => (
+          <div class="facts__row">
+            <dt class="facts__term">{row.label}</dt>
+            <dd class="facts__data">
+              {row.links
+                ? row.links.map((link) => (
+                    <a href={link.href} class="facts__link" target="_blank" rel="noopener noreferrer">
+                      {link.label}
+                    </a>
+                  ))
+                : row.values?.map((value) => <span class="facts__value">{value}</span>)}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }
 
 <style>
   /*
-    Les filets suivent l'encre du texte et non un gris fixe : l'étiquette reste
-    lisible aussi bien sur Papier que sur un fond inversé.
+    Largeur imposée ici et non par le parent : posée dans une colonne en `flex`,
+    la fiche se réduirait sinon à la largeur de son texte. La requête de
+    conteneur la rend autonome — elle se replie sur SA largeur, pas sur celle
+    de l'écran, et tient donc aussi bien en pleine colonne que dans une marge.
   */
-  .label-frame {
-    /*
-      Largeur imposée ici et non par le parent : posée dans une colonne en
-      `flex`, l'étiquette se réduirait sinon à la largeur de son texte.
-    */
+  .facts {
     width: 100%;
     container-type: inline-size;
   }
 
-  /*
-    L'étiquette a son PROPRE papier : elle se lit comme une vignette collée sur
-    l'échantillon, pas comme un cadre dessiné dessus.
-
-    Le papier est une seconde couche de fond, fondue en multiplication avec la
-    couleur — pas un élément superposé : rien à ajouter au balisage, rien à
-    empiler, et le texte reste au-dessus sans avoir à se replacer. Il couvre le
-    cadre sans se répéter : une photographie de papier ne se raccorde pas, une
-    trame visible trahirait le procédé.
-  */
-  .label {
-    --label-rule: color-mix(in oklab, var(--color-ink) 55%, transparent);
-    --label-hair: color-mix(in oklab, var(--color-ink) 30%, transparent);
-    position: relative;
-    padding: clamp(0.9rem, 1.6vw, 1.3rem);
-    border: 1px solid var(--label-rule);
-    background-color: var(--color-papier);
-    background-image: var(--label-texture, url('/textures/papier-etiquette.webp'));
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: cover;
-    background-blend-mode: multiply;
-  }
-
-  /*
-    Le second filet, en retrait : c'est lui qui fait l'étiquette de flacon
-    plutôt que le simple cadre. Tracé en incrustation pour ne rien peser sur la
-    mise en page.
-  */
-  .label::before {
-    content: '';
-    position: absolute;
-    inset: 4px;
-    border: 1px solid var(--label-hair);
-    pointer-events: none;
-  }
-
-  .label__head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding-bottom: 0.7rem;
-    border-bottom: 1px solid var(--label-rule);
-    margin: 0 0 0.9rem;
-    font-family: var(--font-titre);
-    gap: 1rem;
-  }
-
-  .label__ref {
-    font-size: 0.75rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  /* L'exposant de « N° », posé à la main : la fonte n'a pas d'ordinal. */
-  .label__ord {
-    font-size: 0.62em;
-    vertical-align: 0.42em;
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-  }
-
-  .label__symbol {
-    font-size: 1.15rem;
-    letter-spacing: -0.06em;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .label__rows {
+  .facts__list {
     display: grid;
     margin: 0;
-    gap: 0;
+    column-gap: clamp(1.5rem, 3vw, 3rem);
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    row-gap: clamp(1.1rem, 2vw, 1.6rem);
   }
 
-  .label__row {
+  .facts__row {
     display: grid;
-    align-items: baseline;
-    padding-block: 0.55rem;
-    border-bottom: 1px dotted var(--label-hair);
-    gap: 0.4rem 1.2rem;
-    grid-template-columns: minmax(5.5rem, 8rem) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 1rem;
+    grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
   }
 
-  .label__row:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .label__term {
+  .facts__term,
+  .facts__data,
+  .facts__value,
+  .facts__link {
     font-family: var(--font-titre);
     font-size: 0.6875rem;
-    letter-spacing: 0.12em;
-    line-height: 1.3;
+    line-height: 1.55;
+  }
+
+  .facts__term {
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--color-muted);
   }
 
-  .label__data {
-    margin: 0;
-    font-family: var(--font-annotation);
-    font-size: 1rem;
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
-    line-height: 1.35;
-    text-wrap: pretty;
-  }
-
-  .label__links {
+  .facts__data {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
     margin: 0;
-    padding: 0;
-    list-style: none;
+    letter-spacing: 0.02em;
   }
 
-  .label__link {
+  .facts__link {
     color: inherit;
     text-decoration: underline;
     text-decoration-thickness: 1px;
-    text-underline-offset: 0.28em;
+    text-underline-offset: 0.3em;
     transition: opacity 0.25s ease;
+    width: fit-content;
   }
 
-  .label__link:hover {
+  .facts__link:hover {
     opacity: 0.55;
   }
 
-  .label__foot {
-    padding-top: 0.8rem;
-    border-top: 1px solid var(--label-rule);
-    margin: 0.9rem 0 0;
-    font-family: var(--font-titre);
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-align: center;
-    text-transform: uppercase;
-    color: var(--color-muted);
-  }
-
-  /* Étroite, l'étiquette empile l'intitulé et sa valeur. */
+  /* Trop étroite pour deux colonnes, la fiche pose l'intitulé au-dessus. */
   @container (max-width: 20rem) {
-    .label__row {
+    .facts__row {
       grid-template-columns: minmax(0, 1fr);
-      gap: 0.2rem;
+      row-gap: 0.1rem;
     }
   }
 </style>
