@@ -329,14 +329,25 @@ const elementNumbers = Object.fromEntries(
     };
 
     /*
-      Descente vers la note de bas de page. Le défilement natif « smooth » va
-      vite et sa durée n'est pas réglable : on l'écarte le temps du geste et on
-      mène la course nous-mêmes, plus lentement, pour que le lecteur garde le
-      fil entre la case qu'il vient de quitter et la ligne qui l'attend.
+      Descente vers la note de bas de page.
 
-      Le fragment est tout de même posé dans l'URL — sans lui, `:target` ne
-      désignerait pas la ligne. On annule seulement le saut qu'il provoque,
-      dans la même image, avant d'animer.
+      Le défilement natif « smooth » va vite et sa durée ne se règle pas : on
+      mène la course nous-mêmes. Deux pièges, tous deux payés d'un temps mort
+      à l'écran :
+
+       · la feuille globale pose `scroll-behavior: smooth` sur la racine, ce qui
+         fait de CHAQUE `scrollTo` une animation lissée du navigateur. Notre
+         boucle en émettait une par image : le défilement traînait derrière au
+         lieu de suivre. Le comportement natif est donc écarté pendant tout le
+         geste, et rendu à la fin ;
+
+       · poser le fragment AVANT la descente fait sauter la page à l'arrivée,
+         puis revenir. On descend d'abord, et le fragment est posé une fois sur
+         place — il ne déplace alors plus rien, et `:target` allume la ligne au
+         moment où on y arrive.
+
+      Un geste de l'utilisateur pendant la descente l'interrompt : il reprend la
+      main immédiatement, sans être ramené à l'arrivée.
     */
     const SCROLL_DURATION = 1100;
     const easeInOut = (value: number) =>
@@ -348,48 +359,55 @@ const elementNumbers = Object.fromEntries(
         const target = hash ? document.querySelector<HTMLElement>(hash) : null;
         if (!target || event.defaultPrevented || event.metaKey || event.ctrlKey) return;
 
-        event.preventDefault();
-
         const from = window.scrollY;
         const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
         const limit = document.documentElement.scrollHeight - window.innerHeight;
         const to = clamp(target.getBoundingClientRect().top + from - margin, 0, limit);
 
-        /*
-          Le saut du fragment est différé par le navigateur : il survient APRÈS
-          ce gestionnaire, et écraserait une remise en place faite ici. On
-          attend donc `hashchange`, qui suit la navigation dans la même tâche —
-          avant le premier rendu, donc sans clignotement — pour reprendre la
-          page où elle était et mener la descente nous-mêmes.
-        */
-        const previousBehavior = document.documentElement.style.scrollBehavior;
-        document.documentElement.style.scrollBehavior = 'auto';
+        // Trop court ou mouvement refusé : le saut natif fait déjà l'affaire.
+        if (reducedMotion.matches || Math.abs(to - from) < 2) return;
 
-        const descend = () => {
-          window.scrollTo(0, from);
-          document.documentElement.style.scrollBehavior = previousBehavior;
+        event.preventDefault();
 
-          if (reducedMotion.matches || Math.abs(to - from) < 2) {
-            window.scrollTo(0, to);
+        const documentElement = document.documentElement;
+        const previousBehavior = documentElement.style.scrollBehavior;
+        documentElement.style.scrollBehavior = 'auto';
+
+        let cancelled = false;
+        const interrupt = () => {
+          cancelled = true;
+        };
+        const events = ['wheel', 'touchstart', 'keydown'] as const;
+        events.forEach((name) =>
+          window.addEventListener(name, interrupt, { once: true, passive: true }),
+        );
+
+        const release = () => {
+          documentElement.style.scrollBehavior = previousBehavior;
+          events.forEach((name) => window.removeEventListener(name, interrupt));
+        };
+
+        const start = performance.now();
+        const step = (now: number) => {
+          if (cancelled) {
+            release();
             return;
           }
 
-          const start = performance.now();
-          const step = (now: number) => {
-            const elapsed = clamp((now - start) / SCROLL_DURATION);
-            window.scrollTo(0, from + (to - from) * easeInOut(elapsed));
-            if (elapsed < 1) window.requestAnimationFrame(step);
-          };
-          window.requestAnimationFrame(step);
+          const elapsed = clamp((now - start) / SCROLL_DURATION);
+          window.scrollTo(0, from + (to - from) * easeInOut(elapsed));
+
+          if (elapsed < 1) {
+            window.requestAnimationFrame(step);
+            return;
+          }
+
+          // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
+          window.location.hash = hash!;
+          release();
         };
 
-        // Même fragment : aucune navigation, donc aucun `hashchange` à attendre.
-        if (window.location.hash === hash) {
-          descend();
-        } else {
-          window.addEventListener('hashchange', descend, { once: true });
-          window.location.hash = hash!;
-        }
+        window.requestAnimationFrame(step);
       });
     });
 
