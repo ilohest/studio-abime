@@ -350,27 +350,36 @@ const elementNumbers = Object.fromEntries(
       main immédiatement, sans être ramené à l'arrivée.
     */
     /*
-      La descente se fait en TROIS TEMPS, pour que le trajet se lise au lieu de
-      se subir : la table se défait et devient grille, la grille se pose et
-      tient un instant, puis la note arrive. Sans ce temps d'arrêt, la courbe
-      d'accélération traverse la transformation à sa vitesse maximale — c'est
-      le milieu du parcours qui est le plus rapide — et le passage se perd.
+      Descente vers la note de bas de page.
+
+      Pas de courbe d'accélération classique ici : elle est la plus rapide en
+      son MILIEU, c'est-à-dire précisément là où la table devient grille, et le
+      passage s'y perdait. Le mouvement garde donc une VITESSE CONSTANTE, lissée
+      seulement sur ses deux extrémités — la transformation se lit au même
+      rythme du début à la fin, sans temps mort.
 
       La durée suit la distance plutôt qu'une valeur fixe : un clic donné plus
       bas dans la page, alors que la grille est déjà formée, ne s'étire pas
       inutilement.
     */
     const SCROLL_SPEED = 1000; // pixels par seconde
-    const SEGMENT_MIN = 340;
-    const SEGMENT_MAX = 2200;
-    const GRID_PAUSE = 280; // temps d'arrêt sur la grille formée
-    const easeInOut = (value: number) =>
-      value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
-    const segmentDuration = (delta: number) =>
-      Math.min(Math.max((Math.abs(delta) / SCROLL_SPEED) * 1000, SEGMENT_MIN), SEGMENT_MAX);
+    const SCROLL_MIN = 340;
+    const SCROLL_MAX = 3200;
+    const EASE_EDGE = 0.16; // part du trajet consacrée à démarrer, puis à freiner
 
-    type Move = { from: number; to: number; duration: number };
-    type Hold = { hold: number };
+    /*
+      Vitesse constante au centre, rampes aux extrémités. La vitesse de croisière
+      compense les deux demi-rampes pour que le trajet fasse exactement 1.
+    */
+    const easeSteady = (value: number) => {
+      const cruise = 1 / (1 - EASE_EDGE);
+      if (value < EASE_EDGE) return (cruise * value * value) / (2 * EASE_EDGE);
+      if (value > 1 - EASE_EDGE) {
+        const remaining = 1 - value;
+        return 1 - (cruise * remaining * remaining) / (2 * EASE_EDGE);
+      }
+      return (cruise * EASE_EDGE) / 2 + cruise * (value - EASE_EDGE);
+    };
 
     root.querySelectorAll<HTMLAnchorElement>('a.element-cell[href^="#"]').forEach((link) => {
       link.addEventListener('click', (event) => {
@@ -388,20 +397,10 @@ const elementNumbers = Object.fromEntries(
 
         event.preventDefault();
 
-        // Position de défilement où la grille achève de se poser.
-        const settled =
-          runway instanceof HTMLElement
-            ? runway.offsetTop + Math.max(1, runway.offsetHeight - window.innerHeight) * GRID_SETTLED
-            : null;
-
-        const steps: Array<Move | Hold> =
-          settled !== null && settled > from + 4 && settled < to - 4
-            ? [
-                { from, to: settled, duration: segmentDuration(settled - from) },
-                { hold: GRID_PAUSE },
-                { from: settled, to, duration: segmentDuration(to - settled) },
-              ]
-            : [{ from, to, duration: segmentDuration(to - from) }];
+        const duration = Math.min(
+          Math.max((Math.abs(to - from) / SCROLL_SPEED) * 1000, SCROLL_MIN),
+          SCROLL_MAX,
+        );
 
         /*
           La feuille globale pose `scroll-behavior: smooth` sur la racine :
@@ -427,44 +426,27 @@ const elementNumbers = Object.fromEntries(
           events.forEach((name) => window.removeEventListener(name, interrupt));
         };
 
-        let index = 0;
-        let segmentStart = 0;
-
-        const run = (now: number) => {
+        const start = performance.now();
+        const step = (now: number) => {
           if (cancelled) {
             release();
             return;
           }
 
-          const step = steps[index];
-          if (!step) {
-            // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
-            window.location.hash = hash!;
-            release();
+          const progressed = clamp((now - start) / duration);
+          window.scrollTo(0, from + (to - from) * easeSteady(progressed));
+
+          if (progressed < 1) {
+            window.requestAnimationFrame(step);
             return;
           }
 
-          if (!segmentStart) segmentStart = now;
-          const elapsed = now - segmentStart;
-
-          if ('hold' in step) {
-            if (elapsed >= step.hold) {
-              index += 1;
-              segmentStart = 0;
-            }
-          } else {
-            const progressed = clamp(elapsed / step.duration);
-            window.scrollTo(0, step.from + (step.to - step.from) * easeInOut(progressed));
-            if (progressed >= 1) {
-              index += 1;
-              segmentStart = 0;
-            }
-          }
-
-          window.requestAnimationFrame(run);
+          // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
+          window.location.hash = hash!;
+          release();
         };
 
-        window.requestAnimationFrame(run);
+        window.requestAnimationFrame(step);
       });
     });
 
@@ -634,23 +616,43 @@ const elementNumbers = Object.fromEntries(
   /*
     La grille ne peint qu'un trait entre deux fiches : chacune porte son filet
     de pied et son filet de gauche, la voisine fournit les deux autres. Séparées
-    en vol, elles se retrouvent donc ouvertes en haut et à droite. Le temps du
-    vol, chaque fiche ferme son propre cadre ; une fois la grille reformée, la
-    règle du trait unique reprend et les doublons disparaissent exactement là où
-    ceux des voisines les recouvrent déjà — la bascule ne se voit pas.
+    en vol, elles se retrouvent donc ouvertes en haut et à droite.
+
+    Le temps du vol, chaque fiche ferme son cadre — mais DÉBORDANT D'UN PIXEL en
+    haut et à droite, sur la ligne même où la voisine peint déjà le sien. Deux
+    fiches jointives superposent alors leurs traits au lieu de les accoler : le
+    filet commun reste d'un pixel, exactement comme à l'arrivée. Peint à l'inté-
+    rieur, il en aurait fait deux — c'est ce qui épaississait la trame en vol.
+
+    Les croix de construction, elles, sont centrées sur les sommets : deux
+    fiches voisines y posent la même marque au même endroit, sans surépaisseur.
   */
   .motion-lab[data-motion-detached] :global(.project-catalog-item) {
-    --project-card-top-line: linear-gradient(
-      var(--project-card-line-color),
-      var(--project-card-line-color)
-    );
-    --project-card-right-line: linear-gradient(
-      var(--project-card-line-color),
-      var(--project-card-line-color)
-    );
     --project-card-top-right-cross-color: var(--project-card-cross-color);
     --project-card-bottom-left-cross-color: var(--project-card-cross-color);
     --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+  }
+
+  .motion-lab[data-motion-detached] :global(.project-catalog-card)::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background:
+      linear-gradient(
+          var(--project-card-line-color),
+          var(--project-card-line-color)
+        )
+        top left / 100% 1px no-repeat,
+      linear-gradient(
+          var(--project-card-line-color),
+          var(--project-card-line-color)
+        )
+        top right / 1px 100% no-repeat;
   }
 
   .motion-project-grid {
