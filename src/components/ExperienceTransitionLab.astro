@@ -411,10 +411,18 @@ const elementNumbers = Object.fromEntries(
         const target = hash ? document.querySelector<HTMLElement>(hash) : null;
         if (!target || event.defaultPrevented || event.metaKey || event.ctrlKey) return;
 
+        /*
+          On descend jusqu'à la SECTION, pas jusqu'à la ligne : viser la ligne
+          la pose bien à la bonne hauteur, mais fait alors passer le titre de la
+          note au-dessus du bord de l'écran, et laisse voir la fin de la section
+          précédente. C'est `:target` qui désigne la ligne, le défilement n'a
+          pas à s'en charger.
+        */
+        const landing = target.closest<HTMLElement>('.references') ?? target;
         const from = window.scrollY;
-        const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+        const margin = Number.parseFloat(getComputedStyle(landing).scrollMarginTop) || 0;
         const limit = document.documentElement.scrollHeight - window.innerHeight;
-        const to = clamp(target.getBoundingClientRect().top + from - margin, 0, limit);
+        const to = clamp(landing.getBoundingClientRect().top + from - margin, 0, limit);
 
         // Trop court ou mouvement refusé : le saut natif fait déjà l'affaire.
         if (reducedMotion.matches || Math.abs(to - from) < 2) return;

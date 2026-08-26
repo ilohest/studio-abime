@@ -53,8 +53,24 @@ const footnotes = buildClientFootnotes(projects, clients);
 
 <style>
   .references {
+    /*
+      La note ferme la page : sans hauteur minimale, elle et le pied de page ne
+      remplissaient pas un grand écran, et le défilement butait sur la fin du
+      document AVANT d'avoir amené la note en haut — on gardait sous les yeux la
+      fin de la section précédente. En réservant une hauteur d'écran moins la
+      place du pied, l'ancre atteint sa cible et la page se clôt sur la note
+      suivie du pied, sans blanc résiduel.
+    */
+    min-block-size: calc(100svh - 12rem);
     padding-block: clamp(3rem, 7vw, 6rem) clamp(4rem, 9vw, 8rem);
-    scroll-margin-top: clamp(5rem, 10vw, 9rem);
+    /*
+      Zéro, et non la garde habituelle : la note doit venir jusqu'au bord haut
+      de l'écran, sinon la bande laissée libre montre la fin de la section
+      précédente. Rien n'est fixé en haut au bureau ; sur écran étroit, c'est la
+      garniture de la section, plus généreuse, qui dégage le titre de la barre
+      de marque.
+    */
+    scroll-margin-top: 0;
   }
 
   .references__title {
@@ -130,6 +146,19 @@ const footnotes = buildClientFootnotes(projects, clients);
   .references__sector::before {
     content: ' · ';
     color: var(--color-line);
+  }
+
+  /*
+    Sur écran étroit, la barre de marque est fixe en haut : la note doit pouvoir
+    descendre assez pour passer dessous, sinon le titre se glisse derrière elle.
+    On réserve donc moins de place au pied de page qu'au bureau.
+  */
+  @media (max-width: 767px) {
+    .references {
+      min-block-size: calc(100svh - 6rem);
+      /* Dégage le titre de la barre de marque, fixe en haut de l'écran. */
+      padding-block-start: 5.5rem;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
