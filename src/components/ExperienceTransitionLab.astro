@@ -184,11 +184,16 @@ const elementNumbers = Object.fromEntries(
   const COLUMN_LIVE_OPACITY = 0.4;
 
   /*
-    Instant où la dernière colonne de fiches a fini de monter. Avant lui, les
-    fiches volent séparées et ne peuvent plus compter sur leur voisine pour
-    fermer leur cadre : chacune peint alors ses quatre côtés.
+    Instant où la dernière colonne de fiches a fini de monter. Il coïncide avec
+    la FIN DE LA PISTE : la grille se complète au moment précis où la scène
+    cesse d'être épinglée et repart avec la page. Toute valeur inférieure
+    laisserait la grille formée et immobile le temps du reliquat — un temps mort
+    au milieu du geste.
+
+    Avant cet instant, les fiches volent séparées et ne peuvent plus compter sur
+    leur voisine pour fermer leur cadre : chacune peint alors ses quatre côtés.
   */
-  const GRID_SETTLED = 0.92;
+  const GRID_SETTLED = 1;
 
   document.querySelectorAll('[data-experience-motion]').forEach((root) => {
     if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
@@ -252,7 +257,8 @@ const elementNumbers = Object.fromEntries(
         if (!(card instanceof HTMLElement)) return;
         const columnIndex = index % columnCount;
         const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
-        const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.7 + rightToLeft * 0.22));
+        // La dernière colonne (rightToLeft = 1) se pose à 1, pas avant.
+        const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.78 + rightToLeft * 0.22));
         /*
           Translation seule, sans mise à l'échelle : une fiche réduite se
           décolle de ses voisines et ouvre des jours entre les cases. Elle
