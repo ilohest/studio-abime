@@ -96,12 +96,22 @@ export function insertProjectEditorialCards<T>(
   return entries;
 }
 
-export function toProjectCardView(card: ProjectCard, locale: Locale, index = 0): ProjectCardView {
+/**
+ * `elementNumber` — numéro de la case occupée dans la table des éléments, quand
+ * le projet y figure. La carte porte alors le même chiffre que sa case : c'est
+ * le même objet, vu deux fois. Sinon, son rang éditorial.
+ */
+export function toProjectCardView(
+  card: ProjectCard,
+  locale: Locale,
+  index = 0,
+  elementNumber?: number,
+): ProjectCardView {
   const image = resolveImage(card.thumbnail, { width: 900 });
 
   return {
     id: card._id,
-    number: `[${String(index + 1).padStart(2, '0')}]`,
+    number: `[${elementNumber ?? String(index + 1).padStart(2, '0')}]`,
     title: card.title,
     href: projectPath(locale, card.slug),
     client: card.client ?? null,

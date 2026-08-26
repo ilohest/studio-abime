@@ -36,12 +36,6 @@ export const client = defineType({
         'Domaine d’activité — ex. Gastronomie, Édition, Musique. Affiché sous l’initiale, à la place du mot « élément ».',
       validation: (rule) => rule.max(40),
     }),
-    defineField({
-      name: 'projectName',
-      title: 'Nom du projet',
-      type: 'string',
-      description: 'Facultatif. Cité dans la note de bas de page, à la suite du nom du client.',
-    }),
   ],
   orderings: [
     {
@@ -51,10 +45,10 @@ export const client = defineType({
     },
   ],
   preview: {
-    select: { name: 'name', projectName: 'projectName', sector: 'sector', language: 'language' },
-    prepare: ({ name, projectName, sector, language }) => ({
+    select: { name: 'name', sector: 'sector', language: 'language' },
+    prepare: ({ name, sector, language }) => ({
       title: name,
-      subtitle: [language?.toUpperCase(), sector, projectName].filter(Boolean).join(' · '),
+      subtitle: [language?.toUpperCase(), sector].filter(Boolean).join(' · '),
     }),
   },
 });

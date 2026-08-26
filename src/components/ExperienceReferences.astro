@@ -42,9 +42,6 @@ const footnotes = buildClientFootnotes(projects, clients);
             </span>
             <span class="references__body">
               <span class="references__name">{client.name}</span>
-              {client.projectName && (
-                <span class="references__project type-annotation">, {client.projectName}</span>
-              )}
               {client.sector && <span class="references__sector">{client.sector}</span>}
             </span>
           </li>
@@ -99,10 +96,6 @@ const footnotes = buildClientFootnotes(projects, clients);
   .references__name {
     text-transform: uppercase;
     letter-spacing: 0.04em;
-  }
-
-  .references__project {
-    color: var(--color-muted);
   }
 
   .references__sector {

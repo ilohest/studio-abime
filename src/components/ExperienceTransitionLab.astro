@@ -59,6 +59,17 @@ const columns = Array.from({ length: 18 }, (_, columnIndex) =>
 */
 const referenceSlots = buildReferenceSlots(projects, clients);
 const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot]));
+
+/*
+  Un projet rangé dans la table porte le numéro de sa case jusque dans la
+  grille : c'est le même objet, vu deux fois. Les autres gardent leur rang
+  éditorial, faute de case qui leur corresponde.
+*/
+const elementNumbers = Object.fromEntries(
+  referenceSlots
+    .filter((slot) => slot.source.kind === 'project')
+    .map((slot) => [(slot.source as { project: ProjectCard }).project._id, slot.atomicNumber]),
+);
 ---
 
 <section
@@ -132,6 +143,7 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
             categories={categories}
             locale={locale}
             editorialCards={editorialCards}
+            elementNumbers={elementNumbers}
             showFilters
           />
         </div>
@@ -378,7 +390,12 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
     overflow: hidden;
   }
 
-  .element-cell--reference {
+  /*
+    Le fond ne signale QUE ce qui est cliquable : une case de client, faute de
+    page à ouvrir, garde l'apparence d'un élément ordinaire. Elle se distingue
+    par son symbole et son secteur, pas par une couleur qui promettrait un lien.
+  */
+  .element-cell--project {
     border-color: var(--color-ink);
     background: var(--color-ciel);
   }

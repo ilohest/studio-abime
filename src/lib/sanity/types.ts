@@ -322,8 +322,6 @@ export interface Client {
   _id: string;
   name: string;
   sector?: string;
-  /** Nom du projet mené pour ce client, quand il mérite d'être cité. */
-  projectName?: string;
 }
 
 export interface ProjectsPage {
