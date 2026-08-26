@@ -424,6 +424,23 @@ const panelId = `services-menu-${mode}`;
       display: flex;
     }
 
+    /*
+      Cibles tactiles au doigt : 24 px de haut minimum. Les libellés n'en font
+      que 17, et l'écart de 2,4 px entre deux entrées ne rattrape rien — le pas
+      restait sous le seuil, donc l'exception d'espacement ne jouait pas non
+      plus. La garniture verticale porte la zone touchable au seuil sans grossir
+      la typographie, et les entrées restent séparées : deux cibles qui se
+      chevauchent ne valent guère mieux que deux cibles trop petites.
+
+      Le lien occupe toute la largeur de sa ligne : au doigt, c'est la ligne
+      entière qui répond, pas seulement les quelques caractères du libellé.
+    */
+    .services-rail__label > a,
+    .services-rail__items a {
+      display: block;
+      padding-block: 0.25rem;
+    }
+
     .services-rail__items {
       margin-top: 0.1rem;
       /*
