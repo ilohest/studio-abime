@@ -426,7 +426,12 @@ const panelId = `services-menu-${mode}`;
 
     .services-rail__items {
       margin-top: 0.1rem;
-      padding-inline-start: 1.6rem;
+      /*
+        Un cran FRANC à droite du titre, pas un alignement sur lui : le numéro
+        et son écart occupent près de 2 rem, la sous-section part donc au-delà
+        pour que la subordination se lise d'un coup d'œil.
+      */
+      padding-inline-start: 3rem;
       transform: none;
     }
 

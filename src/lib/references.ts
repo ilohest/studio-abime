@@ -2,10 +2,16 @@
  * Références du studio — table des éléments de la page Expériences.
  *
  * Une seule règle de remplissage, partagée par la table et par la note de bas
- * de page : les cases réservées reçoivent d'abord les PROJETS favoris (dans
- * l'ordre éditorial, du plus récent au plus ancien), puis les CLIENTS encodés
- * sans projet (dans leur ordre d'encodage). Ce qui reste vide garde son
- * véritable élément chimique — la table ne ment jamais sur ce qu'elle montre.
+ * de page, en deux temps :
+ *
+ *  1. les SEPT CASES RÉSERVÉES reçoivent d'abord les projets favoris (ordre
+ *     éditorial, du plus récent au plus ancien), puis les clients encodés sans
+ *     projet (ordre d'encodage) pour celles que les projets laissent libres ;
+ *  2. les clients encore sans case REPRENNENT LA TABLE PAR LE DÉBUT — 1, 2,
+ *     3… — en enjambant les cases réservées, déjà attribuées au premier temps.
+ *
+ * Ce qui reste vide garde son véritable élément chimique : la table ne ment
+ * jamais sur ce qu'elle montre.
  *
  * Ce module ne dépend d'aucun runtime : il est importé aussi bien par les
  * composants Astro que par les schémas Sanity (limite des 7 favoris).
@@ -21,6 +27,17 @@ export const REFERENCE_SLOTS = [22, 26, 29, 47, 79, 86, 117] as const;
 
 /** Nombre maximal de projets favoris — une case réservée chacun. */
 export const MAX_FEATURED_PROJECTS = REFERENCE_SLOTS.length;
+
+/** Dernier numéro atomique de la table. Au-delà, plus une case à donner. */
+const LAST_ELEMENT = 118;
+
+/**
+ * Cases de débordement : toute la table, du début à la fin, moins les sept
+ * réservées. Un client en surnombre prend la première venue.
+ */
+const OVERFLOW_SLOTS = Array.from({ length: LAST_ELEMENT }, (_, index) => index + 1).filter(
+  (atomicNumber) => !REFERENCE_SLOTS.includes(atomicNumber as (typeof REFERENCE_SLOTS)[number]),
+);
 
 /** Entrée de la table : soit un projet publié, soit un client sans projet. */
 export type ReferenceSource =
@@ -69,9 +86,18 @@ export function buildReferenceSlots(
       .map((client) => ({ kind: 'client' as const, client })),
   ];
 
-  return sources
+  const reserved = sources
     .slice(0, REFERENCE_SLOTS.length)
     .map((source, index) => ({ atomicNumber: REFERENCE_SLOTS[index]!, source }));
+
+  // Les sources en surnombre ne peuvent être que des clients : les favoris sont
+  // plafonnés au nombre de cases réservées.
+  const overflow = sources
+    .slice(REFERENCE_SLOTS.length)
+    .map((source, index) => ({ atomicNumber: OVERFLOW_SLOTS[index], source }))
+    .filter((slot): slot is ReferenceSlot => slot.atomicNumber !== undefined);
+
+  return [...reserved, ...overflow];
 }
 
 /** Client de la note de bas de page, avec l'appel de note qui lui revient. */
@@ -85,6 +111,9 @@ export interface ClientFootnote {
  * Note de bas de page : TOUS les clients encodés sans projet, qu'ils aient
  * trouvé une case ou non. Les projets favoris en sont exclus — ils se lisent
  * déjà dans la table et dans la grille.
+ *
+ * L'ordre est celui des appels de note, pas celui de la saisie : une note se
+ * lit par ses numéros. Les clients sans case ferment la liste.
  */
 export function buildClientFootnotes(
   projects: ProjectCard[],
@@ -101,5 +130,6 @@ export function buildClientFootnotes(
 
   return clients
     .filter((client) => client?.name?.trim())
-    .map((client) => ({ client, atomicNumber: placed.get(client._id) }));
+    .map((client) => ({ client, atomicNumber: placed.get(client._id) }))
+    .sort((a, b) => (a.atomicNumber ?? Infinity) - (b.atomicNumber ?? Infinity));
 }
