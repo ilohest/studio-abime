@@ -49,6 +49,9 @@ const categoryViews = toJournalCategoryViews(postViews);
     {JOURNAL_CATEGORIES.map((category) => <span id={category.value}></span>)}
   </div>
 
+  {/* Marche intermédiaire entre le titre de la page et les fiches d'article. */}
+  <h2 class="sr-only">Tous les articles</h2>
+
   <JournalExplorer
     client:visible
     posts={postViews}

@@ -298,6 +298,14 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
           {projectsIntro && <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>}
         </header>
 
+        {/*
+          Les fiches de projet sont des titres de niveau 3. Sans ce niveau 2,
+          la page saute du titre principal aux fiches : un lecteur d'écran qui
+          navigue de titre en titre perd la marche intermédiaire. Le titre est
+          masqué à l'œil, la composition ne l'affichant pas.
+        */}
+        <h2 class="sr-only">Tous les projets</h2>
+
         <ExperienceTransitionLab
           projects={projects}
           categories={categories}

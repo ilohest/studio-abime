@@ -72,9 +72,16 @@
   --color-surface-invert: var(--color-abime);
   --color-ink: var(--color-abime);
   --color-ink-invert: var(--color-papier);
+  /*
+    74 % et pas moins : le texte secondaire se pose aussi sur Ciel et sur Sable,
+    les deux fonds les plus sombres du nuancier, et c'est là que se joue le
+    seuil. À 62 %, il tombait à 3,5:1 sur Ciel — sous le minimum AA de 4,5:1
+    exigé pour un texte de taille courante. À 74 %, le pire cas relevé est de
+    4,85:1 (Sable), et 6,0:1 sur Papier.
+  */
   --color-muted: color-mix(
     in oklab,
-    var(--color-abime) 62%,
+    var(--color-abime) 74%,
     var(--color-papier)
   );
   --color-line: color-mix(

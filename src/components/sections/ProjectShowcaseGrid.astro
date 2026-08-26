@@ -48,6 +48,9 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
     >
       <div class="showcase-grid__grain surface-paper-grain"></div>
 
+      {/* Marche intermédiaire entre le titre de la page et les fiches. */}
+      <h2 class="sr-only">Sélection de projets</h2>
+
       <ProjectCatalogRail
         projects={projects}
         locale={locale}

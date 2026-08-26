@@ -33,6 +33,13 @@ const { href, label, number, symbol, title, image, class: className } = Astro.pr
 ---
 
 <nav class:list={['next-entry container-wide', className]} aria-label={label}>
+  {/*
+    Le titre de la fiche est de niveau 3 : sans cette marche, la page projet
+    sauterait de son titre principal à lui. Le libellé du bloc — « Projet
+    suivant », « Article suivant » — fait ce niveau 2, masqué à l'œil puisque
+    la composition l'affiche déjà sous forme de légende de figure.
+  */}
+  <h2 class="sr-only">{label}</h2>
   <div class="next-entry__layout">
     <p class="next-entry__caption" aria-hidden="true">
       <FigureCaption as="span" value={`fig. ${number} ${label}`} />
