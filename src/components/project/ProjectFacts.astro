@@ -108,12 +108,28 @@ const symbol = projectInitials(project.title);
     container-type: inline-size;
   }
 
+  /*
+    L'étiquette a son PROPRE papier : elle se lit comme une vignette collée sur
+    l'échantillon, pas comme un cadre dessiné dessus.
+
+    Le papier est une seconde couche de fond, fondue en multiplication avec la
+    couleur — pas un élément superposé : rien à ajouter au balisage, rien à
+    empiler, et le texte reste au-dessus sans avoir à se replacer. Il couvre le
+    cadre sans se répéter : une photographie de papier ne se raccorde pas, une
+    trame visible trahirait le procédé.
+  */
   .label {
     --label-rule: color-mix(in oklab, var(--color-ink) 55%, transparent);
     --label-hair: color-mix(in oklab, var(--color-ink) 30%, transparent);
     position: relative;
     padding: clamp(0.9rem, 1.6vw, 1.3rem);
     border: 1px solid var(--label-rule);
+    background-color: var(--color-papier);
+    background-image: var(--label-texture, url('/textures/papier-etiquette.webp'));
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background-blend-mode: multiply;
   }
 
   /*

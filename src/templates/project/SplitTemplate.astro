@@ -199,10 +199,17 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     c'est ce bord commun qui tient les deux colonnes ensemble. « Pleine
     largeur » vaut donc pour toute la largeur disponible de la planche.
   */
+  /*
+    La colonne d'images démarre SOUS la case du projet, posée en haut à droite
+    de toutes les pages projet : sans ce dégagement, le premier visuel passait
+    dessous. La valeur suit la taille de la case — hauteur, plus le retrait
+    qui la décolle du bord et l'air qu'on lui laisse.
+  */
   .split__gallery {
     --gallery-inset: clamp(1.5rem, 3.5vw, 4rem);
+    --cell-clearance: calc(clamp(6.5rem, 9vw, 8.5rem) + clamp(1.5rem, 3vw, 2.5rem) + 1.5rem);
     min-height: 100svh;
-    padding-top: var(--gallery-inset);
+    padding-top: var(--cell-clearance);
     padding-right: var(--gallery-inset);
   }
 
@@ -269,7 +276,9 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     }
 
     .split__gallery {
+      /* Empilée sous le texte, la galerie ne croise plus la case. */
       min-height: 0;
+      padding-top: var(--gallery-inset);
     }
   }
 </style>
