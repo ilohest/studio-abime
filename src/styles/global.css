@@ -146,16 +146,6 @@
     color: var(--color-ink);
   }
 
-  /*
-   * Une page projet avec image fixe partage le même fond sur toute la largeur
-   * du viewport. Le rail ne doit donc ajouter aucune couche colorée : lorsque
-   * son opacité baisse au survol du contenu, seul son texte s'atténue et aucune
-   * couture verticale n'apparaît au bord du menu.
-   */
-  body.page-project-has-background [data-page-rail] {
-    background-color: transparent;
-  }
-
   ::selection {
     background-color: var(--color-accent);
     color: var(--color-ink);

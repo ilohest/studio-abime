@@ -8,9 +8,11 @@ import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro'
 import ExperienceReferences from '~/components/ExperienceReferences.astro';
 import JournalIndex from '~/components/JournalIndex.astro';
 import JournalPost from '~/components/JournalPost.astro';
+import ShopIndex from '~/components/ShopIndex.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
+import { getProducts } from '~/lib/shopify/catalogue';
 import { getSiteContext } from '~/lib/siteContext';
 import { getDocumentAlternates, getStaticAlternates } from '~/lib/alternates';
 import { loadQuery } from '~/lib/sanity/loadQuery';
@@ -30,6 +32,7 @@ import {
 import { getHomeFallback } from '~/content/homeFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
+import type { ProductCard as ShopProductCard } from '~/lib/shopify/types';
 import type {
   CategorySummary,
   Client,
@@ -90,6 +93,11 @@ let laboPage: LaboPage | null = null;
 let journalPage: JournalPage | null = null;
 let posts: PostCard[] = [];
 let post: Post | null = null;
+let shopProducts: ShopProductCard[] = [];
+
+if (route.kind === 'shop') {
+  shopProducts = await getProducts();
+}
 
 if (route.kind === 'labo') {
   const [pageContent, latestProjects] = await Promise.all([
@@ -166,6 +174,8 @@ if (
   route.kind !== 'projectIndex' &&
   route.kind !== 'contact' &&
   route.kind !== 'journal' &&
+  route.kind !== 'shop' &&
+  route.kind !== 'product' &&
   !page &&
   !project &&
   !post &&
@@ -188,6 +198,8 @@ const alternates =
       ? getStaticAlternates('labo')
     : route.kind === 'home'
       ? getStaticAlternates('home')
+    : route.kind === 'shop'
+      ? getStaticAlternates('shop')
       : await getDocumentAlternates(document?._id, locale);
 
 const projectIndexTitleSource = projectsPage?.title?.trim();
@@ -209,12 +221,13 @@ const title =
       ? 'Contact'
     : route.kind === 'labo'
       ? (laboPage?.title ?? 'Le Labo')
+    : route.kind === 'shop'
+      ? t('shop.title')
       : (document?.title ?? site.localized?.siteTitle ?? '');
 
 const journalIntro = journalPage?.intro?.trim();
 
 const projectsIntro = projectsPage?.intro?.trim();
-const hasProjectBackground = Boolean(project?.backgroundImage?.asset);
 
 // L'ancienne planche autonome fournissait les deux derniers médias de la
 // composition. Sur l'accueil, on les rattache au manifeste avant de retirer
@@ -260,7 +273,7 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
     route.kind === 'labo' ? 'page-labo' : '',
     route.kind === 'journal' || route.kind === 'post' ? 'page-journal' : '',
     route.kind === 'contact' ? 'page-contact' : '',
-    hasProjectBackground ? 'page-project-has-background' : '',
+    route.kind === 'shop' || route.kind === 'product' ? 'page-shop' : '',
   ].filter(Boolean).join(' ')}
   alternates={alternates}
   showServicesRail={!hasEmbeddedServicesRail}
@@ -285,6 +298,12 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
   }
 
   {route.kind === 'contact' && <ContactPage />}
+
+  {
+    route.kind === 'shop' && (
+      <ShopIndex products={shopProducts} locale={locale} title={t('shop.title')} number="04." />
+    )
+  }
 
   {page && <SectionRenderer sections={pageSections} locale={locale} />}
 

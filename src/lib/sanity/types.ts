@@ -297,10 +297,6 @@ export interface Project {
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   gallery?: ProjectGalleryItem[];
   thumbnail?: SanityImage;
-  /** Image décorative couvrant le viewport et fixe pendant le défilement. */
-  backgroundImage?: SanityImage;
-  /** Opacité de l’arrière-plan, exprimée de 0 à 100. */
-  backgroundOpacity?: number;
   categories: CategorySummary[];
   sections: Section[];
   seo?: Seo;

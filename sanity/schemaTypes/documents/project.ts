@@ -257,27 +257,6 @@ export const project = defineType({
         ((document?.template as string | undefined) ?? 'standard') !== 'immersive',
     }),
 
-    defineField({
-      name: 'backgroundImage',
-      title: 'Arrière-plan fixe',
-      type: 'image',
-      group: 'content',
-      options: { hotspot: true },
-      description:
-        "Image affichée derrière toute la page du projet. Elle couvre tout l’écran et reste fixe pendant le défilement. Vide = fond jaune du site.",
-    }),
-
-    defineField({
-      name: 'backgroundOpacity',
-      title: 'Opacité de l’arrière-plan',
-      type: 'number',
-      group: 'content',
-      initialValue: 100,
-      description: 'Saisissez une valeur de 0 à 100 %. 0 = invisible · 100 = image totalement opaque.',
-      hidden: ({ document }) => !document?.backgroundImage,
-      validation: (rule) => rule.min(0).max(100).integer(),
-    }),
-
     /* ── Corps de la page ────────────────────────────────────────────────────── */
     /*
       Liste volontairement restreinte : les blocs du site sont écrits pour la
