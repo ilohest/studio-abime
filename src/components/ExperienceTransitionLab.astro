@@ -242,7 +242,14 @@ const elementNumbers = Object.fromEntries(
       elementColumns.forEach((column, index) => {
         if (!(column instanceof HTMLElement)) return;
         const rightToLeft = (totalOutgoing - index) / totalOutgoing;
-        const columnProgress = ease(range(progress, 0.05 + rightToLeft * 0.26, 0.46 + rightToLeft * 0.26));
+        /*
+          La première colonne part à 0, c'est-à-dire à l'instant PRÉCIS où la
+          scène s'épingle. Le moindre retard se paie d'un temps mort : la page
+          cesse de défiler puisque la scène est fixe, et rien n'a encore
+          commencé à bouger — c'est là, et nulle part ailleurs, que le geste
+          semblait marquer un arrêt.
+        */
+        const columnProgress = ease(range(progress, rightToLeft * 0.26, 0.41 + rightToLeft * 0.26));
         const opacity = 1 - range(columnProgress, 0.72, 1);
         column.style.transform = `translate3d(0, ${(-118 * columnProgress).toFixed(3)}vh, 0)`;
         column.style.opacity = String(opacity);
