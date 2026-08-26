@@ -2,7 +2,6 @@
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
@@ -55,7 +54,6 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
           <h1 class="split__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
         </header>
 
-        <ProjectFacts project={project} locale={locale} class="split__facts" />
 
         <div class="split__body">
           <SectionRenderer sections={project.sections} locale={locale} />
@@ -200,16 +198,18 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     largeur » vaut donc pour toute la largeur disponible de la planche.
   */
   /*
-    La colonne d'images démarre SOUS la case du projet, posée en haut à droite
-    de toutes les pages projet : sans ce dégagement, le premier visuel passait
-    dessous. La valeur suit la taille de la case — hauteur, plus le retrait
-    qui la décolle du bord et l'air qu'on lui laisse.
+    La colonne d'images démarre SOUS le cartouche de tête — case du projet et
+    relevé —, posé en haut à droite de toutes les pages projet : sans ce
+    dégagement, les premiers visuels passaient dessous. La hauteur du cartouche
+    est mesurée au rendu et publiée par le gabarit ; la valeur de repli couvre
+    le cas où le script ne s'exécute pas.
   */
   .split__gallery {
     --gallery-inset: clamp(1.5rem, 3.5vw, 4rem);
-    --cell-clearance: calc(clamp(6.5rem, 9vw, 8.5rem) + clamp(1.5rem, 3vw, 2.5rem) + 1.5rem);
     min-height: 100svh;
-    padding-top: var(--cell-clearance);
+    padding-top: calc(
+      var(--project-aside-height, 22rem) + clamp(1.5rem, 3vw, 2.5rem) + 1.5rem
+    );
     padding-right: var(--gallery-inset);
   }
 

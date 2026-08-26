@@ -2,7 +2,6 @@
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
@@ -59,7 +58,6 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
         </div>
       </div>
 
-      <ProjectFacts project={project} locale={locale} class="banner__facts" />
     </div>
 
     {

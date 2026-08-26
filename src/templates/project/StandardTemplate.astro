@@ -1,7 +1,6 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
@@ -49,7 +48,6 @@ const { project, locale } = Astro.props;
     </div>
 
     <aside class="order-1 lg:order-2 lg:sticky lg:top-12">
-      <ProjectFacts project={project} locale={locale} />
     </aside>
   </div>
 

@@ -1,7 +1,6 @@
 ---
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
@@ -72,7 +71,6 @@ const marginNotes = [
 
     {/* La fiche ouvre la lecture : on sait de quel projet on parle avant le texte. */}
     <div>
-      <ProjectFacts project={project} locale={locale} />
 
       <SectionRenderer sections={project.sections} locale={locale} />
     </div>

@@ -272,19 +272,24 @@ const panelId = `services-menu-${mode}`;
   }
 
   /*
-    Cibles de pointage : 24 px de haut minimum, au doigt COMME à la souris — le
-    critère ne distingue pas les deux. Les libellés n'en font que 17, et l'écart
-    de 2,4 px entre deux entrées ne rattrape rien : le pas restait sous le
-    seuil, donc l'exception d'espacement ne jouait pas davantage.
-
-    La garniture verticale porte la zone active au seuil sans grossir la
-    typographie, et les entrées restent séparées : deux cibles qui se
-    chevauchent ne valent guère mieux que deux cibles trop petites.
+    ┌─ Écart assumé au critère 2.5.8 ────────────────────────────────────────┐
+    │ Ces liens font environ 20 px de haut, sous le minimum de 24 px exigé   │
+    │ pour une cible de pointage. C'est un ARBITRAGE ÉDITORIAL, pris en      │
+    │ connaissance de cause : le rythme serré du menu prime ici sur le       │
+    │ seuil, et le site n'est donc pas conforme AA sur ce point précis.      │
+    │                                                                        │
+    │ Ne pas « corriger » sans en reparler : la garniture avait été portée à │
+    │ 0,25 rem pour atteindre 24 px, puis ramenée sciemment.                 │
+    │                                                                        │
+    │ Ce qui est conservé : le lien occupe TOUTE la largeur de sa ligne. La  │
+    │ cible reste donc large, seule sa hauteur est en cause — au doigt, on   │
+    │ vise la ligne, pas les quelques caractères du libellé.                 │
+    └────────────────────────────────────────────────────────────────────────┘
   */
   .services-rail__label > a,
   .services-rail__items a {
     display: block;
-    padding-block: 0.25rem;
+    padding-block: 0.1rem;
   }
 
   .services-rail__items a {

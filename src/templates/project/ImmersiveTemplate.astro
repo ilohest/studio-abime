@@ -3,7 +3,6 @@ import { stegaClean } from '@sanity/client/stega';
 
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 
@@ -75,7 +74,6 @@ const accentClass = {
   </header>
 
   <div class="container-wide pt-16">
-    <ProjectFacts project={project} locale={locale} />
   </div>
 
   <SectionRenderer sections={project.sections} locale={locale} />

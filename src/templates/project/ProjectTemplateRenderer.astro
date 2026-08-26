@@ -2,6 +2,7 @@
 import { stegaClean } from '@sanity/client/stega';
 
 import ProjectElementCell from '~/components/project/ProjectElementCell.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
 
 import StandardTemplate from './StandardTemplate.astro';
 import ImmersiveTemplate from './ImmersiveTemplate.astro';
@@ -47,18 +48,44 @@ const Template = (() => {
 
 ---
 
-<div class="project-page-shell">
+<div class="project-page-shell" data-project-shell>
   {/*
-    C'est la case que le visiteur vient de quitter, qu'il retrouve en ouvrant la
-    page. Posée hors du flux, en haut à DROITE : elle ne repousse alors rien
-    vers le bas, et le lien de retour garde sa place en haut à gauche.
+    Le cartouche de tête : la case que le visiteur vient de quitter, et sous
+    elle le relevé du projet. Posé hors du flux, en haut à DROITE — il ne
+    repousse alors rien vers le bas, et le lien de retour garde sa place en haut
+    à gauche. Les gabarits ne portent plus la fiche : elle est ici, une fois
+    pour les cinq.
   */}
-  <div class="project-page-cell container-wide" aria-hidden="true">
-    <ProjectElementCell project={project} class="project-page-cell__unit" />
+  <div class="project-page-aside container-wide">
+    <div class="project-page-aside__unit">
+      <ProjectElementCell project={project} />
+      <ProjectFacts project={project} locale={locale} class="project-page-aside__facts" />
+    </div>
   </div>
 
   <Template project={project} locale={locale} />
 </div>
+
+<script>
+  /*
+    Hauteur réelle du cartouche de tête, publiée en variable CSS. Les gabarits
+    dont la colonne de droite commence en haut — « Colonne fixe », « Bandeau » —
+    s'en servent pour démarrer dessous. Une valeur écrite à la main ne tiendrait
+    pas : le relevé compte deux lignes ou six selon le projet.
+  */
+  document.querySelectorAll<HTMLElement>('[data-project-shell]').forEach((shell) => {
+    const aside = shell.querySelector<HTMLElement>('.project-page-aside__unit');
+    if (!aside) return;
+
+    const publish = () => {
+      shell.style.setProperty('--project-aside-height', `${Math.ceil(aside.getBoundingClientRect().height)}px`);
+    };
+
+    publish();
+    if ('ResizeObserver' in window) new ResizeObserver(publish).observe(aside);
+    document.fonts?.ready.then(publish);
+  });
+</script>
 
 <style>
   .project-page-shell {
@@ -67,15 +94,45 @@ const Template = (() => {
     isolation: isolate;
   }
 
-  .project-page-cell {
+  .project-page-aside {
     position: absolute;
     z-index: 2;
     inset: clamp(1.5rem, 3vw, 2.5rem) 0 auto;
+    /*
+      Le bloc ne capte rien : il ne porte que du texte et une case muette. Les
+      liens qu'il contient — les canaux du projet — le redemandent pour eux.
+    */
     pointer-events: none;
   }
 
-  .project-page-cell :global(.project-page-cell__unit) {
+  .project-page-aside__unit {
+    display: flex;
+    width: min(20rem, 100%);
+    flex-direction: column;
     margin-inline-start: auto;
+    gap: clamp(1.1rem, 2vw, 1.6rem);
+  }
+
+  .project-page-aside :global(a) {
+    pointer-events: auto;
+  }
+
+  /*
+    Sous 900 px, la colonne de droite n'a plus la largeur d'accueillir le
+    relevé : le bloc rentre dans le flux, en tête de page. Il y repousse le
+    contenu, mais rien ne disparaît — masquer la fiche reviendrait à retirer au
+    petit écran ce que le grand donne.
+  */
+  @media (max-width: 899px) {
+    .project-page-aside {
+      position: static;
+      padding-top: clamp(1.5rem, 3vw, 2.5rem);
+      pointer-events: auto;
+    }
+
+    .project-page-aside__unit {
+      width: auto;
+    }
   }
 
 </style>
