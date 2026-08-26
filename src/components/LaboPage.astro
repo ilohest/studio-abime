@@ -1114,7 +1114,11 @@ const whyTitle = page.whyTitle
 
   .labo-service__number {
     display: block;
-    margin-bottom: clamp(1.1rem, 1.7vw, 1.65rem);
+    /*
+      Plus serré que l'écart titre/description : le numéro se lit comme
+      l'étiquette du titre, pas comme une ligne autonome au-dessus de lui.
+    */
+    margin-bottom: clamp(0.4rem, 0.6vw, 0.6rem);
     font-size: clamp(0.64rem, 0.7vw, 0.75rem);
     line-height: 1;
     letter-spacing: 0.08em;
