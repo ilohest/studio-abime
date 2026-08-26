@@ -1991,6 +1991,42 @@ const whyTitle = page.whyTitle
     }
   }
 
+  /*
+    La devise passe sur une seule ligne dès que le système d'orbites est assez
+    grand pour l'accueillir. Le disque s'élargit — dans un cercle, une ligne n'a
+    que le diamètre pour elle, là où trois lignes empilées se partageaient la
+    hauteur — et sa largeur s'exprime en pourcentage du système, comme les
+    orbites elles-mêmes : rester sous les 38 % de la première garantit qu'il ne
+    la recouvre jamais. Le texte se mesure ensuite en cqw du disque, donc
+    l'ajustement reste le même à toutes les largeurs.
+
+    Sous 768px, aucun disque capable de tenir la phrase sur une ligne n'entrerait
+    dans les orbites : on y garde les trois lignes empilées.
+  */
+  @media (min-width: 768px) {
+    .labo-orbits__core {
+      width: 31%;
+      container-type: inline-size;
+      grid-auto-flow: column;
+      align-items: baseline;
+      white-space: nowrap;
+    }
+
+    .labo-orbits__core .type-note {
+      font-size: 5.6cqw;
+    }
+
+    .labo-orbits__core strong {
+      /*
+        Contraste de corps resserré par rapport à la version empilée : sur une
+        ligne, un écart trop fort réduirait les deux mots faibles à rien. La
+        marge remplace un gap, qui en cqw se mesurerait sur la fenêtre.
+      */
+      font-size: 7.8cqw;
+      margin-inline: 2cqw;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .labo-service,
     .labo-service__number {
