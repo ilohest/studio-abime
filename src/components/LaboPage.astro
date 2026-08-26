@@ -1737,7 +1737,11 @@ const whyTitle = page.whyTitle
   }
 
   .labo-why {
-    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(4rem, 7vw, 7rem);
+    /*
+      La réserve du bas s'ajoutait à celle du haut de la conclusion : la chute
+      de section se retrouvait à deux respirations de la suivante.
+    */
+    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(2rem, 3.5vw, 3.5rem);
     overflow: clip;
   }
 
