@@ -205,7 +205,6 @@ function isActive(key: string) {
   align-items: baseline;
   gap: 0.2rem clamp(1.4rem, 3vw, 2.6rem);
   padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--color-line);
 }
 
 .journal-filter {
