@@ -120,7 +120,11 @@ function isActive(key: string) {
       </button>
     </div>
 
-    <p class="type-annotation mt-4 text-muted" aria-live="polite">
+    <!--
+      Le décompte ne s'affiche plus, mais il reste annoncé : c'est le seul
+      retour qu'ont les lecteurs d'écran quand un filtre change la liste.
+    -->
+    <p class="sr-only" aria-live="polite">
       {{ filteredPosts.length }} {{ labels.count }}
     </p>
 
