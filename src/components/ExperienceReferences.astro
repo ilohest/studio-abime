@@ -36,7 +36,7 @@ const footnotes = buildClientFootnotes(projects, clients);
 
       <ul class="references__list" role="list">
         {footnotes.map(({ client, atomicNumber }) => (
-          <li class="references__item type-note">
+          <li class="references__item type-note" id={atomicNumber ? `reference-${atomicNumber}` : undefined}>
             <span class="references__marker" aria-hidden="true">
               {atomicNumber ?? '—'}
             </span>
@@ -72,6 +72,13 @@ const footnotes = buildClientFootnotes(projects, clients);
     padding: 0;
   }
 
+  /*
+    Une case de client mène ici. Pas de marge de défilement calculée comme sur
+    les services du Labo : la note ferme la page, le navigateur bute donc sur
+    la fin du document et la section entre de toute façon entière dans l'écran.
+    C'est `:target` qui fait le travail utile — le reste recule, la ligne qu'on
+    est venu lire garde l'encre pleine et son appel de note se tamponne.
+  */
   .references__item {
     display: grid;
     align-items: baseline;
@@ -79,13 +86,29 @@ const footnotes = buildClientFootnotes(projects, clients);
     grid-template-columns: 2.1rem 1fr;
     padding-bottom: 0.45rem;
     border-bottom: 1px solid var(--color-line);
+    scroll-margin-top: clamp(5rem, 10vw, 9rem);
+    transition: color 320ms ease;
+  }
+
+  .references__list:has(.references__item:target) .references__item:not(:target) {
+    color: var(--color-muted);
+  }
+
+  .references__item:target .references__marker {
+    padding-inline: 0.35em;
+    margin-inline-end: -0.35em;
+    background: var(--color-ink);
+    color: var(--color-ink-invert);
   }
 
   .references__marker {
+    width: fit-content;
+    justify-self: end;
     color: var(--color-muted);
     font-size: 0.6875rem;
     font-variant-numeric: tabular-nums;
     text-align: right;
+    transition: background-color 320ms ease, color 320ms ease;
   }
 
   /* Flux de texte, pas une grille : la virgule doit coller au nom. */
@@ -108,4 +131,12 @@ const footnotes = buildClientFootnotes(projects, clients);
     content: ' · ';
     color: var(--color-line);
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .references__item,
+    .references__marker {
+      transition: none;
+    }
+  }
 </style>
+

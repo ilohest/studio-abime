@@ -14,8 +14,19 @@
     text-wrap: wrap;
   }
 
+  /*
+    Le masque coupe ce qui dépasse pour que le mot surgisse par le bas. À
+    l'interligne des Titres (1,05), il coupait aussi les ACCENTS DES CAPITALES :
+    un É monte 4 à 5 px plus haut que la place laissée au-dessus de la ligne de
+    base. On ouvre donc le masque vers le haut, et la marge négative rend
+    exactement ce que la garniture a pris — la ligne ne bouge pas d'un pixel,
+    l'accent cesse d'être rogné, et le bas du masque continue de cacher le mot
+    avant son entrée.
+  */
   .text-reveal-word-mask {
     display: inline-block;
+    padding-top: 0.16em;
+    margin-top: -0.16em;
     overflow: clip;
     vertical-align: bottom;
   }

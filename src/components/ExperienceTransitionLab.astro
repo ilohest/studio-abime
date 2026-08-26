@@ -107,7 +107,8 @@ const elementNumbers = Object.fromEntries(
                   const linkedProject = reference?.kind === 'project' ? reference.project : undefined;
                   const name = reference ? referenceName(reference) : undefined;
                   const sector = reference ? referenceSector(reference) : undefined;
-                  const Tag = linkedProject ? 'a' : 'span';
+                  const client = reference?.kind === 'client' ? reference.client : undefined;
+                  const Tag = reference ? 'a' : 'span';
 
                   return (
                     <Tag
@@ -115,8 +116,20 @@ const elementNumbers = Object.fromEntries(
                         'element-cell',
                         { 'element-cell--reference': reference, 'element-cell--project': linkedProject },
                       ]}
-                      href={linkedProject ? projectPath(locale, linkedProject.slug) : undefined}
-                      aria-label={linkedProject ? `Voir l’expérience ${linkedProject.title}` : undefined}
+                      href={
+                        linkedProject
+                          ? projectPath(locale, linkedProject.slug)
+                          : client
+                            ? `#reference-${slot!.atomicNumber}`
+                            : undefined
+                      }
+                      aria-label={
+                        linkedProject
+                          ? `Voir l’expérience ${linkedProject.title}`
+                          : client
+                            ? `${client.name} — voir la référence`
+                            : undefined
+                      }
                     >
                       <span class="element-cell__number">{element.number}</span>
                       <strong class="element-cell__symbol">
@@ -125,8 +138,6 @@ const elementNumbers = Object.fromEntries(
                       <span class="element-cell__name">
                         {sector ?? name ?? (element.symbol === '—' ? 'série' : 'élément')}
                       </span>
-                      {/* L'initiale seule est illisible à la voix : on donne le nom entier. */}
-                      {name && !linkedProject && <span class="sr-only">{name}</span>}
                     </Tag>
                   );
                 })}
@@ -172,6 +183,13 @@ const elementNumbers = Object.fromEntries(
   const TABLE_EXIT_END = 0.72;
   const COLUMN_LIVE_OPACITY = 0.4;
 
+  /*
+    Instant où la dernière colonne de fiches a fini de monter. Avant lui, les
+    fiches volent séparées et ne peuvent plus compter sur leur voisine pour
+    fermer leur cadre : chacune peint alors ses quatre côtés.
+  */
+  const GRID_SETTLED = 0.92;
+
   document.querySelectorAll('[data-experience-motion]').forEach((root) => {
     if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
     root.dataset.motionReady = 'true';
@@ -180,7 +198,7 @@ const elementNumbers = Object.fromEntries(
     const tableLayer = root.querySelector('[data-table-layer]');
     const projectsLayer = root.querySelector('[data-projects-layer]');
     const elementColumns = [...root.querySelectorAll('[data-element-column]')];
-    const tableLinks = [...root.querySelectorAll('.element-cell--project')];
+    const tableLinks = [...root.querySelectorAll('a.element-cell')];
     const projectCards = [...root.querySelectorAll('.motion-project-grid .project-catalog-item')];
     const projectLinks = [...root.querySelectorAll('.motion-project-grid .project-catalog-card[href]')];
     const stateLabel = root.querySelector('[data-motion-state]');
@@ -235,7 +253,13 @@ const elementNumbers = Object.fromEntries(
         const columnIndex = index % columnCount;
         const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
         const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.7 + rightToLeft * 0.22));
-        card.style.transform = `translate3d(0, ${(112 * (1 - columnProgress)).toFixed(3)}vh, 0) scale(${(0.92 + columnProgress * 0.08).toFixed(4)})`;
+        /*
+          Translation seule, sans mise à l'échelle : une fiche réduite se
+          décolle de ses voisines et ouvre des jours entre les cases. Elle
+          monte donc à sa taille définitive, et la trame reste jointive pendant
+          toute la montée.
+        */
+        card.style.transform = `translate3d(0, ${(112 * (1 - columnProgress)).toFixed(3)}vh, 0)`;
         card.style.opacity = String(range(columnProgress, 0.04, 0.32));
       });
     };
@@ -283,6 +307,9 @@ const elementNumbers = Object.fromEntries(
         if (link instanceof HTMLElement) link.tabIndex = projectsAreInteractive ? 0 : -1;
       });
 
+      // Cadres complets tant que les fiches ne se touchent pas.
+      root.toggleAttribute('data-motion-detached', !reducedMotion.matches && progress < GRID_SETTLED);
+
       if (stateLabel instanceof HTMLElement) {
         stateLabel.textContent = progress < 0.22
           ? 'VUE D’ENSEMBLE'
@@ -300,6 +327,71 @@ const elementNumbers = Object.fromEntries(
       measureLinks();
       requestUpdate();
     };
+
+    /*
+      Descente vers la note de bas de page. Le défilement natif « smooth » va
+      vite et sa durée n'est pas réglable : on l'écarte le temps du geste et on
+      mène la course nous-mêmes, plus lentement, pour que le lecteur garde le
+      fil entre la case qu'il vient de quitter et la ligne qui l'attend.
+
+      Le fragment est tout de même posé dans l'URL — sans lui, `:target` ne
+      désignerait pas la ligne. On annule seulement le saut qu'il provoque,
+      dans la même image, avant d'animer.
+    */
+    const SCROLL_DURATION = 1100;
+    const easeInOut = (value: number) =>
+      value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2;
+
+    root.querySelectorAll<HTMLAnchorElement>('a.element-cell[href^="#"]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        const hash = link.getAttribute('href');
+        const target = hash ? document.querySelector<HTMLElement>(hash) : null;
+        if (!target || event.defaultPrevented || event.metaKey || event.ctrlKey) return;
+
+        event.preventDefault();
+
+        const from = window.scrollY;
+        const margin = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+        const limit = document.documentElement.scrollHeight - window.innerHeight;
+        const to = clamp(target.getBoundingClientRect().top + from - margin, 0, limit);
+
+        /*
+          Le saut du fragment est différé par le navigateur : il survient APRÈS
+          ce gestionnaire, et écraserait une remise en place faite ici. On
+          attend donc `hashchange`, qui suit la navigation dans la même tâche —
+          avant le premier rendu, donc sans clignotement — pour reprendre la
+          page où elle était et mener la descente nous-mêmes.
+        */
+        const previousBehavior = document.documentElement.style.scrollBehavior;
+        document.documentElement.style.scrollBehavior = 'auto';
+
+        const descend = () => {
+          window.scrollTo(0, from);
+          document.documentElement.style.scrollBehavior = previousBehavior;
+
+          if (reducedMotion.matches || Math.abs(to - from) < 2) {
+            window.scrollTo(0, to);
+            return;
+          }
+
+          const start = performance.now();
+          const step = (now: number) => {
+            const elapsed = clamp((now - start) / SCROLL_DURATION);
+            window.scrollTo(0, from + (to - from) * easeInOut(elapsed));
+            if (elapsed < 1) window.requestAnimationFrame(step);
+          };
+          window.requestAnimationFrame(step);
+        };
+
+        // Même fragment : aucune navigation, donc aucun `hashchange` à attendre.
+        if (window.location.hash === hash) {
+          descend();
+        } else {
+          window.addEventListener('hashchange', descend, { once: true });
+          window.location.hash = hash!;
+        }
+      });
+    });
 
     window.addEventListener('scroll', requestUpdate, { passive: true });
     window.addEventListener('resize', remeasure, { passive: true });
@@ -404,10 +496,33 @@ const elementNumbers = Object.fromEntries(
     text-transform: lowercase;
   }
 
+  /*
+    L'inversion complète reste au projet : c'est lui qui ouvre une page. Une
+    case de client ne mène qu'à sa ligne dans la note — son survol se contente
+    donc d'affermir le cadre et de poser le symbole en pleine encre.
+  */
   .element-cell--project:hover,
   .element-cell--project:focus-visible {
     background: var(--color-ink);
     color: var(--color-lumiere);
+  }
+
+  a.element-cell--reference:not(.element-cell--project) {
+    border-color: var(--motion-line);
+    transition: border-color 220ms ease, opacity 220ms ease;
+    opacity: 0.82;
+  }
+
+  a.element-cell--reference:not(.element-cell--project):hover,
+  a.element-cell--reference:not(.element-cell--project):focus-visible {
+    border-color: var(--color-ink);
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    a.element-cell--reference:not(.element-cell--project) {
+      transition: none;
+    }
   }
 
   .element-cell__number {
@@ -439,6 +554,28 @@ const elementNumbers = Object.fromEntries(
   .motion-lab__projects-layer {
     z-index: 2;
     opacity: 0;
+  }
+
+  /*
+    La grille ne peint qu'un trait entre deux fiches : chacune porte son filet
+    de pied et son filet de gauche, la voisine fournit les deux autres. Séparées
+    en vol, elles se retrouvent donc ouvertes en haut et à droite. Le temps du
+    vol, chaque fiche ferme son propre cadre ; une fois la grille reformée, la
+    règle du trait unique reprend et les doublons disparaissent exactement là où
+    ceux des voisines les recouvrent déjà — la bascule ne se voit pas.
+  */
+  .motion-lab[data-motion-detached] :global(.project-catalog-item) {
+    --project-card-top-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+    --project-card-right-line: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+    --project-card-top-right-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-right-cross-color: var(--project-card-cross-color);
   }
 
   .motion-project-grid {
