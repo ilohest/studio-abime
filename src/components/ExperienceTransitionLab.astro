@@ -171,24 +171,6 @@ const elementNumbers = Object.fromEntries(
   const ease = (value: number) => value * value * (3 - 2 * value);
 
   /*
-    Montée des fiches : on démarre en douceur, puis on tient une VITESSE
-    CONSTANTE jusqu'au bout — pas d'amortissement final.
-
-    C'est lui qui faisait la dernière pause : les fiches s'arrêtaient à la fin
-    de la piste, puis la scène cessait d'être épinglée et la page les emportait
-    d'un coup à pleine vitesse. En arrivant encore lancées, à un rythme voisin
-    de celui du défilement (≈ 1 px de fiche pour 1 px de page), elles passent le
-    relais sans rupture : la grille continue simplement de partir vers le haut.
-  */
-  const RUN_UP = 0.35; // part de la course consacrée à prendre de la vitesse
-  const easeNoBrake = (value: number) => {
-    const cruise = 1 / (1 - RUN_UP / 2);
-    return value < RUN_UP
-      ? (cruise * value * value) / (2 * RUN_UP)
-      : (cruise * RUN_UP) / 2 + cruise * (value - RUN_UP);
-  };
-
-  /*
     Une case liée à un projet reste cliquable TANT QU'ELLE EST LISIBLE : ce
     n'est pas le départ de l'animation qui éteint les liens, c'est la sortie de
     chaque colonne. Deux seuils suffisent :
@@ -275,12 +257,8 @@ const elementNumbers = Object.fromEntries(
         if (!(card instanceof HTMLElement)) return;
         const columnIndex = index % columnCount;
         const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
-        /*
-          Départs échelonnés, ARRIVÉE COMMUNE à la fin exacte de la piste : une
-          colonne qui se poserait plus tôt resterait immobile jusqu'au bout, et
-          c'est très exactement ce qui se lisait comme une pause.
-        */
-        const columnProgress = easeNoBrake(range(progress, 0.23 + rightToLeft * 0.22, 1));
+        // La dernière colonne (rightToLeft = 1) se pose à 1, pas avant.
+        const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.78 + rightToLeft * 0.22));
         /*
           Translation seule, sans mise à l'échelle : une fiche réduite se
           décolle de ses voisines et ouvre des jours entre les cases. Elle
