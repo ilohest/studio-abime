@@ -147,6 +147,19 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
   const range = (value: number, start: number, end: number) => clamp((value - start) / (end - start));
   const ease = (value: number) => value * value * (3 - 2 * value);
 
+  /*
+    Une case liée à un projet reste cliquable TANT QU'ELLE EST LISIBLE : ce
+    n'est pas le départ de l'animation qui éteint les liens, c'est la sortie de
+    chaque colonne. Deux seuils suffisent :
+      · TABLE_EXIT_END — instant où la dernière colonne a fini de sortir ;
+        au-delà, la couche entière cesse de capter la souris, sans quoi son
+        cadre invisible masquerait la grille des projets qui prend le relais.
+      · COLUMN_LIVE_OPACITY — en deçà de cette opacité, une colonne est trop
+        effacée pour qu'on puisse viser ses cases : elle se retire seule.
+  */
+  const TABLE_EXIT_END = 0.72;
+  const COLUMN_LIVE_OPACITY = 0.4;
+
   document.querySelectorAll('[data-experience-motion]').forEach((root) => {
     if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
     root.dataset.motionReady = 'true';
@@ -161,6 +174,24 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
     const stateLabel = root.querySelector('[data-motion-state]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
+
+    /*
+      Géométrie figée des cases liées à un projet. `offsetTop` ignore les
+      transformations : la position mesurée ici reste donc valable pendant toute
+      la sortie, et l'animation n'a jamais à interroger la mise en page — elle ne
+      fait que soustraire la distance déjà parcourue par la colonne.
+    */
+    const linkGeometry = new Map<HTMLElement, { top: number; height: number }>();
+    let layerTop = 0;
+
+    const measureLinks = () => {
+      layerTop = tableLayer instanceof HTMLElement ? tableLayer.offsetTop : 0;
+      tableLinks.forEach((link) => {
+        if (link instanceof HTMLElement) {
+          linkGeometry.set(link, { top: link.offsetTop, height: link.offsetHeight });
+        }
+      });
+    };
 
     const renderColumns = (progress: number) => {
       if (tableLayer instanceof HTMLElement) {
@@ -177,8 +208,12 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
         if (!(column instanceof HTMLElement)) return;
         const rightToLeft = (totalOutgoing - index) / totalOutgoing;
         const columnProgress = ease(range(progress, 0.05 + rightToLeft * 0.26, 0.46 + rightToLeft * 0.26));
+        const opacity = 1 - range(columnProgress, 0.72, 1);
         column.style.transform = `translate3d(0, ${(-118 * columnProgress).toFixed(3)}vh, 0)`;
-        column.style.opacity = String(1 - range(columnProgress, 0.72, 1));
+        column.style.opacity = String(opacity);
+        column.dataset.live = String(opacity > COLUMN_LIVE_OPACITY);
+        // Distance parcourue vers le haut, en pixels : sert au clavier.
+        column.dataset.travel = String(1.18 * window.innerHeight * columnProgress);
       });
 
       const columnCount = window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2;
@@ -200,7 +235,7 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
       const rect = runway.getBoundingClientRect();
       const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
       const progress = reducedMotion.matches ? 1 : clamp(-rect.top / distance);
-      const tableIsInteractive = !reducedMotion.matches && progress < 0.12;
+      const tableIsInteractive = !reducedMotion.matches && progress < TABLE_EXIT_END;
       const projectsAreInteractive = reducedMotion.matches || progress > 0.78;
 
       renderColumns(progress);
@@ -209,8 +244,24 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
         tableLayer.style.pointerEvents = tableIsInteractive ? 'auto' : 'none';
         tableLayer.setAttribute('aria-hidden', String(!tableIsInteractive));
       }
+      // Colonne par colonne : celles encore à l'écran gardent souris et clavier.
+      elementColumns.forEach((column) => {
+        if (column instanceof HTMLElement) {
+          column.style.pointerEvents = column.dataset.live === 'true' ? 'auto' : 'none';
+        }
+      });
+      /*
+        Le clavier suit la case, pas la colonne : une case déjà remontée hors du
+        cadre ne doit plus recevoir le focus, même si sa colonne est encore
+        lisible plus bas.
+      */
       tableLinks.forEach((link) => {
-        if (link instanceof HTMLElement) link.tabIndex = tableIsInteractive ? 0 : -1;
+        if (!(link instanceof HTMLElement)) return;
+        const column = link.closest('[data-element-column]');
+        const travel = column instanceof HTMLElement ? Number(column.dataset.travel ?? 0) : 0;
+        const geometry = linkGeometry.get(link);
+        const onScreen = geometry ? layerTop + geometry.top + geometry.height - travel > 0 : false;
+        link.tabIndex = tableIsInteractive && onScreen ? 0 : -1;
       });
       if (projectsLayer instanceof HTMLElement) {
         projectsLayer.style.pointerEvents = projectsAreInteractive ? 'auto' : 'none';
@@ -233,9 +284,15 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
       if (!frame) frame = window.requestAnimationFrame(update);
     };
 
+    const remeasure = () => {
+      measureLinks();
+      requestUpdate();
+    };
+
     window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate, { passive: true });
-    reducedMotion.addEventListener('change', requestUpdate);
+    window.addEventListener('resize', remeasure, { passive: true });
+    reducedMotion.addEventListener('change', remeasure);
+    measureLinks();
     update();
   });
 </script>
