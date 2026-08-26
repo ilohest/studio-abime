@@ -105,12 +105,22 @@ const Template = (() => {
     pointer-events: none;
   }
 
+  /*
+    La case se cale sur le BORD du cartouche, pas sur son début : elle est plus
+    étroite que le relevé, et alignée à gauche elle rentrait dans la page au
+    lieu de tenir le coin. Le relevé, lui, garde toute la largeur.
+  */
   .project-page-aside__unit {
     display: flex;
     width: min(20rem, 100%);
     flex-direction: column;
+    align-items: flex-end;
     margin-inline-start: auto;
     gap: clamp(1.1rem, 2vw, 1.6rem);
+  }
+
+  .project-page-aside :global(.project-page-aside__facts) {
+    align-self: stretch;
   }
 
   .project-page-aside :global(a) {
