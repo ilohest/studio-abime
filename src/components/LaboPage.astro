@@ -1793,11 +1793,10 @@ const whyTitle = page.whyTitle
     grid-column: 1 / 7;
   }
 
-  .labo-principles__intro,
-  .labo-principles > li {
-    font-size: clamp(1.05rem, 1.35vw, 1.35rem);
-    line-height: 1.38;
-  }
+  /*
+    L'intro et la liste ne se distinguent plus par la taille : elles suivent le
+    corps de texte de la section, réglé plus haut avec le chapô et la chute.
+  */
 
   .labo-principles {
     display: block;
