@@ -257,8 +257,14 @@ const elementNumbers = Object.fromEntries(
         if (!(card instanceof HTMLElement)) return;
         const columnIndex = index % columnCount;
         const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
-        // La dernière colonne (rightToLeft = 1) se pose à 1, pas avant.
-        const columnProgress = ease(range(progress, 0.23 + rightToLeft * 0.22, 0.78 + rightToLeft * 0.22));
+        /*
+          L'écart entre colonnes (0,30 de la piste) est plus large que celui de
+          la table qui se vide (0,26) : la grille se remplit donc en éventail
+          plus ouvert. Son entrée commence tôt, pendant que la table sort encore
+          — les deux mouvements se croisent au lieu de se succéder. La dernière
+          colonne se pose à 1, à la fin exacte de la piste, et pas avant.
+        */
+        const columnProgress = ease(range(progress, 0.18 + rightToLeft * 0.3, 0.7 + rightToLeft * 0.3));
         /*
           Translation seule, sans mise à l'échelle : une fiche réduite se
           décolle de ses voisines et ouvre des jours entre les cases. Elle
