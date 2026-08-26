@@ -66,6 +66,22 @@ export function referenceSector(source: ReferenceSource): string | undefined {
   return sector?.trim() || undefined;
 }
 
+/**
+ * Numéro que porte un projet partout où on le montre : celui de sa case
+ * réservée s'il en occupe une, son rang au catalogue sinon. La grille, la case
+ * d'en-tête et l'étiquette de la fiche s'accordent ainsi sans se concerter.
+ */
+export function projectDisplayNumber(project: {
+  featured?: boolean;
+  featuredRank?: number;
+  number?: number;
+}): number | undefined {
+  const rank = project.featuredRank;
+  return project.featured && typeof rank === 'number' && rank < MAX_FEATURED_PROJECTS
+    ? REFERENCE_SLOTS[rank]
+    : project.number;
+}
+
 /** Projets favoris de la langue courante, dans l'ordre déjà trié par la requête. */
 export function featuredProjects(projects: ProjectCard[]): ProjectCard[] {
   return projects.filter((project) => project.featured).slice(0, MAX_FEATURED_PROJECTS);

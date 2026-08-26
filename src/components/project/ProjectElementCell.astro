@@ -1,6 +1,6 @@
 ---
 import { projectInitials } from '~/lib/viewModels';
-import { MAX_FEATURED_PROJECTS, REFERENCE_SLOTS } from '~/lib/references';
+import { projectDisplayNumber } from '~/lib/references';
 import type { Project } from '~/lib/sanity/types';
 
 /**
@@ -25,12 +25,7 @@ interface Props {
 
 const { project, class: className } = Astro.props;
 
-const rank = project.featuredRank;
-const slot =
-  project.featured && typeof rank === 'number' && rank < MAX_FEATURED_PROJECTS
-    ? REFERENCE_SLOTS[rank]
-    : undefined;
-const number = slot ?? project.number;
+const number = projectDisplayNumber(project);
 const symbol = projectInitials(project.title);
 ---
 

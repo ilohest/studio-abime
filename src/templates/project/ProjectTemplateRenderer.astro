@@ -62,11 +62,12 @@ const backgroundOpacity = Math.min(100, Math.max(0, project.backgroundOpacity ??
   }
 
   {/*
-    Posée avant le gabarit, donc au seuil de toutes les mises en page : c'est la
-    case que le visiteur vient de quitter, qu'il retrouve en ouvrant la page.
+    C'est la case que le visiteur vient de quitter, qu'il retrouve en ouvrant la
+    page. Posée hors du flux, en haut à DROITE : elle ne repousse alors rien
+    vers le bas, et le lien de retour garde sa place en haut à gauche.
   */}
-  <div class="project-page-cell container-wide">
-    <ProjectElementCell project={project} />
+  <div class="project-page-cell container-wide" aria-hidden="true">
+    <ProjectElementCell project={project} class="project-page-cell__unit" />
   </div>
 
   <Template project={project} locale={locale} />
@@ -80,7 +81,14 @@ const backgroundOpacity = Math.min(100, Math.max(0, project.backgroundOpacity ??
   }
 
   .project-page-cell {
-    padding-top: clamp(1.5rem, 3vw, 2.5rem);
+    position: absolute;
+    z-index: 2;
+    inset: clamp(1.5rem, 3vw, 2.5rem) 0 auto;
+    pointer-events: none;
+  }
+
+  .project-page-cell :global(.project-page-cell__unit) {
+    margin-inline-start: auto;
   }
 
   .project-page-background {
