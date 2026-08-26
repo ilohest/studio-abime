@@ -203,6 +203,42 @@ const whyTitle = page.whyTitle
     {page.note && <p class="labo-services__note type-annotation">({page.note})</p>}
   </section>
 
+  <script>
+    /*
+      Aligne l'atterrissage de toutes les fiches de service sur l'en-tête de la
+      section : la marge de défilement de chaque fiche vaut sa distance à cet
+      en-tête, plus la garde laissée à la barre de marque. Mesuré au chargement,
+      après le chargement des fontes — qui change la hauteur des lignes — et à
+      chaque redimensionnement.
+    */
+    const servicesSection = document.querySelector('.labo-services');
+    const serviceCards = [...document.querySelectorAll('.labo-service')];
+
+    if (servicesSection instanceof HTMLElement && serviceCards.length > 0) {
+      let measureFrame = 0;
+
+      const measureServiceAnchors = () => {
+        measureFrame = 0;
+        const guard = Number.parseFloat(getComputedStyle(servicesSection).scrollMarginTop) || 0;
+        const sectionTop = servicesSection.getBoundingClientRect().top;
+
+        serviceCards.forEach((card) => {
+          if (!(card instanceof HTMLElement)) return;
+          const distance = card.getBoundingClientRect().top - sectionTop;
+          card.style.setProperty('--service-anchor-offset', `${Math.round(distance + guard)}px`);
+        });
+      };
+
+      const scheduleMeasure = () => {
+        if (!measureFrame) measureFrame = window.requestAnimationFrame(measureServiceAnchors);
+      };
+
+      measureServiceAnchors();
+      window.addEventListener('resize', scheduleMeasure, { passive: true });
+      document.fonts?.ready.then(measureServiceAnchors);
+    }
+  </script>
+
   <section class="labo-philosophy container-wide surface-paper" id="philosophie" aria-labelledby="labo-philosophy-title">
     <div class="labo-philosophy__grain surface-paper-grain" aria-hidden="true"></div>
     <h2 id="labo-philosophy-title" class="sr-only">{page.eyebrow}</h2>
@@ -1047,6 +1083,8 @@ const whyTitle = page.whyTitle
 
   .labo-services {
     padding-block: clamp(2rem, 3vw, 3.5rem) clamp(7rem, 11vw, 11rem);
+    /* Destination commune de toutes les fiches : l'en-tête « Index orbital ». */
+    scroll-margin-top: clamp(5rem, 10vw, 9rem);
   }
 
   .labo-services__heading {
@@ -1082,10 +1120,36 @@ const whyTitle = page.whyTitle
     row-gap: clamp(4.5rem, 7vw, 7rem);
   }
 
+  /*
+    Les nœuds de l'orbite mènent tous au même endroit, sans que le clic soit
+    intercepté : chaque fiche garde son ancre — donc partageable, et le bouton
+    retour conserve son repère — mais sa marge de défilement vaut sa distance à
+    l'en-tête. Le navigateur atterrit alors toujours sur « Index orbital », et
+    `:target` désigne la fiche demandée. La valeur exacte est posée au chargement
+    par le script ; la valeur de repli sert tant qu'il n'a pas mesuré.
+  */
   .labo-service {
     display: block;
     min-height: 0;
-    scroll-margin-top: clamp(5rem, 10vw, 9rem);
+    scroll-margin-top: var(--service-anchor-offset, clamp(5rem, 10vw, 9rem));
+    transition: color 320ms ease;
+  }
+
+  /*
+    Mise en évidence par RETRAIT : l'index entier passe en gris, la fiche lue
+    seule garde l'encre pleine et son numéro tamponné. Rien ne s'ajoute à la
+    page, et la marge négative compense le fond pour que le chiffre ne bouge pas.
+  */
+  .labo-services__grid:has(.labo-service:target) .labo-service:not(:target) {
+    color: var(--color-muted);
+  }
+
+  .labo-service:target .labo-service__number {
+    padding-inline: 0.45em;
+    margin-inline-start: -0.45em;
+    background: var(--color-ink);
+    color: var(--color-ink-invert);
+    opacity: 1;
   }
 
   .labo-service__number,
@@ -1114,6 +1178,8 @@ const whyTitle = page.whyTitle
 
   .labo-service__number {
     display: block;
+    width: fit-content;
+    transition: background-color 320ms ease, color 320ms ease;
     /*
       Plus serré que l'écart titre/description : le numéro se lit comme
       l'étiquette du titre, pas comme une ligne autonome au-dessus de lui.
@@ -1920,6 +1986,11 @@ const whyTitle = page.whyTitle
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .labo-service,
+    .labo-service__number {
+      transition: none;
+    }
+
     .labo-orbits__core::before {
       animation: none;
       transform: none;
@@ -2008,6 +2079,22 @@ const whyTitle = page.whyTitle
       return;
     }
 
+    /*
+      Réponse au scroll. La vitesse du geste devient une impulsion qui s'ajoute
+      au régime de croisière des orbites, puis retombe d'elle-même. Les valeurs
+      se lisent ensemble : un scroll de trackpad ordinaire tourne autour de
+      1200 px/s, soit une impulsion d'environ 3 — les orbites quadruplent leur
+      vitesse le temps du geste, et un lancer franc les pousse jusqu'à 8×.
+    */
+    const SCROLL_SENSITIVITY = 420; // px/s nécessaires pour +1× de vitesse
+    const IMPULSE_MIN = -3;
+    const IMPULSE_MAX = 7;
+    const REVOLUTION_MIN = 0.25; // remonter le scroll fait presque caler l'orbite
+    const REVOLUTION_MAX = 8;
+    const SPIN_COUPLING = 0.5; // les symboles suivent, à mi-voix
+    const SPIN_MIN = 0.4;
+    const SPIN_MAX = 4;
+
     let hoverFactor = 1;
     let scrollImpulse = 0;
 
@@ -2029,7 +2116,7 @@ const whyTitle = page.whyTitle
         });
       },
       onUpdate: (self) => {
-        scrollImpulse = gsap.utils.clamp(-2.4, 3.6, self.getVelocity() / 850);
+        scrollImpulse = gsap.utils.clamp(IMPULSE_MIN, IMPULSE_MAX, self.getVelocity() / SCROLL_SENSITIVITY);
       },
     });
 
@@ -2040,14 +2127,39 @@ const whyTitle = page.whyTitle
       });
     }
 
+    /*
+      Trois réglages de temps, calibrés pour une image de 60 Hz. Sur un écran
+      120 Hz, les appliquer telles quelles ferait retomber l'élan deux fois plus
+      vite et rendrait la poussée du scroll deux fois plus molle : le même geste
+      ne donnerait pas le même mouvement d'une machine à l'autre. On les
+      convertit donc en fonction du temps réellement écoulé.
+
+      L'élan survit volontairement au geste : il met environ une demi-seconde à
+      s'éteindre, et les orbites le rattrapent assez vite pour qu'on voie
+      l'accélération arriver. C'est ce décalage — pousser, puis regarder le
+      système redescendre tout seul — qui rend l'effet lisible.
+    */
+    const IMPULSE_DECAY = 0.945; // par image : l'élan garde la moitié de sa force ~200 ms
+    const REVOLUTION_CATCH_UP = 0.16;
+    const SPIN_CATCH_UP = 0.1;
+
+    const perFrame = (rate: number, frames: number) => 1 - (1 - rate) ** frames;
+
     const updateMotion = () => {
-      scrollImpulse *= 0.9;
-      const revolutionSpeed = gsap.utils.clamp(0.38, 4.25, 1 + scrollImpulse) * hoverFactor;
-      const spinSpeed = gsap.utils.clamp(0.55, 2.3, 1 + scrollImpulse * 0.34) * hoverFactor;
+      const frames = gsap.ticker.deltaRatio(60);
+      scrollImpulse *= IMPULSE_DECAY ** frames;
+      const revolutionSpeed =
+        gsap.utils.clamp(REVOLUTION_MIN, REVOLUTION_MAX, 1 + scrollImpulse) * hoverFactor;
+      const spinSpeed =
+        gsap.utils.clamp(SPIN_MIN, SPIN_MAX, 1 + scrollImpulse * SPIN_COUPLING) * hoverFactor;
 
       motions.forEach(({ revolution, spin }) => {
-        revolution.timeScale(gsap.utils.interpolate(revolution.timeScale(), revolutionSpeed, 0.075));
-        spin.timeScale(gsap.utils.interpolate(spin.timeScale(), spinSpeed, 0.05));
+        revolution.timeScale(
+          gsap.utils.interpolate(revolution.timeScale(), revolutionSpeed, perFrame(REVOLUTION_CATCH_UP, frames)),
+        );
+        spin.timeScale(
+          gsap.utils.interpolate(spin.timeScale(), spinSpeed, perFrame(SPIN_CATCH_UP, frames)),
+        );
       });
     };
 
