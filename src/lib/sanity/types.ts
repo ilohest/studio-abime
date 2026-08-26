@@ -304,6 +304,14 @@ export interface Project {
   categories: CategorySummary[];
   sections: Section[];
   seo?: Seo;
+  /** Domaine d'activité — affiché dans la table des éléments. */
+  sector?: string;
+  /** Marqué favori : table des éléments, accueil et archive du Labo. */
+  featured?: boolean;
+  /** Rang dans le catalogue — le numéro que porte la fiche dans la grille. */
+  number?: number;
+  /** Rang parmi les projets favoris : désigne la case réservée occupée. */
+  featuredRank?: number;
   next?: ProjectCard | null;
 }
 
@@ -480,4 +488,7 @@ export type RouteEntry =
   | { kind: 'projectIndex'; locale: Locale; path: string }
   | { kind: 'project'; locale: Locale; path: string; slug: string }
   | { kind: 'journal'; locale: Locale; path: string }
-  | { kind: 'post'; locale: Locale; path: string; slug: string };
+  | { kind: 'post'; locale: Locale; path: string; slug: string }
+  | { kind: 'shop'; locale: Locale; path: string }
+  /* `handle` et non `slug` : c'est le terme de Shopify, autant ne pas traduire. */
+  | { kind: 'product'; locale: Locale; path: string; handle: string };

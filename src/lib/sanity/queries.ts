@@ -261,6 +261,12 @@ export const pageBySlugQuery = /* groq */ `
 export const homePageQuery = /* groq */ `
 *[_type == "localizedSettings" && language == $locale][0].homePage-> ${PAGE_BODY}`;
 
+/**
+ * Page projet. Deux rangs y sont calculés pour que la page puisse reconstituer
+ * la case que le visiteur vient de quitter : sa position dans le catalogue, et
+ * sa position parmi les favoris — celle-ci désigne la case réservée qu'il
+ * occupe dans la table des éléments.
+ */
 export const projectBySlugQuery = /* groq */ `
 *[_type == "project" && language == $locale && slug.current == $slug][0]{
   _id,
@@ -274,6 +280,27 @@ export const projectBySlugQuery = /* groq */ `
   client,
   sector,
   "featured": featured == true,
+  "number": count(*[
+    _type == "project" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(visible, true) == true &&
+    (
+      coalesce(year, 0) > coalesce(^.year, 0) ||
+      (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
+    )
+  ]) + 1,
+  "featuredRank": count(*[
+    _type == "project" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(visible, true) == true &&
+    featured == true &&
+    (
+      coalesce(year, 0) > coalesce(^.year, 0) ||
+      (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
+    )
+  ]),
   year,
   headline,
   excerpt,

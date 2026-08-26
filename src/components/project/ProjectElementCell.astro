@@ -1,0 +1,88 @@
+---
+import { projectInitials } from '~/lib/viewModels';
+import { MAX_FEATURED_PROJECTS, REFERENCE_SLOTS } from '~/lib/references';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * La case du projet, reprise en tête de sa page.
+ *
+ * Le visiteur arrive ici en ayant cliqué une case de la table des éléments ou
+ * une fiche de la grille. La retrouver au seuil de la page — même numéro, même
+ * symbole, même nom — donne le sentiment d'avoir OUVERT quelque chose plutôt
+ * que d'avoir changé de page.
+ *
+ * Le numéro est celui de la case réservée quand le projet en occupe une, et son
+ * rang au catalogue sinon : exactement ce que la grille affiche.
+ *
+ * Masquée aux technologies d'assistance : elle ne répète que ce que le titre de
+ * la page énonce déjà, et son numéro est un repère visuel, pas une information
+ * de lecture.
+ */
+interface Props {
+  project: Project;
+  class?: string;
+}
+
+const { project, class: className } = Astro.props;
+
+const rank = project.featuredRank;
+const slot =
+  project.featured && typeof rank === 'number' && rank < MAX_FEATURED_PROJECTS
+    ? REFERENCE_SLOTS[rank]
+    : undefined;
+const number = slot ?? project.number;
+const symbol = projectInitials(project.title);
+---
+
+{
+  number !== undefined && (
+    <div class:list={['project-element', className]} aria-hidden="true">
+      <span class="project-element__number">{number}</span>
+      <strong class="project-element__symbol">{symbol}</strong>
+      <span class="project-element__name">{project.title}</span>
+    </div>
+  )
+}
+
+<style>
+  .project-element {
+    display: flex;
+    width: clamp(6.5rem, 9vw, 8.5rem);
+    aspect-ratio: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(0.4rem, 0.6vw, 0.6rem);
+    border: 1px solid var(--color-ink);
+    background: var(--color-ciel);
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    line-height: 1;
+  }
+
+  .project-element__number {
+    font-size: clamp(0.55rem, 0.7vw, 0.7rem);
+  }
+
+  .project-element__symbol {
+    align-self: center;
+    max-width: 100%;
+    font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+    font-weight: 400;
+    letter-spacing: -0.08em;
+    overflow-wrap: anywhere;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .project-element__name {
+    display: block;
+    width: 100%;
+    font-size: clamp(0.45rem, 0.6vw, 0.6rem);
+    line-height: 1.1;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+</style>
