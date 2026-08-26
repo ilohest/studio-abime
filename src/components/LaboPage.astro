@@ -1565,7 +1565,6 @@ const whyTitle = page.whyTitle
 
     .labo-closing__keystone {
       margin-block: 1.5rem;
-      font-size: clamp(3.2rem, 14.5vw, 5rem);
       text-align: center;
     }
 
@@ -1844,6 +1843,8 @@ const whyTitle = page.whyTitle
     row-gap: 0.35rem;
     width: min(100%, 66rem);
     max-width: 100%;
+    /* Repère de largeur pour la ligne maîtresse, qui s'y mesure en cqw. */
+    container-type: inline-size;
     margin-inline: auto;
   }
 
@@ -1871,10 +1872,17 @@ const whyTitle = page.whyTitle
     grid-column: 1 / -1;
     margin-block: clamp(5rem, 9vw, 9rem);
     font-family: var(--font-copy);
-    font-size: clamp(4rem, 7.7vw, 8rem);
+    /*
+      La phrase tient sur une seule ligne à toute largeur. Elle mesure 8,33 em :
+      calée sur son conteneur plutôt que sur la fenêtre, la taille garde le même
+      rapport partout, et 11,2cqw laisse la marge qu'il faut pour que le retour
+      à la ligne ne survienne jamais — d'où le nowrap, qui n'est qu'un garde-fou.
+    */
+    font-size: 11.2cqw;
     line-height: 0.9;
     letter-spacing: -0.05em;
     text-align: center;
+    white-space: nowrap;
   }
 
   .labo-closing__keystone span {
@@ -1976,7 +1984,6 @@ const whyTitle = page.whyTitle
 
     .labo-closing__keystone {
       margin-block: 4.5rem;
-      font-size: clamp(3.2rem, 15vw, 5rem);
     }
 
     .labo-closing__action {
