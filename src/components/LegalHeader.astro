@@ -1,0 +1,27 @@
+---
+/**
+ * En-tête d'une page d'informations légales.
+ *
+ * Partagé par les deux origines — politiques de boutique (Shopify) et pages
+ * institutionnelles (Sanity) — pour que rien ne trahisse d'où vient le texte.
+ *
+ * Pas de légende de figure ici, contrairement aux pages éditoriales : la
+ * numérotation « 01. » à « 05. » désigne les sections du site dans le rail de
+ * navigation, et les pages légales n'en sont pas une. Le titre porte donc seul.
+ */
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<header class="legal-header">
+  <h1 class="legal-header__title type-declaration text-balance" data-text-reveal>{title}</h1>
+</header>
+
+<style>
+  .legal-header__title {
+    margin-bottom: 3rem;
+  }
+</style>

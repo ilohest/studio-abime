@@ -257,6 +257,16 @@ const PAGE_BODY = /* groq */ `{
 export const pageBySlugQuery = /* groq */ `
 *[_type == "page" && language == $locale && slug.current == $slug][0] ${PAGE_BODY}`;
 
+/**
+ * Existence des pages légales portées par Sanity.
+ *
+ * Le pied de page ne doit lister que des liens qui mènent quelque part : tant
+ * que la page « Cookies » n'a pas été créée dans le Studio, son lien n'apparaît
+ * pas. On ne récupère que les slugs — le contenu est chargé par la route.
+ */
+export const legalPagesQuery = /* groq */ `
+*[_type == "page" && language == $locale && slug.current in $slugs].slug.current`;
+
 /** Page d'accueil : désignée dans les réglages localisés, pas par un slug magique. */
 export const homePageQuery = /* groq */ `
 *[_type == "localizedSettings" && language == $locale][0].homePage-> ${PAGE_BODY}`;

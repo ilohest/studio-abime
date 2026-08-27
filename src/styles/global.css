@@ -51,6 +51,21 @@
   --text-annotation--letter-spacing: -0.05em;
   --text-annotation--font-weight: 400;
 
+  /*
+    Les deux variations documentées du style Titre (voir `type-note` et
+    `type-declaration` plus bas) sont exposées ici pour que les composants
+    puissent les référencer au lieu de recopier la valeur.
+  */
+  /* NOTE DACTYLOGRAPHIÉE — Titre en petit corps · 12 px */
+  --text-note: 0.75rem;
+  --text-note--line-height: 1.65;
+  --text-note--letter-spacing: 0.02em;
+
+  /* DÉCLARATION — Titre en corps intermédiaire · 20 → 30 px */
+  --text-declaration: clamp(1.25rem, 2.1vw, 1.9rem);
+  --text-declaration--line-height: 1.25;
+  --text-declaration--letter-spacing: -0.01em;
+
   /* Interlettrages exposés séparément (utilitaires `tracking-*`) */
   --tracking-titre: -0.03em;
   --tracking-sous-titre: 0.05em;
@@ -342,8 +357,8 @@
  */
 @utility type-note {
   font-family: var(--font-titre);
-  font-size: 0.75rem; /* 12px */
-  line-height: 1.65;
+  font-size: var(--text-note);
+  line-height: var(--text-note--line-height);
   letter-spacing: var(--tracking-copy);
   font-weight: 400;
 }
@@ -355,9 +370,9 @@
  */
 @utility type-declaration {
   font-family: var(--font-titre);
-  font-size: clamp(1.25rem, 2.1vw, 1.9rem);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-size: var(--text-declaration);
+  line-height: var(--text-declaration--line-height);
+  letter-spacing: var(--text-declaration--letter-spacing);
   font-weight: 400;
 }
 
@@ -413,7 +428,7 @@
   background: transparent;
   color: var(--color-ink);
   font-family: var(--font-titre);
-  font-size: clamp(0.85rem, 1vw, 1rem);
+  font-size: var(--text-copy);
   font-style: normal;
   font-weight: 400;
   letter-spacing: var(--tracking-copy);
@@ -587,7 +602,7 @@
   .project-catalog-heading h3,
   .project-catalog-number {
     font-family: var(--font-titre);
-    font-size: 0.75rem;
+    font-size: var(--text-note);
     line-height: 1.25;
     letter-spacing: var(--tracking-copy);
     font-weight: 400;
@@ -626,9 +641,9 @@
     align-self: start;
     justify-self: end;
     max-width: 100%;
-    font-size: clamp(1.8rem, 2.8vw, 2.8rem);
+    font-size: clamp(1.8rem, 2.8vw, var(--text-titre));
     line-height: 0.85;
-    letter-spacing: -0.08em;
+    letter-spacing: var(--tracking-annotation);
     overflow-wrap: anywhere;
     text-align: right;
     text-transform: uppercase;
@@ -638,7 +653,7 @@
     grid-column: 2;
     grid-row: 2;
     justify-self: end;
-    font-size: 0.65rem;
+    font-size: var(--text-note);
     line-height: 1.2;
     text-align: right;
   }
@@ -692,8 +707,8 @@
   }
 
   .project-index .project-catalog-image {
-    width: 76%;
-    max-width: 76%;
+    width: 88%;
+    max-width: 88%;
     max-height: none;
   }
 
@@ -759,7 +774,7 @@
     margin: auto;
     max-width: 18ch;
     font-family: var(--font-titre);
-    font-size: clamp(0.75rem, 1vw, 1rem);
+    font-size: var(--text-copy);
     line-height: 1.3;
   }
 
@@ -788,7 +803,7 @@
     max-width: 24ch;
     margin: auto 0 0 auto;
     font-family: var(--font-annotation);
-    font-size: clamp(0.78rem, 1vw, 1rem);
+    font-size: var(--text-copy);
     font-style: italic;
     line-height: 1.25;
     letter-spacing: var(--tracking-annotation);
@@ -800,7 +815,7 @@
     flex-direction: column;
     gap: 0.08rem;
     font-family: var(--font-titre);
-    font-size: 0.68rem;
+    font-size: var(--text-note);
     line-height: 1.25;
     letter-spacing: var(--tracking-copy);
   }
@@ -820,7 +835,7 @@
   .project-catalog-copy {
     margin-top: auto;
     font-family: var(--font-copy);
-    font-size: clamp(0.75rem, 0.9vw, 0.95rem);
+    font-size: var(--text-copy);
     line-height: 1.25;
   }
 
@@ -881,8 +896,8 @@
    * une seule ligne, quel que soit le format de la fiche.
    */
   .journal-index .project-catalog-symbol {
-    font-size: clamp(1.4rem, 2.2vw, 2.2rem);
-    letter-spacing: -0.05em;
+    font-size: clamp(1.4rem, 2.2vw, var(--text-titre));
+    letter-spacing: var(--tracking-annotation);
     white-space: nowrap;
     overflow-wrap: normal;
   }
@@ -1047,7 +1062,7 @@
 
     .project-catalog-heading h3,
     .project-catalog-number {
-      font-size: 0.58rem;
+      font-size: var(--text-note);
     }
 
     .project-catalog-heading h3 {
@@ -1059,12 +1074,12 @@
     }
 
     .project-index .project-catalog-image {
-      width: 82%;
-      max-width: 82%;
+      width: 94%;
+      max-width: 94%;
     }
 
     .project-catalog-facts {
-      font-size: 0.54rem;
+      font-size: var(--text-note);
     }
 
     .project-catalog-facts > div {
@@ -1073,7 +1088,7 @@
     }
 
     .project-catalog-copy {
-      font-size: 0.62rem;
+      font-size: var(--text-note);
     }
 
     .project-catalog-spacer,
@@ -1088,12 +1103,12 @@
     }
 
     .project-catalog-empty p {
-      font-size: 0.58rem;
+      font-size: var(--text-note);
     }
 
     .project-catalog-state-quote p {
       max-width: 19ch;
-      font-size: 0.6rem;
+      font-size: var(--text-note);
     }
   }
 
@@ -1143,11 +1158,68 @@
     padding-inline-start: 1.25rem;
   }
 
+  /**
+   * Colonne de lecture d'un bloc de texte, à l'intérieur d'un `container-wide`
+   * (qui porte déjà les gouttières). Classe plutôt qu'utilitaire en dur : les
+   * pages qui ont besoin d'une autre mesure peuvent la redéfinir, ce que fait
+   * `.page-legal` plus bas.
+   */
+  .reading-column {
+    max-width: var(--container-content);
+    margin-inline: auto;
+  }
+
   .prose-abime figcaption {
     font-family: var(--font-annotation);
     font-size: var(--text-annotation);
     letter-spacing: var(--tracking-annotation);
     font-style: italic;
     color: var(--color-muted);
+  }
+
+  /**
+   * PAGES D'INFORMATIONS LÉGALES
+   *
+   * Mentions légales, confidentialité et cookies (portées par Sanity) et
+   * politiques de boutique (portées par Shopify). Deux sources, une seule
+   * présentation : le visiteur ne doit pas pouvoir deviner laquelle vient d'où.
+   *
+   * Ces textes ne se lisent pas d'un trait — on y cherche un passage. D'où deux
+   * écarts avec le reste du site :
+   *
+   *  · le bloc prend toute la largeur disponible au lieu de la colonne de
+   *    lecture de 44rem, qui laissait ici deux marges vides de 230px ;
+   *  · les titres de section descendent au style Sous-titre. Le style Titre à
+   *    46px porte un titre de page ; répété vingt-six fois dans des CGV, il
+   *    hurle et ne hiérarchise plus rien.
+   */
+  body.page-legal .reading-column {
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  body.page-legal .prose-abime h2 {
+    font-family: var(--font-sous-titre);
+    font-size: var(--text-sous-titre);
+    line-height: var(--text-sous-titre--line-height);
+    letter-spacing: var(--tracking-sous-titre);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 3em;
+  }
+}
+
+/*
+  L'en-tête d'une page légale et le texte qui suit forment un seul bloc. La
+  section du page builder porte sa propre marge haute : rejouée ici, elle
+  creuse un vide entre le titre et son premier paragraphe.
+
+  Dans `utilities` et non dans `components` : la règle combat la classe
+  `py-(--spacing-section)`, qui vit dans cette couche-là. Entre deux couches,
+  c'est la dernière déclarée qui l'emporte — la spécificité n'y peut rien.
+*/
+@layer utilities {
+  body.page-legal .legal-header-block + section {
+    padding-top: 0;
   }
 }

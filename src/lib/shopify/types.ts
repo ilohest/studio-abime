@@ -6,6 +6,7 @@
  * suive serait un signal — soit le champ est utile et il rejoint ce fichier,
  * soit il ne l'est pas et il quitte la requête.
  */
+import type { PolicyRouteKey } from '~/i18n/routes';
 
 /** Montant Shopify : la valeur arrive en chaîne pour éviter les arrondis flottants. */
 export interface Money {
@@ -115,4 +116,28 @@ export interface ShopInfo {
   name: string;
   primaryDomain: { url: string };
   paymentSettings: { currencyCode: string };
+}
+
+/**
+ * Politiques de boutique rédigées dans l'admin Shopify.
+ *
+ * Le partage est net : Shopify décrit la transaction (vente, livraison,
+ * retours), Sanity décrit l'entreprise (mentions légales, confidentialité,
+ * cookies). Ces trois textes-ci sont donc lus chez Shopify et rendus sur le
+ * domaine du site — une seule saisie, deux affichages, aucune divergence
+ * possible avec ce que le client lit dans le tunnel de paiement.
+ */
+/*
+  Une seule liste fait foi, et c'est celle du routage : `src/i18n/routes.ts`
+  porte déjà le vocabulaire d'URL du site et ne dépend d'aucun runtime. Ajouter
+  une politique se fait donc là-bas, et ce module suit sans rien à modifier.
+*/
+export type PolicyKey = PolicyRouteKey;
+
+export interface ShopPolicy {
+  key: PolicyKey;
+  /** Titre tel qu'enregistré chez Shopify — souvent en anglais, on ne s'en sert pas au rendu. */
+  title: string;
+  /** HTML déjà normalisé (voir `normalizePolicyHtml`), prêt pour `set:html`. */
+  body: string;
 }

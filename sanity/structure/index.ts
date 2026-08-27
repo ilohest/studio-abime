@@ -4,6 +4,7 @@ import type {
   StructureResolverContext,
 } from 'sanity/structure';
 import { locales, localeMeta } from '../../src/i18n/config';
+import type { LegalPageKey } from '../../src/i18n/routes';
 
 /** Identifiant figé du document de réglages globaux (instance unique). */
 export const SITE_SETTINGS_ID = 'siteSettings';
@@ -110,16 +111,28 @@ function homePageByLanguage(S: StructureBuilder, context: StructureResolverConte
     );
 }
 
-/** Un document unique par langue, ouvert directement sans liste intermédiaire. */
-function localizedSingleton(S: StructureBuilder, schemaType: string, title: string) {
-  if (locales.length === 1) {
-    const locale = locales[0];
-    return S.document()
+/**
+ * Un document unique par langue, ouvert directement sans liste intermédiaire.
+ *
+ * `idBase` sépare l'identifiant du document de son type. Les pages à contenu
+ * unique se suffisent du type (`laboPage-fr`), mais plusieurs documents peuvent
+ * partager un même type tout en étant chacun singulier : c'est le cas des pages
+ * légales, qui sont des `page` ordinaires à l'emplacement figé.
+ */
+function localizedSingleton(
+  S: StructureBuilder,
+  schemaType: string,
+  title: string,
+  idBase: string = schemaType,
+) {
+  const document = (locale: (typeof locales)[number], documentTitle: string) =>
+    S.document()
       .schemaType(schemaType)
-      .documentId(`${schemaType}-${locale}`)
+      .documentId(`${idBase}-${locale}`)
       .initialValueTemplate(`${schemaType}-${locale}`)
-      .title(title);
-  }
+      .title(documentTitle);
+
+  if (locales.length === 1) return document(locales[0], title);
 
   return S.list()
     .title(title)
@@ -128,16 +141,28 @@ function localizedSingleton(S: StructureBuilder, schemaType: string, title: stri
         S.listItem()
           .title(localeMeta[locale]?.label ?? locale)
           .id(locale)
-          .child(
-            S.document()
-              .schemaType(schemaType)
-              .documentId(`${schemaType}-${locale}`)
-              .initialValueTemplate(`${schemaType}-${locale}`)
-              .title(`${title} — ${locale.toUpperCase()}`),
-          ),
+          .child(document(locale, `${title} — ${locale.toUpperCase()}`)),
       ),
     );
 }
+
+/**
+ * Pages légales.
+ *
+ * Ce sont des documents `page` comme les autres, mais leur existence et leur
+ * slug sont imposés par le site — le pied de page les attend à une adresse
+ * précise, et la loi les attend tout court. Elles sont donc nommées une à une,
+ * au même rang que les pages à contenu unique, plutôt que noyées dans une liste
+ * ouverte où il faudrait les chercher.
+ *
+ * Leur contenu est amorcé par `npm run legal:seed`, qui crée les documents aux
+ * identifiants ci-dessous.
+ */
+const LEGAL_PAGES: Array<{ key: LegalPageKey; title: string }> = [
+  { key: 'notice', title: 'Mentions légales' },
+  { key: 'privacy', title: 'Politique de confidentialité' },
+  { key: 'cookies', title: 'Politique cookies' },
+];
 
 /**
  * Structure du back-office.
@@ -176,6 +201,18 @@ export const structure: StructureResolver = (S, context) =>
                 .title('Page Shop')
                 .id('shopPage')
                 .child(localizedSingleton(S, 'shopPage', 'Page Shop')),
+
+              // Les pages légales restent au même rang que les précédentes, mais
+              // ne relèvent pas du même geste éditorial : le trait les sépare
+              // sans les reléguer.
+              S.divider(),
+
+              ...LEGAL_PAGES.map(({ key, title }) =>
+                S.listItem()
+                  .title(title)
+                  .id(`legal-${key}`)
+                  .child(localizedSingleton(S, 'page', title, `page-legal-${key}`)),
+              ),
             ]),
         ),
 

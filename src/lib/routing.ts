@@ -19,8 +19,10 @@ import {
   journalIndexPath,
   laboPath,
   localizedPath,
+  matchPolicySegment,
   orderConfirmationPath,
   pagePath,
+  policyPath,
   postPath,
   productPath,
   projectPath,
@@ -28,6 +30,7 @@ import {
   shopIndexPath,
 } from '~/i18n/routes';
 import { getCollectionHandles, getProductHandles } from './shopify/catalogue';
+import { getShopPolicies } from './shopify/policies';
 import { loadQuery } from './sanity/loadQuery';
 import { routeManifestQuery } from './sanity/queries';
 import type { ResolvedLink, RouteEntry, SanityLink } from './sanity/types';
@@ -78,6 +81,24 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
         locale,
         path: productPath(locale, handle),
         handle,
+      });
+    }
+  }
+
+  /*
+    Politiques de boutique. Seules celles réellement rédigées dans l'admin
+    Shopify obtiennent une route : un modèle laissé avec ses emplacements à
+    compléter n'est pas publié (voir `shopify/policies.ts`), et le lien
+    correspondant disparaît alors du pied de page de lui-même.
+  */
+  const policies = await getShopPolicies();
+  for (const locale of locales) {
+    for (const policy of policies) {
+      routes.push({
+        kind: 'policy',
+        locale,
+        path: policyPath(locale, policy.key),
+        policy: policy.key,
       });
     }
   }
@@ -204,7 +225,16 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return null;
   }
 
-  // 8. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
+  // 8. Politiques de boutique, servies à la racine (`/cgv`, `/livraison`…).
+  //    Testées AVANT le repli page institutionnelle : sans cela, `/cgv` serait
+  //    cherché dans Sanity. Ces segments sont réservés côté schéma, une page ne
+  //    peut donc pas revendiquer le même slug.
+  if (rest.length === 1) {
+    const policy = matchPolicySegment(rest[0]!, locale);
+    if (policy) return { kind: 'policy', locale, path, policy };
+  }
+
+  // 9. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
   //    (`agence/equipe`) : on le reconstruit tel quel.
   return { kind: 'page', locale, path, slug: rest.join('/') };
 }

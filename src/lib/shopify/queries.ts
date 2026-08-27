@@ -220,3 +220,33 @@ export const collectionsQuery = /* GraphQL */ `
     }
   }
 `;
+
+/**
+ * Politiques de boutique.
+ *
+ * Les six emplacements de l'admin Shopify sont exposés ici, mais on n'en lit
+ * que trois : les mentions légales et la confidentialité vivent dans Sanity,
+ * et les coordonnées marchandes ne servent qu'au tunnel de paiement.
+ *
+ * Chaque champ est nullable : un emplacement vide dans l'admin renvoie `null`,
+ * jamais une chaîne vide. C'est ce qui permet de ne pas publier une page de
+ * livraison tant que la politique n'est pas écrite.
+ */
+export const shopPoliciesQuery = /* GraphQL */ `
+  query ShopPolicies {
+    shop {
+      termsOfService {
+        title
+        body
+      }
+      shippingPolicy {
+        title
+        body
+      }
+      refundPolicy {
+        title
+        body
+      }
+    }
+  }
+`;

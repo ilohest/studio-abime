@@ -55,15 +55,15 @@ const symbol = projectInitials(project.title);
   }
 
   .project-element__number {
-    font-size: clamp(0.55rem, 0.7vw, 0.7rem);
+    font-size: var(--text-note);
   }
 
   .project-element__symbol {
     align-self: center;
     max-width: 100%;
-    font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+    font-size: clamp(1.6rem, 2.6vw, var(--text-titre));
     font-weight: 400;
-    letter-spacing: -0.08em;
+    letter-spacing: var(--tracking-annotation);
     overflow-wrap: anywhere;
     text-align: center;
     text-transform: uppercase;
@@ -72,7 +72,7 @@ const symbol = projectInitials(project.title);
   .project-element__name {
     display: block;
     width: 100%;
-    font-size: clamp(0.45rem, 0.6vw, 0.6rem);
+    font-size: var(--text-note);
     line-height: 1.1;
     overflow: hidden;
     text-align: center;

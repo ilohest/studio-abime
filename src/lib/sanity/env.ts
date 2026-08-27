@@ -16,7 +16,8 @@ function required(value: string | undefined, name: string): string {
 export const projectId = required(import.meta.env.PUBLIC_SANITY_PROJECT_ID, 'PUBLIC_SANITY_PROJECT_ID');
 export const dataset = import.meta.env.PUBLIC_SANITY_DATASET || 'production';
 export const apiVersion = import.meta.env.PUBLIC_SANITY_API_VERSION || '2025-02-19';
-export const studioUrl = import.meta.env.PUBLIC_SANITY_STUDIO_URL || '/studio';
+// Le Studio est déployé à part (voir astro.config.ts) : en local il tourne sur 3333.
+export const studioUrl = import.meta.env.PUBLIC_SANITY_STUDIO_URL || 'http://localhost:3333';
 
 /** Mode édition visuelle : brouillons + stega + rendu à la demande. */
 export const visualEditingEnabled = import.meta.env.PUBLIC_SANITY_VISUAL_EDITING_ENABLED === 'true';

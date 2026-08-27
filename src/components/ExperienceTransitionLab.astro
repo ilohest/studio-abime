@@ -147,23 +147,28 @@ const elementNumbers = Object.fromEntries(
         </div>
       </div>
 
-      <div class="motion-lab__projects-layer" data-projects-layer aria-hidden="true">
-        <div class="motion-project-grid">
-          <ProjectGrid
-            projects={projects}
-            categories={categories}
-            locale={locale}
-            editorialCards={editorialCards}
-            elementNumbers={elementNumbers}
-            showFilters
-          />
-        </div>
-      </div>
-
     </div>
   </div>
 
 </section>
+
+{/*
+  Le catalogue, à sa hauteur propre — aucun plafond, quel que soit le nombre
+  de projets à venir. La table, elle, reste épinglée le temps de sa propre
+  sortie ; une fois la piste franchie, chaque fiche du catalogue s'anime à
+  son tour dès qu'elle entre à l'écran (voir le script plus bas) — l'effet
+  se poursuit donc ici, il ne se rejoue pas séparément.
+*/}
+<div class="motion-lab__settled container-wide">
+  <ProjectGrid
+    projects={projects}
+    categories={categories}
+    locale={locale}
+    editorialCards={editorialCards}
+    elementNumbers={elementNumbers}
+    showFilters
+  />
+</div>
 
 <script>
   const clamp = (value: number, min = 0, max = 1) => Math.min(Math.max(value, min), max);
@@ -183,29 +188,14 @@ const elementNumbers = Object.fromEntries(
   const TABLE_EXIT_END = 0.72;
   const COLUMN_LIVE_OPACITY = 0.4;
 
-  /*
-    Instant où la dernière colonne de fiches a fini de monter. Il coïncide avec
-    la FIN DE LA PISTE : la grille se complète au moment précis où la scène
-    cesse d'être épinglée et repart avec la page. Toute valeur inférieure
-    laisserait la grille formée et immobile le temps du reliquat — un temps mort
-    au milieu du geste.
-
-    Avant cet instant, les fiches volent séparées et ne peuvent plus compter sur
-    leur voisine pour fermer leur cadre : chacune peint alors ses quatre côtés.
-  */
-  const GRID_SETTLED = 1;
-
   document.querySelectorAll('[data-experience-motion]').forEach((root) => {
     if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
     root.dataset.motionReady = 'true';
 
     const runway = root.querySelector('[data-motion-runway]');
     const tableLayer = root.querySelector('[data-table-layer]');
-    const projectsLayer = root.querySelector('[data-projects-layer]');
     const elementColumns = [...root.querySelectorAll('[data-element-column]')];
     const tableLinks = [...root.querySelectorAll('a.element-cell')];
-    const projectCards = [...root.querySelectorAll('.motion-project-grid .project-catalog-item')];
-    const projectLinks = [...root.querySelectorAll('.motion-project-grid .project-catalog-card[href]')];
     const stateLabel = root.querySelector('[data-motion-state]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
@@ -233,10 +223,6 @@ const elementNumbers = Object.fromEntries(
         tableLayer.style.transform = 'none';
         tableLayer.style.opacity = '1';
       }
-      if (projectsLayer instanceof HTMLElement) {
-        projectsLayer.style.transform = 'none';
-        projectsLayer.style.opacity = '1';
-      }
 
       const totalOutgoing = Math.max(1, elementColumns.length - 1);
       elementColumns.forEach((column, index) => {
@@ -257,30 +243,6 @@ const elementNumbers = Object.fromEntries(
         // Distance parcourue vers le haut, en pixels : sert au clavier.
         column.dataset.travel = String(1.18 * window.innerHeight * columnProgress);
       });
-
-      const columnCount = window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2;
-      const totalIncoming = Math.max(1, columnCount - 1);
-      projectCards.forEach((card, index) => {
-        if (!(card instanceof HTMLElement)) return;
-        const columnIndex = index % columnCount;
-        const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
-        /*
-          L'écart entre colonnes (0,30 de la piste) est plus large que celui de
-          la table qui se vide (0,26) : la grille se remplit donc en éventail
-          plus ouvert. Son entrée commence tôt, pendant que la table sort encore
-          — les deux mouvements se croisent au lieu de se succéder. La dernière
-          colonne se pose à 1, à la fin exacte de la piste, et pas avant.
-        */
-        const columnProgress = ease(range(progress, 0.18 + rightToLeft * 0.3, 0.7 + rightToLeft * 0.3));
-        /*
-          Translation seule, sans mise à l'échelle : une fiche réduite se
-          décolle de ses voisines et ouvre des jours entre les cases. Elle
-          monte donc à sa taille définitive, et la trame reste jointive pendant
-          toute la montée.
-        */
-        card.style.transform = `translate3d(0, ${(112 * (1 - columnProgress)).toFixed(3)}vh, 0)`;
-        card.style.opacity = String(range(columnProgress, 0.04, 0.32));
-      });
     };
 
     const update = () => {
@@ -291,7 +253,6 @@ const elementNumbers = Object.fromEntries(
       const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
       const progress = reducedMotion.matches ? 1 : clamp(-rect.top / distance);
       const tableIsInteractive = !reducedMotion.matches && progress < TABLE_EXIT_END;
-      const projectsAreInteractive = reducedMotion.matches || progress > 0.78;
 
       renderColumns(progress);
 
@@ -323,17 +284,6 @@ const elementNumbers = Object.fromEntries(
         const onScreen = geometry ? layerTop + geometry.top + geometry.height - travel > 0 : false;
         link.tabIndex = tableIsInteractive && onScreen ? 0 : -1;
       });
-      if (projectsLayer instanceof HTMLElement) {
-        projectsLayer.style.pointerEvents = projectsAreInteractive ? 'auto' : 'none';
-        projectsLayer.setAttribute('aria-hidden', String(!projectsAreInteractive));
-      }
-      projectLinks.forEach((link) => {
-        if (link instanceof HTMLElement) link.tabIndex = projectsAreInteractive ? 0 : -1;
-      });
-
-      // Cadres complets tant que les fiches ne se touchent pas.
-      root.toggleAttribute('data-motion-detached', !reducedMotion.matches && progress < GRID_SETTLED);
-
       if (stateLabel instanceof HTMLElement) {
         stateLabel.textContent = progress < 0.22
           ? 'VUE D’ENSEMBLE'
@@ -522,6 +472,114 @@ const elementNumbers = Object.fromEntries(
     measureLinks();
     update();
   });
+
+  /*
+    Le catalogue reprend le geste de sortie de la table, mais à l'entrée :
+    chaque colonne monte en suivant le DÉFILEMENT lui-même, pas une minuterie
+    déclenchée une fois pour toutes. Un scroll lent déplace lentement, un
+    scroll rapide déplace vite, et remonter la page DÉFAIT le geste — dans
+    les deux sens, toujours, sans jamais se figer dans un état final : la
+    position n'est jamais mémorisée, elle est relue à chaque image tant que
+    la fiche reste à portée de l'écran.
+
+    Le décalage suit la COLONNE, pas le rang dans la liste, et part de la
+    DROITE — comme les colonnes de la table, qui sortaient chacune à son
+    heure en commençant par le bord droit.
+
+    Sans piste dédiée, sans plafond : chaque fiche calcule sa progression
+    depuis SA propre position à l'écran, pas depuis une distance de scroll
+    fixée d'avance — le geste reste correct quel que soit le nombre de
+    projets à venir.
+  */
+  const revealItems = [...document.querySelectorAll<HTMLElement>('.motion-lab__settled .project-catalog-item')];
+  const revealReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  if (revealItems.length > 0 && !revealReducedMotion.matches && 'IntersectionObserver' in window) {
+    const getRevealColumnCount = () => (window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2);
+
+    /*
+      Fenêtre de progression locale, en fraction de la hauteur d'écran
+      parcourue par la fiche : la même largeur pour toutes, seul son départ
+      se décale vers la droite. Élargie pour que le geste se voie vraiment
+      pendant le défilement, au lieu de se jouer en un instant.
+    */
+    const REVEAL_SPAN_VH = 0.9;
+    const REVEAL_WINDOW = 0.35;
+    const REVEAL_MAX_SHIFT = 0.65;
+    const REVEAL_DISTANCE_REM = 13;
+
+    const active = new Set<HTMLElement>();
+    let revealFrame = 0;
+
+    const applyReveal = () => {
+      revealFrame = 0;
+      if (active.size === 0) return;
+
+      const columnCount = getRevealColumnCount();
+      const vh = window.innerHeight;
+
+      /*
+        Une colonne bouge d'un bloc, pas ligne par ligne : quand plusieurs
+        lignes d'une même colonne sont actives à la fois, elles doivent
+        partager EXACTEMENT la même position — sinon un écart s'ouvre entre
+        elles pendant le geste. On regroupe donc les fiches actives par
+        colonne, et chaque colonne se règle sur sa fiche la MOINS avancée
+        (la plus basse, la dernière arrivée) : tant qu'une ligne suit, toute
+        la colonne au-dessus l'attend.
+      */
+      const columns = new Map<number, HTMLElement[]>();
+      active.forEach((item) => {
+        const index = revealItems.indexOf(item);
+        const columnIndex = columnCount > 0 ? index % columnCount : 0;
+        const list = columns.get(columnIndex);
+        if (list) list.push(item);
+        else columns.set(columnIndex, [item]);
+      });
+
+      columns.forEach((items, columnIndex) => {
+        let leastProgress = Infinity;
+        items.forEach((item) => {
+          const rect = item.getBoundingClientRect();
+          // 0 quand le haut de la fiche vient d'atteindre le bas de l'écran,
+          // 1 quand il a atteint son point d'arrivée, un peu avant le centre.
+          const local = range(vh * 0.95 - rect.top, 0, vh * REVEAL_SPAN_VH);
+          if (local < leastProgress) leastProgress = local;
+        });
+
+        const rightToLeft = columnCount > 1 ? (columnCount - 1 - columnIndex) / (columnCount - 1) : 0;
+        const start = rightToLeft * REVEAL_MAX_SHIFT;
+        const columnProgress = ease(range(leastProgress, start, start + REVEAL_WINDOW));
+        const offset = `${(REVEAL_DISTANCE_REM * (1 - columnProgress)).toFixed(3)}rem`;
+
+        items.forEach((item) => {
+          item.style.transform = `translate3d(0, ${offset}, 0)`;
+        });
+      });
+    };
+
+    const requestReveal = () => {
+      if (!revealFrame) revealFrame = window.requestAnimationFrame(applyReveal);
+    };
+
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const target = entry.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (entry.isIntersecting) active.add(target);
+        else active.delete(target);
+      });
+      requestReveal();
+    }, { rootMargin: '35% 0px 35% 0px', threshold: 0 });
+
+    revealItems.forEach((item) => revealObserver.observe(item));
+
+    window.addEventListener('scroll', requestReveal, { passive: true });
+    window.addEventListener('resize', requestReveal, { passive: true });
+  } else {
+    revealItems.forEach((item) => {
+      item.style.transform = 'none';
+    });
+  }
 </script>
 
 <style>
@@ -537,9 +595,31 @@ const elementNumbers = Object.fromEntries(
     scroll-margin-top: 0;
   }
 
+  /*
+    Le catalogue complet, une fois la piste franchie. Posé dans le flux
+    normal — donc à sa hauteur propre, sans plafond, aussi loin qu'il grandira
+    — il utilise la même trame et les mêmes cases que le reste de la page
+    (`.project-index`, portée par le conteneur parent) : rien à répéter ici.
+  */
+  .motion-lab__settled {
+    padding-block: clamp(0.5rem, 1.5vw, 1.5rem) clamp(4rem, 8vw, 7rem);
+  }
+
+  /*
+    Position de départ, avant que le script ne prenne le relais : la fiche
+    est légèrement basse, mais déjà pleinement visible — seule sa position
+    bouge, pas son opacité. Aucune transition CSS ici — c'est le défilement
+    lui-même qui pilote la position, image par image, exactement comme les
+    colonnes de la table.
+  */
+  .motion-lab__settled :global(.project-catalog-item) {
+    transform: translate3d(0, 13rem, 0);
+    will-change: transform;
+  }
+
   .motion-lab__runway {
     position: relative;
-    height: 300vh;
+    height: 140vh;
   }
 
   .motion-lab__stage {
@@ -561,8 +641,7 @@ const elementNumbers = Object.fromEntries(
     pointer-events: none;
   }
 
-  .motion-lab__table-layer,
-  .motion-lab__projects-layer {
+  .motion-lab__table-layer {
     position: absolute;
     inset: clamp(3.4rem, 7vh, 5.25rem) 0 clamp(2.2rem, 5vh, 3.5rem);
     transform-origin: 72% 42%;
@@ -649,15 +728,15 @@ const elementNumbers = Object.fromEntries(
   }
 
   .element-cell__number {
-    font-size: clamp(0.28rem, 0.48vw, 0.52rem);
+    font-size: var(--text-note);
   }
 
   .element-cell__symbol {
     align-self: center;
     max-width: 100%;
-    font-size: clamp(0.48rem, 1vw, 1.05rem);
+    font-size: var(--text-copy);
     font-weight: 400;
-    letter-spacing: -0.08em;
+    letter-spacing: var(--tracking-annotation);
     overflow-wrap: anywhere;
     text-align: center;
     text-transform: uppercase;
@@ -666,7 +745,7 @@ const elementNumbers = Object.fromEntries(
   .element-cell__name {
     display: block;
     width: 100%;
-    font-size: clamp(0.2rem, 0.34vw, 0.38rem);
+    font-size: var(--text-note);
     line-height: 1.05;
     overflow: hidden;
     text-align: center;
@@ -674,95 +753,9 @@ const elementNumbers = Object.fromEntries(
     white-space: nowrap;
   }
 
-  .motion-lab__projects-layer {
-    z-index: 2;
-    opacity: 0;
-  }
-
-  /*
-    La grille ne peint qu'un trait entre deux fiches : chacune porte son filet
-    de pied et son filet de gauche, la voisine fournit les deux autres. Séparées
-    en vol, elles se retrouvent donc ouvertes en haut et à droite.
-
-    Le temps du vol, chaque fiche ferme son cadre — mais DÉBORDANT D'UN PIXEL en
-    haut et à droite, sur la ligne même où la voisine peint déjà le sien. Deux
-    fiches jointives superposent alors leurs traits au lieu de les accoler : le
-    filet commun reste d'un pixel, exactement comme à l'arrivée. Peint à l'inté-
-    rieur, il en aurait fait deux — c'est ce qui épaississait la trame en vol.
-
-    Les croix de construction, elles, sont centrées sur les sommets : deux
-    fiches voisines y posent la même marque au même endroit, sans surépaisseur.
-  */
-  .motion-lab[data-motion-detached] :global(.project-catalog-item) {
-    --project-card-top-right-cross-color: var(--project-card-cross-color);
-    --project-card-bottom-left-cross-color: var(--project-card-cross-color);
-    --project-card-bottom-right-cross-color: var(--project-card-cross-color);
-  }
-
-  .motion-lab[data-motion-detached] :global(.project-catalog-card)::after {
-    content: '';
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background:
-      linear-gradient(
-          var(--project-card-line-color),
-          var(--project-card-line-color)
-        )
-        top left / 100% 1px no-repeat,
-      linear-gradient(
-          var(--project-card-line-color),
-          var(--project-card-line-color)
-        )
-        top right / 1px 100% no-repeat;
-  }
-
-  .motion-project-grid {
-    box-sizing: border-box;
-    height: 100%;
-    padding: 7px;
-  }
-
-  :global(.motion-project-grid .project-catalog-grid) {
-    height: 100%;
-    grid-auto-rows: minmax(0, 1fr);
-  }
-
-  :global(.motion-project-grid .project-catalog-item),
-  :global(.motion-project-grid .project-catalog-card) {
-    min-height: 0;
-    will-change: transform, opacity;
-  }
-
-  :global(.motion-project-grid .project-catalog-card) {
-    overflow: hidden;
-  }
-
-  :global(.motion-project-grid .project-catalog-media) {
-    min-height: 0;
-    flex: 1 1 auto;
-  }
-
-  :global(.motion-project-grid .project-catalog-image) {
-    width: 100%;
-    max-width: 100%;
-    height: 100%;
-    max-height: 100%;
-    background-image: none !important;
-    filter: none !important;
-    object-fit: contain;
-    object-position: right bottom;
-    transform: none !important;
-    transition: none;
-  }
-
   @media (max-width: 899px) {
     .motion-lab__runway {
-      height: 220vh;
+      height: 120vh;
     }
 
     .motion-lab__stage {
@@ -773,10 +766,27 @@ const elementNumbers = Object.fromEntries(
       inset-inline: -10%;
       width: 120%;
     }
-
   }
 
   @media (max-width: 560px) {
+    /*
+      Les 18 colonnes ne laissent que 20 px de large aux cases sur un écran
+      étroit : les étirer sur toute la hauteur disponible (comportement par
+      défaut d'une piste `1fr`) les rend démesurément hautes, avec un
+      symbole minuscule perdu au milieu d'un grand vide. On fixe donc leur
+      hauteur et on les cale en haut de la couche, sous le repère « Table des
+      éléments », plutôt que de les centrer dans tout l'espace disponible —
+      ce qui les éloignait du repère au lieu de les en rapprocher.
+    */
+    .element-table {
+      align-items: start;
+    }
+
+    .element-table__column {
+      height: auto;
+      grid-template-rows: repeat(7, minmax(0, 2.35rem)) 0.6rem repeat(2, minmax(0, 2.35rem));
+    }
+
     .motion-lab__stage::before {
       content: '';
       position: absolute;
@@ -789,15 +799,11 @@ const elementNumbers = Object.fromEntries(
 
     .motion-lab__meta {
       inset-block-start: 4.5rem;
-      font-size: 0.58rem;
-    }
-
-    .motion-lab__table-layer,
-    .motion-lab__projects-layer {
-      inset-block: 6.3rem 3.2rem;
+      font-size: var(--text-note);
     }
 
     .motion-lab__table-layer {
+      inset-block: 6.3rem 3.2rem;
       inset-inline: 0;
       width: 100%;
     }
@@ -821,27 +827,17 @@ const elementNumbers = Object.fromEntries(
   }
 
   @media (prefers-reduced-motion: reduce) {
+    /*
+      Sans le geste de scroll, la table n'a plus rien à jouer : la scène
+      épinglée disparaît, et le catalogue qui la suit — jamais animé lui non
+      plus — s'affiche directement dans son état final.
+    */
     .motion-lab__runway {
-      height: auto;
-    }
-
-    .motion-lab__stage {
-      position: relative;
-      height: min(82vh, 50rem);
-    }
-
-    .motion-lab__table-layer {
       display: none;
     }
 
-    .motion-lab__projects-layer {
-      opacity: 1 !important;
-      transform: none !important;
-    }
-
-    :global(.motion-project-grid .project-catalog-item) {
-      opacity: 1 !important;
-      transform: none !important;
+    .motion-lab__settled :global(.project-catalog-item) {
+      transform: none;
     }
   }
 </style>

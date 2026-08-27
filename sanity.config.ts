@@ -17,23 +17,36 @@ import type { DuplicateDocumentActionComponent } from 'sanity';
 /**
  * Configuration du Studio Sanity.
  *
- * Le Studio est embarqué dans Astro (route `/studio`, voir `astro.config.ts`),
- * ce qui garantit que le CMS et le site partagent la même origine — condition
- * la plus simple pour que l'édition visuelle fonctionne sans configuration CORS.
+ * Le Studio est une application autonome, déployée à part sur
+ * https://studio.studio-abime.com (`npm run studio:dev` / `npm run studio:build`).
+ * Le site et le back-office vivent donc sur deux origines distinctes : les deux
+ * doivent être déclarées dans les origines CORS du projet Sanity, et l'origine
+ * du site prévisualisé est fournie ci-dessous au Presentation Tool.
  */
-// Le Studio embarqué charge cette configuration dans le navigateur via Vite,
-// tandis que la CLI Sanity l'exécute dans Node.js.
+/**
+ * Résolution des variables d'environnement.
+ *
+ * La CLI Sanity n'expose au bundle navigateur que les variables préfixées
+ * `SANITY_STUDIO_` — le préfixe `PUBLIC_` d'Astro y est ignoré. Le Studio lit
+ * donc `SANITY_STUDIO_*` en priorité et retombe sur les variables `PUBLIC_*`,
+ * qui restent la source de vérité côté site et fonctionnent quand la config est
+ * chargée par Node (CLI, typegen).
+ */
 const env = {
   ...(typeof process !== 'undefined' ? process.env : {}),
   ...(import.meta.env ?? {}),
 };
 
-const projectId = env.PUBLIC_SANITY_PROJECT_ID ?? '';
-const dataset = env.PUBLIC_SANITY_DATASET ?? 'production';
-const apiVersion = env.PUBLIC_SANITY_API_VERSION ?? '2025-02-19';
+const read = (studioKey: string, publicKey: string) =>
+  env[studioKey] || env[publicKey] || undefined;
+
+const projectId = read('SANITY_STUDIO_PROJECT_ID', 'PUBLIC_SANITY_PROJECT_ID') ?? '';
+const dataset = read('SANITY_STUDIO_DATASET', 'PUBLIC_SANITY_DATASET') ?? 'production';
+const apiVersion = read('SANITY_STUDIO_API_VERSION', 'PUBLIC_SANITY_API_VERSION') ?? '2025-02-19';
 
 /** Origine du site prévisualisé dans le Presentation Tool. */
-const previewOrigin = env.PUBLIC_SITE_URL ?? 'http://localhost:4321';
+const previewOrigin =
+  read('SANITY_STUDIO_SITE_URL', 'PUBLIC_SITE_URL') ?? 'http://localhost:4321';
 
 /** Libellés sobres pour les modèles localisés quand une seule langue est active. */
 const creationTitles: Record<string, string> = {

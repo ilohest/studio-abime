@@ -9,7 +9,9 @@ import {
   projectPath,
   projectsIndexPath,
   orderConfirmationPath,
+  policyPath,
   shopIndexPath,
+  type PolicyRouteKey,
 } from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
@@ -79,4 +81,16 @@ export function getStaticAlternates(
           : projectsIndexPath(locale),
     ]),
   );
+}
+
+/**
+ * Alternates d'une politique de boutique.
+ *
+ * À part des autres routes de code : le chemin dépend de la politique
+ * concernée, pas seulement de la langue.
+ */
+export function getPolicyAlternates(key: PolicyRouteKey): Partial<Record<Locale, string>> {
+  if (locales.length < 2) return {};
+
+  return Object.fromEntries(locales.map((locale) => [locale, policyPath(locale, key)]));
 }

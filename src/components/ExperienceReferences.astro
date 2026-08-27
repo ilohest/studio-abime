@@ -76,7 +76,7 @@ const footnotes = buildClientFootnotes(projects, clients);
   .references__title {
     margin-bottom: clamp(1.5rem, 3vw, 2.5rem);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: var(--tracking-sous-titre);
   }
 
   .references__list {
@@ -121,7 +121,7 @@ const footnotes = buildClientFootnotes(projects, clients);
     width: fit-content;
     justify-self: end;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: var(--text-note);
     font-variant-numeric: tabular-nums;
     text-align: right;
     transition: background-color 320ms ease, color 320ms ease;
@@ -134,12 +134,12 @@ const footnotes = buildClientFootnotes(projects, clients);
 
   .references__name {
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: var(--tracking-sous-titre);
   }
 
   .references__sector {
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: var(--text-note);
   }
 
   /* Le point médian sépare le secteur sans l'écrire dans le contenu. */
@@ -155,7 +155,7 @@ const footnotes = buildClientFootnotes(projects, clients);
   */
   @media (max-width: 767px) {
     .references {
-      min-block-size: calc(100svh - 6rem);
+      min-block-size: calc(78svh - 6rem);
       /* Dégage le titre de la barre de marque, fixe en haut de l'écran. */
       padding-block-start: 5.5rem;
     }

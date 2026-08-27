@@ -73,7 +73,11 @@ const { href, label, number, symbol, title, image, class: className } = Astro.pr
 
 <style>
   .next-entry {
-    padding-block: var(--spacing-section);
+    /*
+      Plus d'air au-dessus qu'en dessous : la fiche referme la lecture qui
+      précède, le pied de page referme ensuite la fiche elle-même.
+    */
+    padding-block: clamp(6rem, 14vw, 12rem) var(--spacing-section);
   }
 
   .next-entry__layout {
@@ -87,7 +91,7 @@ const { href, label, number, symbol, title, image, class: className } = Astro.pr
 
   .next-entry__caption {
     padding-bottom: 0.15rem;
-    font-size: 0.75rem;
+    font-size: var(--text-note);
     line-height: 1.25;
     white-space: nowrap;
   }

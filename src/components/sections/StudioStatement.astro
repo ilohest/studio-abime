@@ -252,7 +252,7 @@ const figures = (section.figures ?? []).map((figure) => ({
   }
 
   .statement__note {
-    font-size: 0.75rem;
+    font-size: var(--text-note);
     line-height: 1.25;
     color: var(--color-ink);
   }
@@ -328,7 +328,7 @@ const figures = (section.figures ?? []).map((figure) => ({
 
   .statement__caption {
     margin-top: 0.6rem;
-    font-size: 0.75rem;
+    font-size: var(--text-note);
     line-height: 1.25;
     color: var(--color-ink);
   }
@@ -355,8 +355,9 @@ const figures = (section.figures ?? []).map((figure) => ({
   }
 
   .statement__plate[data-lower-row] .statement__actions {
-    grid-column: 2 / span 3;
+    grid-column: span 3 / -1;
     grid-row: 3;
+    justify-content: flex-end;
     margin-top: calc(-1 * clamp(2rem, 4vw, 4rem));
   }
 
@@ -398,19 +399,26 @@ const figures = (section.figures ?? []).map((figure) => ({
 
     .statement__text {
       text-align: left;
-      text-indent: 0;
+      text-indent: 2em;
     }
 
+    /*
+      La grille de bureau range les figures en cases égales ; en colonne
+      unique, la planche s'assemble plutôt à la main — chaque image garde son
+      propre gabarit et son propre bord, comme des tirages posés côte à côte
+      plutôt que rangés dans un classeur.
+    */
     .statement__plate {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      row-gap: clamp(2.5rem, 8vh, 4rem);
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      row-gap: clamp(3rem, 10vw, 5rem);
+      align-items: stretch;
     }
 
     .statement__figure,
     .statement__figure:nth-child(n) {
-      grid-column: span 1;
-      grid-row: auto;
+      width: auto;
+      max-width: none;
     }
 
     .statement__figure[data-bleed='left'],
@@ -418,20 +426,40 @@ const figures = (section.figures ?? []).map((figure) => ({
       margin-inline: 0;
     }
 
-    .statement__figure[data-push] {
-      grid-column-end: auto;
+    .statement__figure:nth-child(1) {
+      width: 64%;
+      align-self: flex-start;
+    }
+
+    .statement__figure:nth-child(2) {
+      width: 82%;
+      align-self: flex-end;
+    }
+
+    .statement__figure:nth-child(3) {
+      width: 56%;
+      align-self: flex-start;
+    }
+
+    .statement__figure:nth-child(4) {
+      width: 74%;
+      align-self: flex-end;
+    }
+
+    .statement__figure:nth-child(5) {
+      width: 94%;
+      align-self: center;
     }
 
     .statement__marker {
-      grid-column: span 2;
-      grid-row: auto;
+      align-self: flex-start;
       text-align: left;
     }
 
     .statement__actions,
     .statement__plate[data-lower-row] .statement__actions {
-      grid-column: span 2;
-      grid-row: auto;
+      align-self: flex-end;
+      justify-content: flex-end;
       margin-top: 0;
     }
   }

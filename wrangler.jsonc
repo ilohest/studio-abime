@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Le serveur d'assets de Cloudflare ajoute par défaut une barre finale
+  // (`/experiences` → 307 vers `/experiences/`). Le site est publié en
+  // `trailingSlash: 'never'` : chaque lien interne partirait donc en
+  // aller-retour, vers une URL différente de sa propre canonique.
+  "assets": {
+    "html_handling": "drop-trailing-slash"
+  }
+}

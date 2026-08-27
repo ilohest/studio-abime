@@ -11,7 +11,8 @@ export const seo = defineType({
   name: 'seo',
   title: 'SEO',
   type: 'object',
-  options: { collapsible: true, collapsed: true },
+  // Le champ vit déjà dans un onglet « SEO » : un accordéon en plus obligerait
+  // à deux clics pour atteindre les métadonnées. On affiche les champs directement.
   fields: [
     defineField({
       name: 'title',

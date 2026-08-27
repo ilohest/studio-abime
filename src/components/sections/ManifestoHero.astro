@@ -212,8 +212,10 @@ const metaLines = (section.metaLines ?? []).map((line) => {
     .manifesto-intention {
       position: absolute;
       right: 1.25rem;
-      bottom: 0.5rem;
-      left: 2.25rem;
+      /* Relevée un peu au-dessus du bord bas, pour ne plus s'y coller. */
+      bottom: 2.25rem;
+      /* Même bord gauche que le repère et l'hypothèse au-dessus. */
+      left: 1.25rem;
       max-width: none;
     }
 

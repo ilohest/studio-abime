@@ -4,6 +4,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
 
 import { projectGallery } from '~/lib/projectGallery';
 import type { Locale } from '~/i18n/config';
@@ -54,6 +55,11 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
           <h1 class="split__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
         </header>
 
+        {/*
+          Sous 767 px seulement : au bureau le relevé reste dans le cartouche
+          de tête, en colonne collante à droite (voir `ProjectTemplateRenderer`).
+        */}
+        <ProjectFacts project={project} locale={locale} class="split__mobile-facts" />
 
         <div class="split__body">
           <SectionRenderer sections={project.sections} locale={locale} />
@@ -135,7 +141,7 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
   .split__eyebrow {
     margin: 0;
     font-family: var(--font-copy);
-    font-size: 0.9375rem;
+    font-size: var(--text-note);
     font-weight: 400;
     letter-spacing: var(--tracking-copy);
     line-height: 1.3;
@@ -149,9 +155,9 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
   .split__title {
     margin: 0.9rem 0 0;
     font-family: var(--font-copy);
-    font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+    font-size: clamp(1.6rem, 3.2vw, var(--text-titre));
     font-weight: 400;
-    letter-spacing: -0.02em;
+    letter-spacing: var(--tracking-titre);
     line-height: 1.15;
     text-transform: none;
   }
@@ -162,6 +168,11 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
   */
   .split__paneInner :global(.split__facts) {
     margin-top: clamp(6rem, 16vw, 12rem);
+  }
+
+  /* Copie mobile du relevé — masquée au bureau, où le cartouche de tête suffit. */
+  .split__paneInner :global(.split__mobile-facts) {
+    display: none;
   }
 
   .split__body {
@@ -257,7 +268,7 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
 
   .split__caption {
     margin-top: 0.5rem;
-    font-size: 0.9375rem;
+    font-size: var(--text-note);
     color: var(--color-muted);
   }
 
@@ -279,6 +290,12 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
       /* Empilée sous le texte, la galerie ne croise plus la case. */
       min-height: 0;
       padding-top: var(--gallery-inset);
+      padding-inline: var(--gallery-inset);
+    }
+
+    .split__paneInner :global(.split__mobile-facts) {
+      display: block;
+      margin-top: clamp(2.5rem, 7vw, 3.5rem);
     }
   }
 </style>

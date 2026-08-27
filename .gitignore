@@ -2,6 +2,8 @@
 dist/
 .astro/
 .output/
+dist-studio/
+.wrangler/
 
 # deps
 node_modules/

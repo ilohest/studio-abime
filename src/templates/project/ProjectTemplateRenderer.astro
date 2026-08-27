@@ -145,4 +145,24 @@ const Template = (() => {
     }
   }
 
+  /*
+    Sous 767 px, le repère de marque et le bouton de menu sont fixés en haut de
+    l'écran (voir `--mobile-brand-clearance`) : la case doit démarrer sous eux,
+    sans quoi elle se superpose au bouton de menu.
+  */
+  @media (max-width: 767px) {
+    .project-page-aside {
+      padding-top: max(clamp(1.5rem, 3vw, 2.5rem), var(--mobile-brand-clearance));
+    }
+
+    /*
+      Le relevé rejoint l'ordre de lecture mobile — après le titre, avant la
+      description — porté par chaque gabarit (`.mobile-facts`) : sa copie dans
+      le cartouche de tête, pensée pour la colonne fixe du bureau, s'efface ici.
+    */
+    .project-page-aside :global(.project-page-aside__facts) {
+      display: none;
+    }
+  }
+
 </style>

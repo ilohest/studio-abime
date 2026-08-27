@@ -5,6 +5,7 @@ import Wordmark from '~/components/brand/Wordmark.astro';
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
 
 import { localizedPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { SiteContext } from '~/lib/sanity/types';
 
@@ -28,7 +29,15 @@ const DEFAULT_BASELINE =
 /** Crédit de réalisation — hors CMS, il ne relève pas du contenu éditorial. */
 const CREDIT = { label: 'Website by Isaure', href: 'https://isaure-lohest.com/' };
 
+const t = useTranslations(locale);
 const nav = site.localized?.footerNav ?? [];
+/*
+  Informations légales. Calculées en amont (voir `getLegalLinks`) et non tirées
+  du CMS : ces liens sont une obligation, pas un choix éditorial. La liste est
+  vide tant qu'aucun texte n'est publié — la ligne disparaît alors entièrement
+  plutôt que d'annoncer un pied de page à trous.
+*/
+const legalLinks = site.legalLinks ?? [];
 const social = site.settings?.socialLinks ?? [];
 const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
 const year = new Date().getFullYear();
@@ -89,6 +98,22 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
 
         <LocaleSwitcher locale={locale} alternates={alternates} />
       </div>
+
+      {
+        legalLinks.length > 0 && (
+          <nav class="footer-legal type-note" aria-label={t('legal.title')}>
+            <ul class="footer-legal__list">
+              {legalLinks.map((item) => (
+                <li>
+                  <a href={item.href} class="underline-offset-2 hover:underline">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
     </div>
 
     {/* ── Colonne de droite : la marque, retour à l'accueil ─────────────── */}
@@ -121,6 +146,17 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
 
   .footer-external__label {
     text-underline-offset: 2px;
+  }
+
+  /*
+    Les informations légales forment une ligne à part, sous les autres liens :
+    présentes et atteignables, sans concurrencer la navigation éditoriale.
+  */
+  .footer-legal__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4em 1.5em;
+    color: var(--color-muted);
   }
 
   .footer-external:hover .footer-external__label,

@@ -42,12 +42,10 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
 {
   hasItems && (
     <section
-      class="showcase-grid project-index surface-paper"
+      class="showcase-grid project-index"
       aria-label="Sélection de projets — variante en grille"
       data-project-showcase-grid
     >
-      <div class="showcase-grid__grain surface-paper-grain"></div>
-
       {/* Marche intermédiaire entre le titre de la page et les fiches. */}
       <h2 class="sr-only">Sélection de projets</h2>
 
@@ -119,10 +117,6 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
     isolation: isolate;
     overflow: hidden;
     padding-block: clamp(4rem, 10vh, 8rem);
-  }
-
-  .showcase-grid__grain {
-    z-index: 0;
   }
 
   .showcase-grid :global(.project-catalog-rail) {

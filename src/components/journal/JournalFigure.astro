@@ -105,12 +105,11 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
     display: block;
     width: 100%;
     height: auto;
-    background: var(--color-surface-alt);
   }
 
   .journal-figure__caption {
     font-family: var(--font-annotation);
-    font-size: clamp(0.8rem, 0.95vw, 0.95rem);
+    font-size: var(--text-copy);
     font-style: italic;
     letter-spacing: var(--tracking-annotation);
     line-height: 1.35;
@@ -127,7 +126,7 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
   }
 
   .journal-figure--marge .journal-figure__caption {
-    font-size: 0.75rem;
+    font-size: var(--text-note);
   }
 
   @media (max-width: 767px) {

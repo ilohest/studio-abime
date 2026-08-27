@@ -25,11 +25,14 @@ Reporter le `projectId` obtenu dans `.env`, puis :
 npm run dev
 ```
 
-| URL | Contenu |
-| --- | --- |
-| `http://localhost:4321` | le site |
-| `http://localhost:4321/studio` | le back-office Sanity (embarqué) |
-| `http://localhost:4321/studio/presentation` | l'édition visuelle en écran scindé |
+Le site et le back-office sont **deux applications distinctes**, lancées par deux
+commandes (deux terminaux) :
+
+| Commande | URL | Contenu |
+| --- | --- | --- |
+| `npm run dev` | `http://localhost:4321` | le site |
+| `npm run studio:dev` | `http://localhost:3333` | le back-office Sanity |
+| `npm run studio:dev` | `http://localhost:3333/presentation` | l'édition visuelle en écran scindé |
 
 ### Premier contenu
 
@@ -44,11 +47,17 @@ Le site a besoin de deux documents pour s'afficher :
 
 | Commande | Rôle |
 | --- | --- |
-| `npm run dev` | serveur de développement |
-| `npm run build` | vérification des types **puis** build de production |
-| `npm run preview` | prévisualisation du build |
+| `npm run dev` | serveur de développement du **site** (4321) |
+| `npm run studio:dev` | serveur de développement du **Studio** (3333) |
+| `npm run build` | vérification des types **puis** build de production du site |
+| `npm run studio:build` | build du Studio dans `dist-studio/` |
+| `npm run preview` | build **puis** exécution locale dans le runtime Cloudflare (`wrangler`) |
 | `npm run typecheck` | `astro check` seul |
 | `npx sanity <cmd>` | CLI Sanity (datasets, tokens, import/export) |
+
+`npm run preview` passe par `wrangler` plutôt que par `astro preview` : c'est le
+seul moyen d'exécuter `/api/contact` dans le vrai runtime Workers, celui qui
+tournera en production. Au quotidien, `npm run dev` reste l'outil de travail.
 
 ---
 
@@ -256,8 +265,179 @@ Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le 
 
 ---
 
+## Déploiement
+
+Deux applications, **deux projets Cloudflare** branchés sur ce même dépôt.
+
+| Projet | Build | Sortie | Domaine |
+| --- | --- | --- | --- |
+| Site | `npm run build` | `dist/` | `studio-abime.com` |
+| Studio | `npm run studio:build` | `dist-studio/` | `studio.studio-abime.com` |
+
+Le choix de Cloudflare n'est pas qu'une question de prix. Son offre gratuite
+autorise l'usage commercial — ce que le plan Hobby de Vercel interdit
+explicitement, y compris pour un site simplement réalisé contre rémunération —,
+la bande passante y est illimitée, et surtout **les membres d'un compte y sont
+gratuits et illimités**. La cliente peut donc rester seule propriétaire de son
+compte et y inviter un intervenant, sans jamais partager de mot de passe. Le
+domaine peut vivre dans le même compte, acheté au prix coûtant du registre.
+
+### Le site
+
+`@astrojs/cloudflare` produit un build hybride : toutes les pages partent en HTML
+statique sur le CDN, et **un seul Worker** est déployé, pour `/api/contact`.
+
+Réglages du projet Cloudflare « Site » (Workers & Pages → connecter le dépôt) :
+
+- **Build command** : `npm run build`
+- **Build output directory** : `dist`
+
+Comme les pages sont pré-rendues, une publication dans Sanity n'apparaît en ligne
+qu'après un nouveau build. Le câblage à faire une fois pour toutes :
+
+1. Cloudflare → le projet → Settings → Builds → **Deploy hooks** : créer un hook
+   sur la branche `main` ;
+2. Sanity → [manage.sanity.io](https://manage.sanity.io) → API → **Webhooks** : coller
+   l'URL du hook, méthode `POST`, sur les types de documents publiés.
+
+Sans cela, la cliente publiera dans le back-office sans rien voir changer sur le site.
+
+#### Deux réglages qui décident du coût
+
+Ce sont les deux seules choses qui, mal réglées, feraient basculer un
+hébergement gratuit vers une facture. Elles sont posées dans le dépôt, mais
+elles se retirent d'un geste distrait :
+
+- **`imageService: 'compile'`** dans `astro.config.ts`. Par défaut, l'adaptateur
+  route les images vers le binding **Cloudflare Images**, un produit facturé : les
+  pages émettent alors des URLs `/_image?...` transformées **à chaque visite**, qui
+  réveillent le Worker au passage. En `compile`, sharp optimise tout au build et
+  les images partent comme des assets statiques. Le contrôle : après un build,
+  `grep -rl "/_image" dist/client --include="*.html"` ne doit **rien** retourner.
+- **`html_handling: "drop-trailing-slash"`** dans `wrangler.jsonc`. Le serveur
+  d'assets de Cloudflare ajoute sinon une barre finale par une redirection 307,
+  et chaque lien interne du site part en aller-retour, vers une URL différente de
+  sa propre canonique. (Passer `build.format` à `'file'` corrige le symptôme mais
+  casse les canoniques, qui deviennent `/experiences.html` : ce n'est pas la
+  solution.)
+
+#### Ce qui est gratuit, et où sont les plafonds
+
+Les requêtes vers les assets statiques — donc la quasi-totalité du trafic — sont
+**gratuites et illimitées**, bande passante comprise, et n'appellent même pas le
+Worker. Ne comptent que les requêtes qu'aucun fichier ne satisfait :
+
+| Ressource | Offre gratuite | Consommation réelle du site |
+| --- | --- | --- |
+| Requêtes Worker | 100 000 / jour | uniquement `/api/contact` |
+| Minutes de build | 3 000 / mois (1 build à la fois) | ~2 min par publication |
+| KV (binding `SESSION`) | 100 000 lectures / jour | aucune — les sessions ne sont pas utilisées |
+| Domaine, SSL, DNS, e-mail | gratuits | — |
+
+Le seul point de vigilance à moyen terme : les conditions de Cloudflare
+n'autorisent pas à faire du CDN gratuit un serveur de vidéo. Le site n'héberge
+aujourd'hui qu'un `.mp4` de 6 Mo sur la page 404, ce qui est sans conséquence ;
+si des vidéos de fond arrivent un jour sur les pages courantes, c'est là qu'il
+faudra regarder Cloudflare Stream.
+
+### Le Studio
+
+Le Studio n'est **pas** embarqué dans le site (voir `astro.config.ts`) : il est
+construit par la CLI Sanity et déployé comme un projet Cloudflare indépendant.
+Deux bénéfices concrets : le site public n'embarque plus React ni les 9 Mo du
+back-office (le build du site est passé de ~33 s à ~7 s), et mettre à jour l'un
+n'oblige pas à redéployer l'autre.
+
+Réglages du projet Cloudflare « Studio » :
+
+- **Build command** : `npm run studio:build`
+- **Build output directory** : `dist-studio`
+
+Le Studio est une application à routage client : rafraîchir la page sur
+`/structure/...` demanderait un fichier qui n'existe pas. Le fichier
+`sanity/static/_redirects`, recopié dans le build, renvoie donc toutes les URLs
+vers `index.html`.
+
+### Origines CORS
+
+Site et back-office vivant sur deux domaines, les deux doivent être déclarés dans
+Sanity → manage → API → **CORS origins** :
+
+| Origine | Identifiants |
+| --- | --- |
+| `https://studio.studio-abime.com` | oui (le Studio s'authentifie) |
+| `https://studio-abime.com` | oui (lecture des brouillons en édition visuelle) |
+| l'URL de preview du site | oui |
+| `http://localhost:3333` | oui |
+| `http://localhost:4321` | oui |
+
+### Variables d'environnement
+
+La distinction qui compte est `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` : `"false"`
+en production (site 100 % statique, sans stega ni JavaScript d'édition), `"true"`
+sur l'environnement de preview, où l'édition visuelle est utilisée.
+
+**Projet « Site »**
+
+| Variable | Production | Preview | Secret |
+| --- | --- | --- | --- |
+| `PUBLIC_SANITY_PROJECT_ID` | identique | identique | non |
+| `PUBLIC_SANITY_DATASET` | `production` | `production` | non |
+| `PUBLIC_SANITY_API_VERSION` | `2025-02-19` | idem | non |
+| `PUBLIC_SANITY_STUDIO_URL` | `https://studio.studio-abime.com` | idem | non |
+| `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` | `"false"` | `"true"` | non |
+| `SANITY_API_READ_TOKEN` | — | token **Viewer** | **oui** |
+| `PUBLIC_SITE_URL` | `https://studio-abime.com` | URL de preview | non |
+| `RESEND_API_KEY` | clé Resend | clé Resend | **oui** |
+| `CONTACT_FROM_EMAIL` | expéditeur vérifié chez Resend | idem | non |
+| `CONTACT_TO_EMAIL` | destinataire du formulaire | idem | non |
+| `CONTACT_REPLY_TO_EMAIL` | adresse de réponse | idem | non |
+| `PUBLIC_SHOPIFY_STORE_DOMAIN` | `xxx.myshopify.com` | idem | non |
+| `PUBLIC_SHOPIFY_STOREFRONT_TOKEN` | jeton Storefront | idem | non (public par conception) |
+| `PUBLIC_SHOPIFY_API_VERSION` | `2026-07` | idem | non |
+
+`SANITY_API_READ_TOKEN` ne sert qu'à lire les brouillons : il n'a d'utilité que
+sur l'environnement de preview. Le laisser vide en production, c'est une clé de
+moins à exposer.
+
+`SANITY_API_WRITE_TOKEN` reste **local uniquement** (script `npm run legal:seed`).
+Il ne doit être présent sur aucun environnement en ligne.
+
+> **⚠️ Les secrets sont figés au build.** Les variables non préfixées `PUBLIC_`
+> sont lues via `import.meta.env` : Vite les remplace par leur valeur au moment de
+> la compilation, elles ne sont pas relues à l'exécution. Changer `RESEND_API_KEY`
+> ou `SANITY_API_READ_TOKEN` dans le tableau de bord n'a donc aucun effet tant
+> qu'un nouveau déploiement n'a pas été lancé.
+
+**Projet « Studio »**
+
+La CLI Sanity n'expose au navigateur que les variables préfixées
+`SANITY_STUDIO_` — le préfixe `PUBLIC_` d'Astro y est ignoré. Le projet Studio a
+donc son propre jeu, volontairement minimal :
+
+| Variable | Valeur |
+| --- | --- |
+| `SANITY_STUDIO_PROJECT_ID` | identique au site |
+| `SANITY_STUDIO_DATASET` | `production` |
+| `SANITY_STUDIO_API_VERSION` | `2025-02-19` |
+| `SANITY_STUDIO_SITE_URL` | `https://studio-abime.com` — l'origine chargée dans l'aperçu du Presentation Tool |
+
+Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity.
+
+### Avant la première mise en ligne
+
+- [ ] remplacer la fonte **Commuters Sans « Fontspring DEMO »** par sa version sous
+      licence web (voir § Design system) — la licence actuelle n'autorise pas la production ;
+- [ ] `@astrojs/sitemap` + `robots.txt` ;
+- [ ] pages légales publiées (`npm run legal:seed` crée les brouillons) ;
+- [ ] domaine de l'expéditeur vérifié chez Resend (enregistrements SPF/DKIM dans la zone DNS) ;
+- [ ] boutique Shopify sur un forfait payant, jeton Storefront de production ;
+- [ ] webhook Sanity → deploy hook opérationnel (publier un document et vérifier le rebuild).
+
+---
+
 ## Prochaines étapes suggérées
 
 - `npx sanity typegen generate` pour dériver les types depuis les schémas et les requêtes, en remplacement des types écrits à la main dans `src/lib/sanity/types.ts` ;
 - `@astrojs/sitemap` + `robots.txt` avant la mise en ligne ;
-- déploiement : le site est statique, mais l'adaptateur Node est requis si l'environnement de preview doit servir l'édition visuelle.
+- une page de statut ou une sauvegarde planifiée du dataset Sanity (`sanity dataset export`) une fois le site en production.

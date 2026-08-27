@@ -6,17 +6,20 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
+    "studio:dev": "sanity dev",
+    "studio:build": "sanity build dist-studio",
     "build": "astro check && astro build",
-    "preview": "astro preview",
+    "preview": "astro build && wrangler dev --config dist/server/wrangler.json",
     "astro": "astro",
     "sanity": "sanity",
     "shopify:check": "node --env-file=.env scripts/shopify-check.mjs",
+    "legal:seed": "node --env-file=.env scripts/seed-legal-pages.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",
     "typecheck": "astro check"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
-    "@astrojs/node": "^11.1.0",
+    "@astrojs/cloudflare": "^14.2.5",
     "@astrojs/react": "^6.0.2",
     "@astrojs/vue": "^7.0.2",
     "@portabletext/to-html": "^5.0.2",
@@ -42,6 +45,7 @@
     "vue": "^3.5.41"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2"
+    "@types/node": "^26.1.2",
+    "wrangler": "^4.127.0"
   }
 }

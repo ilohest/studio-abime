@@ -76,6 +76,17 @@ const fr = {
   'shop.confirmationEmailLabel': 'Envoyé à',
   'shop.confirmationFallback': 'Si vous cherchez le détail d’une commande passée, retrouvez-le dans l’e-mail de confirmation envoyé par Shopify.',
   'shop.confirmationContinue': 'Continuer les achats',
+  /*
+    Pages légales. Les trois premières sont servies depuis l'admin Shopify, les
+    trois suivantes depuis Sanity — le visiteur ne doit voir aucune couture.
+  */
+  'policy.terms': 'Conditions générales de vente',
+  'policy.shipping': 'Livraison',
+  'policy.refund': 'Retours et remboursements',
+  'legal.notice': 'Mentions légales',
+  'legal.privacy': 'Confidentialité',
+  'legal.cookies': 'Cookies',
+  'legal.title': 'Informations légales',
 } as const;
 
 export type TranslationKey = keyof typeof fr;

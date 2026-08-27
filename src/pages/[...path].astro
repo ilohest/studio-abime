@@ -12,12 +12,16 @@ import ShopIndex from '~/components/ShopIndex.astro';
 import ProductPage from '~/components/ProductPage.astro';
 import OrderConfirmation from '~/components/OrderConfirmation.astro';
 import CollectionPage from '~/components/CollectionPage.astro';
+import PolicyPage from '~/components/PolicyPage.astro';
+import LegalHeader from '~/components/LegalHeader.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
 import { getCollectionByHandle, getProductByHandle, getProducts } from '~/lib/shopify/catalogue';
+import { getShopPolicy } from '~/lib/shopify/policies';
 import { getSiteContext } from '~/lib/siteContext';
-import { getDocumentAlternates, getStaticAlternates } from '~/lib/alternates';
+import { getDocumentAlternates, getPolicyAlternates, getStaticAlternates } from '~/lib/alternates';
+import { getLegalPageSlug, legalPageKeys } from '~/i18n/routes';
 import { loadQuery } from '~/lib/sanity/loadQuery';
 import {
   homePageQuery,
@@ -37,7 +41,7 @@ import { getHomeFallback } from '~/content/homeFallback';
 import { getShopIntro } from '~/content/shopFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
-import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard } from '~/lib/shopify/types';
+import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard, ShopPolicy } from '~/lib/shopify/types';
 import type {
   CategorySummary,
   Client,
@@ -104,6 +108,7 @@ let shopPage: ShopPage | null = null;
 let shopProduct: ShopProduct | null = null;
 let shopCollection: ShopCollection | null = null;
 let shopRelated: ShopProductCard[] = [];
+let shopPolicy: ShopPolicy | null = null;
 
 if (route.kind === 'shop') {
   /*
@@ -129,6 +134,13 @@ if (route.kind === 'product') {
     // Le tirage courant ne se suggère pas lui-même.
     shopRelated = (collection?.products ?? []).filter((p) => p.id !== shopProduct!.id).slice(0, 4);
   }
+}
+
+if (route.kind === 'policy') {
+  shopPolicy = await getShopPolicy(route.policy);
+  // Politique retirée de l'admin — ou redevenue un modèle à compléter — depuis
+  // la génération du manifeste.
+  if (!shopPolicy) return Astro.rewrite('/404');
 }
 
 if (route.kind === 'collection') {
@@ -216,6 +228,7 @@ if (
   route.kind !== 'product' &&
   route.kind !== 'orderConfirmation' &&
   route.kind !== 'collection' &&
+  route.kind !== 'policy' &&
   !page &&
   !project &&
   !post &&
@@ -242,6 +255,8 @@ const alternates =
       ? getStaticAlternates('shop')
     : route.kind === 'orderConfirmation'
       ? getStaticAlternates('orderConfirmation')
+    : route.kind === 'policy'
+      ? getPolicyAlternates(route.policy)
       : await getDocumentAlternates(document?._id, locale);
 
 const projectIndexTitleSource = projectsPage?.title?.trim();
@@ -271,6 +286,8 @@ const title =
       ? t('shop.confirmationTitle')
     : route.kind === 'collection'
       ? (shopCollection?.title ?? t('shop.title'))
+    : route.kind === 'policy'
+      ? t(`policy.${route.policy}` as 'policy.terms')
       : (document?.title ?? site.localized?.siteTitle ?? '');
 
 const journalIntro = journalPage?.intro?.trim();
@@ -299,6 +316,18 @@ const pageSections = route.kind === 'home'
       });
     })()
   : page?.sections;
+
+/*
+  Les pages d'informations légales partagent une présentation propre (colonne
+  pleine largeur, titres de section resserrés — voir `.page-legal` dans
+  global.css). Elles arrivent par deux routes différentes : les politiques de
+  boutique viennent de Shopify, les trois autres sont des pages Sanity
+  ordinaires qu'on reconnaît à leur slug.
+*/
+const isLegalPage =
+  route.kind === 'policy' ||
+  (route.kind === 'page' &&
+    legalPageKeys.some((key) => getLegalPageSlug(key, locale) === route.slug));
 
 const hasEmbeddedServicesRail = pageSections?.some((section) => section._type === 'servicesMenu') ?? false;
 ---
@@ -329,6 +358,7 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
     route.kind === 'collection'
       ? 'page-shop'
       : '',
+    isLegalPage ? 'page-legal' : '',
   ].filter(Boolean).join(' ')}
   alternates={alternates}
   showServicesRail={!hasEmbeddedServicesRail}
@@ -358,6 +388,8 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
 
   {route.kind === 'orderConfirmation' && <OrderConfirmation locale={locale} />}
 
+  {shopPolicy && <PolicyPage policy={shopPolicy} locale={locale} />}
+
   {shopCollection && <CollectionPage collection={shopCollection} locale={locale} />}
 
   {
@@ -369,6 +401,16 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
         number="04."
         intro={shopPage?.intro?.trim() || getShopIntro(locale)}
       />
+    )
+  }
+
+  {
+    isLegalPage && page && (
+      <div class="legal-header-block container-wide pt-(--spacing-section)">
+        <div class="reading-column">
+          <LegalHeader title={page.title} />
+        </div>
+      </div>
     )
   }
 

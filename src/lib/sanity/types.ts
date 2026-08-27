@@ -11,6 +11,7 @@
 import type { PortableTextBlock } from '@portabletext/types';
 import type { ImageMetadata } from 'astro';
 import type { Locale } from '~/i18n/config';
+import type { PolicyRouteKey } from '~/i18n/routes';
 import type { JournalCategory } from '~/content/journalCategories';
 
 export type { PortableTextBlock };
@@ -476,10 +477,24 @@ export interface LocalizedSettings {
 }
 
 /** Données communes à toutes les pages, injectées par le layout. */
+/**
+ * Lien d'information légale affiché en pied de page.
+ *
+ * Les deux origines — Sanity pour l'entreprise, Shopify pour la boutique — sont
+ * mises à plat ici volontairement : le visiteur n'a pas à savoir d'où vient
+ * quel texte, et le pied de page n'a pas à le savoir non plus.
+ */
+export interface LegalLink {
+  label: string;
+  href: string;
+}
+
 export interface SiteContext {
   locale: Locale;
   settings: SiteSettings | null;
   localized: LocalizedSettings | null;
+  /** Ne contient que des pages réellement publiées — un lien mort n'y entre jamais. */
+  legalLinks: LegalLink[];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -499,4 +514,6 @@ export type RouteEntry =
   /* `handle` et non `slug` : c'est le terme de Shopify, autant ne pas traduire. */
   | { kind: 'product'; locale: Locale; path: string; handle: string }
   | { kind: 'orderConfirmation'; locale: Locale; path: string }
-  | { kind: 'collection'; locale: Locale; path: string; handle: string };
+  | { kind: 'collection'; locale: Locale; path: string; handle: string }
+  /* Politique de boutique (CGV, livraison, retours) : le texte vit chez Shopify. */
+  | { kind: 'policy'; locale: Locale; path: string; policy: PolicyRouteKey };

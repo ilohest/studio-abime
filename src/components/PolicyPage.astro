@@ -1,0 +1,54 @@
+---
+import LegalHeader from '~/components/LegalHeader.astro';
+
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { ShopPolicy } from '~/lib/shopify/types';
+
+/**
+ * Page de politique de boutique — CGV, livraison, retours.
+ *
+ * Le texte vient de l'admin Shopify et non de Sanity : c'est le même contenu
+ * qui s'affiche dans le tunnel de paiement, où le client le lit au moment de
+ * s'engager. Une seule saisie, deux affichages, aucune divergence possible
+ * entre ce que promet le site et ce que promet la caisse.
+ *
+ * Le corps arrive en HTML déjà normalisé par `shopify/policies.ts` : structure
+ * de titres reconstruite et balises réduites à une liste blanche. C'est ce qui
+ * autorise le `set:html` ci-dessous — la chaîne ne contient plus que des
+ * paragraphes, des titres et des liens.
+ *
+ * La composition reprend celle du bloc de texte du page builder
+ * (`sections/RichTextSection.astro`) : les pages légales issues de Sanity et
+ * celles issues de Shopify doivent se ressembler au point qu'on ne puisse pas
+ * deviner laquelle vient d'où.
+ */
+interface Props {
+  policy: ShopPolicy;
+  locale: Locale;
+}
+
+const { policy, locale } = Astro.props;
+const t = useTranslations(locale);
+
+const title = t(`policy.${policy.key}` as 'policy.terms');
+---
+
+<article class="policy container-wide py-(--spacing-section)">
+  <div class="reading-column">
+    <LegalHeader title={title} />
+
+    <div class="prose-abime policy__body" set:html={policy.body} />
+  </div>
+</article>
+
+<style>
+  /*
+    Le premier titre du texte suit immédiatement le titre de la page : la marge
+    haute généreuse de `.prose-abime h2`, faite pour séparer deux sections d'un
+    long texte, creuserait ici un trou.
+  */
+  .policy__body :global(> h2:first-child) {
+    margin-top: 0;
+  }
+</style>
