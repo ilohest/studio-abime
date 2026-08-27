@@ -580,7 +580,13 @@ const panelId = `services-menu-${mode}`;
 
     toggle.addEventListener('click', () => setOpen(!menu.hasAttribute('data-menu-open')));
     panel.addEventListener('click', (event) => {
-      if ((event.target as Element).closest('a')) setOpen(false);
+      /*
+        Un lien quitte la page, il referme le menu de lui-même. Le panier ne
+        quitte rien — c'est un bouton, pas un lien — mais son tiroir se pose
+        par-dessus ce même menu mobile : sans cette ligne, le fermer laissait
+        retomber sur le menu resté ouvert en dessous.
+      */
+      if ((event.target as Element).closest('a, .cart-trigger')) setOpen(false);
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') setOpen(false);
