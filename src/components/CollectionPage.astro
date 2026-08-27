@@ -27,9 +27,11 @@ const shopHref = shopIndexPath(locale);
 
 <div class="collection-page container-wide py-(--spacing-section)">
   {/*
-    Positionné en absolu à dessein : le titre et la description doivent tomber
-    exactement là où ils tombent sur `/shop`, qui n'a rien au-dessus des siens.
-    Un lien en flux normal les aurait poussés plus bas.
+    Positionné en absolu à partir de 768px, pour que le titre et la description
+    tombent exactement là où ils tombent sur `/shop`, qui n'a rien au-dessus
+    des siens. En dessous, la barre mobile du menu (logo + bouton) occupe déjà
+    ce coin en position fixe : le lien y reste en flux normal, comme partout
+    ailleurs sur le site, pour ne pas se superposer à elle.
   */}
   <a href={shopHref} class="button-minimal collection-page__all">
     <span class="button-minimal__label">{t('shop.back')}</span>
@@ -68,20 +70,29 @@ const shopHref = shopIndexPath(locale);
 </div>
 
 <style>
-  .collection-page {
-    position: relative;
+  /* Flux normal sur mobile — voir le commentaire dans le balisage. */
+  .collection-page__all {
+    display: inline-block;
+    margin-bottom: clamp(2rem, 5vw, 3.5rem);
+    color: var(--color-ink);
   }
 
-  /*
-    Flotte dans le rembourrage haut du conteneur plutôt que de s'insérer dans
-    le flux : le header qui suit démarre ainsi au même point que celui de
-    `/shop`, qui n'a rien au-dessus de lui.
-  */
-  .collection-page__all {
-    position: absolute;
-    top: clamp(1.5rem, 4vw, 2.5rem);
-    inset-inline-start: 0;
-    color: var(--color-ink);
+  @media (min-width: 768px) {
+    /*
+      Flotte dans le rembourrage haut du conteneur plutôt que de s'insérer
+      dans le flux : le header qui suit démarre ainsi au même point que celui
+      de `/shop`, qui n'a rien au-dessus de lui.
+    */
+    .collection-page {
+      position: relative;
+    }
+
+    .collection-page__all {
+      position: absolute;
+      top: clamp(1.5rem, 4vw, 2.5rem);
+      inset-inline-start: 0;
+      margin-bottom: 0;
+    }
   }
 
   /* Même motif que le retour aux expériences, au journal et à la fiche produit. */
