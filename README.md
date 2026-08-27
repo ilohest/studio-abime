@@ -78,7 +78,9 @@ tournera en production. Au quotidien, `npm run dev` reste l'outil de travail.
 │   │   ├── siteContext.ts       Réglages communs (mémoïsés par langue)
 │   │   ├── viewModels.ts        Sanity → props des composants Vue
 │   │   ├── portableText.ts      Rendu du texte riche
-│   │   └── sanity/              client, env, requêtes GROQ, images, types
+│   │   ├── seo/                 Schema.org, vignette de partage, verrou d'index
+│   │   ├── sanity/              client, env, requêtes GROQ, images, types
+│   │   └── shopify/             catalogue, panier, politiques de boutique
 │   │
 │   ├── components/
 │   │   ├── primitives/          SanityImage, PortableText, SmartLink
@@ -88,7 +90,10 @@ tournera en production. Au quotidien, `npm run dev` reste l'outil de travail.
 │   │
 │   ├── templates/project/       ★ Modèles de page projet distincts
 │   ├── layouts/BaseLayout.astro
-│   ├── pages/[...path].astro    ★ Route universelle
+│   ├── pages/
+│   │   ├── [...path].astro      ★ Route universelle
+│   │   ├── sitemap.xml.ts       Sitemap généré depuis le manifeste de routes
+│   │   └── robots.txt.ts        robots.txt, fermé hors production
 │   └── styles/                  Design tokens + fontes
 │
 └── sanity/
@@ -265,6 +270,61 @@ Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le 
 
 ---
 
+## Référencement
+
+Tout est généré : aucun fichier SEO n'est posé à la main, aucune URL n'est écrite en dur.
+
+| Ce qui est produit | Où |
+| --- | --- |
+| `<title>`, méta description, canonique, Open Graph, carte X | `src/components/Seo.astro` |
+| Données structurées Schema.org | `src/lib/seo/jsonLd.ts` → `src/components/JsonLd.astro` |
+| Vignette de partage | `src/lib/seo/shareImage.ts` |
+| Verrou d'indexation | `src/lib/seo/indexing.ts` |
+| `/sitemap.xml` | `src/pages/sitemap.xml.ts` |
+| `/robots.txt` | `src/pages/robots.txt.ts` |
+
+**Les métadonnées se calculent une fois.** `src/pages/[...path].astro` résout le
+titre, la description et la vignette de la page, puis les passe *à la fois* aux
+balises du `<head>` et aux données structurées. Ce qu'un moteur lit dans le
+JSON-LD est donc exactement ce qu'affiche un lien partagé — les deux ne peuvent
+pas diverger.
+
+**Cascades de repli.** La description part du SEO du document, retombe sur son
+extrait (résumé de projet, chapô d'article, description de tirage), puis sur la
+description du site. Sans l'étage du milieu, toutes les pages sans description
+saisie partageraient mot pour mot la même méta description. La vignette suit la
+même logique : image SEO → visuel du document → image sociale par défaut, avec
+recadrage paysage systématique parce que les réseaux composent leur aperçu dans
+un cadre large.
+
+**Un seul graphe Schema.org par page.** Les nœuds se citent par `@id` : le studio
+décrit sur l'accueil est littéralement la même entité que l'auteur d'un article et
+que le vendeur d'un tirage. Chaque type de page a le sien — `CreativeWork` pour un
+projet, `BlogPosting` pour un article, `Product` avec le prix et la disponibilité
+de chaque variante pour un tirage, `ItemList` pour les index, `BreadcrumbList`
+partout. Rien n'est inventé : un champ vide dans le CMS n'apparaît pas dans le
+graphe.
+
+La fiche d'entreprise (nom légal, adresse, TVA, logo, réseaux) se saisit dans le
+Studio, sous **Réglages du site → Identité et réseaux sociaux**. Elle ne s'affiche
+nulle part : elle sert à rattacher le domaine à une entreprise réelle. Renseigner
+l'adresse postale fait passer le studio en `ProfessionalService`, ce qui le rend
+éligible aux résultats locaux.
+
+**Le sitemap est construit depuis `buildRouteManifest()`**, pas par
+`@astrojs/sitemap` : le manifeste connaît les URLs venant de Sanity *et* de
+Shopify, porte la date de dernière révision de chaque document, et reste complet
+même en rendu à la demande. Il exclut ce qui est en `noindex` et référence le
+visuel de chaque page (extension images).
+
+**Hors production, tout est fermé.** `PUBLIC_SANITY_VISUAL_EDITING_ENABLED`
+distingue la preview de la production : sur la preview, `robots.txt` interdit tout
+et chaque page porte `noindex`. Sans ce verrou, le domaine de preview servirait un
+duplicata intégral du site public — l'un des accidents de référencement les plus
+longs à rattraper.
+
+---
+
 ## Déploiement
 
 Deux applications, **deux projets Cloudflare** branchés sur ce même dépôt.
@@ -428,16 +488,17 @@ Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity
 
 - [ ] remplacer la fonte **Commuters Sans « Fontspring DEMO »** par sa version sous
       licence web (voir § Design system) — la licence actuelle n'autorise pas la production ;
-- [ ] `@astrojs/sitemap` + `robots.txt` ;
 - [ ] pages légales publiées (`npm run legal:seed` crée les brouillons) ;
 - [ ] domaine de l'expéditeur vérifié chez Resend (enregistrements SPF/DKIM dans la zone DNS) ;
 - [ ] boutique Shopify sur un forfait payant, jeton Storefront de production ;
-- [ ] webhook Sanity → deploy hook opérationnel (publier un document et vérifier le rebuild).
+- [ ] webhook Sanity → deploy hook opérationnel (publier un document et vérifier le rebuild) ;
+- [ ] fiche d'entreprise complétée dans le Studio (Réglages → Identité et réseaux sociaux) : sans elle, les données structurées se limitent au nom et à la description du site ;
+- [ ] site déclaré dans la Google Search Console, sitemap soumis (`/sitemap.xml`) ;
+- [ ] `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` bien à `"false"` en production — c'est lui qui autorise l'indexation.
 
 ---
 
 ## Prochaines étapes suggérées
 
 - `npx sanity typegen generate` pour dériver les types depuis les schémas et les requêtes, en remplacement des types écrits à la main dans `src/lib/sanity/types.ts` ;
-- `@astrojs/sitemap` + `robots.txt` avant la mise en ligne ;
 - une page de statut ou une sauvegarde planifiée du dataset Sanity (`sanity dataset export`) une fois le site en production.

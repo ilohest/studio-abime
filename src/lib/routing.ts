@@ -36,8 +36,33 @@ import { routeManifestQuery } from './sanity/queries';
 import type { ResolvedLink, RouteEntry, SanityLink } from './sanity/types';
 
 interface RouteManifestResponse {
-  documents: Array<{ _type: 'page' | 'project' | 'post'; slug: string; language: Locale }>;
+  documents: Array<{
+    _type: 'page' | 'project' | 'post';
+    slug: string;
+    language: Locale;
+    updatedAt?: string;
+    publishedAt?: string | null;
+  }>;
   homePages: Array<{ language: Locale; slug: string | null }>;
+}
+
+/**
+ * Date de dernière révision d'un document, telle que l'annonce le sitemap.
+ *
+ * On prend la plus tardive des deux dates connues : un article peut être
+ * rédigé des semaines avant sa mise en ligne, auquel cas `publishedAt` est
+ * postérieure ; à l'inverse, une correction ultérieure fait gagner `_updatedAt`.
+ * Annoncer la plus récente, c'est annoncer l'état réel de la page.
+ */
+function latestDate(...dates: Array<string | null | undefined>): string | undefined {
+  const timestamps = dates
+    .filter((date): date is string => Boolean(date))
+    .map((date) => ({ date, time: Date.parse(date) }))
+    .filter((entry) => Number.isFinite(entry.time));
+
+  if (timestamps.length === 0) return undefined;
+
+  return timestamps.reduce((latest, entry) => (entry.time > latest.time ? entry : latest)).date;
 }
 
 /**
@@ -120,12 +145,15 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
     // le contenu peut être préparé en amont sans fuiter en production.
     if (!isLocale(doc.language)) continue;
 
+    const lastmod = latestDate(doc.updatedAt, doc.publishedAt);
+
     if (doc._type === 'project') {
       routes.push({
         kind: 'project',
         locale: doc.language,
         path: projectPath(doc.language, doc.slug),
         slug: doc.slug,
+        lastmod,
       });
       continue;
     }
@@ -136,6 +164,7 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
         locale: doc.language,
         path: postPath(doc.language, doc.slug),
         slug: doc.slug,
+        lastmod,
       });
       continue;
     }
@@ -148,6 +177,7 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
       locale: doc.language,
       path: pagePath(doc.language, doc.slug),
       slug: doc.slug,
+      lastmod,
     });
   }
 

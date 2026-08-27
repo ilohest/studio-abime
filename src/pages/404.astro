@@ -24,12 +24,14 @@ const phrases = [
 const canvasCopy = phrases.join(' ');
 ---
 
+{/* `noIndex` : une page d'erreur n'a pas à figurer dans un index de recherche. */}
 <BaseLayout
   locale={locale}
   site={site}
   title="Page introuvable - Studio Abîme"
   bodyClass="page-404"
   hideFooter
+  noIndex
 >
   <section class="error-page" aria-labelledby="error-title">
     <div class="paper-grain" aria-hidden="true"></div>

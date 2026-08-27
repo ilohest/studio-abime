@@ -165,6 +165,9 @@ export const productByHandleQuery = /* GraphQL */ `
         nodes {
           id
           title
+          # Référence interne de la variante. Non affichée : elle sert
+          # d'identifiant marchand dans les données structurées de la fiche.
+          sku
           availableForSale
           price {
             amount

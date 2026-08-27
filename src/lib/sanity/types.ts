@@ -11,7 +11,7 @@
 import type { PortableTextBlock } from '@portabletext/types';
 import type { ImageMetadata } from 'astro';
 import type { Locale } from '~/i18n/config';
-import type { PolicyRouteKey } from '~/i18n/routes';
+import type { LegalPageKey, PolicyRouteKey } from '~/i18n/routes';
 import type { JournalCategory } from '~/content/journalCategories';
 
 export type { PortableTextBlock };
@@ -183,7 +183,6 @@ export interface ProjectListSection extends SectionBase {
   /** `manual` → projets choisis à la main ; `latest` → les N plus récents. */
   mode: 'manual' | 'latest';
   limit?: number;
-  showFilters?: boolean;
   /** Les deux jeux sont renvoyés par GROQ ; le composant choisit selon `mode`. */
   manualProjects: ProjectCard[] | null;
   latestProjects: ProjectCard[];
@@ -265,6 +264,8 @@ export interface Project {
   _id: string;
   _type: 'project';
   language: Locale;
+  /** Date ISO de dernière révision — `dateModified` des données structurées. */
+  updatedAt?: string;
   title: string;
   slug: string;
   template: ProjectTemplate;
@@ -297,6 +298,8 @@ export interface Page {
   _id: string;
   _type: 'page';
   language: Locale;
+  /** Date ISO de dernière révision — `dateModified` des données structurées. */
+  updatedAt?: string;
   title: string;
   slug: string;
   sections: Section[];
@@ -377,6 +380,8 @@ export type JournalBlock = JournalProse | JournalFigure | JournalNote;
 
 export interface Post extends PostCard {
   _type: 'post';
+  /** Date ISO de dernière révision — `dateModified` des données structurées. */
+  updatedAt?: string;
   standfirst?: string;
   template: PostTemplate;
   /** Composition de l'article. L'ancienne saisie y est repliée par la requête. */
@@ -434,9 +439,32 @@ export interface NavigationItem extends SanityLink {
   _key: string;
 }
 
+/**
+ * Fiche d'identité de l'entreprise.
+ *
+ * Elle n'est rendue nulle part : elle alimente le nœud `Organization` des
+ * données structurées (`src/lib/seo/jsonLd.ts`). Tous les champs sont
+ * optionnels — un champ vide n'est pas publié plutôt que d'être deviné.
+ */
+export interface OrganizationIdentity {
+  /** Logo carré destiné aux résultats de recherche (jamais rendu sur le site). */
+  logo?: SanityImage;
+  legalName?: string;
+  email?: string;
+  phone?: string;
+  streetAddress?: string;
+  postalCode?: string;
+  addressLocality?: string;
+  addressCountry?: string;
+  vatId?: string;
+  /** Date ISO (`2019-04-01`). */
+  foundingDate?: string;
+}
+
 /** Réglages globaux, partagés par toutes les langues. */
 export interface SiteSettings {
   socialLinks: Array<{ _key: string; platform: string; url: string }>;
+  organization?: OrganizationIdentity | null;
 }
 
 export interface LocalizedSettings {
@@ -447,8 +475,6 @@ export interface LocalizedSettings {
   headerNav: NavigationItem[];
   footerNav: NavigationItem[];
   footerText?: PortableTextBlock[];
-  /** Slug de la page désignée comme accueil : sert à l'exclure des routes `/slug`. */
-  homePageSlug?: string | null;
 }
 
 /** Données communes à toutes les pages, injectées par le layout. */
@@ -476,11 +502,23 @@ export interface SiteContext {
 /* Routage                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export type RouteEntry =
+/**
+ * Métadonnées transverses d'une route. Elles n'entrent pas dans le rendu : le
+ * sitemap est le seul à les lire, et elles restent absentes des routes dont la
+ * source ne date rien (index calculés, catalogue Shopify).
+ */
+interface RouteMeta {
+  /** Date ISO de dernière révision — `<lastmod>` du sitemap. */
+  lastmod?: string;
+}
+
+export type RouteEntry = RouteMeta &
+  (
   | { kind: 'home'; locale: Locale; path: string }
   | { kind: 'labo'; locale: Locale; path: string }
   | { kind: 'contact'; locale: Locale; path: string }
-  | { kind: 'page'; locale: Locale; path: string; slug: string }
+  /* Page d'informations légales : le texte vit dans Sanity, l'adresse en code. */
+  | { kind: 'legalPage'; locale: Locale; path: string; key: LegalPageKey }
   | { kind: 'projectIndex'; locale: Locale; path: string }
   | { kind: 'project'; locale: Locale; path: string; slug: string }
   | { kind: 'journal'; locale: Locale; path: string }
@@ -491,4 +529,5 @@ export type RouteEntry =
   | { kind: 'orderConfirmation'; locale: Locale; path: string }
   | { kind: 'collection'; locale: Locale; path: string; handle: string }
   /* Politique de boutique (CGV, livraison, retours) : le texte vit chez Shopify. */
-  | { kind: 'policy'; locale: Locale; path: string; policy: PolicyRouteKey };
+  | { kind: 'policy'; locale: Locale; path: string; policy: PolicyRouteKey }
+  );

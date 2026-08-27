@@ -184,7 +184,19 @@ const SECTIONS = /* groq */ `sections[]{
 /** Réglages globaux, communs à toutes les langues (document singleton). */
 export const siteSettingsQuery = /* groq */ `
 *[_type == "siteSettings"][0]{
-  "socialLinks": coalesce(socialLinks[]{ _key, platform, url }, [])
+  "socialLinks": coalesce(socialLinks[]{ _key, platform, url }, []),
+  organization {
+    logo ${IMAGE},
+    legalName,
+    email,
+    phone,
+    streetAddress,
+    postalCode,
+    addressLocality,
+    addressCountry,
+    vatId,
+    foundingDate
+  }
 }`;
 
 /** Réglages propres à une langue (navigation, titres, accueil). */
@@ -196,8 +208,7 @@ export const localizedSettingsQuery = /* groq */ `
   defaultSeoImage ${IMAGE},
   "headerNav": coalesce(headerNav[]{ _key, ...${LINK} }, []),
   "footerNav": coalesce(footerNav[]{ _key, ...${LINK} }, []),
-  footerText ${PORTABLE_TEXT},
-  "homePageSlug": homePage->slug.current
+  footerText ${PORTABLE_TEXT}
 }`;
 
 /* -------------------------------------------------------------------------- */
@@ -210,18 +221,43 @@ export const localizedSettingsQuery = /* groq */ `
  */
 export const routeManifestQuery = /* groq */ `{
   "documents": *[
-    _type in ["page", "project", "post"] &&
+    _type in ["project", "post"] &&
     defined(slug.current) &&
     (_type != "project" || coalesce(visible, true) == true)
   ]{
     _type,
     "slug": slug.current,
-    language
-  },
-  "homePages": *[_type == "localizedSettings" && defined(homePage)]{
     language,
-    "slug": homePage->slug.current
+    // Date de dernière révision : c'est le \`lastmod\` du sitemap. Pour un
+    // article, la date de publication fait foi si elle est postérieure — une
+    // correction de coquille ne doit pas le faire passer pour un texte neuf.
+    "updatedAt": coalesce(_updatedAt, _createdAt),
+    "publishedAt": publishedAt
+  },
+  // Pages légales : adressées par identifiant, leur chemin est calculé en code.
+  "legalPages": *[_type == "page" && _id in $legalPageIds]{
+    _id,
+    "updatedAt": coalesce(_updatedAt, _createdAt)
   }
+}`;
+
+/**
+ * Visuel représentatif de chaque document, pour l'extension « images » du
+ * sitemap. Requête à part du manifeste de routes : celui-ci décrit ce qui
+ * existe et quand ça a changé, pas à quoi ça ressemble.
+ *
+ * Google n'exploite plus que `<image:loc>` dans un sitemap ; on ne projette
+ * donc que ce qu'il faut pour construire une URL d'image.
+ */
+export const sitemapImagesQuery = /* groq */ `*[
+  _type in ["page", "project", "post"] &&
+  defined(slug.current) &&
+  (_type != "project" || coalesce(visible, true) == true)
+]{
+  _type,
+  "slug": slug.current,
+  language,
+  "image": coalesce(seo.image, thumbnail, coverImage) ${IMAGE}
 }`;
 
 /* -------------------------------------------------------------------------- */
@@ -232,6 +268,7 @@ const PAGE_BODY = /* groq */ `{
   _id,
   _type,
   language,
+  "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
   "sections": coalesce(${SECTIONS}, []),
@@ -266,6 +303,7 @@ export const projectBySlugQuery = /* groq */ `
   _id,
   _type,
   language,
+  "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
   "template": coalesce(template, "standard"),
@@ -431,6 +469,7 @@ export const postBySlugQuery = /* groq */ `
   _id,
   _type,
   language,
+  "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
   "category": coalesce(category, "cahier-de-recherche"),

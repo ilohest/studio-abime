@@ -1,7 +1,11 @@
 ---
+import { stegaClean } from '@sanity/client/stega';
+
 import { resolveImage } from '~/lib/sanity/image';
 import { absoluteUrl } from '~/lib/routing';
-import { locales, type Locale } from '~/i18n/config';
+import { INDEXABLE_ROBOTS, NOINDEX_ROBOTS, indexingAllowed } from '~/lib/seo/indexing';
+import type { ImageInput } from '~/lib/seo/jsonLd';
+import { getLocaleMeta, locales, type Locale } from '~/i18n/config';
 import type { Seo as SeoType, SiteContext } from '~/lib/sanity/types';
 
 interface Props {
@@ -9,41 +13,179 @@ interface Props {
   site: SiteContext;
   seo?: SeoType;
   fallbackTitle: string;
+  /**
+   * Vignette de partage déjà résolue par la page (voir `resolveShareImage`).
+   * Absente, on retombe sur l'image SEO du document puis sur celle des réglages.
+   */
+  shareImage?: ImageInput | null;
+  /**
+   * Description propre au document (extrait de projet, chapô d'article…),
+   * utilisée quand aucune description SEO n'a été saisie.
+   */
+  descriptionFallback?: string;
+  /** Nature de la page pour Open Graph — un article se partage autrement qu'une page. */
+  ogType?: 'website' | 'article';
+  /** Dates de l'article, au format ISO. Ignorées hors `ogType="article"`. */
+  publishedTime?: string;
+  modifiedTime?: string;
+  /** Rubrique de l'article. */
+  section?: string;
+  /** Page volontairement tenue hors des moteurs (404, confirmation de commande). */
+  noIndex?: boolean;
 }
 
-const { locale, site, seo, fallbackTitle } = Astro.props;
+const {
+  locale,
+  site,
+  seo,
+  fallbackTitle,
+  shareImage: providedShareImage = null,
+  descriptionFallback,
+  ogType = 'website',
+  publishedTime: publishedTimeInput,
+  modifiedTime: modifiedTimeInput,
+  section,
+  noIndex = false,
+} = Astro.props;
 
-const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
+/**
+ * Open Graph attend une date ISO 8601 complète. Sanity stocke la date de
+ * publication au jour (`2026-08-24`) : on la normalise pour que les deux dates
+ * d'un article soient comparables par le même lecteur.
+ */
+const toIso = (value: string | undefined): string | undefined => {
+  if (!value) return undefined;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
+};
+
+const publishedTime = toIso(publishedTimeInput);
+const modifiedTime = toIso(modifiedTimeInput);
+
+/*
+  Le stega de Sanity encode des caractères invisibles dans chaque chaîne pour
+  rendre les textes cliquables dans le Presentation Tool. Utile à l'écran,
+  nuisible dans une balise `<title>` ou une méta description : ces valeurs sont
+  lues par des machines, pas affichées. On les nettoie systématiquement.
+*/
+const text = (value: string | undefined | null): string =>
+  value ? stegaClean(value).replace(/\s+/g, ' ').trim() : '';
+
+const siteTitle = text(site.localized?.siteTitle) || 'Studio Abîme';
 
 // Cascade de repli : SEO du document → titre du document → nom du site.
-const title = seo?.title || fallbackTitle || siteTitle;
+const title = text(seo?.title) || text(fallbackTitle) || siteTitle;
 const fullTitle = title === siteTitle ? title : `${title} — ${siteTitle}`;
-const description = seo?.description || site.localized?.siteDescription || '';
+/*
+  L'extrait du document s'intercale avant la description du site. Sans lui,
+  toutes les pages dépourvues de description SEO partageraient mot pour mot la
+  même méta description — un signal de contenu dupliqué, et surtout un résultat
+  de recherche qui ne dit rien de la page atteinte.
+*/
+/**
+ * Un extrait de document peut faire plusieurs paragraphes. Servi tel quel comme
+ * méta description, il pousse Google à ignorer la balise et à composer lui-même
+ * l'aperçu. On le ramène donc à une longueur lisible, coupée sur un mot entier —
+ * une description écrite exprès par un éditeur, elle, est respectée telle quelle.
+ */
+const trim = (value: string, max = 200): string => {
+  if (value.length <= max) return value;
+  const cut = value.slice(0, max);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+};
 
-const shareImage = resolveImage(seo?.image ?? site.localized?.defaultSeoImage, {
+const description =
+  text(seo?.description) ||
+  (descriptionFallback ? trim(text(descriptionFallback)) : '') ||
+  text(site.localized?.siteDescription);
+
+/*
+  La page résout elle-même sa vignette (elle seule sait si c'est une couverture
+  d'article ou le premier visuel d'un tirage). Ce repli couvre les pages qui ne
+  s'en occupent pas — la 404, par exemple.
+*/
+const fallbackShare = resolveImage(seo?.image ?? site.localized?.defaultSeoImage, {
   width: 1200,
   ratio: 'landscape',
 });
 
+const shareImage =
+  providedShareImage ??
+  (fallbackShare
+    ? {
+        url: absoluteUrl(fallbackShare.src, Astro.site),
+        width: fallbackShare.width,
+        height: fallbackShare.height,
+        alt: fallbackShare.alt,
+      }
+    : null);
+
 const canonical = absoluteUrl(Astro.url.pathname, Astro.site);
-const ogImage = shareImage ? absoluteUrl(shareImage.src, Astro.site) : null;
+const ogImage = shareImage?.url ?? null;
+const ogImageAlt = text(shareImage?.alt) || title;
+
+/*
+  Trois verrous indépendants ferment l'indexation : la case du document, la
+  décision de la page (404, confirmation de commande) et l'environnement de
+  déploiement. Il suffit qu'un seul se ferme.
+*/
+const isIndexable = indexingAllowed && !noIndex && !seo?.noIndex;
+
+const localeMeta = getLocaleMeta(locale);
+/** Open Graph attend `fr_FR`, pas `fr-FR`. */
+const ogLocale = localeMeta.htmlLang.replace('-', '_');
 ---
 
 <title>{fullTitle}</title>
 {description && <meta name="description" content={description} />}
 <link rel="canonical" href={canonical} />
-{seo?.noIndex && <meta name="robots" content="noindex, nofollow" />}
 
-<meta property="og:type" content="website" />
+{/*
+  Directives d'affichage. `max-image-preview:large` est celle qui compte le plus
+  ici : elle autorise Google à afficher une grande vignette à côté du résultat,
+  ce qui, pour un studio, vaut mieux qu'une ligne de texte de plus.
+*/}
+<meta name="robots" content={isIndexable ? INDEXABLE_ROBOTS : NOINDEX_ROBOTS} />
+
+<meta property="og:type" content={ogType} />
 <meta property="og:title" content={fullTitle} />
 {description && <meta property="og:description" content={description} />}
 <meta property="og:url" content={canonical} />
 <meta property="og:site_name" content={siteTitle} />
-<meta property="og:locale" content={locale} />
-{ogImage && <meta property="og:image" content={ogImage} />}
+<meta property="og:locale" content={ogLocale} />
+
+{
+  ogImage && (
+    <>
+      <meta property="og:image" content={ogImage} />
+      {/* Les dimensions évitent au partageur de télécharger l'image pour composer son aperçu. */}
+      {shareImage?.width && <meta property="og:image:width" content={String(shareImage.width)} />}
+      {shareImage?.height && <meta property="og:image:height" content={String(shareImage.height)} />}
+      <meta property="og:image:alt" content={ogImageAlt} />
+    </>
+  )
+}
+
+{
+  ogType === 'article' && (
+    <>
+      {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+      {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+      {section && <meta property="article:section" content={text(section)} />}
+    </>
+  )
+}
 
 <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+{/*
+  X/Twitter ne retombe PAS toujours sur les balises Open Graph : sans titre ni
+  description propres, certaines cartes s'affichent avec la seule URL.
+*/}
+<meta name="twitter:title" content={fullTitle} />
+{description && <meta name="twitter:description" content={description} />}
 {ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && <meta name="twitter:image:alt" content={ogImageAlt} />}
 
 {/*
   Alternates de langue : inertes tant que le site est monolingue, actifs dès

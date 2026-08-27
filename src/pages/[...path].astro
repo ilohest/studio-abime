@@ -15,8 +15,15 @@ import CollectionPage from '~/components/CollectionPage.astro';
 import PolicyPage from '~/components/PolicyPage.astro';
 import LegalHeader from '~/components/LegalHeader.astro';
 
-import { buildRouteManifest, matchRoute } from '~/lib/routing';
-import { getCollectionByHandle, getProductByHandle, getProducts } from '~/lib/shopify/catalogue';
+import { absoluteUrl, buildRouteManifest, matchRoute } from '~/lib/routing';
+import { buildPageGraph, fromShopMedia } from '~/lib/seo/jsonLd';
+import { resolveShareImage } from '~/lib/seo/shareImage';
+import {
+  getCollectionByHandle,
+  getProductByHandle,
+  getProducts,
+  shopifyImageUrl,
+} from '~/lib/shopify/catalogue';
 import { getShopPolicy } from '~/lib/shopify/policies';
 import { getSiteContext } from '~/lib/siteContext';
 import { getDocumentAlternates, getPolicyAlternates, getStaticAlternates } from '~/lib/alternates';
@@ -37,6 +44,7 @@ import {
   postBySlugQuery,
 } from '~/lib/sanity/queries';
 import { getHomeFallback } from '~/content/homeFallback';
+import { getJournalCategory } from '~/content/journalCategories';
 import { getShopIntro } from '~/content/shopFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
@@ -320,24 +328,127 @@ const isLegalPage =
   (route.kind === 'page' &&
     legalPageKeys.some((key) => getLegalPageSlug(key, locale) === route.slug));
 
+/*
+  Le titre d'une page légale n'est plus saisi dans le CMS : il vient des
+  traductions, comme les intitulés de section. Le champ Sanity, s'il porte
+  encore une valeur, reste prioritaire — on ne renomme pas une page sous les
+  pieds de qui l'a intitulée.
+*/
+const legalKey =
+  route.kind === 'page'
+    ? (legalPageKeys.find((key) => getLegalPageSlug(key, locale) === route.slug) ?? null)
+    : null;
+const legalTitle =
+  page?.title?.trim() || (legalKey ? t(`legal.${legalKey}` as 'legal.notice') : t('legal.title'));
+
 const hasEmbeddedServicesRail = pageSections?.some((section) => section._type === 'servicesMenu') ?? false;
+
+/* ── Référencement ────────────────────────────────────────────────────────── */
+
+/*
+  Les métadonnées d'une page se calculent ici, une fois, et servent à la fois
+  aux balises `<head>` et aux données structurées : c'est ce qui garantit que ce
+  qu'un moteur lit dans le JSON-LD est exactement ce qu'un partage affiche.
+*/
+
+const seo =
+  route.kind === 'projectIndex'
+    ? projectsPage?.seo
+    : route.kind === 'journal'
+      ? journalPage?.seo
+      : route.kind === 'labo'
+        ? laboPage?.seo
+        : route.kind === 'shop'
+          ? shopPage?.seo
+          : document?.seo;
+
+/** Extrait propre à la page, à défaut de description SEO saisie. */
+const descriptionFallback =
+  route.kind === 'project'
+    ? project?.excerpt
+    : route.kind === 'post'
+      ? (post?.excerpt ?? post?.standfirst)
+      : route.kind === 'product'
+        ? shopProduct?.excerpt
+        : route.kind === 'collection'
+          ? shopCollection?.descriptionHtml?.replace(/<[^>]*>/g, ' ').trim()
+          : route.kind === 'journal'
+            ? journalIntro
+            : route.kind === 'projectIndex'
+              ? projectsIntro
+              : route.kind === 'shop'
+                ? shopPage?.intro?.trim()
+                : route.kind === 'labo'
+                  ? laboPage?.philosophy?.[0]
+                  : route.kind === 'policy'
+                    ? shopPolicy?.body?.replace(/<[^>]*>/g, ' ').trim()
+                    : undefined;
+
+const origin = (Astro.site ?? new URL(Astro.url.origin)).origin;
+
+const collectionImage = shopCollection?.image;
+
+const shareImage = resolveShareImage(
+  {
+    seo: seo?.image,
+    document: project?.thumbnail ?? post?.coverImage ?? null,
+    external: shopProduct
+      ? fromShopMedia(shopProduct)
+      : collectionImage
+        ? {
+            url: shopifyImageUrl(collectionImage.url, 1200),
+            width: collectionImage.width ?? undefined,
+            height: collectionImage.height ?? undefined,
+            alt: collectionImage.altText ?? shopCollection?.title,
+          }
+        : null,
+    siteDefault: site.localized?.defaultSeoImage,
+  },
+  origin,
+);
+
+/*
+  Deux routes restent hors des moteurs : la confirmation de commande, atteinte
+  uniquement par redirection depuis le paiement et sans contenu à indexer, et
+  toute page marquée comme telle dans le CMS.
+*/
+const noIndex = route.kind === 'orderConfirmation';
+
+const jsonLd = buildPageGraph({
+  route,
+  site,
+  locale,
+  canonical: absoluteUrl(Astro.url.pathname, Astro.site),
+  origin,
+  title,
+  description: seo?.description || descriptionFallback || site.localized?.siteDescription,
+  image: shareImage,
+  isLegal: isLegalPage,
+  lastmod: project?.updatedAt ?? post?.updatedAt ?? page?.updatedAt,
+  page,
+  project,
+  post,
+  product: shopProduct,
+  collection: shopCollection,
+  projects,
+  posts,
+  products: shopProducts,
+});
 ---
 
 <BaseLayout
   locale={locale}
   site={site}
-  seo={
-    route.kind === 'projectIndex'
-      ? projectsPage?.seo
-      : route.kind === 'journal'
-        ? journalPage?.seo
-        : route.kind === 'labo'
-          ? laboPage?.seo
-        : route.kind === 'shop'
-          ? shopPage?.seo
-          : document?.seo
-  }
+  seo={seo}
   title={title}
+  shareImage={shareImage}
+  descriptionFallback={descriptionFallback}
+  jsonLd={jsonLd}
+  ogType={route.kind === 'post' ? 'article' : 'website'}
+  publishedTime={post?.publishedAt}
+  modifiedTime={post?.updatedAt}
+  section={post ? (getJournalCategory(post.category)?.title ?? undefined) : undefined}
+  noIndex={noIndex}
   bodyClass={[
     route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : '',
     route.kind === 'labo' ? 'page-labo' : '',
@@ -399,7 +510,7 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
     isLegalPage && page && (
       <div class="legal-header-block container-wide pt-(--spacing-section)">
         <div class="reading-column">
-          <LegalHeader title={page.title} />
+          <LegalHeader title={legalTitle} />
         </div>
       </div>
     )

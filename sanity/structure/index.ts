@@ -257,13 +257,13 @@ export const structure: StructureResolver = (S, context) =>
                   ),
                 ),
               S.listItem()
-                .title('Réseaux sociaux')
+                .title('Identité et réseaux sociaux')
                 .id('siteSettings')
                 .child(
                   S.document()
                     .schemaType('siteSettings')
                     .documentId(SITE_SETTINGS_ID)
-                    .title('Réseaux sociaux'),
+                    .title('Identité et réseaux sociaux'),
                 ),
             ]),
         ),

@@ -54,6 +54,8 @@ export interface ProductOption {
 export interface ProductVariant {
   id: string;
   title: string;
+  /** Référence de l'atelier. Jamais affichée : elle identifie l'offre pour les moteurs. */
+  sku: string | null;
   availableForSale: boolean;
   /*
     Pas de `quantityAvailable` ici volontairement : ce champ exige la portée

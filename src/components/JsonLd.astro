@@ -1,0 +1,19 @@
+---
+import type { JsonLdGraph } from '~/lib/seo/jsonLd';
+
+interface Props {
+  graph: JsonLdGraph | null;
+}
+
+const { graph } = Astro.props;
+
+/*
+  `<` est échappé en `<` : sans cela, une chaîne de contenu contenant
+  « </script> » — un extrait de code dans un article, par exemple — fermerait la
+  balise en plein milieu du JSON et laisserait le reste s'exécuter comme du
+  HTML. L'échappement est invisible pour un parseur JSON et neutralise le cas.
+*/
+const json = graph ? JSON.stringify(graph).replace(/</g, '\\u003c') : null;
+---
+
+{json && <script type="application/ld+json" is:inline set:html={json} />}

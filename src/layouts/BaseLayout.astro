@@ -5,14 +5,16 @@ import '~/styles/global.css';
 
 import Footer from '~/components/Footer.astro';
 import Seo from '~/components/Seo.astro';
+import JsonLd from '~/components/JsonLd.astro';
 import CustomCursor from '~/components/CustomCursor.astro';
 import ServicesRail from '~/components/ServicesRail.astro';
 import TextReveal from '~/components/TextReveal.astro';
 
-import { getLocaleMeta, type Locale } from '~/i18n/config';
+import { defaultLocale, getLocaleMeta, type Locale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { visualEditingEnabled } from '~/lib/sanity/env';
+import type { ImageInput, JsonLdGraph } from '~/lib/seo/jsonLd';
 import type { Seo as SeoType, SiteContext } from '~/lib/sanity/types';
 
 interface Props {
@@ -31,6 +33,24 @@ interface Props {
   enableVisualEditing?: boolean;
   /** URLs de la même page dans les autres langues (hreflang + sélecteur). */
   alternates?: Partial<Record<Locale, string>>;
+  /**
+   * Données structurées Schema.org de la page (voir `src/lib/seo/jsonLd.ts`).
+   * Une page qui n'en fournit pas n'émet simplement aucun bloc.
+   */
+  jsonLd?: JsonLdGraph | null;
+  /** Vignette de partage de la page, déjà résolue (voir `resolveShareImage`). */
+  shareImage?: ImageInput | null;
+  /** Description propre au document, employée à défaut de description SEO. */
+  descriptionFallback?: string;
+  /** Nature de la page pour Open Graph. */
+  ogType?: 'website' | 'article';
+  /** Dates ISO de l'article — ignorées hors `ogType="article"`. */
+  publishedTime?: string;
+  modifiedTime?: string;
+  /** Rubrique de l'article. */
+  section?: string;
+  /** Tient la page hors des moteurs (404, confirmation de commande). */
+  noIndex?: boolean;
 }
 
 const {
@@ -43,6 +63,14 @@ const {
   showServicesRail = true,
   enableVisualEditing = true,
   alternates = {},
+  jsonLd = null,
+  shareImage = null,
+  descriptionFallback,
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
+  section,
+  noIndex = false,
 } = Astro.props;
 
 const resolvedBodyClass = [bodyClass, showServicesRail && 'has-services-rail'].filter(Boolean).join(' ');
@@ -51,6 +79,13 @@ const meta = getLocaleMeta(locale);
 const t = useTranslations(locale);
 
 const alternateEntries = Object.entries(alternates) as [Locale, string][];
+
+/**
+ * `x-default` désigne la version servie à qui ne correspond à aucune langue
+ * déclarée. Sans elle, Google choisit lui-même — souvent mal. On pointe la
+ * langue par défaut du site, qui est aussi celle servie à la racine.
+ */
+const defaultAlternate = alternates[defaultLocale];
 ---
 
 <!doctype html>
@@ -77,13 +112,37 @@ const alternateEntries = Object.entries(alternates) as [Locale, string][];
       crossorigin
     />
 
-    <Seo locale={locale} site={site} seo={seo} fallbackTitle={title} />
+    <Seo
+      locale={locale}
+      site={site}
+      seo={seo}
+      fallbackTitle={title}
+      shareImage={shareImage}
+      descriptionFallback={descriptionFallback}
+      ogType={ogType}
+      publishedTime={publishedTime}
+      modifiedTime={modifiedTime}
+      section={section}
+      noIndex={noIndex}
+    />
 
     {
       alternateEntries.map(([code, href]) => (
         <link rel="alternate" hreflang={code} href={new URL(href, Astro.site ?? Astro.url).toString()} />
       ))
     }
+
+    {
+      defaultAlternate && (
+        <link
+          rel="alternate"
+          hreflang="x-default"
+          href={new URL(defaultAlternate, Astro.site ?? Astro.url).toString()}
+        />
+      )
+    }
+
+    <JsonLd graph={jsonLd} />
 
     <slot name="head" />
 
