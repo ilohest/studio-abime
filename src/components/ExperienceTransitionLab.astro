@@ -154,20 +154,29 @@ const elementNumbers = Object.fromEntries(
 
 {/*
   Le catalogue, à sa hauteur propre — aucun plafond, quel que soit le nombre
-  de projets à venir. La table, elle, reste épinglée le temps de sa propre
-  sortie ; une fois la piste franchie, chaque fiche du catalogue s'anime à
-  son tour dès qu'elle entre à l'écran (voir le script plus bas) — l'effet
-  se poursuit donc ici, il ne se rejoue pas séparément.
+  de projets à venir.
+
+  Il CHEVAUCHE néanmoins la dernière hauteur d'écran de la piste (marge
+  négative, voir la feuille) : sa première page écran occupe donc le même
+  ruban de défilement que la scène épinglée, et ses fiches montent pendant
+  que la table sort — les deux gestes se croisent, exactement comme du temps
+  où la grille était une couche de la scène. Le temps de la montée, la couche
+  intérieure est épinglée à l'écran comme l'est la scène ; elle retrouve le
+  flux à l'instant où la grille se pose. Les rangées suivantes sont hors
+  champ à l'atterrissage : elles gardent leur entrée discrète, jouée à leur
+  arrivée à l'écran (voir le script plus bas).
 */}
-<div class="motion-lab__settled container-wide">
-  <ProjectGrid
-    projects={projects}
-    categories={categories}
-    locale={locale}
-    editorialCards={editorialCards}
-    elementNumbers={elementNumbers}
-    showFilters
-  />
+<div class="motion-lab__settled container-wide" data-settled-catalog>
+  <div class="motion-lab__settled-layer" data-settled-layer>
+    <ProjectGrid
+      projects={projects}
+      categories={categories}
+      locale={locale}
+      editorialCards={editorialCards}
+      elementNumbers={elementNumbers}
+      showFilters
+    />
+  </div>
 </div>
 
 <script>
@@ -188,6 +197,32 @@ const elementNumbers = Object.fromEntries(
   const TABLE_EXIT_END = 0.72;
   const COLUMN_LIVE_OPACITY = 0.4;
 
+  /*
+    Montée de la première page écran du catalogue — les valeurs d'origine de
+    la grille-couche.
+
+    L'écart entre colonnes (0,30 de la piste) est plus large que celui de la
+    table qui se vide (0,26) : la grille se remplit donc en éventail plus
+    ouvert que celui par lequel la table s'efface. Son entrée commence tôt,
+    pendant que la table sort encore — les deux mouvements se croisent au lieu
+    de se succéder. La dernière colonne se pose à 1, à la fin exacte de la
+    piste : c'est l'instant où la scène cesse d'être épinglée, et une colonne
+    posée plus tôt resterait immobile jusque-là.
+  */
+  const CARD_TRAVEL_VH = 112;
+  const CARD_ENTER_START = 0.18;
+  const CARD_ENTER_END = 0.7;
+  const CARD_COLUMN_SHIFT = 0.3;
+
+  /*
+    Tant que les fiches volent séparées, elles ne peuvent plus compter sur leur
+    voisine pour fermer leur cadre : chacune peint alors ses quatre côtés. Et
+    elles ne captent la souris qu'une fois presque posées — sans quoi elles
+    voleraient au-dessus de la table en lui prenant ses clics.
+  */
+  const GRID_SETTLED = 1;
+  const GRID_LIVE = 0.78;
+
   document.querySelectorAll('[data-experience-motion]').forEach((root) => {
     if (!(root instanceof HTMLElement) || root.dataset.motionReady) return;
     root.dataset.motionReady = 'true';
@@ -199,6 +234,109 @@ const elementNumbers = Object.fromEntries(
     const stateLabel = root.querySelector('[data-motion-state]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
+
+    /*
+      Le catalogue vit dans le flux, à sa hauteur propre — mais sa PREMIÈRE
+      PAGE ÉCRAN monte pendant que la table sort. Deux choses le permettent :
+
+       · le bloc chevauche la dernière hauteur d'écran de la piste, si bien
+         qu'à l'instant où la scène se décolle, sa première rangée est déjà
+         en place, en haut de l'écran ;
+       · la grille est ÉPINGLÉE le temps de la montée, comme la scène l'est
+         elle-même : `position: fixed`, posée à la hauteur exacte où elle
+         atterrira. Les fiches n'ont alors que leur propre course à jouer.
+
+      L'épinglage est celui du navigateur, pas une imitation calculée à chaque
+      image. Annuler le défilement fiche par fiche — un pixel de transformation
+      pour un pixel de page — donnait le même dessin, mais juste à une image
+      près seulement : le temps que le fil principal rende la sienne, la page
+      avait déjà défilé. Une fiche encore en vol le masquait ; une fiche POSÉE
+      — la colonne de droite, qui touche le haut de l'écran bien avant la fin
+      et y reste — le montrait crûment. C'est là que la grille tremblait.
+      Épinglée pour de bon, il n'y a plus rien à rattraper : le compositeur la
+      tient immobile tout seul.
+
+      Le bloc garde sa hauteur mesurée le temps de l'épinglage : sans elle il
+      se refermerait sur sa couche sortie du flux, et la page raccourcirait
+      d'un coup sous le curseur.
+    */
+    const settled = document.querySelector<HTMLElement>('[data-settled-catalog]');
+    const layer = document.querySelector<HTMLElement>('[data-settled-layer]');
+    const catalogItems = settled
+      ? [...settled.querySelectorAll<HTMLElement>('.project-catalog-item')]
+      : [];
+
+    /*
+      Position naturelle d'une fiche dans le bloc : `offsetTop` ignore les
+      transformations, la mesure reste donc valable pendant toute la montée.
+      Seules s'envolent les fiches de la première page écran — les suivantes
+      sont hors champ à l'atterrissage, et gardent l'entrée discrète jouée
+      plus bas. Le partage est fait une fois pour toutes : redimensionner la
+      fenêtre en cours de route ne le rejoue pas, mais ne peut pas non plus
+      confier une même fiche aux deux gestes à la fois.
+    */
+    const naturalTop = (element: HTMLElement, stop: HTMLElement) => {
+      let offset = 0;
+      let node: HTMLElement | null = element;
+      while (node && node !== stop) {
+        offset += node.offsetTop;
+        node = node.offsetParent instanceof HTMLElement ? node.offsetParent : null;
+      }
+      return offset;
+    };
+
+    const flightCards = settled
+      ? catalogItems.filter((item) => naturalTop(item, settled) < window.innerHeight)
+      : [];
+    flightCards.forEach((card) => {
+      card.dataset.flight = 'true';
+    });
+
+    /*
+      Hauteur d'atterrissage de la grille, lue sur la page plutôt que déduite
+      de la marge : `100vh` et `window.innerHeight` ne coïncident pas partout
+      — les barres d'outils mobiles les séparent — et c'est la COUTURE qui
+      compte. Mesurée ainsi, la position épinglée et la position naturelle se
+      rejoignent au pixel près à l'instant du décrochage.
+    */
+    let landingTop = 0;
+    let layerLeft = 0;
+    let layerWidth = 0;
+    let blockHeight = 0;
+    let pinned = false;
+
+    const setPinned = (next: boolean) => {
+      if (!settled || !layer || next === pinned) return;
+      pinned = next;
+      if (next) {
+        settled.style.height = `${blockHeight}px`;
+        layer.style.position = 'fixed';
+        layer.style.top = `${landingTop}px`;
+        layer.style.left = `${layerLeft}px`;
+        layer.style.width = `${layerWidth}px`;
+      } else {
+        settled.style.height = '';
+        layer.style.position = '';
+        layer.style.top = '';
+        layer.style.left = '';
+        layer.style.width = '';
+      }
+    };
+
+    const measureCatalog = () => {
+      if (!settled || !layer || !(runway instanceof HTMLElement)) return;
+      const wasPinned = pinned;
+      setPinned(false);
+      const blockRect = settled.getBoundingClientRect();
+      const layerRect = layer.getBoundingClientRect();
+      const runwayDocTop = runway.getBoundingClientRect().top + window.scrollY;
+      const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
+      blockHeight = blockRect.height;
+      layerLeft = layerRect.left;
+      layerWidth = layerRect.width;
+      landingTop = layerRect.top + window.scrollY - (runwayDocTop + distance);
+      setPinned(wasPinned);
+    };
 
     /*
       Géométrie figée des cases liées à un projet. `offsetTop` ignore les
@@ -243,6 +381,32 @@ const elementNumbers = Object.fromEntries(
         // Distance parcourue vers le haut, en pixels : sert au clavier.
         column.dataset.travel = String(1.18 * window.innerHeight * columnProgress);
       });
+
+      if (flightCards.length === 0) return;
+
+      const columnCount = window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2;
+      const totalIncoming = Math.max(1, columnCount - 1);
+
+      flightCards.forEach((card, index) => {
+        const columnIndex = index % columnCount;
+        const rightToLeft = (totalIncoming - columnIndex) / totalIncoming;
+        const columnProgress = ease(
+          range(
+            progress,
+            CARD_ENTER_START + rightToLeft * CARD_COLUMN_SHIFT,
+            CARD_ENTER_END + rightToLeft * CARD_COLUMN_SHIFT,
+          ),
+        );
+        /*
+          Translation seule, sans mise à l'échelle : une fiche réduite se
+          décolle de ses voisines et ouvre des jours entre les cases. Elle
+          monte donc à sa taille définitive, et la trame reste jointive
+          pendant toute la montée.
+        */
+        const rise = (CARD_TRAVEL_VH / 100) * window.innerHeight * (1 - columnProgress);
+        card.style.transform = `translate3d(0, ${rise.toFixed(3)}px, 0)`;
+        card.style.opacity = String(range(columnProgress, 0.04, 0.32));
+      });
     };
 
     const update = () => {
@@ -284,6 +448,29 @@ const elementNumbers = Object.fromEntries(
         const onScreen = geometry ? layerTop + geometry.top + geometry.height - travel > 0 : false;
         link.tabIndex = tableIsInteractive && onScreen ? 0 : -1;
       });
+      /*
+        Épinglée pendant la montée, rendue au flux dès qu'elle est posée. Au-
+        dessus de la piste — avant que la scène ne se colle — le bloc reprend
+        aussi sa place : autrement la grille resterait plantée à l'écran,
+        invisible mais bien là, par-dessus la section précédente.
+      */
+      setPinned(!reducedMotion.matches && progress > 0 && progress < GRID_SETTLED);
+
+      /*
+        La couche épinglée couvre l'écran : tant qu'elle vole, elle ne doit pas
+        prendre à la table les clics qui lui reviennent. Le clavier, lui, garde
+        sa route — donner le focus à une fiche fait défiler la page jusqu'à sa
+        place, donc jusqu'à la grille posée.
+      */
+      const gridIsLive = reducedMotion.matches || progress > GRID_LIVE;
+      if (layer) layer.style.pointerEvents = gridIsLive ? '' : 'none';
+      // Cadres complets tant que les fiches ne se touchent pas.
+      if (settled) {
+        settled.toggleAttribute(
+          'data-motion-detached',
+          !reducedMotion.matches && progress < GRID_SETTLED,
+        );
+      }
       if (stateLabel instanceof HTMLElement) {
         stateLabel.textContent = progress < 0.22
           ? 'VUE D’ENSEMBLE'
@@ -299,6 +486,7 @@ const elementNumbers = Object.fromEntries(
 
     const remeasure = () => {
       measureLinks();
+      measureCatalog();
       requestUpdate();
     };
 
@@ -470,11 +658,13 @@ const elementNumbers = Object.fromEntries(
     window.addEventListener('resize', remeasure, { passive: true });
     reducedMotion.addEventListener('change', remeasure);
     measureLinks();
+    measureCatalog();
     update();
   });
 
   /*
-    Le catalogue reprend le geste de sortie de la table, mais à l'entrée :
+    Les rangées SUIVANTES — celles qui sont hors champ quand la grille se pose.
+    Elles reprennent le geste de sortie de la table, mais à l'entrée :
     chaque colonne monte en suivant le DÉFILEMENT lui-même, pas une minuterie
     déclenchée une fois pour toutes. Un scroll lent déplace lentement, un
     scroll rapide déplace vite, et remonter la page DÉFAIT le geste — dans
@@ -490,8 +680,15 @@ const elementNumbers = Object.fromEntries(
     depuis SA propre position à l'écran, pas depuis une distance de scroll
     fixée d'avance — le geste reste correct quel que soit le nombre de
     projets à venir.
+
+    Les fiches marquées `data-flight` sont exclues : elles appartiennent à la
+    première page écran, et c'est la piste qui les fait monter. Deux gestes
+    sur une même fiche se disputeraient sa position.
   */
-  const revealItems = [...document.querySelectorAll<HTMLElement>('.motion-lab__settled .project-catalog-item')];
+  const catalogItems = [
+    ...document.querySelectorAll<HTMLElement>('.motion-lab__settled .project-catalog-item'),
+  ];
+  const revealItems = catalogItems.filter((item) => item.dataset.flight !== 'true');
   const revealReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   if (revealItems.length > 0 && !revealReducedMotion.matches && 'IntersectionObserver' in window) {
@@ -529,7 +726,9 @@ const elementNumbers = Object.fromEntries(
       */
       const columns = new Map<number, HTMLElement[]>();
       active.forEach((item) => {
-        const index = revealItems.indexOf(item);
+        // Rang dans la GRILLE, pas dans la liste filtrée : les fiches parties
+        // avec la piste manquent à celle-ci, et décaleraient les colonnes.
+        const index = catalogItems.indexOf(item);
         const columnIndex = columnCount > 0 ? index % columnCount : 0;
         const list = columns.get(columnIndex);
         if (list) list.push(item);
@@ -600,8 +799,40 @@ const elementNumbers = Object.fromEntries(
     normal — donc à sa hauteur propre, sans plafond, aussi loin qu'il grandira
     — il utilise la même trame et les mêmes cases que le reste de la page
     (`.project-index`, portée par le conteneur parent) : rien à répéter ici.
+
+    La marge négative lui fait CHEVAUCHER la dernière hauteur d'écran de la
+    piste. Deux conséquences, l'une et l'autre voulues :
+
+     · à l'instant où la scène se décolle, la première rangée est exactement
+       à la place que la table vient de quitter — sous les repères de la
+       scène, dont la grille recouvrait autrement les deux lignes ;
+     · la piste et l'entrée de la grille partagent le même ruban de
+       défilement, ce qui rend le croisement des deux gestes possible.
+
+    D'où la piste rendue à ses 300 vh d'origine : recouvrement compris, il
+    reste 200 vh de défilement épinglé pour la transformation — la mesure
+    exacte d'avant.
+
+    Le rang de superposition met les fiches en vol AU-DESSUS de la scène, dont
+    le fond est opaque ; il reste sous le rail de menu, fixé bien plus haut.
+
+    La couche intérieure n'a pas de style propre : sa position, sa largeur et
+    sa hauteur d'atterrissage sont mesurées puis posées par le script — elles
+    dépendent de la piste, que la feuille ne connaît pas. Elle existe pour
+    donner au navigateur QUELQUE CHOSE à épingler pendant la montée : une
+    grille restée dans le flux ne peut être tenue immobile qu'à la main, image
+    par image, et c'est ce qui la faisait trembler.
   */
   .motion-lab__settled {
+    position: relative;
+    z-index: 1;
+    /*
+      Le recouvrement s'arrête à la HAUTEUR DE LA TABLE, pas à celle de
+      l'écran : la grille se pose là où la table commençait — même retrait que
+      `.motion-lab__table-layer` — et laisse au-dessus d'elle la ligne des
+      repères, « Table des éléments » et l'état de la scène.
+    */
+    margin-top: calc(-100vh + clamp(3.4rem, 7vh, 5.25rem));
     padding-block: clamp(0.5rem, 1.5vw, 1.5rem) clamp(4rem, 8vw, 7rem);
   }
 
@@ -611,15 +842,83 @@ const elementNumbers = Object.fromEntries(
     bouge, pas son opacité. Aucune transition CSS ici — c'est le défilement
     lui-même qui pilote la position, image par image, exactement comme les
     colonnes de la table.
+
+    Les fiches de la première page écran, elles, sont reprises dès la première
+    image par la piste : elles partent de bien plus bas, et en fondu.
   */
   .motion-lab__settled :global(.project-catalog-item) {
     transform: translate3d(0, 13rem, 0);
     will-change: transform;
   }
 
+  /*
+    La grille ne peint qu'un trait entre deux fiches : chacune porte son filet
+    de pied et son filet de gauche, la voisine fournit les deux autres.
+
+    En vol, ce sont les COLONNES qui se séparent, jamais les rangées : une
+    colonne monte d'un bloc, ses fiches restent jointives les unes au-dessus
+    des autres. Les filets horizontaux se suffisent donc à eux-mêmes, et il n'y
+    a que le bord DROIT à compléter — là où la voisine de droite, montée plus
+    haut, ne fournit plus son filet de gauche.
+
+    Ce filet est peint UN PIXEL EN DEHORS de la fiche, sur la ligne même où
+    cette voisine peint le sien : les deux se superposent au lieu de s'accoler,
+    et le filet commun reste d'un pixel quand les colonnes se rejoignent.
+    Peint à l'intérieur, il en aurait fait deux.
+
+    Les croix de construction, elles, sont centrées sur les sommets : deux
+    fiches voisines y posent la même marque au même endroit, sans surépaisseur.
+  */
+  .motion-lab__settled[data-motion-detached] :global(.project-catalog-item) {
+    --project-card-top-right-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-left-cross-color: var(--project-card-cross-color);
+    --project-card-bottom-right-cross-color: var(--project-card-cross-color);
+  }
+
+  .motion-lab__settled[data-motion-detached] :global(.project-catalog-card)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -1px;
+    z-index: 1;
+    width: 1px;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+      var(--project-card-line-color),
+      var(--project-card-line-color)
+    );
+  }
+
+  /*
+    La dernière colonne, elle, porte déjà son filet de droite : le doubler
+    épaissirait le bord extérieur de la grille. Mêmes sélecteurs que la trame
+    elle-même, colonne par colonne selon la largeur.
+  */
+  @media (max-width: 899px) {
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:nth-child(2n) .project-catalog-card)::after,
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:last-child .project-catalog-card)::after {
+      content: none;
+    }
+  }
+
+  @media (min-width: 900px) and (max-width: 1439px) {
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:nth-child(3n) .project-catalog-card)::after,
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:last-child .project-catalog-card)::after {
+      content: none;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:nth-child(4n) .project-catalog-card)::after,
+    .motion-lab__settled[data-motion-detached] :global(.project-catalog-item:last-child .project-catalog-card)::after {
+      content: none;
+    }
+  }
+
   .motion-lab__runway {
     position: relative;
-    height: 140vh;
+    height: 300vh;
   }
 
   .motion-lab__stage {
@@ -759,8 +1058,13 @@ const elementNumbers = Object.fromEntries(
   }
 
   @media (max-width: 899px) {
+    /*
+      Deux colonnes au lieu de trois : l'éventail se referme, la piste peut
+      donc être plus courte. Le recouvrement d'une hauteur d'écran est
+      conservé — c'est lui qui pose la grille en haut de l'écran.
+    */
     .motion-lab__runway {
-      height: 120vh;
+      height: 240vh;
     }
 
     .motion-lab__stage {
@@ -813,6 +1117,14 @@ const elementNumbers = Object.fromEntries(
       width: 100%;
     }
 
+    /*
+      La barre de marque pousse les repères à 4,5 rem : la grille se pose donc
+      plus bas encore, au même retrait que la table.
+    */
+    .motion-lab__settled {
+      margin-top: calc(-100vh + 6.3rem);
+    }
+
     .element-table {
       gap: 1px;
     }
@@ -839,6 +1151,14 @@ const elementNumbers = Object.fromEntries(
     */
     .motion-lab__runway {
       display: none;
+    }
+
+    /*
+      Le recouvrement n'a plus de piste à recouvrir : sans lui, le catalogue
+      remonterait d'une hauteur d'écran sur la section précédente.
+    */
+    .motion-lab__settled {
+      margin-top: 0;
     }
 
     .motion-lab__settled :global(.project-catalog-item) {
