@@ -79,6 +79,13 @@ function select(key: string) {
   if (key === ALL) url.searchParams.delete(paramName.value);
   else url.searchParams.set(paramName.value, key);
   window.history.pushState({}, '', url);
+
+  /*
+    `pushState` ne déclenche ni `popstate` ni `hashchange` : c'est le seul
+    moyen pour le menu latéral (un composant Astro distinct) de savoir qu'un
+    filtre vient de changer sans rechargement de page.
+  */
+  window.dispatchEvent(new CustomEvent('journal:filter'));
 }
 
 function isActive(key: string) {

@@ -18,6 +18,7 @@ const HANDLED_TYPES = [
   'projectsPage',
   'laboPage',
   'journalPage',
+  'shopPage',
   'siteSettings',
   'localizedSettings',
   'translation.metadata',
@@ -171,6 +172,10 @@ export const structure: StructureResolver = (S, context) =>
                 .title('Page Journal')
                 .id('journalPage')
                 .child(localizedSingleton(S, 'journalPage', 'Page Journal')),
+              S.listItem()
+                .title('Page Shop')
+                .id('shopPage')
+                .child(localizedSingleton(S, 'shopPage', 'Page Shop')),
             ]),
         ),
 

@@ -48,7 +48,7 @@ export interface SanityLink {
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
-    _type: 'page' | 'project' | 'post' | 'projectsPage' | 'laboPage' | 'journalPage';
+    _type: 'page' | 'project' | 'post' | 'projectsPage' | 'laboPage' | 'journalPage' | 'shopPage';
     title?: string;
     slug?: string;
     language?: Locale;
@@ -405,6 +405,16 @@ export interface Post extends PostCard {
   next?: PostCard | null;
 }
 
+/** Contenu éditorial de l'index de la boutique (singleton par langue). */
+export interface ShopPage {
+  _id: string;
+  _type: 'shopPage';
+  language: Locale;
+  title: string;
+  intro?: string;
+  seo?: Seo;
+}
+
 /** Contenu éditorial de l'index du Journal (singleton par langue). */
 export interface JournalPage {
   _id: string;
@@ -487,4 +497,6 @@ export type RouteEntry =
   | { kind: 'post'; locale: Locale; path: string; slug: string }
   | { kind: 'shop'; locale: Locale; path: string }
   /* `handle` et non `slug` : c'est le terme de Shopify, autant ne pas traduire. */
-  | { kind: 'product'; locale: Locale; path: string; handle: string };
+  | { kind: 'product'; locale: Locale; path: string; handle: string }
+  | { kind: 'orderConfirmation'; locale: Locale; path: string }
+  | { kind: 'collection'; locale: Locale; path: string; handle: string };

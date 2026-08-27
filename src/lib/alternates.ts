@@ -8,6 +8,8 @@ import {
   postPath,
   projectPath,
   projectsIndexPath,
+  orderConfirmationPath,
+  shopIndexPath,
 } from '~/i18n/routes';
 import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
@@ -55,7 +57,7 @@ export async function getDocumentAlternates(
 
 /** Alternates des routes générées par le code (accueil, index portfolio). */
 export function getStaticAlternates(
-  kind: 'home' | 'projectIndex' | 'labo' | 'contact' | 'journal',
+  kind: 'home' | 'projectIndex' | 'labo' | 'contact' | 'journal' | 'shop' | 'orderConfirmation',
 ): Partial<Record<Locale, string>> {
   if (locales.length < 2) return {};
 
@@ -70,6 +72,10 @@ export function getStaticAlternates(
           ? laboPath(locale)
         : kind === 'journal'
           ? journalIndexPath(locale)
+        : kind === 'shop'
+          ? shopIndexPath(locale)
+        : kind === 'orderConfirmation'
+          ? orderConfirmationPath(locale)
           : projectsIndexPath(locale),
     ]),
   );

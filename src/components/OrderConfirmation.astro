@@ -1,0 +1,180 @@
+---
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
+
+import { shopIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+
+/**
+ * Page de confirmation de commande.
+ *
+ * Le site est statique et le paiement se fait entièrement chez Shopify : au
+ * moment où cette page est construite, aucune commande n'existe encore. Il n'y
+ * a donc rien à afficher côté serveur — le numéro de commande, le total et
+ * l'e-mail n'arrivent qu'après coup, en paramètres d'URL, via une redirection
+ * configurée dans Shopify (Settings → Checkout → Order status page →
+ * Additional scripts). Voir le script à coller, documenté à côté de ce fichier.
+ *
+ * Cette page reste donc lisible sans JavaScript — un message de confirmation
+ * générique — et s'enrichit dès que le script peut lire l'URL.
+ */
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const shopHref = shopIndexPath(locale);
+---
+
+<article class="order-confirmation container-wide py-(--spacing-section)">
+  <div class="order-confirmation__top">
+    <a href={shopHref} class="button-minimal order-confirmation__back">
+      <span class="button-minimal__label">{t('shop.back')}</span>
+      <span class="button-minimal__arrow order-confirmation__back-arrow" aria-hidden="true">↲</span>
+    </a>
+  </div>
+
+  <div class="order-confirmation__body container-content">
+    <FigureCaption as="p" value="fig. 01 - commande confirmée" />
+
+    {/*
+      Le titre fait doublon visuel avec la légende juste au-dessus (« fig. 01 -
+      commande confirmée ») : gardé pour la hiérarchie sémantique de la page,
+      mais masqué à l'écran plutôt que répété.
+    */}
+    <h1 class="sr-only">{t('shop.confirmationTitle')}</h1>
+
+    <p class="order-confirmation__intro type-copy text-pretty">
+      {t('shop.confirmationBody')}
+    </p>
+
+    {/* Rempli par le script ci-dessous ; reste masqué sans numéro de commande à afficher. */}
+    <dl class="order-confirmation__summary" data-order-summary hidden>
+      <div class="order-confirmation__row">
+        <dt>{t('shop.confirmationOrderLabel')}</dt>
+        <dd data-order-number></dd>
+      </div>
+      <div class="order-confirmation__row" data-order-total-row hidden>
+        <dt>{t('shop.confirmationTotalLabel')}</dt>
+        <dd data-order-total></dd>
+      </div>
+      <div class="order-confirmation__row" data-order-email-row hidden>
+        <dt>{t('shop.confirmationEmailLabel')}</dt>
+        <dd data-order-email></dd>
+      </div>
+    </dl>
+
+    {/*
+      Repli visible tant qu'aucun numéro de commande n'est reconnu dans l'URL —
+      y compris sans JavaScript, et pour une visite directe sur cette page.
+    */}
+    <p class="order-confirmation__fallback type-annotation" data-order-fallback>
+      {t('shop.confirmationFallback')}
+    </p>
+
+    <a href={shopHref} class="button-minimal order-confirmation__continue">
+      <span class="button-minimal__label">{t('shop.confirmationContinue')}</span>
+      <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+    </a>
+  </div>
+</article>
+
+<script>
+  import { clearCartAfterCheckout } from '~/lib/shopify/cartStore';
+
+  /*
+    La commande vient d'être payée : le panier qui l'a produite n'a plus lieu
+    d'exister. On l'oublie dès l'arrivée, avant même de savoir si l'URL porte
+    un numéro de commande — les deux sont indépendants.
+  */
+  clearCartAfterCheckout();
+
+  const params = new URLSearchParams(window.location.search);
+  const order = params.get('order');
+
+  if (order) {
+    const summary = document.querySelector<HTMLElement>('[data-order-summary]');
+    const fallback = document.querySelector<HTMLElement>('[data-order-fallback]');
+    const numberEl = document.querySelector('[data-order-number]');
+    const totalEl = document.querySelector('[data-order-total]');
+    const emailEl = document.querySelector('[data-order-email]');
+    const totalRow = document.querySelector<HTMLElement>('[data-order-total-row]');
+    const emailRow = document.querySelector<HTMLElement>('[data-order-email-row]');
+
+    if (numberEl) numberEl.textContent = `#${order}`;
+    summary?.removeAttribute('hidden');
+    fallback?.setAttribute('hidden', '');
+
+    const total = params.get('total');
+    if (total && totalEl && totalRow) {
+      totalEl.textContent = total;
+      totalRow.removeAttribute('hidden');
+    }
+
+    const email = params.get('email');
+    if (email && emailEl && emailRow) {
+      emailEl.textContent = email;
+      emailRow.removeAttribute('hidden');
+    }
+  }
+</script>
+
+<style>
+  .order-confirmation__back:hover .order-confirmation__back-arrow {
+    transform: translate(-0.18em, 0.1em);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .order-confirmation__back-arrow,
+    .order-confirmation__back:hover .order-confirmation__back-arrow {
+      transform: none;
+    }
+  }
+
+  .order-confirmation__body {
+    margin-top: clamp(3rem, 7vw, 6rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  .order-confirmation__intro {
+    max-width: 52ch;
+    color: var(--color-muted);
+  }
+
+  .order-confirmation__summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+    border: 1px solid var(--color-line);
+  }
+
+  .order-confirmation__row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .order-confirmation__row dt,
+  .order-confirmation__row dd {
+    margin: 0;
+  }
+
+  .order-confirmation__row dt {
+    color: var(--color-muted);
+  }
+
+  .order-confirmation__fallback {
+    color: var(--color-muted);
+  }
+
+  .order-confirmation__continue {
+    align-self: start;
+    margin-top: 0.5rem;
+    color: var(--color-ink);
+  }
+</style>

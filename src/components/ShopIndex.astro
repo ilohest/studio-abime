@@ -1,0 +1,80 @@
+---
+import ShopProductGrid from '~/components/ShopProductGrid.astro';
+
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { ProductCard } from '~/lib/shopify/types';
+
+/**
+ * Index de la boutique.
+ *
+ * Une seule grille, tout le catalogue : la répartition par collection a été
+ * essayée puis écartée — le studio a préféré tout montrer ensemble plutôt que
+ * fragmenter le parcours. Les collections restent utiles ailleurs (le menu
+ * latéral les liste réellement), mais n'imposent aucune structure ici.
+ *
+ * La prise de position du studio ne vit pas dans les cartes — elle tient dans
+ * le paragraphe d'intro, au-dessus, lu une fois et qui cadre tout ce qui suit.
+ */
+interface Props {
+  products: ProductCard[];
+  locale: Locale;
+  title: string;
+  number: string;
+  intro?: string;
+}
+
+const { products, locale, title, number, intro } = Astro.props;
+const t = useTranslations(locale);
+---
+
+<div class="shop-index project-index container-wide py-(--spacing-section)">
+  <header class="project-index__header">
+    <h1 class="project-index__title type-titre text-balance" data-text-reveal>
+      {number} {title}
+    </h1>
+    {intro && <p class="project-index__intro type-copy text-pretty">{intro}</p>}
+  </header>
+
+  {
+    products.length === 0 ? (
+      <p class="shop-index__empty type-copy">{t('shop.empty')}</p>
+    ) : (
+      <ShopProductGrid products={products} locale={locale} eagerFirstRow />
+    )
+  }
+</div>
+
+<style>
+  .project-index__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  .project-index__title {
+    text-align: center;
+  }
+
+  /* Même traitement que l'intro de l'index portfolio : large et indentée. */
+  .project-index__intro {
+    max-width: 76rem;
+    margin-top: clamp(5.5rem, 12vw, 12rem);
+    margin-inline: auto;
+    text-indent: clamp(7rem, 20vw, 22rem);
+  }
+
+  .shop-index__empty {
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 767px) {
+    .project-index__header {
+      margin-bottom: 3rem;
+    }
+
+    .project-index__intro {
+      margin-top: 4rem;
+      text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
+  }
+</style>

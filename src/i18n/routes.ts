@@ -14,9 +14,22 @@ export const routeSegments = {
   labo: { fr: 'labo', en: 'lab', nl: 'lab', de: 'labor' },
   journal: { fr: 'journal', en: 'journal', nl: 'journaal', de: 'journal' },
   contact: { fr: 'contact', en: 'contact', nl: 'contact', de: 'kontakt' },
+  shop: { fr: 'shop', en: 'shop', nl: 'winkel', de: 'shop' },
 } satisfies Record<string, Record<string, string>>;
 
 export type RouteKey = keyof typeof routeSegments;
+
+/**
+ * Segment de la page de confirmation de commande, nichée sous la boutique
+ * (`/shop/confirmation`). Pas dans `routeSegments` : ce n'est pas une section
+ * de premier niveau, seulement un mot réservé sous `/shop`.
+ */
+const orderConfirmationSegments = {
+  fr: 'confirmation',
+  en: 'confirmation',
+  nl: 'bevestiging',
+  de: 'bestätigung',
+} satisfies Record<string, string>;
 
 /** Segment d'URL d'une section pour une langue donnée (fallback : langue par défaut). */
 export function getSegment(key: RouteKey, locale: Locale): string {
@@ -72,6 +85,58 @@ export function contactPath(locale: Locale): string {
 /** URL d'un projet. */
 export function projectPath(locale: Locale, slug: string): string {
   return localizedPath(locale, getSegment('projects', locale), slug);
+}
+
+/** URL de l'index de la boutique. */
+export function shopIndexPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('shop', locale));
+}
+
+/** Segment (non préfixé) de la page de confirmation, pour la reconnaître dans `matchRoute`. */
+export function getOrderConfirmationSegment(locale: Locale): string {
+  return orderConfirmationSegments[locale] ?? orderConfirmationSegments[defaultLocale as 'fr'];
+}
+
+/**
+ * URL de la page de confirmation de commande.
+ *
+ * Elle ne reçoit jamais de visite directe au clic : Shopify y redirige depuis
+ * sa page de remerciement hébergée, avec le numéro de commande en paramètre
+ * d'URL (voir le script à coller dans Settings → Checkout → Order status page).
+ */
+export function orderConfirmationPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('shop', locale), getOrderConfirmationSegment(locale));
+}
+
+/**
+ * URL d'un tirage.
+ * Le `handle` vient de Shopify : c'est lui qui fait foi, pas un slug recopié
+ * ailleurs. Le renommer dans l'admin change l'URL — Shopify conserve alors une
+ * redirection de son côté, mais pas nous : penser à la traiter le jour venu.
+ */
+export function productPath(locale: Locale, handle: string): string {
+  return localizedPath(locale, getSegment('shop', locale), handle);
+}
+
+/**
+ * Segment des pages de collection — repris tel quel du Shopify classique
+ * (`/collections/{handle}`), pour que l'URL reste familière à quiconque a déjà
+ * navigué une boutique Shopify.
+ */
+const collectionsSegments = {
+  fr: 'collections',
+  en: 'collections',
+  nl: 'collecties',
+  de: 'kollektionen',
+} satisfies Record<string, string>;
+
+export function getCollectionsSegment(locale: Locale): string {
+  return collectionsSegments[locale] ?? collectionsSegments[defaultLocale as 'fr'];
+}
+
+/** URL d'une collection : `/shop/collections/{handle}`. */
+export function collectionPath(locale: Locale, handle: string): string {
+  return localizedPath(locale, getSegment('shop', locale), getCollectionsSegment(locale), handle);
 }
 
 /** URL d'une page institutionnelle (le slug peut être imbriqué : `agence/equipe`). */

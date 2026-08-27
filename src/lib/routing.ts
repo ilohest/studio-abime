@@ -11,16 +11,23 @@
  */
 import { defaultLocale, isLocale, locales, prefixDefaultLocale, type Locale } from '~/i18n/config';
 import {
+  collectionPath,
   contactPath,
+  getCollectionsSegment,
+  getOrderConfirmationSegment,
   getSegment,
   journalIndexPath,
   laboPath,
   localizedPath,
+  orderConfirmationPath,
   pagePath,
   postPath,
+  productPath,
   projectPath,
   projectsIndexPath,
+  shopIndexPath,
 } from '~/i18n/routes';
+import { getCollectionHandles, getProductHandles } from './shopify/catalogue';
 import { loadQuery } from './sanity/loadQuery';
 import { routeManifestQuery } from './sanity/queries';
 import type { ResolvedLink, RouteEntry, SanityLink } from './sanity/types';
@@ -53,6 +60,38 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
     routes.push({ kind: 'contact', locale, path: contactPath(locale) });
     routes.push({ kind: 'journal', locale, path: journalIndexPath(locale) });
     routes.push({ kind: 'projectIndex', locale, path: projectsIndexPath(locale) });
+    routes.push({ kind: 'shop', locale, path: shopIndexPath(locale) });
+    routes.push({ kind: 'orderConfirmation', locale, path: orderConfirmationPath(locale) });
+  }
+
+  /*
+    Fiches de tirages. Le catalogue vit chez Shopify, pas dans Sanity : on
+    interroge donc une seconde source. Si la boutique n'est pas configurée ou
+    ne répond pas, `getProductHandles()` renvoie une liste vide et le site se
+    construit sans sa boutique — jamais avec une erreur.
+  */
+  const handles = await getProductHandles();
+  for (const locale of locales) {
+    for (const handle of handles) {
+      routes.push({
+        kind: 'product',
+        locale,
+        path: productPath(locale, handle),
+        handle,
+      });
+    }
+  }
+
+  const collectionHandles = await getCollectionHandles();
+  for (const locale of locales) {
+    for (const handle of collectionHandles) {
+      routes.push({
+        kind: 'collection',
+        locale,
+        path: collectionPath(locale, handle),
+        handle,
+      });
+    }
   }
 
   for (const doc of data.documents) {
@@ -149,7 +188,23 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return null;
   }
 
-  // 7. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
+  // 7. Boutique : index, page de confirmation, collections, puis fiche de tirage.
+  const shopSegment = getSegment('shop', locale);
+  if (rest[0] === shopSegment) {
+    if (rest.length === 1) return { kind: 'shop', locale, path };
+    if (rest.length === 2 && rest[1] === getOrderConfirmationSegment(locale)) {
+      return { kind: 'orderConfirmation', locale, path };
+    }
+    if (rest.length === 3 && rest[1] === getCollectionsSegment(locale)) {
+      return { kind: 'collection', locale, path, handle: rest[2]! };
+    }
+    // « confirmation » et « collections » sont des mots réservés sous /shop :
+    // aucun tirage ne peut porter ces handles.
+    if (rest.length === 2) return { kind: 'product', locale, path, handle: rest[1]! };
+    return null;
+  }
+
+  // 8. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
   //    (`agence/equipe`) : on le reconstruit tel quel.
   return { kind: 'page', locale, path, slug: rest.join('/') };
 }

@@ -9,10 +9,13 @@ import ExperienceReferences from '~/components/ExperienceReferences.astro';
 import JournalIndex from '~/components/JournalIndex.astro';
 import JournalPost from '~/components/JournalPost.astro';
 import ShopIndex from '~/components/ShopIndex.astro';
+import ProductPage from '~/components/ProductPage.astro';
+import OrderConfirmation from '~/components/OrderConfirmation.astro';
+import CollectionPage from '~/components/CollectionPage.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
-import { getProducts } from '~/lib/shopify/catalogue';
+import { getCollectionByHandle, getProductByHandle, getProducts } from '~/lib/shopify/catalogue';
 import { getSiteContext } from '~/lib/siteContext';
 import { getDocumentAlternates, getStaticAlternates } from '~/lib/alternates';
 import { loadQuery } from '~/lib/sanity/loadQuery';
@@ -27,12 +30,14 @@ import {
   laboArchiveProjectsQuery,
   journalIndexQuery,
   journalPageQuery,
+  shopPageQuery,
   postBySlugQuery,
 } from '~/lib/sanity/queries';
 import { getHomeFallback } from '~/content/homeFallback';
+import { getShopIntro } from '~/content/shopFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
-import type { ProductCard as ShopProductCard } from '~/lib/shopify/types';
+import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard } from '~/lib/shopify/types';
 import type {
   CategorySummary,
   Client,
@@ -44,6 +49,7 @@ import type {
   Project,
   ProjectCard,
   ProjectsPage,
+  ShopPage,
 } from '~/lib/sanity/types';
 
 /**
@@ -94,9 +100,41 @@ let journalPage: JournalPage | null = null;
 let posts: PostCard[] = [];
 let post: Post | null = null;
 let shopProducts: ShopProductCard[] = [];
+let shopPage: ShopPage | null = null;
+let shopProduct: ShopProduct | null = null;
+let shopCollection: ShopCollection | null = null;
+let shopRelated: ShopProductCard[] = [];
 
 if (route.kind === 'shop') {
-  shopProducts = await getProducts();
+  /*
+    Deux sources en parallèle : Shopify pour le catalogue, Sanity pour le texte
+    d'ouverture. Aucune des deux ne bloque l'autre — une boutique vide reste une
+    page lisible, et un singleton non créé retombe sur le texte du dépôt.
+  */
+  const [products, pageContent] = await Promise.all([
+    getProducts(),
+    loadQuery<ShopPage | null>({ query: shopPageQuery, locale, fallback: null }),
+  ]);
+  shopProducts = products;
+  shopPage = pageContent;
+}
+
+if (route.kind === 'product') {
+  shopProduct = await getProductByHandle(route.handle);
+  // Tirage dépublié ou renommé depuis la génération du manifeste.
+  if (!shopProduct) return Astro.rewrite('/404');
+
+  if (shopProduct.primaryCollectionHandle) {
+    const collection = await getCollectionByHandle(shopProduct.primaryCollectionHandle);
+    // Le tirage courant ne se suggère pas lui-même.
+    shopRelated = (collection?.products ?? []).filter((p) => p.id !== shopProduct!.id).slice(0, 4);
+  }
+}
+
+if (route.kind === 'collection') {
+  shopCollection = await getCollectionByHandle(route.handle);
+  // Collection dépubliée ou renommée depuis la génération du manifeste.
+  if (!shopCollection) return Astro.rewrite('/404');
 }
 
 if (route.kind === 'labo') {
@@ -176,6 +214,8 @@ if (
   route.kind !== 'journal' &&
   route.kind !== 'shop' &&
   route.kind !== 'product' &&
+  route.kind !== 'orderConfirmation' &&
+  route.kind !== 'collection' &&
   !page &&
   !project &&
   !post &&
@@ -200,6 +240,8 @@ const alternates =
       ? getStaticAlternates('home')
     : route.kind === 'shop'
       ? getStaticAlternates('shop')
+    : route.kind === 'orderConfirmation'
+      ? getStaticAlternates('orderConfirmation')
       : await getDocumentAlternates(document?._id, locale);
 
 const projectIndexTitleSource = projectsPage?.title?.trim();
@@ -222,7 +264,13 @@ const title =
     : route.kind === 'labo'
       ? (laboPage?.title ?? 'Le Labo')
     : route.kind === 'shop'
-      ? t('shop.title')
+      ? (shopPage?.title?.trim() || t('shop.title'))
+    : route.kind === 'product'
+      ? (shopProduct?.title ?? t('shop.title'))
+    : route.kind === 'orderConfirmation'
+      ? t('shop.confirmationTitle')
+    : route.kind === 'collection'
+      ? (shopCollection?.title ?? t('shop.title'))
       : (document?.title ?? site.localized?.siteTitle ?? '');
 
 const journalIntro = journalPage?.intro?.trim();
@@ -265,6 +313,8 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
         ? journalPage?.seo
         : route.kind === 'labo'
           ? laboPage?.seo
+        : route.kind === 'shop'
+          ? shopPage?.seo
           : document?.seo
   }
   title={title}
@@ -273,7 +323,12 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
     route.kind === 'labo' ? 'page-labo' : '',
     route.kind === 'journal' || route.kind === 'post' ? 'page-journal' : '',
     route.kind === 'contact' ? 'page-contact' : '',
-    route.kind === 'shop' || route.kind === 'product' ? 'page-shop' : '',
+    route.kind === 'shop' ||
+    route.kind === 'product' ||
+    route.kind === 'orderConfirmation' ||
+    route.kind === 'collection'
+      ? 'page-shop'
+      : '',
   ].filter(Boolean).join(' ')}
   alternates={alternates}
   showServicesRail={!hasEmbeddedServicesRail}
@@ -299,9 +354,21 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
 
   {route.kind === 'contact' && <ContactPage />}
 
+  {shopProduct && <ProductPage product={shopProduct} related={shopRelated} locale={locale} />}
+
+  {route.kind === 'orderConfirmation' && <OrderConfirmation locale={locale} />}
+
+  {shopCollection && <CollectionPage collection={shopCollection} locale={locale} />}
+
   {
     route.kind === 'shop' && (
-      <ShopIndex products={shopProducts} locale={locale} title={t('shop.title')} number="04." />
+      <ShopIndex
+        products={shopProducts}
+        locale={locale}
+        title={shopPage?.title?.trim() || t('shop.title')}
+        number="04."
+        intro={shopPage?.intro?.trim() || getShopIntro(locale)}
+      />
     )
   }
 

@@ -1,0 +1,264 @@
+---
+import ShopMedia from '~/components/primitives/ShopMedia.astro';
+
+import { productPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import {
+  formatMoney,
+  hasSinglePrice,
+  shopifyImageSrcSet,
+  shopifyImageUrl,
+} from '~/lib/shopify/catalogue';
+import type { Locale } from '~/i18n/config';
+import type { ProductCard } from '~/lib/shopify/types';
+
+/**
+ * Grille de tirages — l'unité réutilisée par l'index, qu'il soit affiché en un
+ * seul bloc ou réparti par collection.
+ *
+ * Les vignettes sont recadrées (`fit="cover"`) et toutes à la même taille :
+ * contrairement à la fiche produit, où l'œuvre entière doit rester visible,
+ * l'index est un parcours de vitrine — l'uniformité du grain prime ici sur le
+ * cadrage d'origine de chaque visuel.
+ */
+interface Props {
+  products: ProductCard[];
+  locale: Locale;
+  /** `true` pour la grille au-dessus de la ligne de flottaison — la première du lot. */
+  eagerFirstRow?: boolean;
+  /**
+   * `true` : sur mobile, la grille devient un défilement horizontal à
+   * accrochage plutôt qu'une colonne empilée — pour une courte liste de
+   * suggestions, où faire défiler la page entière pour voir la suite n'a pas
+   * de sens. Scroll natif, sans librairie : voir la charte du projet.
+   */
+  mobileCarousel?: boolean;
+}
+
+const { products, locale, eagerFirstRow = false, mobileCarousel = false } = Astro.props;
+const t = useTranslations(locale);
+
+const mediaLabels = { video: t('shop.video'), noVisual: t('shop.noVisual') };
+// En carrousel, une carte mobile occupe une fraction de l'écran, pas sa pleine largeur.
+const CARD_SIZES = mobileCarousel
+  ? '(max-width: 767px) 76vw, (max-width: 1199px) 50vw, (max-width: 1599px) 33vw, 25vw'
+  : '(max-width: 767px) 100vw, (max-width: 1199px) 50vw, (max-width: 1599px) 33vw, 25vw';
+const EAGER_COUNT = 4;
+---
+
+<ul class:list={['shop-grid', { 'shop-grid--carousel': mobileCarousel }]} role="list">
+  {
+    products.map((product, index) => {
+      const href = productPath(locale, product.handle);
+      const hoverPreview = product.hover?.preview;
+      const single = hasSinglePrice(product);
+
+      return (
+        <li class="shop-card">
+          <article class="shop-card__inner">
+            <ShopMedia
+              media={product.cover}
+              fallbackAlt={product.title}
+              labels={mediaLabels}
+              sizes={CARD_SIZES}
+              eager={eagerFirstRow && index < EAGER_COUNT}
+              ratio="4 / 5"
+              fit="cover"
+            >
+              {/*
+                Seconde vue, révélée au survol. `aria-hidden` parce qu'elle
+                ne dit rien de plus à qui ne peut pas la survoler : la fiche
+                produit présente tous les médias du tirage.
+              */}
+              {hoverPreview?.url && (
+                <img
+                  class="shop-card__hover"
+                  src={shopifyImageUrl(hoverPreview.url, 1200)}
+                  srcset={shopifyImageSrcSet(hoverPreview.url)}
+                  sizes={CARD_SIZES}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+            </ShopMedia>
+
+            <div class="shop-card__body">
+              <h3 class="shop-card__title type-copy">
+                <a class="shop-card__link" href={href}>
+                  {product.title}
+                </a>
+              </h3>
+
+              <p class="shop-card__price">
+                {single
+                  ? formatMoney(product.minPrice)
+                  : `${t('shop.from')} ${formatMoney(product.minPrice)}`}
+              </p>
+
+              {!product.availableForSale && (
+                <p class="shop-card__soldout">({t('shop.soldOut')})</p>
+              )}
+            </div>
+          </article>
+        </li>
+      );
+    })
+  }
+</ul>
+
+<style>
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 2vw, 1.75rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .shop-card__inner {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+  }
+
+  /* Recadrée comme le premier plan, à fleur de cadre : plus de rembourrage à respecter. */
+  .shop-card__hover {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 260ms ease;
+    pointer-events: none;
+  }
+
+  .shop-card__inner:hover .shop-card__hover,
+  .shop-card__inner:focus-within .shop-card__hover {
+    opacity: 1;
+  }
+
+  /* Sur écran tactile, le survol n'existe pas : la seconde vue reste masquée. */
+  @media (hover: none) {
+    .shop-card__hover {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shop-card__hover {
+      transition: none;
+    }
+  }
+
+  /*
+    Titre et prix sur la même ligne, prix à droite ; l'état épuisé passe en
+    dessous, sur toute la largeur.
+  */
+  .shop-card__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 1rem;
+    row-gap: 0.2rem;
+  }
+
+  .shop-card__title {
+    margin: 0;
+    grid-column: 1;
+    font-size: calc(var(--text-copy) * 0.9);
+  }
+
+  .shop-card__price {
+    margin: 0;
+    grid-column: 2;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--color-muted);
+    font-family: var(--font-copy);
+    /* Dérivé de l'échelle plutôt qu'une valeur libre : le prix s'efface derrière le titre. */
+    font-size: calc(var(--text-copy) * 0.8);
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .shop-card__soldout {
+    margin: 0;
+    grid-column: 1 / -1;
+    color: var(--color-muted);
+    font-family: var(--font-copy);
+    font-size: calc(var(--text-copy) * 0.8);
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .shop-card__link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /*
+    La carte entière est cliquable, mais le nom accessible du lien reste le seul
+    titre du tirage : c'est le lien qui s'étend, pas le titre qui s'allonge.
+  */
+  .shop-card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .shop-card__link:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .shop-card__link:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.35rem;
+  }
+
+  /* Une tuile de plus dès que la place le permet : c'est ce qui les rend plus petites. */
+  @media (min-width: 1600px) {
+    .shop-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1199px) {
+    .shop-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .shop-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /*
+      Défilement natif à accrochage plutôt qu'une pile verticale : une liste
+      de quatre suggestions se parcourt d'un geste, elle n'a pas besoin de
+      faire défiler toute la page. `scroll-snap` fait le travail d'un
+      carrousel sans une ligne de JavaScript.
+    */
+    .shop-grid--carousel {
+      display: flex;
+      grid-template-columns: none;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline-start: var(--spacing-gutter, 1.5rem);
+      margin-inline: calc(var(--spacing-gutter, 1.5rem) * -1);
+      padding-inline: var(--spacing-gutter, 1.5rem);
+    }
+
+    .shop-grid--carousel .shop-card {
+      flex: 0 0 76%;
+      scroll-snap-align: start;
+    }
+  }
+</style>

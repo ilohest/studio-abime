@@ -1,0 +1,382 @@
+---
+import ShopMedia from '~/components/primitives/ShopMedia.astro';
+import ShopProductGrid from '~/components/ShopProductGrid.astro';
+import ProductPurchase from '~/components/vue/ProductPurchase.vue';
+
+import { shopIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import { formatMoney } from '~/lib/shopify/catalogue';
+import type { Locale } from '~/i18n/config';
+import type { Product, ProductCard } from '~/lib/shopify/types';
+import type { VariantView } from '~/components/vue/ProductPurchase.vue';
+
+/**
+ * Fiche d'un tirage.
+ *
+ * Les médias sont empilés dans la colonne de gauche plutôt que rangés derrière
+ * une galerie à vignettes. Un tirage en compte deux ou trois : les faire défiler
+ * coûterait un composant interactif, une gestion du clavier et un état — pour
+ * cacher ce qu'on peut simplement montrer. La colonne d'information reste collée
+ * en vis-à-vis pendant qu'on descend.
+ *
+ * Seul le bloc d'achat est hydraté. Sans JavaScript, la fiche garde son titre,
+ * son propos, sa fourchette de prix et ses formats : seul l'ajout au panier
+ * demande le navigateur.
+ */
+interface Props {
+  product: Product;
+  /** Autres tirages de la même collection — vide si le tirage n'en a aucune. */
+  related: ProductCard[];
+  locale: Locale;
+}
+
+const { product, related, locale } = Astro.props;
+const t = useTranslations(locale);
+
+const mediaLabels = { video: t('shop.video'), noVisual: t('shop.noVisual') };
+const MEDIA_SIZES = '(max-width: 899px) 100vw, 55vw';
+
+/*
+  Modèles de vue pour l'îlot : les prix sont formatés ici, côté serveur, afin
+  qu'aucune logique monétaire ne parte dans le navigateur.
+*/
+const variantViews: VariantView[] = product.variants.map((variant) => ({
+  id: variant.id,
+  available: variant.availableForSale,
+  priceLabel: formatMoney(variant.price, `${locale}-BE`),
+  compareAtLabel: variant.compareAtPrice ? formatMoney(variant.compareAtPrice, `${locale}-BE`) : null,
+  options: Object.fromEntries(variant.selectedOptions.map((option) => [option.name, option.value])),
+}));
+
+const purchaseLabels = {
+  addToCart: t('shop.addToCart'),
+  adding: t('shop.adding'),
+  soldOut: t('shop.soldOut'),
+  unavailable: t('shop.unavailable'),
+  error: t('shop.error'),
+  quantity: t('cart.quantity'),
+  decrease: t('cart.decrease'),
+  increase: t('cart.increase'),
+};
+
+/** Repli sans JavaScript : la fourchette telle que la grille l'affiche. */
+const priceFallback =
+  product.minPrice.amount === product.maxPrice.amount
+    ? formatMoney(product.minPrice)
+    : `${t('shop.from')} ${formatMoney(product.minPrice)}`;
+---
+
+<article class="product container-wide py-(--spacing-section)">
+  <a href={shopIndexPath(locale)} class="button-minimal product__back">
+    <span class="button-minimal__label">{t('shop.back')}</span>
+    <span class="button-minimal__arrow product__back-arrow" aria-hidden="true">↲</span>
+  </a>
+
+  <div class="product__layout">
+    {/*
+      Premier visuel à part du reste : sur mobile, l'ordre de lecture devient
+      image → titre → achat → description → reste des visuels, plutôt que
+      toutes les images d'abord. `grid-template-areas` réordonne ces trois
+      blocs par taille d'écran sans dupliquer le balisage — voir le CSS.
+    */}
+    <div class="product__media-primary">
+      {product.media.length > 0 ? (
+        <ShopMedia
+          media={product.media[0]}
+          fallbackAlt={product.title}
+          labels={mediaLabels}
+          sizes={MEDIA_SIZES}
+          eager
+          ratio={null}
+          mount={false}
+        />
+      ) : (
+        <ShopMedia
+          media={null}
+          fallbackAlt={product.title}
+          labels={mediaLabels}
+          sizes={MEDIA_SIZES}
+          mount={false}
+        />
+      )}
+    </div>
+
+    <div class="product__info">
+      <header class="product__header">
+        <h1 class="product__title type-declaration text-balance" data-text-reveal>{product.title}</h1>
+      </header>
+
+      {/*
+        Le bloc d'achat remplace la fourchette de prix dès qu'il est hydraté.
+        Avant ça — et sans JavaScript — la fourchette reste seule et informe.
+      */}
+      <noscript>
+        <p class="product__price type-copy">{priceFallback}</p>
+      </noscript>
+
+      <ProductPurchase
+        client:visible
+        options={product.options}
+        variants={variantViews}
+        labels={purchaseLabels}
+      />
+
+      {
+        product.descriptionHtml && (
+          <div class="product__description type-note" set:html={product.descriptionHtml} />
+        )
+      }
+
+      {/*
+        Renseigné uniquement sur certains tirages (la collection « Outils de
+        com ») : la plupart du catalogue n'a ni l'un ni l'autre, d'où les deux
+        gardes séparées plutôt qu'une condition sur le couple.
+      */}
+      {(product.where || product.when) && (
+        <dl class="product__facts">
+          {product.where && (
+            <div class="product__fact">
+              <dt>{t('shop.where')}</dt>
+              <dd>{product.where}</dd>
+            </div>
+          )}
+          {product.when && (
+            <div class="product__fact">
+              <dt>{t('shop.when')}</dt>
+              <dd>{product.when}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
+      {
+        product.tags.length > 0 && (
+          <ul class="product__tags type-annotation" role="list">
+            {product.tags.map((tag) => (
+              <li>{tag}</li>
+            ))}
+          </ul>
+        )
+      }
+    </div>
+
+    {product.media.length > 1 && (
+      <div class="product__media-secondary">
+        {product.media.slice(1).map((media) => (
+          <ShopMedia
+            media={media}
+            fallbackAlt={product.title}
+            labels={mediaLabels}
+            sizes={MEDIA_SIZES}
+            ratio={null}
+            mount={false}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+
+  {/*
+    Silencieux quand le tirage n'a pas de collection ou en est l'unique
+    membre : aucune section vide, aucun titre sans rien dessous.
+  */}
+  {related.length > 0 && (
+    <section class="product__related" aria-labelledby="product-related-title">
+      <h2 id="product-related-title" class="product__related-title type-titre">
+        {t('shop.related')}
+      </h2>
+      <ShopProductGrid products={related} locale={locale} mobileCarousel />
+    </section>
+  )}
+</article>
+
+<style>
+  /* Même motif que le retour aux expériences et au journal : la flèche s'inverse au survol. */
+  .product__back {
+    color: var(--color-ink);
+    margin-bottom: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .product__back:hover .product__back-arrow {
+    transform: translate(-0.18em, 0.1em);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product__back-arrow,
+    .product__back:hover .product__back-arrow {
+      transform: none;
+    }
+  }
+
+  /*
+    Zones nommées plutôt qu'un ordre de source fixe : la position de chaque
+    bloc dépend de la largeur d'écran (voir le bloc mobile plus bas), sans
+    dupliquer de balisage ni recourir à `order` sur des enfants dispersés.
+  */
+  /*
+    `row-gap` à zéro volontairement : sur desktop, l'espacement vertical entre
+    le premier visuel et les suivants est porté par la marge de
+    `.product__media-secondary` ci-dessous, à la même valeur que l'espacement
+    entre ces visuels-là. Un `row-gap` de grille aurait imposé sa propre
+    valeur entre les deux premières images, différente de celle régnant entre
+    les suivantes — l'incohérence visuelle qu'on corrige ici.
+  */
+  .product__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-areas: 'media-primary info' 'media-secondary info';
+    column-gap: clamp(2rem, 5vw, 5rem);
+    row-gap: 0;
+    align-items: start;
+  }
+
+  .product__media-primary {
+    grid-area: media-primary;
+  }
+
+  .product__media-secondary {
+    grid-area: media-secondary;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1rem, 2.5vw, 2rem);
+    /* Même valeur que le `gap` ci-dessus : l'écart avec le premier visuel n'a pas à différer. */
+    margin-top: clamp(1rem, 2.5vw, 2rem);
+  }
+
+  /*
+    La colonne d'information reste en vis-à-vis pendant qu'on parcourt les
+    médias : le prix et le sélecteur de format ne doivent jamais sortir de
+    l'écran, c'est là que se prend la décision.
+  */
+  .product__info {
+    grid-area: info;
+    position: sticky;
+    top: clamp(2rem, 6vw, 5rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .product__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .product__title {
+    margin: 0;
+  }
+
+  .product__price {
+    margin: 0;
+  }
+
+  /*
+    Même taille que l'amorce de l'accueil (`type-note`) : un propos, pas une
+    notice. Pas de `max-width` en caractères : la description occupe la même
+    largeur que le prix, les formats et le bouton juste au-dessus, plutôt que
+    de se resserrer en colonne étroite sous un bloc plus large.
+  */
+  .product__description {
+    color: var(--color-muted);
+  }
+
+  .product__description :global(p) {
+    margin: 0 0 0.75em;
+  }
+
+  .product__description :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+/*
+    Même famille, taille et interlettrage que la description (`type-note`) :
+    ces deux lignes en sont le prolongement, pas une fiche technique à part.
+    Le libellé reprend le traitement des relevés de projet (majuscules,
+    couleur atténuée) ; la valeur se range en face, sur la même ligne.
+  */
+  .product__facts {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-family: var(--font-titre);
+    font-size: 0.75rem;
+    line-height: 1.65;
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .product__fact {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .product__fact dt {
+    margin: 0;
+    color: var(--color-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .product__fact dd {
+    margin: 0;
+    text-align: right;
+  }
+
+  .product__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 899px) {
+    /*
+      Ordre de lecture propre au mobile : le premier visuel donne le ton,
+      puis vient la décision d'achat, puis le propos, et le reste des visuels
+      ferme la fiche — plutôt que d'épuiser la galerie avant d'arriver au prix.
+    */
+    .product__layout {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'media-primary' 'info' 'media-secondary';
+      /* Sur une seule colonne, ce `row-gap` redevient l'unique espacement entre les trois blocs empilés. */
+      row-gap: clamp(2rem, 5vw, 5rem);
+    }
+
+    .product__info {
+      position: static;
+    }
+
+    /*
+      Le `clamp` de base retombe à son minimum (1rem) sur un écran étroit :
+      entre deux photos pleine largeur, ça se voit à peine. Un espacement fixe
+      plus généreux prend le relais rien que sur mobile. La marge du haut est
+      neutralisée : le `row-gap` ci-dessus porte déjà l'écart avec le bloc
+      d'info qui précède désormais ce groupe, plutôt que le premier visuel.
+    */
+    .product__media-secondary {
+      gap: 2rem;
+      margin-top: 0;
+    }
+  }
+
+  .product__related {
+    margin-top: clamp(9rem, 16vw, 14rem);
+  }
+
+  /* Une mention discrète, pas un second titre de page : petite, en capitales, à gauche. */
+  .product__related-title {
+    margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
+    text-align: left;
+    font-family: var(--font-titre);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+</style>

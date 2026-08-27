@@ -4,6 +4,7 @@ import { defaultLocale, isLocale, locales } from '../../src/i18n/config';
 import {
   getSegment,
   journalIndexPath,
+  shopIndexPath,
   laboPath,
   localizedPath,
   pagePath,
@@ -79,6 +80,13 @@ const locations: PresentationPluginOptions['resolve'] = {
       }),
     }),
 
+    shopPage: defineLocations({
+      select: { language: 'language' },
+      resolve: (doc: Selected | null) => ({
+        locations: [{ title: 'Page Shop', href: shopIndexPath(toLocale(doc?.language)) }],
+      }),
+    }),
+
     category: defineLocations({
       select: { title: 'title', language: 'language' },
       resolve: (doc: Selected | null) => ({
@@ -118,11 +126,17 @@ const locations: PresentationPluginOptions['resolve'] = {
       const projects = getSegment('projects', locale);
       const labo = getSegment('labo', locale);
       const journal = getSegment('journal', locale);
+      const shop = getSegment('shop', locale);
 
       return [
         {
           route: `${prefix}/${journal}`,
           filter: `_type == "journalPage" && language == $language`,
+          params: { language: locale },
+        },
+        {
+          route: `${prefix}/${shop}`,
+          filter: `_type == "shopPage" && language == $language`,
           params: { language: locale },
         },
         {

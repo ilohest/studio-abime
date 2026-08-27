@@ -13,6 +13,7 @@ import { localizedSettings } from './singletons/localizedSettings';
 import { projectsPage } from './singletons/projectsPage';
 import { laboPage } from './singletons/laboPage';
 import { journalPage } from './singletons/journalPage';
+import { shopPage } from './singletons/shopPage';
 
 // Objets réutilisables
 import { link } from './objects/link';
@@ -40,6 +41,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   projectsPage,
   laboPage,
   journalPage,
+  shopPage,
 
   // Objets
   link,

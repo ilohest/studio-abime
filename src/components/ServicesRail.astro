@@ -1,6 +1,9 @@
 ---
 import Wordmark from '~/components/brand/Wordmark.astro';
-import { contactPath, journalIndexPath, laboPath, pagePath, projectsIndexPath } from '~/i18n/routes';
+import CartDrawer from '~/components/vue/CartDrawer.vue';
+import { getCollections } from '~/lib/shopify/catalogue';
+import { collectionPath, contactPath, getCollectionsSegment, journalIndexPath, laboPath, projectsIndexPath, shopIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
 interface Props {
@@ -14,8 +17,44 @@ const { locale, mode = 'page', homeHref = '/', class: className } = Astro.props;
 const laboHref = laboPath(locale);
 const experiencesHref = projectsIndexPath(locale);
 const journalHref = journalIndexPath(locale);
-const shopHref = pagePath(locale, 'shop');
+const shopHref = shopIndexPath(locale);
 const contactHref = contactPath(locale);
+const t = useTranslations(locale);
+
+/*
+  Sous-entrées de « Shop » : les vraies collections Shopify, chacune vers sa
+  propre page (`/shop/collections/{handle}`, comme sur un Shopify classique).
+  Rendu partout — ce composant habille chaque page du site — donc en cache
+  d'échec silencieux : `getCollections()` renvoie une liste vide si Shopify ne
+  répond pas, plutôt que de faire échouer une page qui n'a rien à voir avec la
+  boutique. Tant qu'aucune collection n'existe dans l'admin, ce groupe n'a
+  simplement pas de sous-liste — pas de nom de collection à inventer ici.
+*/
+const shopCollections = await getCollections();
+const shopItems = shopCollections.map((collection) => ({
+  label: collection.title,
+  href: collectionPath(locale, collection.handle),
+}));
+
+/*
+  Libellés du panier. Le tiroir naît côté navigateur : il n'a aucun moyen de
+  lire le dictionnaire, on les lui passe déjà traduits.
+*/
+const cartLabels = {
+  cart: t('cart.title'),
+  close: t('cart.close'),
+  empty: t('cart.empty'),
+  subtotal: t('cart.subtotal'),
+  checkout: t('cart.checkout'),
+  remove: t('cart.remove'),
+  quantity: t('cart.quantity'),
+  decrease: t('cart.decrease'),
+  increase: t('cart.increase'),
+  shipping: t('cart.shipping'),
+  taxes: t('cart.taxes'),
+  calculatedAtCheckout: t('cart.calculatedAtCheckout'),
+  error: t('shop.error'),
+};
 const groups = [
   {
     _key: 'labo',
@@ -41,18 +80,15 @@ const groups = [
     title: 'Journal',
     href: journalHref,
     items: [
-      { label: 'Cahier de recherche', href: `${journalHref}#cahier-de-recherche` },
-      { label: 'Actualités', href: `${journalHref}#actualites` },
+      { label: 'Cahier de recherche', href: `${journalHref}#cahier-de-recherche`, filterKey: 'cahier-de-recherche' },
+      { label: 'Actualités', href: `${journalHref}#actualites`, filterKey: 'actualites' },
     ],
   },
   {
     _key: 'shop',
     title: 'Shop',
     href: shopHref,
-    items: [
-      { label: 'Impressions', href: `${shopHref}#impressions` },
-      { label: 'Outils de com', href: `${shopHref}#outils-de-com` },
-    ],
+    items: shopItems,
   },
   {
     _key: 'contact',
@@ -65,10 +101,19 @@ const groups = [
   },
 ];
 const currentPath = Astro.url.pathname;
+// Une page de collection a sa propre sous-entrée à allumer : le groupe
+// « Shop » ne doit pas s'allumer en plus, sous peine de deux points à la fois.
+const collectionsPrefix = `${shopHref}/${getCollectionsSegment(locale)}/`;
 const numbered = groups.map((group, index) => ({
   ...group,
   number: String(index + 1).padStart(2, '0'),
-  isCurrent: currentPath === group.href || currentPath.startsWith(`${group.href}/`),
+  isCurrent:
+    currentPath === group.href ||
+    (currentPath.startsWith(`${group.href}/`) &&
+      !(group._key === 'shop' && currentPath.startsWith(collectionsPrefix))),
+  // Correspondance stricte : contrairement au groupe, une sous-entrée ne doit
+  // pas s'allumer pour une simple page « en dessous » d'elle dans l'arborescence.
+  items: group.items.map((item) => ({ ...item, isCurrent: currentPath === item.href })),
 }));
 const panelId = `services-menu-${mode}`;
 ---
@@ -105,7 +150,11 @@ const panelId = `services-menu-${mode}`;
     <ol class="services-rail__groups">
       {
         numbered.map((group) => (
-          <li class:list={['services-rail__group', { 'is-current': group.isCurrent }]}>
+          <li
+            class:list={['services-rail__group', { 'is-current': group.isCurrent }]}
+            data-nav-group={group._key}
+            data-href={group.href}
+          >
             <div class="services-rail__label">
               <span class="type-note">{group.number}.</span>
               <a
@@ -119,13 +168,39 @@ const panelId = `services-menu-${mode}`;
             </div>
 
             {
-              group.items.length > 0 && (
+              /*
+                Le panier reste toujours affiché sous « Shop », même sans
+                aucune collection créée dans l'admin : il ne dépend pas des
+                sous-entrées, qui elles s'effacent tant qu'il n'y a rien à lister.
+              */
+              (group.items.length > 0 || group._key === 'shop') && (
                 <ul class="services-rail__items">
                   {group.items.map((item) => (
-                    <li class="type-note">
-                      <a href={item.href} data-cursor-interactive>{item.label}</a>
+                    <li
+                      class:list={['type-note', { 'is-current': item.isCurrent }]}
+                      data-filter-key={'filterKey' in item ? item.filterKey : undefined}
+                    >
+                      <a
+                        href={item.href}
+                        aria-current={item.isCurrent ? 'page' : undefined}
+                        data-cursor-interactive
+                      >
+                        {item.label}
+                      </a>
                     </li>
                   ))}
+
+                  {group._key === 'shop' && (
+                    <li class="type-note services-rail__cart">
+                      {/*
+                        `client:load` et non `client:visible` : le compteur doit
+                        être juste dès l'arrivée sur n'importe quelle page, et le
+                        menu est replié sur mobile — il ne croiserait jamais
+                        l'observateur d'intersection.
+                      */}
+                      <CartDrawer client:load labels={cartLabels} />
+                    </li>
+                  )}
                 </ul>
               )
             }
@@ -268,7 +343,18 @@ const panelId = `services-menu-${mode}`;
   }
 
   .services-rail__items li {
+    position: relative;
     white-space: nowrap;
+  }
+
+  /* Même point que le groupe actif, réutilisé à l'échelle de la sous-entrée. */
+  .services-rail__items li.is-current::before {
+    content: '•';
+    position: absolute;
+    inset-inline-end: calc(100% + 0.45em);
+    color: currentColor;
+    font-size: 1.25em;
+    line-height: 1;
   }
 
   /*
@@ -518,5 +604,65 @@ const panelId = `services-menu-${mode}`;
     }
 
     setOpen(false);
+  }
+</script>
+
+<script>
+  /*
+    Point actif sous « Journal », pour les deux rubriques.
+
+    Contrairement à une collection Shopify, une rubrique n'a pas sa propre
+    page : le filtre change le contenu sur place (`JournalExplorer.vue`,
+    `history.pushState`) sans navigation, donc sans jamais faire rejouer ce
+    composant Astro côté serveur. Le point ne peut donc s'allumer qu'ici,
+    en lisant l'URL après coup et en écoutant les changements du filtre.
+
+    Le nom du paramètre (« rubrique ») est dupliqué depuis `JournalIndex.astro`
+    faute d'un point commun entre les deux composants : les faire diverger
+    casserait ce repère silencieusement, sans erreur visible.
+  */
+  const QUERY_PARAM = 'rubrique';
+
+  function syncJournalNav(rail: HTMLElement) {
+    const groupCandidate = rail.querySelector<HTMLElement>('[data-nav-group="journal"]');
+    if (!groupCandidate) return;
+    const group = groupCandidate;
+
+    const items = rail.querySelectorAll<HTMLElement>('[data-nav-group="journal"] [data-filter-key]');
+    const groupHref = group.dataset.href;
+
+    function activeKey(): string | null {
+      if (location.pathname !== groupHref) return null;
+      const hash = location.hash.replace('#', '');
+      if (hash) return hash;
+      return new URLSearchParams(location.search).get(QUERY_PARAM);
+    }
+
+    function apply() {
+      /*
+        Seule la page d'index a un filtre à lire. Sur toute autre page —
+        `/journal/micaras`, un article — le point que le serveur a déjà posé
+        sur le groupe doit rester tel quel : ne rien toucher plutôt que
+        recalculer une égalité stricte qui l'effacerait par erreur.
+      */
+      if (location.pathname !== groupHref) return;
+
+      const key = activeKey();
+      group.classList.toggle('is-current', !key);
+      items.forEach((item) => {
+        item.classList.toggle('is-current', item.dataset.filterKey === key);
+      });
+    }
+
+    apply();
+    window.addEventListener('popstate', apply);
+    window.addEventListener('hashchange', apply);
+    // Émis par JournalExplorer.vue après chaque `pushState`, qui ne déclenche
+    // lui-même ni `popstate` ni `hashchange`.
+    window.addEventListener('journal:filter', apply);
+  }
+
+  for (const rail of document.querySelectorAll<HTMLElement>('[data-services-rail]')) {
+    syncJournalNav(rail);
   }
 </script>

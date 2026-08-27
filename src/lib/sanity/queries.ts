@@ -410,6 +410,17 @@ export const journalIndexQuery = /* groq */ `
 *[_type == "post" && language == $locale && defined(slug.current)]
   | order(coalesce(publishedAt, _createdAt) desc, _createdAt desc) ${POST_CARD}`;
 
+/** Contenu éditorial de la page Shop, singleton propre à chaque langue. */
+export const shopPageQuery = /* groq */ `
+*[_type == "shopPage" && language == $locale][0]{
+  _id,
+  _type,
+  language,
+  title,
+  intro,
+  seo ${SEO}
+}`;
+
 /** Contenu éditorial de la page Journal, singleton propre à chaque langue. */
 export const journalPageQuery = /* groq */ `
 *[_type == "journalPage" && language == $locale][0]{

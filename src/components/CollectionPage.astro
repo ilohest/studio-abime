@@ -1,0 +1,140 @@
+---
+import ShopProductGrid from '~/components/ShopProductGrid.astro';
+
+import { shopIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { Collection } from '~/lib/shopify/types';
+
+/**
+ * Page d'une collection — `/shop/collections/{handle}`, comme sur une
+ * boutique Shopify classique.
+ *
+ * Même grille que l'index (`ShopProductGrid`), restreinte aux tirages de cette
+ * collection. La description, si elle est renseignée dans Shopify, en tient
+ * lieu d'intro — sans texte de repli inventé : une collection sans description
+ * n'a besoin que de son titre.
+ */
+interface Props {
+  collection: Collection;
+  locale: Locale;
+}
+
+const { collection, locale } = Astro.props;
+const t = useTranslations(locale);
+const shopHref = shopIndexPath(locale);
+---
+
+<div class="collection-page container-wide py-(--spacing-section)">
+  {/*
+    Positionné en absolu à dessein : le titre et la description doivent tomber
+    exactement là où ils tombent sur `/shop`, qui n'a rien au-dessus des siens.
+    Un lien en flux normal les aurait poussés plus bas.
+  */}
+  <a href={shopHref} class="button-minimal collection-page__all">
+    <span class="button-minimal__label">{t('shop.back')}</span>
+    <span class="button-minimal__arrow collection-page__all-arrow" aria-hidden="true">↲</span>
+  </a>
+
+  {/*
+    Valeurs reprises telles quelles de `.project-index__header` /
+    `.project-index__title` / `.project-index__intro` (ShopIndex.astro) : le
+    style scopé d'Astro isole chaque composant, un même nom de classe ne
+    suffit donc pas à partager la règle. Si une troisième page a besoin du
+    même gabarit, ça vaudra un composant commun plutôt qu'une troisième copie.
+  */}
+  <header class="collection-page__header">
+    <h1 class="collection-page__title type-titre text-balance" data-text-reveal>
+      {collection.title}
+    </h1>
+
+    {
+      collection.descriptionHtml && (
+        <div
+          class="collection-page__description type-copy text-pretty"
+          set:html={collection.descriptionHtml}
+        />
+      )
+    }
+  </header>
+
+  {
+    collection.products.length === 0 ? (
+      <p class="collection-page__empty type-copy">{t('shop.empty')}</p>
+    ) : (
+      <ShopProductGrid products={collection.products} locale={locale} eagerFirstRow />
+    )
+  }
+</div>
+
+<style>
+  .collection-page {
+    position: relative;
+  }
+
+  /*
+    Flotte dans le rembourrage haut du conteneur plutôt que de s'insérer dans
+    le flux : le header qui suit démarre ainsi au même point que celui de
+    `/shop`, qui n'a rien au-dessus de lui.
+  */
+  .collection-page__all {
+    position: absolute;
+    top: clamp(1.5rem, 4vw, 2.5rem);
+    inset-inline-start: 0;
+    color: var(--color-ink);
+  }
+
+  /* Même motif que le retour aux expériences, au journal et à la fiche produit. */
+  .collection-page__all:hover .collection-page__all-arrow {
+    transform: translate(-0.18em, 0.1em);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .collection-page__all-arrow,
+    .collection-page__all:hover .collection-page__all-arrow {
+      transform: none;
+    }
+  }
+
+  /* Copié de `.project-index__header` (ShopIndex.astro) — voir la remarque dans le balisage. */
+  .collection-page__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  /* Copié de `.project-index__title`. */
+  .collection-page__title {
+    text-align: center;
+  }
+
+  /* Copié de `.project-index__intro`. */
+  .collection-page__description {
+    max-width: 76rem;
+    margin-top: clamp(5.5rem, 12vw, 12rem);
+    margin-inline: auto;
+    text-indent: clamp(7rem, 20vw, 22rem);
+  }
+
+  .collection-page__description :global(p) {
+    margin: 0 0 0.75em;
+  }
+
+  .collection-page__description :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .collection-page__empty {
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 767px) {
+    .collection-page__header {
+      margin-bottom: 3rem;
+    }
+
+    .collection-page__description {
+      margin-top: 4rem;
+      text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
+  }
+</style>

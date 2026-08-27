@@ -1,0 +1,224 @@
+---
+import { shopifyImageSrcSet, shopifyImageUrl } from '~/lib/shopify/catalogue';
+import type { ProductMedia } from '~/lib/shopify/types';
+
+/**
+ * Un média de tirage — image ou vidéo — posé dans son cadre.
+ *
+ * Partagé par la grille et la fiche produit pour que le comportement vidéo soit
+ * strictement identique aux deux endroits. Astro monte le script une seule fois
+ * quel que soit le nombre d'occurrences du composant.
+ *
+ * Le visuel n'est jamais recadré (`object-fit: contain`) : les tirages arrivent
+ * en ratios différents, et rogner une œuvre pour l'ajuster à une grille serait
+ * le contraire du propos. Le fond fait passe-partout.
+ */
+interface Props {
+  media: ProductMedia | null;
+  /** Repli du texte alternatif quand Shopify n'en fournit pas — le titre du tirage. */
+  fallbackAlt: string;
+  /** Libellés d'interface, déjà traduits par l'appelant. */
+  labels: { video: string; noVisual: string };
+  sizes: string;
+  /** `true` pour les visuels au-dessus de la ligne de flottaison. */
+  eager?: boolean;
+  /** Ratio du cadre. `null` laisse le média imposer sa hauteur (fiche produit). */
+  ratio?: string | null;
+  /**
+   * `contain` (par défaut) : l'œuvre entière visible, sans recadrage.
+   * `cover` : recadré pour remplir le cadre à l'identique d'une tuile à
+   * l'autre — pour l'index, où l'uniformité prime sur le cadrage d'origine.
+   */
+  fit?: 'contain' | 'cover';
+  /**
+   * Fond, filet et rembourrage façon passe-partout. Par défaut, présent en
+   * `contain` (l'œuvre a besoin d'un fond pour ne pas flotter dans le vide
+   * dès que son ratio diffère du cadre) et absent en `cover` (le recadrage
+   * remplit déjà tout le cadre). Se force explicitement dans les deux sens —
+   * la fiche produit, par exemple, le retire même en `contain`.
+   */
+  mount?: boolean;
+}
+
+const {
+  media,
+  fallbackAlt,
+  labels,
+  sizes,
+  eager = false,
+  ratio = '3 / 4',
+  fit = 'contain',
+  mount = fit === 'contain',
+} = Astro.props;
+
+const preview = media?.preview;
+const isVideo = media?.type === 'VIDEO' || media?.type === 'EXTERNAL_VIDEO';
+const playable = isVideo && (media?.sources.length ?? 0) > 0;
+---
+
+<div
+  class:list={['shop-media', { 'shop-media--cover': fit === 'cover', 'shop-media--flush': !mount }]}
+  style={ratio ? `aspect-ratio: ${ratio}` : undefined}
+>
+  {
+    playable ? (
+      <video
+        class="shop-media__el"
+        poster={preview?.url ? shopifyImageUrl(preview.url, 1200) : undefined}
+        width={preview?.width ?? undefined}
+        height={preview?.height ?? undefined}
+        aria-label={media?.alt || fallbackAlt}
+        muted
+        loop
+        playsinline
+        preload="none"
+        data-autoplay
+      >
+        {media!.sources.map((source) => <source src={source.url} type={source.mimeType} />)}
+      </video>
+    ) : preview?.url ? (
+      <img
+        class="shop-media__el"
+        src={shopifyImageUrl(preview.url, 1200)}
+        srcset={shopifyImageSrcSet(preview.url, [400, 600, 800, 1200, 1600, 2000])}
+        sizes={sizes}
+        width={preview.width ?? undefined}
+        height={preview.height ?? undefined}
+        alt={media?.alt || preview.altText || fallbackAlt}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : 'auto'}
+        decoding="async"
+      />
+    ) : (
+      <p class="shop-media__placeholder type-annotation">{labels.noVisual}</p>
+    )
+  }
+
+  {/*
+    Redondant tant que la vidéo tourne : le mouvement se voit. Le repère ne
+    réapparaît qu'en mouvement réduit, où l'affiche reste fixe et où rien ne
+    signalerait sinon qu'il s'agit d'une vidéo.
+  */}
+  {isVideo && <span class="shop-media__flag type-annotation">{labels.video}</span>}
+
+  {/* Surcouches de l'appelant : image de survol, repère « Voir »… */}
+  <slot />
+</div>
+
+<script>
+  /*
+    Lecture des vidéos de tirage.
+
+    Deux règles, dans cet ordre :
+      1. Mouvement réduit demandé → rien ne démarre. L'affiche (`poster`) tient
+         lieu de visuel et le repère « Vidéo » réapparaît en CSS.
+      2. Sinon, une vidéo ne se charge et ne joue QUE lorsqu'elle approche de
+         l'écran, et se met en pause dès qu'elle en sort. D'où `preload="none"`
+         dans le balisage : sans ça, chaque carte téléchargerait sa vidéo au
+         chargement de la page, même jamais vue.
+
+    Pas d'attribut `autoplay` : il ignorerait la première règle.
+  */
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video[data-autoplay]'));
+
+  if (videos.length > 0) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const video = entry.target as HTMLVideoElement;
+
+          if (!entry.isIntersecting) {
+            video.pause();
+            continue;
+          }
+
+          if (reduceMotion.matches) continue;
+
+          video.preload = 'auto';
+          /*
+            Le navigateur peut refuser la lecture automatique malgré `muted`
+            (onglet en arrière-plan, économiseur de batterie). L'affiche reste
+            alors visible : rien à rattraper, on ignore le rejet.
+          */
+          video.play().catch(() => {});
+        }
+      },
+      { rootMargin: '15% 0px' },
+    );
+
+    for (const video of videos) observer.observe(video);
+
+    // Le visiteur peut changer d'avis en cours de route, ou changer de système.
+    reduceMotion.addEventListener('change', (event) => {
+      if (event.matches) for (const video of videos) video.pause();
+    });
+  }
+</script>
+
+<style>
+  /*
+    Le passe-partout : un fond légèrement plus dense que le papier de la page,
+    cerné d'un filet. Assez présent pour poser l'œuvre, assez discret pour ne
+    pas peser plus qu'elle.
+  */
+  .shop-media {
+    position: relative;
+    background: color-mix(in oklab, var(--color-surface-alt) 55%, var(--color-surface));
+    border: 1px solid var(--color-line);
+    display: grid;
+    /*
+      Une piste unique, explicitement dimensionnée à la place disponible.
+      Indispensable : avec des pistes `auto`, la hauteur de la ligne dépend du
+      contenu, le contenu ne peut donc pas résoudre sa hauteur en pourcentage,
+      et les visuels les plus hauts débordaient du passe-partout. Le `minmax(0,
+      1fr)` empêche en plus la taille minimale automatique de rouvrir la piste.
+    */
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    padding: clamp(0.75rem, 1.6vw, 1.4rem);
+    overflow: hidden;
+  }
+
+  /*
+    Le média occupe tout le cadre et se contente d'y tenir : `object-fit`
+    s'occupe du reste. Le dimensionner par `max-height: 100%` ne fonctionne pas
+    de façon fiable ici — la hauteur du parent vient d'un `aspect-ratio`, et un
+    pourcentage calculé dessus laisse déborder les ratios les plus hauts.
+  */
+  .shop-media__el {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .shop-media--cover .shop-media__el {
+    object-fit: cover;
+  }
+
+  /* Sans passe-partout : le visuel repose directement sur le fond de la page. */
+  .shop-media--flush {
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+
+  .shop-media__placeholder {
+    margin: auto;
+    color: var(--color-muted);
+  }
+
+  .shop-media__flag {
+    position: absolute;
+    top: clamp(0.6rem, 1.5vw, 1rem);
+    left: clamp(0.6rem, 1.5vw, 1rem);
+    color: var(--color-muted);
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shop-media__flag {
+      display: block;
+    }
+  }
+</style>
