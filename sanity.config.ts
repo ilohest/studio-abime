@@ -57,7 +57,6 @@ const previewOrigin =
 
 /** Libellés sobres pour les modèles localisés quand une seule langue est active. */
 const creationTitles: Record<string, string> = {
-  page: 'Page',
   project: 'Projet',
   post: 'Article',
   localizedSettings: 'Réglages du site',
@@ -140,6 +139,13 @@ export default defineConfig({
      */
     newDocumentOptions: (prev) =>
       prev
+        /*
+          Les pages sont à emplacement figé : l'accueil et les trois pages
+          légales, toutes ouvertes depuis leur entrée du back-office. Une page
+          créée à la main n'aurait ni titre ni slug — donc aucune adresse, et
+          aucun moyen d'être servie. On retire l'entrée du menu « Créer ».
+        */
+        .filter(({ templateId }) => templateId !== 'page' && !templateId.startsWith('page-'))
         .filter(
           ({ templateId }) =>
             templateId !== 'projectsPage' &&

@@ -719,8 +719,8 @@
    * ne bouge pas — seule la mesure change.
    */
   .project-index .project-catalog-media--portrait .project-catalog-image {
-    width: 80%;
-    max-width: 80%;
+    width: 72%;
+    max-width: 72%;
   }
 
   @media (hover: hover) and (pointer: fine) {

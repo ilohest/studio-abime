@@ -19,9 +19,12 @@ import {
   journalIndexPath,
   laboPath,
   localizedPath,
+  legalPageFromId,
+  legalPageIds,
+  legalPagePath,
+  matchLegalSegment,
   matchPolicySegment,
   orderConfirmationPath,
-  pagePath,
   policyPath,
   postPath,
   productPath,
@@ -43,7 +46,7 @@ interface RouteManifestResponse {
     updatedAt?: string;
     publishedAt?: string | null;
   }>;
-  homePages: Array<{ language: Locale; slug: string | null }>;
+  legalPages: Array<{ _id: string; updatedAt?: string }>;
 }
 
 /**
@@ -72,12 +75,9 @@ function latestDate(...dates: Array<string | null | undefined>): string | undefi
 export async function buildRouteManifest(): Promise<RouteEntry[]> {
   const data = await loadQuery<RouteManifestResponse>({
     query: routeManifestQuery,
-    fallback: { documents: [], homePages: [] },
+    params: { legalPageIds },
+    fallback: { documents: [], legalPages: [] },
   });
-
-  const homeSlugByLocale = new Map<string, string | null>(
-    data.homePages.map((entry) => [entry.language, entry.slug]),
-  );
 
   const routes: RouteEntry[] = [];
 
@@ -158,30 +158,44 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
       continue;
     }
 
-    if (doc._type === 'post') {
-      routes.push({
-        kind: 'post',
-        locale: doc.language,
-        path: postPath(doc.language, doc.slug),
-        slug: doc.slug,
-        lastmod,
-      });
-      continue;
-    }
-
-    // La page d'accueil est déjà servie à la racine : pas de doublon d'URL.
-    if (homeSlugByLocale.get(doc.language) === doc.slug) continue;
-
     routes.push({
-      kind: 'page',
+      kind: 'post',
       locale: doc.language,
-      path: pagePath(doc.language, doc.slug),
+      path: postPath(doc.language, doc.slug),
       slug: doc.slug,
       lastmod,
     });
   }
 
+  /*
+    Pages légales. Elles n'ont ni titre ni slug : leur identifiant dit à la fois
+    de quelle page il s'agit et dans quelle langue, et le chemin se calcule en
+    code. Seules celles réellement présentes dans Sanity obtiennent une route —
+    une page jamais publiée ne produit ni URL ni lien de pied de page.
+  */
+  for (const legal of data.legalPages) {
+    const found = legalPageFromId(legal._id);
+    if (!found) continue;
+
+    routes.push({
+      kind: 'legalPage',
+      locale: found.locale,
+      path: legalPagePath(found.locale, found.key),
+      key: found.key,
+      lastmod: latestDate(legal.updatedAt),
+    });
+  }
+
   return routes;
+}
+
+/**
+ * Adresse d'une page `page` : légale si son identifiant la désigne, sinon la
+ * racine — c'est alors la page d'accueil, seule autre `page` du site.
+ */
+function pageHref(id: string | undefined, locale: Locale): string {
+  const legal = id ? legalPageFromId(id) : null;
+  return legal ? legalPagePath(legal.locale, legal.key) : localizedPath(locale);
 }
 
 /**
@@ -264,9 +278,17 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     if (policy) return { kind: 'policy', locale, path, policy };
   }
 
-  // 9. Tout le reste est une page institutionnelle. Le slug peut être imbriqué
-  //    (`agence/equipe`) : on le reconstruit tel quel.
-  return { kind: 'page', locale, path, slug: rest.join('/') };
+  // 9. Pages d'informations légales, elles aussi servies à la racine.
+  if (rest.length === 1) {
+    const legal = matchLegalSegment(rest[0]!, locale);
+    if (legal) return { kind: 'legalPage', locale, path, key: legal };
+  }
+
+  /*
+    10. Il ne reste rien. Aucune page ne s'adresse plus par un slug libre : les
+        `page` de Sanity sont toutes à un emplacement figé, traité plus haut.
+  */
+  return null;
 }
 
 /**
@@ -295,12 +317,12 @@ export function resolveLink(link: SanityLink | undefined | null, locale: Locale)
         ? projectsIndexPath(targetLocale)
         : target._type === 'journalPage'
           ? journalIndexPath(targetLocale)
+        : target._type === 'page'
+          ? pageHref(target._id, targetLocale)
         : target.slug
           ? target._type === 'project'
             ? projectPath(targetLocale, target.slug)
-            : target._type === 'post'
-              ? postPath(targetLocale, target.slug)
-              : pagePath(targetLocale, target.slug)
+            : postPath(targetLocale, target.slug)
           : null;
 
     if (href) {

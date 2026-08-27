@@ -6,7 +6,7 @@
  *   FR → /experiences/nom-du-projet
  *   EN → /en/work/project-name
  */
-import { defaultLocale, prefixDefaultLocale, type Locale } from './config';
+import { defaultLocale, locales, prefixDefaultLocale, type Locale } from './config';
 
 /** Segments réservés par section. Pré-remplis pour les langues à venir. */
 export const routeSegments = {
@@ -220,9 +220,55 @@ export function legalPagePath(locale: Locale, key: LegalPageKey): string {
   return localizedPath(locale, getLegalPageSlug(key, locale));
 }
 
-/** URL d'une page institutionnelle (le slug peut être imbriqué : `agence/equipe`). */
-export function pagePath(locale: Locale, slug: string): string {
-  return localizedPath(locale, slug);
+/**
+ * Identifiant de repli du document de page d'accueil.
+ *
+ * L'accueil est normalement DÉSIGNÉ par référence depuis les réglages
+ * localisés ; cet identifiant sert quand aucune désignation n'existe encore —
+ * le back-office ouvre alors ce document, et `sanity/seed/build-home.mjs` le
+ * crée sous le même nom.
+ *
+ * Jamais de point dans un identifiant figé : Sanity traite tout `_id` qui en
+ * contient comme un chemin privé, à la manière de `drafts.`, et l'API publique
+ * le renvoie vide.
+ */
+export function homePageId(locale: Locale): string {
+  return locale === defaultLocale ? `page-accueil-${locale}` : `page-home-${locale}`;
+}
+
+/**
+ * Identifiant figé du document d'une page légale.
+ *
+ * Les documents `page` ne portent ni titre ni slug : leur identifiant EST leur
+ * adresse. Le script d'amorçage (`scripts/seed-legal-pages.mjs`), la structure
+ * du back-office et le routage doivent donc s'accorder sur cette forme.
+ */
+export function legalPageId(key: LegalPageKey, locale: Locale): string {
+  return `page-legal-${key}-${locale}`;
+}
+
+/** Tous les identifiants de pages légales, toutes langues actives confondues. */
+export const legalPageIds = locales.flatMap((locale) =>
+  legalPageKeys.map((key) => legalPageId(key, locale)),
+);
+
+/** Retrouve la page légale portée par un identifiant, ou `null`. */
+export function legalPageFromId(
+  id: string,
+): { key: LegalPageKey; locale: Locale } | null {
+  const published = id.replace(/^drafts\./, '');
+
+  for (const key of legalPageKeys) {
+    for (const locale of locales) {
+      if (legalPageId(key, locale) === published) return { key, locale };
+    }
+  }
+  return null;
+}
+
+/** Retrouve la page légale servie par un segment d'URL, ou `null`. */
+export function matchLegalSegment(segment: string, locale: Locale): LegalPageKey | null {
+  return legalPageKeys.find((key) => getLegalPageSlug(key, locale) === segment) ?? null;
 }
 
 /** Découpe un chemin d'URL en segments propres, sans le préfixe de langue. */

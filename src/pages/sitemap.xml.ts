@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 
 import { isLocale, type Locale } from '~/i18n/config';
-import { pagePath, postPath, projectPath } from '~/i18n/routes';
+import { postPath, projectPath } from '~/i18n/routes';
 import { buildRouteManifest } from '~/lib/routing';
 import { resolveImage } from '~/lib/sanity/image';
 import { loadQuery } from '~/lib/sanity/loadQuery';
@@ -38,7 +38,7 @@ import type { SanityImage } from '~/lib/sanity/types';
 export const prerender = true;
 
 interface SitemapImageRow {
-  _type: 'page' | 'project' | 'post';
+  _type: 'project' | 'post';
   slug: string;
   language: string;
   image: SanityImage | null;
@@ -66,9 +66,7 @@ function toSitemapDate(value: string | undefined): string | undefined {
 function documentPath(row: SitemapImageRow, locale: Locale): string {
   return row._type === 'project'
     ? projectPath(locale, row.slug)
-    : row._type === 'post'
-      ? postPath(locale, row.slug)
-      : pagePath(locale, row.slug);
+    : postPath(locale, row.slug);
 }
 
 export const GET: APIRoute = async ({ site, url }) => {

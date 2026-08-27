@@ -6,8 +6,9 @@ import {
   journalIndexPath,
   shopIndexPath,
   laboPath,
+  legalPageFromId,
+  legalPagePath,
   localizedPath,
-  pagePath,
   postPath,
   projectPath,
   projectsIndexPath,
@@ -25,22 +26,26 @@ import {
  * que le back-office et le front divergent sur la forme des routes.
  */
 
-type Selected = { slug?: string; title?: string; language?: string };
+type Selected = { _id?: string; slug?: string; title?: string; language?: string };
 
 const toLocale = (language?: string) => (isLocale(language) ? language : defaultLocale);
 
 const locations: PresentationPluginOptions['resolve'] = {
   locations: {
+    /*
+      Une `page` n'a ni titre ni slug : c'est son identifiant qui dit où elle
+      s'affiche — une des trois pages légales, ou l'accueil servi à la racine.
+    */
     page: defineLocations({
-      select: { title: 'title', slug: 'slug.current', language: 'language' },
+      select: { _id: '_id', language: 'language' },
       resolve: (doc: Selected | null) => {
-        if (!doc?.slug) return null;
-        const locale = toLocale(doc.language);
+        const locale = toLocale(doc?.language);
+        const legal = doc?._id ? legalPageFromId(doc._id) : null;
+
         return {
-          locations: [
-            { title: doc.title || 'Page', href: pagePath(locale, doc.slug) },
-            { title: 'Accueil', href: localizedPath(locale) },
-          ],
+          locations: legal
+            ? [{ title: 'Informations légales', href: legalPagePath(legal.locale, legal.key) }]
+            : [{ title: 'Accueil', href: localizedPath(locale) }],
         };
       },
     }),

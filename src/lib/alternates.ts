@@ -4,7 +4,8 @@ import {
   journalIndexPath,
   laboPath,
   localizedPath,
-  pagePath,
+  legalPageFromId,
+  legalPagePath,
   postPath,
   projectPath,
   projectsIndexPath,
@@ -17,6 +18,7 @@ import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
 
 interface Translation {
+  _id: string;
   _type: 'page' | 'project' | 'post';
   language: Locale;
   slug: string | null;
@@ -45,13 +47,24 @@ export async function getDocumentAlternates(
   const alternates: Partial<Record<Locale, string>> = {};
 
   for (const translation of translations ?? []) {
-    if (!translation?.slug || !isLocale(translation.language)) continue;
+    if (!translation || !isLocale(translation.language)) continue;
+
+    /*
+      Une `page` n'a pas de slug : son adresse se déduit de son identifiant.
+      Seules les pages légales en ont une — l'accueil est servi à la racine et
+      relève de `getStaticAlternates`.
+    */
+    if (translation._type === 'page') {
+      const legal = legalPageFromId(translation._id);
+      if (legal) alternates[translation.language] = legalPagePath(legal.locale, legal.key);
+      continue;
+    }
+
+    if (!translation.slug) continue;
     alternates[translation.language] =
       translation._type === 'project'
         ? projectPath(translation.language, translation.slug)
-        : translation._type === 'post'
-          ? postPath(translation.language, translation.slug)
-          : pagePath(translation.language, translation.slug);
+        : postPath(translation.language, translation.slug);
   }
 
   return alternates;

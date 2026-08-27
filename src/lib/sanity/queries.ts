@@ -31,6 +31,7 @@ const LINK = /* groq */ `{
   externalUrl,
   openInNewTab,
   internal->{
+    _id,
     _type,
     title,
     "slug": slug.current,
@@ -250,7 +251,7 @@ export const routeManifestQuery = /* groq */ `{
  * donc que ce qu'il faut pour construire une URL d'image.
  */
 export const sitemapImagesQuery = /* groq */ `*[
-  _type in ["page", "project", "post"] &&
+  _type in ["project", "post"] &&
   defined(slug.current) &&
   (_type != "project" || coalesce(visible, true) == true)
 ]{
@@ -275,18 +276,25 @@ const PAGE_BODY = /* groq */ `{
   seo ${SEO}
 }`;
 
-export const pageBySlugQuery = /* groq */ `
-*[_type == "page" && language == $locale && slug.current == $slug][0] ${PAGE_BODY}`;
+/**
+ * Page à emplacement figé, adressée par son identifiant.
+ *
+ * Les documents `page` ne portent ni titre ni slug : leur place dans le site est
+ * décidée en code (`src/i18n/routes.ts`), et l'identifiant est le seul lien
+ * entre un document et l'adresse à laquelle il est servi.
+ */
+export const pageByIdQuery = /* groq */ `
+*[_type == "page" && _id == $id][0] ${PAGE_BODY}`;
 
 /**
  * Existence des pages légales portées par Sanity.
  *
  * Le pied de page ne doit lister que des liens qui mènent quelque part : tant
- * que la page « Cookies » n'a pas été créée dans le Studio, son lien n'apparaît
- * pas. On ne récupère que les slugs — le contenu est chargé par la route.
+ * que la page « Cookies » n'a pas été publiée, son lien n'apparaît pas. On ne
+ * récupère que les identifiants — le contenu est chargé par la route.
  */
 export const legalPagesQuery = /* groq */ `
-*[_type == "page" && language == $locale && slug.current in $slugs].slug.current`;
+*[_type == "page" && _id in $ids]._id`;
 
 /** Page d'accueil : désignée dans les réglages localisés, pas par un slug magique. */
 export const homePageQuery = /* groq */ `
@@ -419,6 +427,7 @@ export const laboPageQuery = /* groq */ `
 export const translationsQuery = /* groq */ `
 *[_type == "translation.metadata" && references($id)][0]
   .translations[].value->{
+    _id,
     _type,
     language,
     "slug": slug.current

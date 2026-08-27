@@ -27,11 +27,11 @@ import {
 import { getShopPolicy } from '~/lib/shopify/policies';
 import { getSiteContext } from '~/lib/siteContext';
 import { getDocumentAlternates, getPolicyAlternates, getStaticAlternates } from '~/lib/alternates';
-import { getLegalPageSlug, legalPageKeys } from '~/i18n/routes';
+import { legalPageId } from '~/i18n/routes';
 import { loadQuery } from '~/lib/sanity/loadQuery';
 import {
   homePageQuery,
-  pageBySlugQuery,
+  pageByIdQuery,
   projectBySlugQuery,
   projectsIndexQuery,
   projectsPageQuery,
@@ -194,13 +194,15 @@ if (route.kind === 'labo') {
   // Tant qu'aucune page d'accueil n'est désignée dans Sanity, on sert le
   // contenu d'amorçage plutôt qu'un 404 sur la racine du site.
   page ??= getHomeFallback(locale);
-} else if (route.kind === 'page') {
+} else if (route.kind === 'legalPage') {
   page = await loadQuery<Page | null>({
-    query: pageBySlugQuery,
-    params: { slug: route.slug },
+    query: pageByIdQuery,
+    params: { id: legalPageId(route.key, locale) },
     locale,
     fallback: null,
   });
+  // Page retirée de Sanity depuis la génération du manifeste.
+  if (!page) return Astro.rewrite('/404');
 } else if (route.kind === 'project') {
   project = await loadQuery<Project | null>({
     query: projectBySlugQuery,
@@ -320,26 +322,14 @@ const pageSections = route.kind === 'home'
   Les pages d'informations légales partagent une présentation propre (colonne
   pleine largeur, titres de section resserrés — voir `.page-legal` dans
   global.css). Elles arrivent par deux routes différentes : les politiques de
-  boutique viennent de Shopify, les trois autres sont des pages Sanity
-  ordinaires qu'on reconnaît à leur slug.
+  boutique viennent de Shopify, les trois autres sont des documents Sanity
+  adressés par leur identifiant.
 */
-const isLegalPage =
-  route.kind === 'policy' ||
-  (route.kind === 'page' &&
-    legalPageKeys.some((key) => getLegalPageSlug(key, locale) === route.slug));
+const isLegalPage = route.kind === 'policy' || route.kind === 'legalPage';
 
-/*
-  Le titre d'une page légale n'est plus saisi dans le CMS : il vient des
-  traductions, comme les intitulés de section. Le champ Sanity, s'il porte
-  encore une valeur, reste prioritaire — on ne renomme pas une page sous les
-  pieds de qui l'a intitulée.
-*/
-const legalKey =
-  route.kind === 'page'
-    ? (legalPageKeys.find((key) => getLegalPageSlug(key, locale) === route.slug) ?? null)
-    : null;
+/* Le titre est en code, comme l'adresse : le CMS ne porte que le texte. */
 const legalTitle =
-  page?.title?.trim() || (legalKey ? t(`legal.${legalKey}` as 'legal.notice') : t('legal.title'));
+  route.kind === 'legalPage' ? t(`legal.${route.key}` as 'legal.notice') : t('legal.title');
 
 const hasEmbeddedServicesRail = pageSections?.some((section) => section._type === 'servicesMenu') ?? false;
 

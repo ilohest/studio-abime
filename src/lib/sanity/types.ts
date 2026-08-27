@@ -49,6 +49,7 @@ export interface SanityLink {
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
+    _id?: string;
     _type: 'page' | 'project' | 'post' | 'projectsPage' | 'laboPage' | 'journalPage' | 'shopPage';
     title?: string;
     slug?: string;

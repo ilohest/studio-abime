@@ -41,8 +41,6 @@ const home = {
   _id: HOME_ID,
   _type: 'page',
   language: 'fr',
-  title: 'Accueil',
-  slug: { _type: 'slug', current: 'accueil' },
   sections: [
     {
       _key: 'hero',

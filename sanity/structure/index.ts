@@ -5,7 +5,7 @@ import type {
 } from 'sanity/structure';
 import { locales, localeMeta } from '../../src/i18n/config';
 import type { LegalPageKey } from '../../src/i18n/routes';
-import { rememberHomePageId } from '../lib/fixedPages';
+import { homePageId } from '../../src/i18n/routes';
 import Documentation from '../components/Documentation';
 
 /** Identifiant figé du document de réglages globaux (instance unique). */
@@ -70,7 +70,7 @@ function byLanguage(
 async function homePageDocument(
   S: StructureBuilder,
   context: StructureResolverContext,
-  locale: string,
+  locale: (typeof locales)[number],
 ) {
   const documentId = await context
     .getClient({ apiVersion: '2025-02-19' })
@@ -86,14 +86,9 @@ async function homePageDocument(
     et la page n'existe pas sur le site. Des tirets, donc, ici comme dans
     `sanity/seed/build-home.mjs`, qui doit produire le MÊME identifiant.
   */
-  const fallbackId = locale === 'fr' ? 'page-accueil-fr' : `page-home-${locale}`;
-
-  const resolved = documentId ?? fallbackId;
-  rememberHomePageId(resolved);
-
   return S.document()
     .schemaType('page')
-    .documentId(resolved)
+    .documentId(documentId ?? homePageId(locale))
     .initialValueTemplate(`page-${locale}`)
     .title(`Page d’accueil${locales.length > 1 ? ` — ${locale.toUpperCase()}` : ''}`);
 }

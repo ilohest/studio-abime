@@ -2,12 +2,7 @@ import { loadQuery } from './sanity/loadQuery';
 import { legalPagesQuery, localizedSettingsQuery, siteSettingsQuery } from './sanity/queries';
 import { getShopPolicies } from './shopify/policies';
 import type { LegalLink, LocalizedSettings, SiteContext, SiteSettings } from './sanity/types';
-import {
-  getLegalPageSlug,
-  legalPageKeys,
-  legalPagePath,
-  policyPath,
-} from '~/i18n/routes';
+import { legalPageId, legalPageKeys, legalPagePath, policyPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
@@ -60,20 +55,20 @@ export function getSiteContext(locale: Locale, options: { fresh?: boolean } = {}
 async function getLegalLinks(locale: Locale): Promise<LegalLink[]> {
   const t = useTranslations(locale);
 
-  const [existingSlugs, policies] = await Promise.all([
+  const [existingIds, policies] = await Promise.all([
     loadQuery<string[]>({
       query: legalPagesQuery,
-      params: { slugs: legalPageKeys.map((key) => getLegalPageSlug(key, locale)) },
+      params: { ids: legalPageKeys.map((key) => legalPageId(key, locale)) },
       locale,
       fallback: [],
     }),
     getShopPolicies(),
   ]);
 
-  const published = new Set(existingSlugs);
+  const published = new Set(existingIds);
 
   const sanityLinks = legalPageKeys
-    .filter((key) => published.has(getLegalPageSlug(key, locale)))
+    .filter((key) => published.has(legalPageId(key, locale)))
     .map((key) => ({
       label: t(`legal.${key}` as 'legal.notice'),
       href: legalPagePath(locale, key),
