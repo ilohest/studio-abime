@@ -1,8 +1,6 @@
 ---
-import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import ServicesRail from '~/components/ServicesRail.astro';
-import defaultVisual from '~/assets/sections/labo-de-com.webp';
 import { localizedPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
 import type { ServicesMenu } from '~/lib/sanity/types';
@@ -38,25 +36,15 @@ const { section, locale } = Astro.props;
 
       {/* ── Visuel : sort du cadre par la gauche ───────────────────────── */}
       <figure class="services__visual">
-        {
-          section.image?.asset ? (
-            <SanityImage
-              image={section.image}
-              width={1200}
-              sizes="50vw"
-              class="h-full w-full object-cover"
-            />
-          ) : (
-            <Image
-              src={defaultVisual}
-              alt=""
-              widths={[640, 875]}
-              sizes="50vw"
-              loading="lazy"
-              class="h-full w-full object-cover"
-            />
-          )
-        }
+{/* Sans visuel choisi dans le CMS, la colonne reste vide. */}
+        {section.image?.asset && (
+          <SanityImage
+            image={section.image}
+            width={1200}
+            sizes="50vw"
+            class="h-full w-full object-cover"
+          />
+        )}
       </figure>
 
       {/*

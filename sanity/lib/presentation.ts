@@ -87,13 +87,6 @@ const locations: PresentationPluginOptions['resolve'] = {
       }),
     }),
 
-    category: defineLocations({
-      select: { title: 'title', language: 'language' },
-      resolve: (doc: Selected | null) => ({
-        locations: [{ title: 'Portfolio', href: projectsIndexPath(toLocale(doc?.language)) }],
-      }),
-    }),
-
     projectsPage: defineLocations({
       select: { language: 'language' },
       resolve: (doc: Selected | null) => ({

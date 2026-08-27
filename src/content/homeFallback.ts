@@ -44,28 +44,6 @@ const sections: Record<string, Section[]> = {
     {
       _key: 'services',
       _type: 'servicesMenu',
-      groups: [
-        {
-          _key: 'g1',
-          title: 'Labo de com',
-          items: ['Recherche de Sens', 'Accompagnement', 'Audit'],
-        },
-        {
-          _key: 'g2',
-          title: 'Définition',
-          items: ['Direction artistique', 'Conception rédaction'],
-        },
-        {
-          _key: 'g3',
-          title: 'Production',
-          items: ['Identité sensorielle', 'Graphisme', 'Visuels', 'Rédaction'],
-        },
-        {
-          _key: 'g4',
-          title: 'Expansion',
-          items: ['Déploiement', 'Ateliers & formations', 'Conférences', 'Outils de com'],
-        },
-      ],
     },
     {
       _key: 'statement',
@@ -115,12 +93,6 @@ const sections: Record<string, Section[]> = {
           fallbackImage: plancheCercle,
         },
       ],
-      cta: {
-        kind: 'external',
-        label: 'Entrer dans le studio →',
-        externalUrl: '/experiences',
-        openInNewTab: false,
-      },
     },
     {
       _key: 'sensory-quote',

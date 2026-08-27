@@ -40,6 +40,13 @@ const env = {
 const read = (studioKey: string, publicKey: string) =>
   env[studioKey] || env[publicKey] || undefined;
 
+/**
+ * Vision est une console GROQ : un outil de développement. Utile en local pour
+ * mettre au point une requête, hors sujet dans le back-office livré — d'où sa
+ * présence conditionnée au serveur de développement.
+ */
+const isDev = Boolean((import.meta.env ?? {}).DEV);
+
 const projectId = read('SANITY_STUDIO_PROJECT_ID', 'PUBLIC_SANITY_PROJECT_ID') ?? '';
 const dataset = read('SANITY_STUDIO_DATASET', 'PUBLIC_SANITY_DATASET') ?? 'production';
 const apiVersion = read('SANITY_STUDIO_API_VERSION', 'PUBLIC_SANITY_API_VERSION') ?? '2025-02-19';
@@ -52,7 +59,6 @@ const previewOrigin =
 const creationTitles: Record<string, string> = {
   page: 'Page',
   project: 'Projet',
-  category: 'Catégorie',
   post: 'Article',
   localizedSettings: 'Réglages du site',
   projectsPage: 'Page Expériences',
@@ -113,8 +119,17 @@ export default defineConfig({
       bulkPublish: true,
     }),
 
-    visionTool({ defaultApiVersion: apiVersion, defaultDataset: dataset }),
+    ...(isDev
+      ? [visionTool({ defaultApiVersion: apiVersion, defaultDataset: dataset })]
+      : []),
   ],
+
+  /**
+   * Les « Releases » regroupent des changements pour les publier ensemble à une
+   * date donnée. Le site n'a pas de calendrier éditorial : on publie quand
+   * c'est prêt. L'onglet est retiré plutôt que laissé inutilisé.
+   */
+  releases: { enabled: false },
 
   document: {
     /**

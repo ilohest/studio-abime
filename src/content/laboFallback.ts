@@ -63,13 +63,6 @@ const fr: LaboPage = {
     'Le fond précède la forme. Toujours.',
     'Quand le fond est clarifié, la forme devient possible. Le laboratoire prépare le terrain.',
   ],
-  cta: {
-    kind: 'external',
-    label: 'Donner forme',
-    externalUrl: '/contact',
-    openInNewTab: false,
-  },
-  archiveTitle: 'Archives',
   archiveProjects: [],
 };
 

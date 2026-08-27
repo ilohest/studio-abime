@@ -86,7 +86,6 @@ export interface ManifestoHero extends SectionBase {
 export interface ServicesMenu extends SectionBase {
   _type: 'servicesMenu';
   image?: SanityImage;
-  groups?: Array<{ _key: string; title: string; items?: string[] }>;
 }
 
 export interface StudioStatement extends SectionBase {
@@ -96,7 +95,6 @@ export interface StudioStatement extends SectionBase {
   noteNumber?: string;
   note?: string;
   marker?: string;
-  cta?: SanityLink;
   figures?: Array<{
     _key: string;
     /** Requis côté CMS ; absent quand la figure vient du contenu d'amorçage. */
@@ -137,13 +135,6 @@ export interface PlateSpread extends SectionBase {
 export interface ProjectShowcase extends SectionBase {
   _type: 'projectShowcase';
   projects?: ProjectCard[];
-  /** Le CMS n'impose ni titre ni image : une entrée incomplète est ignorée au rendu. */
-  placeholderItems?: Array<{
-    _key: string;
-    title?: string;
-    href?: string;
-    image?: SanityImage;
-  }>;
   /**
    * Projets factices, réservés au contenu d'amorçage tant qu'aucun projet réel
    * n'existe dans Sanity. Jamais renseignés par le CMS.
@@ -196,7 +187,6 @@ export interface ProjectListSection extends SectionBase {
   /** Les deux jeux sont renvoyés par GROQ ; le composant choisit selon `mode`. */
   manualProjects: ProjectCard[] | null;
   latestProjects: ProjectCard[];
-  categories: CategorySummary[];
 }
 
 export interface CtaSection extends SectionBase {
@@ -224,13 +214,6 @@ export type Section =
 /* Documents                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export interface CategorySummary {
-  _id: string;
-  title: string;
-  /** Slug unique dans la langue courante : identifiant du filtre côté client. */
-  slug: string;
-}
-
 export interface ProjectCard {
   _id: string;
   title: string;
@@ -247,7 +230,6 @@ export interface ProjectCard {
   excerpt?: string;
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   thumbnail?: SanityImage | null;
-  categories: CategorySummary[];
 }
 
 /** Templates de page projet disponibles. Voir `src/templates/project/`. */
@@ -298,7 +280,6 @@ export interface Project {
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   gallery?: ProjectGalleryItem[];
   thumbnail?: SanityImage;
-  categories: CategorySummary[];
   sections: Section[];
   seo?: Seo;
   /** Domaine d'activité — affiché dans la table des éléments. */
@@ -333,7 +314,6 @@ export interface ProjectsPage {
   _id: string;
   _type: 'projectsPage';
   language: Locale;
-  title: string;
   intro?: string;
   editorialCards: Array<{
     _key: string;
@@ -411,7 +391,6 @@ export interface ShopPage {
   _id: string;
   _type: 'shopPage';
   language: Locale;
-  title: string;
   intro?: string;
   seo?: Seo;
 }
@@ -421,7 +400,6 @@ export interface JournalPage {
   _id: string;
   _type: 'journalPage';
   language: Locale;
-  title: string;
   intro?: string;
   seo?: Seo;
 }
@@ -448,8 +426,6 @@ export interface LaboPage {
   services: LaboService[];
   note?: string;
   closingLines: string[];
-  cta?: SanityLink;
-  archiveTitle?: string;
   archiveProjects: ProjectCard[];
   seo?: Seo;
 }
@@ -458,9 +434,8 @@ export interface NavigationItem extends SanityLink {
   _key: string;
 }
 
+/** Réglages globaux, partagés par toutes les langues. */
 export interface SiteSettings {
-  /** Réglages globaux, partagés par toutes les langues. */
-  logo?: SanityImage;
   socialLinks: Array<{ _key: string; platform: string; url: string }>;
 }
 

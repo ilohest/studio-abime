@@ -84,7 +84,7 @@ tournera en production. Au quotidien, `npm run dev` reste l'outil de travail.
 │   │   ├── primitives/          SanityImage, PortableText, SmartLink
 │   │   ├── sections/            Rendu du page builder (1 composant par bloc)
 │   │   ├── project/             Fiche projet, projet suivant
-│   │   └── vue/                 ★ Îlots interactifs (ProjectExplorer.vue)
+│   │   └── vue/                 ★ Îlots interactifs (JournalExplorer, panier, achat)
 │   │
 │   ├── templates/project/       ★ Modèles de page projet distincts
 │   ├── layouts/BaseLayout.astro
@@ -258,7 +258,7 @@ Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le 
 
 ## Performance
 
-- **Zéro JavaScript par défaut.** Le seul îlot hydraté est `ProjectExplorer.vue`, et uniquement quand des filtres sont activés (`client:visible`) ; sinon la grille de projets est du HTML pur.
+- **Zéro JavaScript par défaut.** Les seuls îlots hydratés sont ceux du Journal et de la boutique (`JournalExplorer.vue`, `ProductPurchase.vue` en `client:visible`, `CartDrawer.vue` en `client:load`) ; la grille de projets est du HTML pur.
 - **React** n'est chargé que sur `/studio` et par l'overlay d'édition visuelle — jamais sur le site public.
 - Les composants Vue reçoivent des **modèles de vue** (`src/lib/viewModels.ts`), pas des documents Sanity : le JSON hydraté reste minimal et le client n'embarque ni le routeur ni le builder d'images.
 - Images servies par le CDN Sanity avec `srcset` responsive, dimensions explicites et placeholder LQIP.

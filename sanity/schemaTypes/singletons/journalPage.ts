@@ -13,14 +13,6 @@ export const journalPage = defineType({
   fields: [
     languageField,
     defineField({
-      name: 'title',
-      title: 'Titre de la page',
-      type: 'string',
-      group: 'content',
-      initialValue: 'Journal',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
       name: 'intro',
       title: 'Texte d’introduction',
       type: 'text',

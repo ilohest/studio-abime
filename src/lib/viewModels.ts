@@ -2,7 +2,7 @@ import { stegaClean } from '@sanity/client/stega';
 import { resolveImage } from './sanity/image';
 import { projectPath } from '~/i18n/routes';
 import type { Locale } from '~/i18n/config';
-import type { CategorySummary, ProjectCard } from './sanity/types';
+import type { ProjectCard } from './sanity/types';
 
 /**
  * Modèles de vue passés aux composants clients (Vue).
@@ -22,8 +22,6 @@ export interface ProjectCardView {
   year: number | null;
   excerpt: string | null;
   facts: Array<{ key: string; label: string; value: string }>;
-  /** Slugs de catégories — base du filtrage côté client. */
-  categoryKeys: string[];
   image: {
     src: string;
     srcset: string;
@@ -32,12 +30,6 @@ export interface ProjectCardView {
     alt: string;
     lqip: string | null;
   } | null;
-}
-
-export interface CategoryView {
-  key: string;
-  title: string;
-  count: number;
 }
 
 /** Initiales de chaque mot, utilisées comme symbole de la fiche-projet. */
@@ -123,31 +115,7 @@ export function toProjectCardView(
       )
       .slice(0, 5)
       .map((fact) => ({ key: fact._key, label: fact.label.trim(), value: fact.value.trim() })),
-    categoryKeys: (card.categories ?? []).map((category) => category.slug).filter(Boolean),
     image: image ? { ...image, alt: image.alt || card.title, lqip: image.lqip ?? null } : null,
   };
 }
 
-/**
- * Prépare les catégories pour les filtres, en n'exposant que celles réellement
- * utilisées par les projets affichés (pas de filtre qui ne renvoie rien).
- */
-export function toCategoryViews(
-  categories: CategorySummary[],
-  projects: ProjectCardView[],
-): CategoryView[] {
-  const counts = new Map<string, number>();
-  for (const project of projects) {
-    for (const key of project.categoryKeys) {
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-  }
-
-  return categories
-    .filter((category) => counts.has(category.slug))
-    .map((category) => ({
-      key: category.slug,
-      title: category.title,
-      count: counts.get(category.slug) ?? 0,
-    }));
-}

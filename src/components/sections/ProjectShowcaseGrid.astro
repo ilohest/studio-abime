@@ -18,15 +18,6 @@ interface Props {
 
 const { section, locale } = Astro.props;
 const projects = section.projects ?? [];
-const placeholders = (section.placeholderItems ?? [])
-  .filter((item) => Boolean(item.image?.asset) && Boolean(item.title))
-  .map((item) => ({
-    key: item._key,
-    title: item.title ?? '',
-    href: item.href,
-    image: item.image,
-    fallbackImage: undefined,
-  }));
 const fallbackItems = (section.fallbackItems ?? []).map((item) => ({
   key: item._key,
   title: item.title,
@@ -34,7 +25,7 @@ const fallbackItems = (section.fallbackItems ?? []).map((item) => ({
   image: undefined,
   fallbackImage: item.fallbackImage,
 }));
-const previewItems = (placeholders.length > 0 ? placeholders : fallbackItems).slice(0, 5);
+const previewItems = fallbackItems.slice(0, 5);
 const hasItems = projects.length > 0 || previewItems.length > 0;
 const itemCount = projects.length > 0 ? projects.length : previewItems.length;
 ---

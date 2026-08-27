@@ -3,8 +3,8 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
 /**
  * Réglages GLOBAUX — partagés par toutes les langues.
  *
- * Règle de partage : tout ce qui ne se traduit pas vit ici (logo, réseaux
- * sociaux, identifiants d'analytics). Tout ce qui se traduit vit dans
+ * Règle de partage : tout ce qui ne se traduit pas vit ici (réseaux sociaux,
+ * identifiants d'analytics). Tout ce qui se traduit vit dans
  * `localizedSettings`. Cette séparation évite de dupliquer — et de désynchroniser —
  * des informations identiques à chaque ajout de langue.
  *
@@ -12,16 +12,9 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
  */
 export const siteSettings = defineType({
   name: 'siteSettings',
-  title: 'Logo et réseaux sociaux',
+  title: 'Réseaux sociaux',
   type: 'document',
   fields: [
-    defineField({
-      name: 'logo',
-      title: 'Logo',
-      type: 'image',
-      description: 'SVG de préférence.',
-      fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
-    }),
     defineField({
       name: 'socialLinks',
       title: 'Réseaux sociaux',

@@ -1,8 +1,8 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 
 /**
- * Manifeste illustré — déclaration en grand, note de bas de bloc, planche de
- * figures légendées, puis appel à action.
+ * Manifeste illustré — déclaration en grand, note de bas de bloc et planche de
+ * figures légendées.
  *
  * Les numéros de figure (fig.04, fig.05…) sont saisis à la main et non générés :
  * la numérotation court d'une section à l'autre sur toute la page, une
@@ -31,23 +31,15 @@ export const studioStatement = defineType({
       type: 'text',
       rows: 3,
       group: 'text',
-      description:
-        'Ex. « fig.04 — On étudie la communication… ». Le repère de tête est mis en forme automatiquement.',
+      description: 'Fig. 04',
     }),
     defineField({
       name: 'marker',
       title: 'Mention technique',
       type: 'string',
       group: 'text',
-      description: 'Courte annotation posée entre les figures. Ex. « 94,65+50,65 ».',
+      description: 'Courte annotation posée entre les figures.',
     }),
-    defineField({
-      name: 'cta',
-      title: 'Bouton',
-      type: 'link',
-      group: 'text',
-    }),
-
     defineField({
       name: 'figures',
       title: 'Figures',

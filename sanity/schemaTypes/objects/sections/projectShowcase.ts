@@ -1,5 +1,4 @@
-import { defineArrayMember, defineField, defineType } from 'sanity';
-import { sameLanguageFilter } from '../../../lib/i18n';
+import { defineField, defineType } from 'sanity';
 
 /**
  * Sélection de projets — planche défilante.
@@ -9,101 +8,34 @@ import { sameLanguageFilter } from '../../../lib/i18n';
  * défilement. Chaque visuel garde son format d'origine — c'est la variété des
  * proportions qui fait la composition.
  *
- * Le visuel affiché est celui mis en avant sur le projet (vignette, à défaut
- * couverture) : le même que dans la page portfolio, sans réglage séparé ici.
+ * Rien ne se règle ici : la planche affiche les projets cochés « Projet
+ * favori », et à défaut les cinq projets les plus récents. Le visuel employé
+ * est celui mis en avant sur le projet (vignette, à défaut couverture) — le
+ * même que dans la page portfolio.
  */
 export const projectShowcase = defineType({
   name: 'projectShowcase',
   title: 'Sélection de projets',
   type: 'object',
   fields: [
+    /*
+      Sanity exige au moins un champ par type objet. La section n'ayant plus
+      rien à régler, celui-ci reste masqué : l'éditeur pose le bloc dans la
+      page, son aperçu lui dit ce qu'il affichera, et il n'a aucun formulaire
+      à remplir.
+    */
     defineField({
-      name: 'projects',
-      title: 'Projets affichés (ancien champ)',
-      type: 'array',
-      description:
-        'Remplacé par la case « Projet favori » de la fiche projet : les 5 premiers favoris sont désormais affichés ici. Ce champ n’est plus lu.',
-      deprecated: {
-        reason: 'Remplacé par la case « Projet favori » de la fiche projet.',
-      },
+      name: 'automatic',
+      title: 'Sélection automatique',
+      type: 'boolean',
+      hidden: true,
       readOnly: true,
-      hidden: ({ value }) => value === undefined,
-      of: [
-        defineArrayMember({
-          type: 'reference',
-          to: [{ type: 'project' }],
-          options: { filter: sameLanguageFilter },
-        }),
-      ],
-      validation: (rule) => [
-        rule.max(5).error('La page d’accueil peut afficher au maximum 5 projets.'),
-        rule.unique().error('Un même projet ne peut être sélectionné qu’une fois.'),
-      ],
-    }),
-    defineField({
-      name: 'placeholderItems',
-      title: 'Visuels temporaires (ancien champ)',
-      type: 'array',
-      description:
-        'Conservés uniquement pour les anciennes données. Une sélection vide affiche désormais automatiquement les projets les plus récents.',
-      deprecated: {
-        reason: 'Remplacé par la sélection automatique des cinq projets les plus récents.',
-      },
-      readOnly: true,
-      hidden: ({ value }) => value === undefined,
-      initialValue: undefined,
-      of: [
-        defineArrayMember({
-          name: 'placeholderItem',
-          title: 'Visuel temporaire',
-          type: 'object',
-          fields: [
-            /*
-              Avertissements et non erreurs : la liste est masquée dès qu'un
-              projet réel est sélectionné. Une erreur bloquerait alors la
-              publication à cause d'un champ que l'éditeur ne voit même plus.
-              Une entrée incomplète est simplement ignorée au rendu.
-            */
-            defineField({
-              name: 'title',
-              title: 'Titre',
-              type: 'string',
-              validation: (rule) =>
-                rule.warning('Sans titre, ce visuel ne sera pas affiché.'),
-            }),
-            defineField({
-              name: 'image',
-              title: 'Image',
-              type: 'image',
-              options: { hotspot: true },
-              fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
-              validation: (rule) =>
-                rule.warning('Sans image, ce visuel ne sera pas affiché.'),
-            }),
-            defineField({
-              name: 'href',
-              title: 'Lien facultatif',
-              type: 'url',
-              validation: (rule) =>
-                rule.uri({ scheme: ['http', 'https'], allowRelative: true }),
-            }),
-          ],
-          preview: {
-            select: { title: 'title', media: 'image' },
-          },
-        }),
-      ],
-      validation: (rule) => rule.max(5).error('Maximum 5 visuels temporaires.'),
     }),
   ],
   preview: {
-    select: { projects: 'projects', placeholders: 'placeholderItems' },
-    prepare: ({ projects, placeholders }) => ({
+    prepare: () => ({
       title: 'Sélection de projets',
-      subtitle:
-        (projects?.length ?? 0) > 0
-          ? `${projects.length} projet(s)`
-          : `${placeholders?.length ?? 0} visuel(s) temporaire(s)`,
+      subtitle: 'Les projets favoris, à défaut les cinq plus récents',
     }),
   },
 });

@@ -169,13 +169,6 @@ async function main() {
           bleed: 'none',
         },
       ],
-      cta: {
-        _type: 'link',
-        kind: 'external',
-        label: 'Entrer dans le studio →',
-        externalUrl: '/experiences',
-        openInNewTab: false,
-      },
     },
     {
       _key: 'sensory-quote',
@@ -193,32 +186,6 @@ avez choisis.`,
     {
       _key: 'showcase',
       _type: 'projectShowcase',
-      placeholderItems: [
-        {
-          _key: 's1',
-          _type: 'placeholderItem',
-          title: 'Projet en cours',
-          image: { ...images.atelierBandes, alt: 'Projet en cours' },
-        },
-        {
-          _key: 's2',
-          _type: 'placeholderItem',
-          title: 'Projet en cours',
-          image: { ...images.etudeLune, alt: 'Projet en cours' },
-        },
-        {
-          _key: 's3',
-          _type: 'placeholderItem',
-          title: 'Projet en cours',
-          image: { ...images.laboDeCom, alt: 'Projet en cours' },
-        },
-        {
-          _key: 's4',
-          _type: 'placeholderItem',
-          title: 'Projet en cours',
-          image: { ...images.papierLumiere, alt: 'Projet en cours' },
-        },
-      ],
     },
     {
       _key: 'lettre',

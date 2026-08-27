@@ -130,13 +130,6 @@ const home = {
           image: asset('planche-cercle.webp'),
         },
       ],
-      cta: {
-        _type: 'link',
-        kind: 'external',
-        label: 'Entrer dans le studio →',
-        externalUrl: '/experiences',
-        openInNewTab: false,
-      },
     },
     {
       _key: 'sensory-quote',
@@ -156,7 +149,6 @@ avez choisis.`,
       // récupérés automatiquement par la requête de la page d'accueil.
       _key: 'showcase',
       _type: 'projectShowcase',
-      projects: [],
     },
     {
       _key: 'lettre',

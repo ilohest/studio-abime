@@ -712,6 +712,17 @@
     max-height: none;
   }
 
+  /*
+   * Un visuel en hauteur, posé à la même largeur qu'un visuel en largeur,
+   * couvre près du double de surface : il écrasait la fiche et le peu de texte
+   * qui la termine. Il est donc posé un cran plus petit. La proportion, elle,
+   * ne bouge pas — seule la mesure change.
+   */
+  .project-index .project-catalog-media--portrait .project-catalog-image {
+    width: 80%;
+    max-width: 80%;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     .project-catalog-card:hover .project-catalog-image,
     .project-catalog-card:focus-visible .project-catalog-image {

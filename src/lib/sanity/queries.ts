@@ -38,12 +38,6 @@ const LINK = /* groq */ `{
   }
 }`;
 
-const CATEGORY = /* groq */ `{
-  _id,
-  title,
-  "slug": coalesce(slug.current, key.current)
-}`;
-
 /**
  * Un projet masqué (`visible: false`) n'existe plus nulle part sur le site :
  * ni liste, ni sélection, ni page. Le champ étant récent, `coalesce` traite les
@@ -82,8 +76,7 @@ const PROJECT_CARD = /* groq */ `{
   year,
   excerpt,
   listingFacts[]{ _key, label, value },
-  thumbnail ${IMAGE},
-  "categories": coalesce(categories[]->${CATEGORY}, [])
+  thumbnail ${IMAGE}
 }`;
 
 /** Carte d'article du Journal. */
@@ -133,7 +126,6 @@ const SECTIONS = /* groq */ `sections[]{
     image ${IMAGE}
   },
   _type == "studioStatement" => {
-    cta ${LINK},
     figures[]{
       _key,
       number,
@@ -157,13 +149,7 @@ const SECTIONS = /* groq */ `sections[]{
     "projects": select(
       count(*[${FEATURED_PROJECT}]) > 0 => *[${FEATURED_PROJECT}] | ${PROJECT_ORDER}[0...5] ${PROJECT_CARD},
       *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER}[0...5] ${PROJECT_CARD}
-    ),
-    placeholderItems[0...5]{
-      _key,
-      title,
-      href,
-      image ${IMAGE}
-    }
+    )
   },
   _type == "fullBleedImage" => {
     image ${IMAGE}
@@ -187,8 +173,7 @@ const SECTIONS = /* groq */ `sections[]{
   },
   _type == "projectListSection" => {
     "manualProjects": projects[]->${PROJECT_CARD},
-    "latestProjects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER}[0...24] ${PROJECT_CARD},
-    "categories": *[_type == "category" && language == $locale] | order(title asc) ${CATEGORY}
+    "latestProjects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER}[0...24] ${PROJECT_CARD}
   }
 }`;
 
@@ -199,7 +184,6 @@ const SECTIONS = /* groq */ `sections[]{
 /** Réglages globaux, communs à toutes les langues (document singleton). */
 export const siteSettingsQuery = /* groq */ `
 *[_type == "siteSettings"][0]{
-  logo ${IMAGE},
   "socialLinks": coalesce(socialLinks[]{ _key, platform, url }, [])
 }`;
 
@@ -319,7 +303,6 @@ export const projectBySlugQuery = /* groq */ `
   listingFacts[]{ _key, label, value },
   "gallery": coalesce(gallery[]{ _key, span, spanWide, caption, image ${IMAGE} }, []),
   thumbnail ${IMAGE},
-  "categories": coalesce(categories[]->${CATEGORY}, []),
   "sections": coalesce(${SECTIONS}, []),
   "seo": {
     "title": seo.title,
@@ -330,10 +313,9 @@ export const projectBySlugQuery = /* groq */ `
   "next": *[${VISIBLE_PROJECT} && _id != ^._id] | ${PROJECT_ORDER}[0] ${PROJECT_CARD}
 }`;
 
-/** Index portfolio : tous les projets + toutes les catégories de la langue. */
+/** Index portfolio : tous les projets de la langue. */
 export const projectsIndexQuery = /* groq */ `{
-  "projects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER} ${PROJECT_CARD},
-  "categories": *[_type == "category" && language == $locale] | order(title asc) ${CATEGORY}
+  "projects": *[${VISIBLE_PROJECT}] | ${PROJECT_ORDER} ${PROJECT_CARD}
 }`;
 
 /**
@@ -356,7 +338,6 @@ export const projectsPageQuery = /* groq */ `
   _id,
   _type,
   language,
-  title,
   intro,
   "editorialCards": coalesce(editorialCards[]{ _key, kind, text, position }, []),
   seo ${SEO}
@@ -388,8 +369,6 @@ export const laboPageQuery = /* groq */ `
   "services": coalesce(services[]{ _key, title, description }, []),
   note,
   "closingLines": coalesce(closingLines, []),
-  cta ${LINK},
-  archiveTitle,
   "archiveProjects": select(
     count(*[${FEATURED_PROJECT} && defined(thumbnail.asset)]) > 0 =>
       *[${FEATURED_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD},
@@ -426,7 +405,6 @@ export const shopPageQuery = /* groq */ `
   _id,
   _type,
   language,
-  title,
   intro,
   seo ${SEO}
 }`;
@@ -437,7 +415,6 @@ export const journalPageQuery = /* groq */ `
   _id,
   _type,
   language,
-  title,
   intro,
   seo ${SEO}
 }`;

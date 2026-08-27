@@ -1,10 +1,7 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 import { sameLanguageFilter } from '../../../lib/i18n';
 
-/**
- * Liste de projets — c'est cette section qui alimente le composant Vue interactif
- * (`ProjectExplorer.vue`) lorsque les filtres sont activés.
- */
+/** Liste de projets — sélection manuelle, ou les N projets les plus récents. */
 export const projectListSection = defineType({
   name: 'projectListSection',
   title: 'Liste de projets',
@@ -46,24 +43,12 @@ export const projectListSection = defineType({
       validation: (rule) => rule.min(1).max(24),
       hidden: ({ parent }) => parent?.mode !== 'latest',
     }),
-    defineField({
-      name: 'showFilters',
-      title: 'Afficher les filtres par catégorie',
-      type: 'boolean',
-      initialValue: false,
-      description: 'Active le filtrage interactif côté client.',
-    }),
   ],
   preview: {
-    select: { heading: 'heading', mode: 'mode', showFilters: 'showFilters' },
-    prepare: ({ heading, mode, showFilters }) => ({
+    select: { heading: 'heading', mode: 'mode' },
+    prepare: ({ heading, mode }) => ({
       title: heading || 'Liste de projets',
-      subtitle: [
-        mode === 'manual' ? 'Sélection manuelle' : 'Projets récents',
-        showFilters ? 'avec filtres' : null,
-      ]
-        .filter(Boolean)
-        .join(' · '),
+      subtitle: mode === 'manual' ? 'Sélection manuelle' : 'Projets récents',
     }),
   },
 });

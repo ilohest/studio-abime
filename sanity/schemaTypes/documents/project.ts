@@ -1,5 +1,5 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
-import { languageField, sameLanguageFilter } from '../../lib/i18n';
+import { languageField } from '../../lib/i18n';
 import { definePageBuilder } from '../objects/sections';
 import { PROJECT_TEMPLATES } from '../../lib/projectTemplates';
 import { MAX_FEATURED_PROJECTS } from '../../../src/lib/references';
@@ -222,20 +222,6 @@ export const project = defineType({
         }),
       ],
       validation: (rule) => rule.max(5),
-    }),
-    defineField({
-      name: 'categories',
-      title: 'Catégories',
-      type: 'array',
-      of: [
-        defineArrayMember({
-          type: 'reference',
-          to: [{ type: 'category' }],
-          options: { filter: sameLanguageFilter },
-        }),
-      ],
-      group: 'meta',
-      description: 'Sert au filtrage interactif de la page portfolio.',
     }),
     defineField({
       name: 'thumbnail',

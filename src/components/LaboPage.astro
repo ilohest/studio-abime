@@ -2,6 +2,8 @@
 import { Image } from 'astro:assets';
 import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
 import SmartLink from '~/components/primitives/SmartLink.astro';
+import { contactPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { LaboPage } from '~/lib/sanity/types';
 
@@ -18,6 +20,7 @@ interface Props {
 }
 
 const { page, locale } = Astro.props;
+const t = useTranslations(locale);
 const services = (page.services ?? []).slice(0, 6);
 const orbitPhases = [198, 315, 64, 142, 252, 18];
 // Vitesse angulaire décroissante du centre vers l'extérieur : chaque unité
@@ -58,9 +61,18 @@ const orbitSystem = services.map((service, index) => ({
       : orbitMotifs[index] ?? 'dots',
 }));
 const archiveCount = page.archiveProjects.length;
-const archiveTitle = !page.archiveTitle || page.archiveTitle.trim() === 'Archive'
-  ? 'Archives'
-  : page.archiveTitle;
+const archiveTitle = t('labo.archive');
+/*
+  Appel à l'action de conclusion : c'est de la structure, pas du contenu. Son
+  libellé est le sujet de la phrase qui le suit — « … en est la traduction
+  visible. » — et sa destination ne varie pas. Il est donc fixé ici.
+*/
+const closingCta = {
+  kind: 'external' as const,
+  label: t('labo.cta'),
+  externalUrl: contactPath(locale),
+  openInNewTab: false,
+};
 const [philosophyLead, ...philosophyParagraphs] = page.philosophy;
 const philosophyNotes = philosophyParagraphs.length >= 4
   ? [
@@ -321,12 +333,10 @@ const whyTitle = page.whyTitle
         </p>
       ))}
     </div>
-    {page.cta && (
-      <div class="labo-closing__action">
-        <SmartLink link={page.cta} locale={locale} class="button-minimal labo-closing__cta" arrow />
-        <p>en est la traduction visible.</p>
-      </div>
-    )}
+    <div class="labo-closing__action">
+      <SmartLink link={closingCta} locale={locale} class="button-minimal labo-closing__cta" arrow />
+      <p>en est la traduction visible.</p>
+    </div>
   </section>
 
   <section class="labo-archive project-index" id="archives" aria-labelledby="labo-archive-title">

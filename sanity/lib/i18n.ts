@@ -21,7 +21,6 @@ import { defaultLocale, locales, localeMeta } from '../../src/i18n/config';
 export const TRANSLATED_DOCUMENT_TYPES = [
   'page',
   'project',
-  'category',
   'post',
   'localizedSettings',
   'projectsPage',

@@ -23,15 +23,6 @@ interface Props {
 
 const { section, locale } = Astro.props;
 
-/*
-  Les visuels temporaires incomplets sont écartés : le CMS ne les impose pas
-  (ils sont masqués dès qu'un projet réel est choisi), c'est donc au rendu de
-  ne garder que les entrées exploitables.
-*/
-const placeholders = (section.placeholderItems ?? []).filter(
-  (item) => Boolean(item.image?.asset) && Boolean(item.title),
-);
-
 /** Le CMS fournit des projets ; le contenu d'amorçage, des visuels groupés. */
 const sources = (section.projects?.length ?? 0) > 0
   ? (section.projects ?? []).map((project) => ({
@@ -41,14 +32,6 @@ const sources = (section.projects?.length ?? 0) > 0
       image: project.thumbnail,
       fallbackImage: undefined,
     }))
-  : placeholders.length > 0
-    ? placeholders.map((item) => ({
-        key: item._key,
-        title: item.title,
-        href: item.href,
-        image: item.image,
-        fallbackImage: undefined,
-      }))
   : (section.fallbackItems ?? []).map((item) => ({
       key: item._key,
       title: item.title,

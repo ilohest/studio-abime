@@ -1,7 +1,6 @@
 ---
 import SmartLink from '~/components/primitives/SmartLink.astro';
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
-import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { localizedPath, projectsIndexPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
@@ -26,15 +25,7 @@ const currentPath = Astro.url.pathname;
 
 <header class="border-b border-line">
   <div class="container-wide flex items-center justify-between gap-8 py-5">
-    <a href={homeHref} class="type-titre text-[1.5rem] leading-none" aria-label={siteTitle}>
-      {
-        site.settings?.logo ? (
-          <SanityImage image={site.settings.logo} width={200} loading="eager" class="h-8 w-auto" />
-        ) : (
-          siteTitle
-        )
-      }
-    </a>
+    <a href={homeHref} class="type-titre text-[1.5rem] leading-none">{siteTitle}</a>
 
     <nav class="flex items-center gap-6" aria-label={t('nav.menu')}>
       <a

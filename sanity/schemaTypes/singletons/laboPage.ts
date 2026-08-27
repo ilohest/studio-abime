@@ -1,5 +1,5 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
-import { languageField, sameLanguageFilter } from '../../lib/i18n';
+import { languageField } from '../../lib/i18n';
 
 /**
  * Page Labo : une narration volontairement structurée, plutôt qu'un assemblage
@@ -39,13 +39,9 @@ export const laboPage = defineType({
       'Le fond précède la forme. Toujours.',
       'Quand le fond est clarifié, la forme devient possible. Le laboratoire prépare le terrain.',
     ],
-    cta: { _type: 'link', kind: 'external', label: 'Donner forme', externalUrl: '/contact', openInNewTab: false },
-    archiveTitle: 'Archives',
-    archiveProjects: [],
   },
   groups: [
     { name: 'content', title: 'Contenu', default: true },
-    { name: 'archive', title: 'Archives' },
     { name: 'seo', title: 'SEO' },
   ],
   fields: [
@@ -125,35 +121,6 @@ export const laboPage = defineType({
       group: 'content',
       of: [defineArrayMember({ type: 'string' })],
       validation: (rule) => rule.required().min(1),
-    }),
-    defineField({ name: 'cta', title: 'Appel à l’action', type: 'link', group: 'content' }),
-    defineField({
-      name: 'archiveTitle',
-      title: 'Titre de l’archive',
-      type: 'string',
-      group: 'archive',
-      initialValue: 'Archives',
-    }),
-    defineField({
-      name: 'archiveProjects',
-      title: 'Projets de l’archive (ancien champ)',
-      type: 'array',
-      group: 'archive',
-      description:
-        'Remplacé par la case « Projet favori » de la fiche projet : les 6 premiers favoris sont désormais affichés ici. Ce champ n’est plus lu.',
-      deprecated: {
-        reason: 'Remplacé par la case « Projet favori » de la fiche projet.',
-      },
-      readOnly: true,
-      hidden: ({ value }) => value === undefined,
-      of: [
-        defineArrayMember({
-          type: 'reference',
-          to: [{ type: 'project' }],
-          options: { filter: sameLanguageFilter },
-        }),
-      ],
-      validation: (rule) => [rule.max(6), rule.unique()],
     }),
     defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' }),
   ],

@@ -14,7 +14,6 @@ import OrderConfirmation from '~/components/OrderConfirmation.astro';
 import CollectionPage from '~/components/CollectionPage.astro';
 import PolicyPage from '~/components/PolicyPage.astro';
 import LegalHeader from '~/components/LegalHeader.astro';
-import { stegaClean } from '@sanity/client/stega';
 
 import { buildRouteManifest, matchRoute } from '~/lib/routing';
 import { getCollectionByHandle, getProductByHandle, getProducts } from '~/lib/shopify/catalogue';
@@ -43,7 +42,6 @@ import { getLaboFallback } from '~/content/laboFallback';
 import { useTranslations } from '~/i18n/ui';
 import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard, ShopPolicy } from '~/lib/shopify/types';
 import type {
-  CategorySummary,
   Client,
   JournalPage,
   LaboPage,
@@ -96,7 +94,6 @@ const t = useTranslations(locale);
 let page: Page | null = null;
 let project: Project | null = null;
 let projects: ProjectCard[] = [];
-let categories: CategorySummary[] = [];
 let projectsPage: ProjectsPage | null = null;
 let clients: Client[] = [];
 let laboPage: LaboPage | null = null;
@@ -205,16 +202,15 @@ if (route.kind === 'labo') {
   });
 } else {
   const [data, pageContent, clientList] = await Promise.all([
-    loadQuery<{ projects: ProjectCard[]; categories: CategorySummary[] }>({
+    loadQuery<{ projects: ProjectCard[] }>({
       query: projectsIndexQuery,
       locale,
-      fallback: { projects: [], categories: [] },
+      fallback: { projects: [] },
     }),
     loadQuery<ProjectsPage | null>({ query: projectsPageQuery, locale, fallback: null }),
     loadQuery<Client[]>({ query: clientsQuery, locale, fallback: [] }),
   ]);
   projects = data.projects;
-  categories = data.categories;
   projectsPage = pageContent;
   clients = clientList;
 }
@@ -259,15 +255,10 @@ const alternates =
       ? getPolicyAlternates(route.policy)
       : await getDocumentAlternates(document?._id, locale);
 
-const projectIndexTitleSource = projectsPage?.title?.trim();
-const projectIndexTitleClean = stegaClean(projectIndexTitleSource ?? '');
-const projectIndexTitle = !projectIndexTitleSource
-  ? t('nav.projects')
-  : projectIndexTitleClean.toLocaleLowerCase(locale) === 'projets'
-    ? projectIndexTitleSource.replace(projectIndexTitleClean, t('nav.projects'))
-    : projectIndexTitleSource;
-
-const journalTitle = journalPage?.title?.trim() || t('journal.title');
+/* Les intitulés de section sont fixés en code : le CMS porte le contenu. */
+const projectIndexTitle = t('nav.projects');
+const journalTitle = t('journal.title');
+const shopTitle = t('shop.title');
 
 const title =
   route.kind === 'projectIndex'
@@ -279,7 +270,7 @@ const title =
     : route.kind === 'labo'
       ? (laboPage?.title ?? 'Le Labo')
     : route.kind === 'shop'
-      ? (shopPage?.title?.trim() || t('shop.title'))
+      ? shopTitle
     : route.kind === 'product'
       ? (shopProduct?.title ?? t('shop.title'))
     : route.kind === 'orderConfirmation'
@@ -397,7 +388,7 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
       <ShopIndex
         products={shopProducts}
         locale={locale}
-        title={shopPage?.title?.trim() || t('shop.title')}
+        title={shopTitle}
         number="04."
         intro={shopPage?.intro?.trim() || getShopIntro(locale)}
       />
@@ -436,7 +427,6 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
 
         <ExperienceTransitionLab
           projects={projects}
-          categories={categories}
           locale={locale}
           editorialCards={projectsPage?.editorialCards ?? []}
           clients={clients}

@@ -3,7 +3,6 @@ import type { SchemaTypeDefinition } from 'sanity';
 // Documents
 import { page } from './documents/page';
 import { project } from './documents/project';
-import { category } from './documents/category';
 import { client } from './documents/client';
 import { post } from './documents/post';
 
@@ -31,7 +30,6 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   // Documents
   page,
   project,
-  category,
   client,
   post,
 

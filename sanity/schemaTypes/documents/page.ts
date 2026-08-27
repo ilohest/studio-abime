@@ -3,6 +3,7 @@ import { languageField } from '../../lib/i18n';
 import { definePageBuilder } from '../objects/sections';
 import { getReservedSegments } from '../../../src/i18n/routes';
 import { defaultLocale, isLocale } from '../../../src/i18n/config';
+import { isFixedSlotPageId, isHomePageId } from '../../lib/fixedPages';
 
 /**
  * Page institutionnelle (agence, services, contact, mentions légales…).
@@ -28,6 +29,7 @@ export const page = defineType({
       title: 'Titre',
       type: 'string',
       group: 'content',
+      hidden: ({ document }) => isFixedSlotPageId(document?._id),
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -37,6 +39,12 @@ export const page = defineType({
       group: 'content',
       description:
         "Identifiant dans l'URL. Peut être imbriqué : « agence/equipe » donne /agence/equipe.",
+      /*
+        Sans slug, `routeManifestQuery` (qui filtre sur `defined(slug.current)`)
+        ne fabrique aucune route : c'est ce qui évite que l'accueil soit servi
+        une seconde fois sous `/son-slug`.
+      */
+      hidden: ({ document }) => isFixedSlotPageId(document?._id),
       options: {
         source: 'title',
         maxLength: 96,
@@ -54,9 +62,12 @@ export const page = defineType({
             .slice(0, 96),
       },
       validation: (rule) =>
-        rule.required().custom((value, context) => {
+        rule.custom((value, context) => {
           const slug = value?.current;
-          if (!slug) return true;
+          // Seul l'accueil s'en passe : toute autre page a besoin de son URL.
+          if (!slug) {
+            return isHomePageId(context.document?._id) ? true : 'Le slug est requis.';
+          }
 
           // Un slug de page ne doit jamais entrer en collision avec un segment
           // de section réservé (ex. « projets »), sinon la route est ambiguë.

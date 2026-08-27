@@ -5,6 +5,8 @@ import type {
 } from 'sanity/structure';
 import { locales, localeMeta } from '../../src/i18n/config';
 import type { LegalPageKey } from '../../src/i18n/routes';
+import { rememberHomePageId } from '../lib/fixedPages';
+import Documentation from '../components/Documentation';
 
 /** Identifiant figé du document de réglages globaux (instance unique). */
 export const SITE_SETTINGS_ID = 'siteSettings';
@@ -13,7 +15,6 @@ export const SITE_SETTINGS_ID = 'siteSettings';
 const HANDLED_TYPES = [
   'page',
   'project',
-  'category',
   'client',
   'post',
   'projectsPage',
@@ -87,9 +88,12 @@ async function homePageDocument(
   */
   const fallbackId = locale === 'fr' ? 'page-accueil-fr' : `page-home-${locale}`;
 
+  const resolved = documentId ?? fallbackId;
+  rememberHomePageId(resolved);
+
   return S.document()
     .schemaType('page')
-    .documentId(documentId ?? fallbackId)
+    .documentId(resolved)
     .initialValueTemplate(`page-${locale}`)
     .title(`Page d’accueil${locales.length > 1 ? ` — ${locale.toUpperCase()}` : ''}`);
 }
@@ -233,11 +237,6 @@ export const structure: StructureResolver = (S, context) =>
         .id('posts')
         .child(byLanguage(S, 'post', 'Articles du Journal')),
 
-      S.listItem()
-        .title('Catégories')
-        .id('categories')
-        .child(byLanguage(S, 'category', 'Catégories')),
-
       S.divider(),
 
       S.listItem()
@@ -258,16 +257,24 @@ export const structure: StructureResolver = (S, context) =>
                   ),
                 ),
               S.listItem()
-                .title('Logo et réseaux sociaux')
+                .title('Réseaux sociaux')
                 .id('siteSettings')
                 .child(
                   S.document()
                     .schemaType('siteSettings')
                     .documentId(SITE_SETTINGS_ID)
-                    .title('Logo et réseaux sociaux'),
+                    .title('Réseaux sociaux'),
                 ),
             ]),
         ),
+
+      S.divider(),
+
+      // Notice d'utilisation — écrite en code, rien à saisir ni à publier.
+      S.listItem()
+        .title('Mode d’emploi')
+        .id('documentation')
+        .child(S.component(Documentation).title('Mode d’emploi').id('documentation')),
 
       S.divider(),
 

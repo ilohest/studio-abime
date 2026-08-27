@@ -5,7 +5,7 @@
  * Rôle : basculer entre l'ordre chronologique complet (vue par défaut) et
  * l'une des deux rubriques, sans rechargement.
  *
- * Contrat avec Astro, identique à `ProjectExplorer.vue` :
+ * Contrat avec Astro :
  *  - il ne reçoit que des modèles de vue déjà résolus (`PostCardView`) ;
  *  - il est hydraté en `client:visible` ;
  *  - la sélection est reflétée dans l'URL, donc partageable.
