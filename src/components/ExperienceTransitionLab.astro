@@ -727,16 +727,21 @@ const elementNumbers = Object.fromEntries(
     }
   }
 
+  /*
+    La table des éléments compose ses cases à l'échelle de la grille, pas à
+    celle du texte courant : les corps y sont sous le plancher de la charte
+    parce qu'une case fait quelques dizaines de pixels de côté.
+  */
   .element-cell__number {
-    font-size: var(--text-note);
+    font-size: clamp(0.28rem, 0.48vw, 0.52rem);
   }
 
   .element-cell__symbol {
     align-self: center;
     max-width: 100%;
-    font-size: var(--text-copy);
+    font-size: clamp(0.48rem, 1vw, 1.05rem);
     font-weight: 400;
-    letter-spacing: var(--tracking-annotation);
+    letter-spacing: -0.08em;
     overflow-wrap: anywhere;
     text-align: center;
     text-transform: uppercase;
@@ -745,7 +750,7 @@ const elementNumbers = Object.fromEntries(
   .element-cell__name {
     display: block;
     width: 100%;
-    font-size: var(--text-note);
+    font-size: clamp(0.2rem, 0.34vw, 0.38rem);
     line-height: 1.05;
     overflow: hidden;
     text-align: center;
