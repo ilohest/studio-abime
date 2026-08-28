@@ -1,0 +1,130 @@
+---
+import JournalComposition from '~/components/journal/JournalComposition.astro';
+import NextProject from '~/components/project/NextProject.astro';
+import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Modèle COMPOSITION LIBRE — le projet raconté comme un article.
+ *
+ * Les deux autres modèles imposent une architecture : une colonne fixe et sa
+ * planche, ou un bandeau sous un texte. Celui-ci n'impose rien. Le corps de la
+ * page est la suite exacte des blocs saisis — textes, figures, notes de marge —
+ * rendue par le composant même qui compose les articles du Journal. Une seule
+ * grammaire de mise en page pour les deux, apprise une fois.
+ *
+ * La composition s'affiche à l'échelle de la « planche illustrée » : dans un
+ * projet, l'image pèse plus que dans un article de recherche.
+ *
+ * Pas de visuel de tête : la vignette du projet sert les listes et la table des
+ * éléments. La composition ouvre sur ce que l'éditrice a placé en premier, et
+ * l'imposer avant elle ferait doublon avec sa première figure.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+
+const blocks = project.blocks ?? [];
+---
+
+<article class="composition">
+  <div class="composition__inner container-wide">
+    <ProjectBackLink locale={locale} />
+
+    {/*
+      Le titre garde la colonne de gauche : le cartouche de tête — case et
+      relevé — occupe le coin droit sur toutes les pages projet. Centré, il
+      passerait dessous dès que l'écran se resserre.
+    */}
+    <header class="composition__header">
+      {project.headline && <p class="composition__eyebrow">({project.title})</p>}
+      <h1 class="composition__title text-balance" data-text-reveal>
+        {project.headline || project.title}
+      </h1>
+    </header>
+
+    {
+      blocks.length > 0 && (
+        <div class="composition__body">
+          <JournalComposition blocks={blocks} template="planche" locale={locale} />
+        </div>
+      )
+    }
+  </div>
+
+  <NextProject project={project.next} locale={locale} />
+</article>
+
+<style>
+  /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
+  .composition__inner {
+    padding-block: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance))
+      clamp(3rem, 8vw, 6rem);
+  }
+
+  /*
+    La réserve de droite est celle du cartouche de tête. Elle n'est prise qu'au
+    bureau : sous 900 px, le cartouche revient dans le flux, au-dessus du titre,
+    et n'a plus rien à dégager.
+  */
+  .composition__header {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+    max-width: 44rem;
+  }
+
+  @media (min-width: 900px) {
+    .composition__header {
+      padding-right: 22rem;
+      max-width: none;
+    }
+  }
+
+  /* Même police que le texte courant : la mention se lit comme une note. */
+  .composition__eyebrow {
+    margin: 0;
+    font-family: var(--font-copy);
+    font-size: var(--text-note);
+    font-weight: 400;
+    letter-spacing: var(--tracking-copy);
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  /*
+    Le titre quitte la casse forcée et le mono des titres de section : ici
+    c'est une phrase qui se lit, pas une enseigne.
+  */
+  .composition__title {
+    margin: 0.9rem 0 0;
+    font-family: var(--font-copy);
+    font-size: clamp(1.6rem, 3.2vw, var(--text-titre));
+    font-weight: 400;
+    letter-spacing: var(--tracking-titre);
+    line-height: 1.15;
+    text-transform: none;
+  }
+
+  /*
+    Le corps démarre sous le cartouche de tête, dont la hauteur est mesurée au
+    rendu et publiée par le gabarit d'enveloppe. La valeur de repli couvre le
+    cas où le script ne s'exécute pas ; l'écart normal reprend le dessus dès que
+    le cartouche est plus court que le titre.
+  */
+  .composition__body {
+    margin-top: max(
+      clamp(3rem, 7vw, 5rem),
+      calc(var(--project-aside-height, 22rem) - 8rem)
+    );
+  }
+
+  @media (max-width: 899px) {
+    .composition__body {
+      margin-top: clamp(2.5rem, 6vw, 4rem);
+    }
+  }
+</style>

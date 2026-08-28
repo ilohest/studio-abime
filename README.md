@@ -152,12 +152,13 @@ Un `_type` sans composant est ignoré sans casser la page — un schéma peut do
 
 ## Modèles de page projet
 
-Chaque cas client peut avoir une structure propre. Deux leviers combinés :
+Chaque cas client peut avoir une structure propre. Le champ **`template`** ouvre l'onglet « Contenu » du projet, parce qu'il commande ce qui s'y saisit ensuite — trois modèles, trois corps de page (`src/templates/project/`) :
 
-- **`template`** choisit l'enveloppe de la page — `standard`, `immersive` ou `editorial` (`src/templates/project/`) ;
-- **`sections`** compose le corps librement.
+- **`split`** — « Colonne fixe » : texte en blocs (`sections`) à gauche, planche d'images (`gallery`) défilante à droite ;
+- **`banner`** — « Bandeau » : mêmes champs, planche en bandeau sous le texte ;
+- **`composition`** — « Composition libre » : textes, figures et notes intercalés (`blocks`), la saisie même des articles du Journal, rendue par le même composant (`JournalComposition.astro`).
 
-Les options propres à un modèle (couleur d'accent, vidéo de couverture, notes en marge…) vivent dans `templateOptions` et ne sont visibles dans le back-office que pour le modèle concerné.
+Le corps des autres modèles est masqué dans le back-office, jamais effacé : revenir à un modèle retrouve sa saisie intacte.
 
 **Ajouter un modèle :** une entrée dans `sanity/lib/projectTemplates.ts`, un composant dans `src/templates/project/`, un `case` dans `ProjectTemplateRenderer.astro`. Les projets existants ne sont pas impactés.
 

@@ -1,4 +1,5 @@
 import { defineArrayMember, defineField } from 'sanity';
+import type { ConditionalProperty } from '@sanity/types';
 
 import { manifestoHero } from './manifestoHero';
 import { servicesMenu } from './servicesMenu';
@@ -42,9 +43,16 @@ export const sectionTypeNames = sectionTypes.map((section) => section.name);
  * précis, sans dupliquer la définition.
  */
 export function definePageBuilder(
-  options: { name?: string; title?: string; allowed?: string[]; group?: string | string[] } = {},
+  options: {
+    name?: string;
+    title?: string;
+    allowed?: string[];
+    group?: string | string[];
+    /** Masque le champ selon le document — un modèle de page qui compose autrement. */
+    hidden?: ConditionalProperty;
+  } = {},
 ) {
-  const { name = 'sections', title = 'Contenu de la page', allowed, group } = options;
+  const { name = 'sections', title = 'Contenu de la page', allowed, group, hidden } = options;
   const names = allowed ?? sectionTypeNames;
 
   return defineField({
@@ -52,6 +60,7 @@ export function definePageBuilder(
     title,
     type: 'array',
     group,
+    hidden,
     of: names.map((type) => defineArrayMember({ type })),
     options: { insertMenu: { filter: true, showIcons: true } },
   });

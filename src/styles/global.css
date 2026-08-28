@@ -111,6 +111,14 @@
   /* ── Rythme & mise en page ───────────────────────────────────────────────── */
   --spacing-gutter: 1.5rem;
   --spacing-section: 6rem;
+  /*
+    Retrait des planches d'images des pages projet — plus large que la gouttière
+    de page, parce qu'une planche va au bord de l'écran là où le texte reste
+    dans son conteneur. Nommé ici, et non dans un gabarit, parce que le
+    cartouche de tête doit s'aligner dessus : deux valeurs, et le bord droit de
+    la page se dédoublerait.
+  */
+  --project-plate-inset: clamp(1.5rem, 3.5vw, 4rem);
   --container-content: 44rem;
   --container-wide: 90rem;
 }

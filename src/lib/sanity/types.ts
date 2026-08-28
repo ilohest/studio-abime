@@ -233,15 +233,7 @@ export interface ProjectCard {
 }
 
 /** Templates de page projet disponibles. Voir `src/templates/project/`. */
-export type ProjectTemplate = 'standard' | 'immersive' | 'editorial' | 'split' | 'banner';
-
-/** Options conditionnelles du modèle sélectionné (voir `projectTemplateOptions`). */
-export interface ProjectTemplateOptions {
-  accent?: 'lumiere' | 'ciel' | 'sable' | 'papier';
-  /** Ancien emplacement, conservé temporairement pour les documents existants. */
-  coverVideoUrl?: string;
-  showMarginNotes?: boolean;
-}
+export type ProjectTemplate = 'split' | 'banner' | 'composition';
 
 /** Canal de diffusion du projet — site, réseau social, boutique… */
 export interface ProjectChannel {
@@ -270,8 +262,6 @@ export interface Project {
   title: string;
   slug: string;
   template: ProjectTemplate;
-  templateOptions?: ProjectTemplateOptions;
-  coverVideoUrl?: string;
   client?: string;
   year?: number;
   /** Grande phrase de tête de la page projet. À défaut, le titre reprend la place. */
@@ -281,6 +271,8 @@ export interface Project {
   channels?: ProjectChannel[];
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   gallery?: ProjectGalleryItem[];
+  /** Corps du modèle « Composition libre » — mêmes blocs que les articles du Journal. */
+  blocks?: JournalBlock[];
   thumbnail?: SanityImage;
   sections: Section[];
   seo?: Seo;

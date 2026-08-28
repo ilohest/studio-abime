@@ -1,7 +1,7 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField } from '../../lib/i18n';
 import { definePageBuilder } from '../objects/sections';
-import { PROJECT_TEMPLATES } from '../../lib/projectTemplates';
+import { DEFAULT_PROJECT_TEMPLATE, PROJECT_TEMPLATES } from '../../lib/projectTemplates';
 import { MAX_FEATURED_PROJECTS } from '../../../src/lib/references';
 
 const API_VERSION = '2025-02-19';
@@ -10,18 +10,17 @@ const API_VERSION = '2025-02-19';
  * Projet du portfolio.
  *
  * ┌─ Modèle de page ────────────────────────────────────────────────────────┐
- * │ Chaque cas client peut avoir une structure très différente. Le schéma   │
- * │ combine donc deux leviers :                                             │
+ * │ `template` ouvre l'onglet « Contenu », parce qu'il commande ce qui s'y  │
+ * │ saisit ensuite : chaque modèle a SON corps, et les autres se masquent.  │
  * │                                                                         │
- * │  1. `template` — choisit l'ENVELOPPE de la page (mise en page de        │
- * │     l'en-tête, du fil de lecture, du pied de page projet). Un template  │
- * │     = un composant Astro dans `src/templates/project/`.                 │
+ * │  · Colonne fixe / Bandeau — texte en blocs (`sections`) et planche      │
+ * │    d'images (`gallery`) ;                                               │
+ * │  · Composition libre     — textes, figures et notes intercalés          │
+ * │    (`blocks`), la saisie même des articles du Journal.                  │
  * │                                                                         │
- * │  2. `sections` — compose le CORPS de la page librement, bloc par bloc.  │
- * │                                                                         │
- * │ Ajouter un template : une entrée dans `sanity/lib/projectTemplates.ts`  │
- * │ + un composant dans le registre `src/templates/project/index.ts`.       │
- * │ Aucun contenu existant n'est impacté.                                   │
+ * │ Ajouter un modèle : une entrée dans `sanity/lib/projectTemplates.ts`    │
+ * │ + un composant dans `src/templates/project/`. Aucun contenu existant    │
+ * │ n'est impacté.                                                          │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
 export const project = defineType({
@@ -31,7 +30,6 @@ export const project = defineType({
   groups: [
     { name: 'meta', title: 'Fiche projet', default: true },
     { name: 'content', title: 'Contenu' },
-    { name: 'template', title: 'Modèle de page' },
     { name: 'seo', title: 'SEO' },
   ],
   fields: [
@@ -232,18 +230,26 @@ export const project = defineType({
       description: 'Visuel du projet dans les listes et en tête de page.',
       fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
     }),
+    /* ── Corps de la page ────────────────────────────────────────────────────── */
+    /*
+      Le modèle ouvre l'onglet : il décide de ce qui se saisit en dessous. Les
+      corps des autres modèles se masquent, mais rien n'est effacé — repasser au
+      modèle précédent retrouve la saisie intacte.
+    */
     defineField({
-      name: 'coverVideoUrl',
-      title: 'Vidéo de couverture',
-      type: 'url',
+      name: 'template',
+      title: 'Modèle de page',
+      type: 'string',
       group: 'content',
-      description: 'Fichier .mp4 en lecture automatique et muette. Remplace le visuel de tête.',
-      validation: (rule) => rule.uri({ scheme: ['https'] }),
-      hidden: ({ document }) =>
-        ((document?.template as string | undefined) ?? 'standard') !== 'immersive',
+      initialValue: DEFAULT_PROJECT_TEMPLATE,
+      options: {
+        list: PROJECT_TEMPLATES.map(({ value, title }) => ({ value, title })),
+        layout: 'radio',
+      },
+      description: PROJECT_TEMPLATES.map((t) => `${t.title} — ${t.description}`).join('\n'),
+      validation: (rule) => rule.required(),
     }),
 
-    /* ── Corps de la page ────────────────────────────────────────────────────── */
     /*
       Liste volontairement restreinte : les blocs du site sont écrits pour la
       pleine page (Hero manifeste, Menu des services, Planche…) et n'ont pas de
@@ -254,6 +260,29 @@ export const project = defineType({
       title: 'Contenu du projet',
       group: 'content',
       allowed: ['richTextSection', 'fullBleedImage'],
+      hidden: ({ document }) => (document?.template as string | undefined) === 'composition',
+    }),
+
+    /* ── Composition libre (modèle « Composition libre ») ─────────────────── */
+    /*
+      Exactement les blocs du Journal — mêmes types, même appareil de figures et
+      de notes. C'est délibéré : l'éditrice n'a qu'une grammaire de composition à
+      apprendre, et un projet raconté comme un article se saisit comme un
+      article. Le rendu passe d'ailleurs par le même composant.
+    */
+    defineField({
+      name: 'blocks',
+      title: 'Composition du projet',
+      type: 'array',
+      group: 'content',
+      description:
+        'Intercalez autant de textes, de figures et de notes que vous le souhaitez. Les figures et les notes sont numérotées automatiquement, dans l’ordre de la liste.',
+      hidden: ({ document }) => (document?.template as string | undefined) !== 'composition',
+      of: [
+        defineArrayMember({ type: 'journalProse' }),
+        defineArrayMember({ type: 'journalFigure' }),
+        defineArrayMember({ type: 'journalNote' }),
+      ],
     }),
 
     /* ── Planche d'images (modèles « Colonne fixe » et « Bandeau ») ───────── */
@@ -330,27 +359,6 @@ export const project = defineType({
           },
         }),
       ],
-    }),
-
-    /* ── Modèle de page ───────────────────────────────────────────────────── */
-    defineField({
-      name: 'template',
-      title: 'Modèle de page',
-      type: 'string',
-      group: 'template',
-      initialValue: 'standard',
-      options: {
-        list: PROJECT_TEMPLATES.map(({ value, title }) => ({ value, title })),
-        layout: 'radio',
-      },
-      description: PROJECT_TEMPLATES.map((t) => `${t.title} — ${t.description}`).join('\n'),
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'templateOptions',
-      title: 'Options du modèle',
-      type: 'projectTemplateOptions',
-      group: 'template',
     }),
 
     defineField({

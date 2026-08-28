@@ -290,6 +290,22 @@ const elementNumbers = Object.fromEntries(
     });
 
     /*
+      Les rangées SUIVANTES ne jouent rien. Elles portaient une entrée au
+      défilement — chaque colonne remontait de 13 rem en suivant le scroll —,
+      et le geste ne s'arrêtait jamais : arrivé à la troisième rangée, on voyait
+      encore une ligne se décoller de celle du dessus, et un vide s'ouvrir entre
+      les deux. Une grille se pose une fois ; passé la première page écran, elle
+      se lit, elle ne se rejoue pas.
+
+      Le décalage initial reste posé en CSS pour que rien ne clignote avant que
+      ce script ne tourne. Il est annulé ici, définitivement : ni observateur,
+      ni écouteur de défilement, ni position relue à chaque image.
+    */
+    catalogItems.forEach((item) => {
+      if (item.dataset.flight !== 'true') item.style.transform = 'none';
+    });
+
+    /*
       Hauteur d'atterrissage de la grille, lue sur la page plutôt que déduite
       de la marge : `100vh` et `window.innerHeight` ne coïncident pas partout
       — les barres d'outils mobiles les séparent — et c'est la COUTURE qui
@@ -658,124 +674,6 @@ const elementNumbers = Object.fromEntries(
     measureCatalog();
     update();
   });
-
-  /*
-    Les rangées SUIVANTES — celles qui sont hors champ quand la grille se pose.
-    Elles reprennent le geste de sortie de la table, mais à l'entrée :
-    chaque colonne monte en suivant le DÉFILEMENT lui-même, pas une minuterie
-    déclenchée une fois pour toutes. Un scroll lent déplace lentement, un
-    scroll rapide déplace vite, et remonter la page DÉFAIT le geste — dans
-    les deux sens, toujours, sans jamais se figer dans un état final : la
-    position n'est jamais mémorisée, elle est relue à chaque image tant que
-    la fiche reste à portée de l'écran.
-
-    Le décalage suit la COLONNE, pas le rang dans la liste, et part de la
-    DROITE — comme les colonnes de la table, qui sortaient chacune à son
-    heure en commençant par le bord droit.
-
-    Sans piste dédiée, sans plafond : chaque fiche calcule sa progression
-    depuis SA propre position à l'écran, pas depuis une distance de scroll
-    fixée d'avance — le geste reste correct quel que soit le nombre de
-    projets à venir.
-
-    Les fiches marquées `data-flight` sont exclues : elles appartiennent à la
-    première page écran, et c'est la piste qui les fait monter. Deux gestes
-    sur une même fiche se disputeraient sa position.
-  */
-  const catalogItems = [
-    ...document.querySelectorAll<HTMLElement>('.motion-lab__settled .project-catalog-item'),
-  ];
-  const revealItems = catalogItems.filter((item) => item.dataset.flight !== 'true');
-  const revealReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-  if (revealItems.length > 0 && !revealReducedMotion.matches && 'IntersectionObserver' in window) {
-    const getRevealColumnCount = () => (window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2);
-
-    /*
-      Fenêtre de progression locale, en fraction de la hauteur d'écran
-      parcourue par la fiche : la même largeur pour toutes, seul son départ
-      se décale vers la droite. Élargie pour que le geste se voie vraiment
-      pendant le défilement, au lieu de se jouer en un instant.
-    */
-    const REVEAL_SPAN_VH = 0.9;
-    const REVEAL_WINDOW = 0.35;
-    const REVEAL_MAX_SHIFT = 0.65;
-    const REVEAL_DISTANCE_REM = 13;
-
-    const active = new Set<HTMLElement>();
-    let revealFrame = 0;
-
-    const applyReveal = () => {
-      revealFrame = 0;
-      if (active.size === 0) return;
-
-      const columnCount = getRevealColumnCount();
-      const vh = window.innerHeight;
-
-      /*
-        Une colonne bouge d'un bloc, pas ligne par ligne : quand plusieurs
-        lignes d'une même colonne sont actives à la fois, elles doivent
-        partager EXACTEMENT la même position — sinon un écart s'ouvre entre
-        elles pendant le geste. On regroupe donc les fiches actives par
-        colonne, et chaque colonne se règle sur sa fiche la MOINS avancée
-        (la plus basse, la dernière arrivée) : tant qu'une ligne suit, toute
-        la colonne au-dessus l'attend.
-      */
-      const columns = new Map<number, HTMLElement[]>();
-      active.forEach((item) => {
-        // Rang dans la GRILLE, pas dans la liste filtrée : les fiches parties
-        // avec la piste manquent à celle-ci, et décaleraient les colonnes.
-        const index = catalogItems.indexOf(item);
-        const columnIndex = columnCount > 0 ? index % columnCount : 0;
-        const list = columns.get(columnIndex);
-        if (list) list.push(item);
-        else columns.set(columnIndex, [item]);
-      });
-
-      columns.forEach((items, columnIndex) => {
-        let leastProgress = Infinity;
-        items.forEach((item) => {
-          const rect = item.getBoundingClientRect();
-          // 0 quand le haut de la fiche vient d'atteindre le bas de l'écran,
-          // 1 quand il a atteint son point d'arrivée, un peu avant le centre.
-          const local = range(vh * 0.95 - rect.top, 0, vh * REVEAL_SPAN_VH);
-          if (local < leastProgress) leastProgress = local;
-        });
-
-        const rightToLeft = columnCount > 1 ? (columnCount - 1 - columnIndex) / (columnCount - 1) : 0;
-        const start = rightToLeft * REVEAL_MAX_SHIFT;
-        const columnProgress = ease(range(leastProgress, start, start + REVEAL_WINDOW));
-        const offset = `${(REVEAL_DISTANCE_REM * (1 - columnProgress)).toFixed(3)}rem`;
-
-        items.forEach((item) => {
-          item.style.transform = `translate3d(0, ${offset}, 0)`;
-        });
-      });
-    };
-
-    const requestReveal = () => {
-      if (!revealFrame) revealFrame = window.requestAnimationFrame(applyReveal);
-    };
-
-    const revealObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        const target = entry.target;
-        if (!(target instanceof HTMLElement)) return;
-        if (entry.isIntersecting) active.add(target);
-        else active.delete(target);
-      });
-      requestReveal();
-    }, { rootMargin: '35% 0px 35% 0px', threshold: 0 });
-
-    revealItems.forEach((item) => revealObserver.observe(item));
-
-    window.addEventListener('scroll', requestReveal, { passive: true });
-    window.addEventListener('resize', requestReveal, { passive: true });
-  } else {
-    revealItems.forEach((item) => {
-      item.style.transform = 'none';
-    });
-  }
 </script>
 
 <style>
@@ -845,6 +743,14 @@ const elementNumbers = Object.fromEntries(
   */
   .motion-lab__settled :global(.project-catalog-item) {
     transform: translate3d(0, 13rem, 0);
+  }
+
+  /*
+    Seules les fiches reprises par la piste bougent encore une fois la grille
+    posée : le navigateur ne réserve une couche que pour celles-là. Les autres
+    sont remises à plat par le script, une fois, et n'y touchent plus.
+  */
+  .motion-lab__settled :global(.project-catalog-item[data-flight='true']) {
     will-change: transform;
   }
 

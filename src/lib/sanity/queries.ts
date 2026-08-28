@@ -314,9 +314,19 @@ export const projectBySlugQuery = /* groq */ `
   "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
-  "template": coalesce(template, "standard"),
-  templateOptions,
-  "coverVideoUrl": coalesce(coverVideoUrl, templateOptions.coverVideoUrl),
+  "template": coalesce(template, "split"),
+  "blocks": blocks[]{
+    _key,
+    _type,
+    _type == "journalProse" => { "body": body ${PORTABLE_TEXT} },
+    _type == "journalFigure" => {
+      caption,
+      "placement": coalesce(placement, "texte"),
+      "scale": coalesce(scale, "colonne"),
+      "images": images[] ${IMAGE}
+    },
+    _type == "journalNote" => { text }
+  },
   client,
   sector,
   "featured": featured == true,

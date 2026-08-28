@@ -129,16 +129,6 @@ export const post = defineType({
     }),
 
     defineField({
-      name: "standfirst",
-      title: "Chapô",
-      type: "text",
-      rows: 3,
-      group: "content",
-      description:
-        "Phrase d’ouverture affichée en grand sous le titre de l’article.",
-      validation: (rule) => rule.max(320),
-    }),
-    defineField({
       name: "template",
       title: "Modèle de page",
       type: "string",
@@ -157,6 +147,16 @@ export const post = defineType({
         "Le contenu est le même dans les deux cas : changer de modèle ne demande aucune ressaisie.",
       ].join("\n"),
       validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: "standfirst",
+      title: "Chapô",
+      type: "text",
+      rows: 3,
+      group: "content",
+      description:
+        "Phrase d’ouverture affichée en grand sous le titre de l’article.",
+      validation: (rule) => rule.max(320),
     }),
     defineField({
       name: "blocks",

@@ -216,7 +216,7 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     le cas où le script ne s'exécute pas.
   */
   .split__gallery {
-    --gallery-inset: clamp(1.5rem, 3.5vw, 4rem);
+    --gallery-inset: var(--project-plate-inset);
     min-height: 100svh;
     padding-top: calc(
       var(--project-aside-height, 22rem) + clamp(1.5rem, 3vw, 2.5rem) + 1.5rem

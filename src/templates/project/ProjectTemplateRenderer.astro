@@ -4,11 +4,9 @@ import { stegaClean } from '@sanity/client/stega';
 import ProjectElementCell from '~/components/project/ProjectElementCell.astro';
 import ProjectFacts from '~/components/project/ProjectFacts.astro';
 
-import StandardTemplate from './StandardTemplate.astro';
-import ImmersiveTemplate from './ImmersiveTemplate.astro';
-import EditorialTemplate from './EditorialTemplate.astro';
 import SplitTemplate from './SplitTemplate.astro';
 import BannerTemplate from './BannerTemplate.astro';
+import CompositionTemplate from './CompositionTemplate.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
@@ -17,8 +15,10 @@ import type { Project } from '~/lib/sanity/types';
  * Registre des modèles de page projet.
  *
  * Pendant exact de `sanity/lib/projectTemplates.ts` (côté CMS).
- * Un modèle inconnu — schéma déployé avant le rendu, ou valeur héritée —
- * retombe sur le modèle standard : la page reste toujours affichable.
+ * Un modèle inconnu — schéma déployé avant le rendu, valeur héritée, ou modèle
+ * retiré depuis — retombe sur « Colonne fixe » : la page reste toujours
+ * affichable, et c'est la mise en page dont le contenu des anciens modèles
+ * s'accommode le mieux.
  *
  * ➜ AJOUTER UN MODÈLE : créer le composant, l'importer, ajouter un `case`,
  *    puis déclarer l'entrée correspondante dans `sanity/lib/projectTemplates.ts`.
@@ -30,25 +30,30 @@ interface Props {
 
 const { project, locale } = Astro.props;
 
+/*
+  Résolu, et non brut : un projet peut encore porter le nom d'un modèle retiré.
+  L'attribut posé sur la page doit alors désigner le modèle RÉELLEMENT rendu,
+  sans quoi les règles qui s'y accrochent — le retrait du cartouche de tête —
+  ne s'appliqueraient pas.
+*/
+const requested = stegaClean(project.template);
+const template =
+  requested === 'banner' || requested === 'composition' ? requested : 'split';
+
 const Template = (() => {
-  switch (stegaClean(project.template)) {
-    case 'immersive':
-      return ImmersiveTemplate;
-    case 'editorial':
-      return EditorialTemplate;
-    case 'split':
-      return SplitTemplate;
+  switch (template) {
     case 'banner':
       return BannerTemplate;
-    case 'standard':
+    case 'composition':
+      return CompositionTemplate;
     default:
-      return StandardTemplate;
+      return SplitTemplate;
   }
 })();
 
 ---
 
-<div class="project-page-shell" data-project-shell>
+<div class="project-page-shell" data-project-shell data-template={template}>
   {/*
     Le cartouche de tête : la case que le visiteur vient de quitter, et sous
     elle le relevé du projet. Posé hors du flux, en haut à DROITE — il ne
@@ -121,6 +126,20 @@ const Template = (() => {
 
   .project-page-aside :global(.project-page-aside__facts) {
     align-self: stretch;
+  }
+
+  /*
+    « Colonne fixe » : la planche de droite n'est pas tenue par le conteneur de
+    page, elle va jusqu'au bord de l'écran moins son propre retrait — plus large
+    que la gouttière. Le cartouche s'alignait donc sur un bord que rien d'autre
+    ne suivait, et la case dépassait les images d'une vingtaine de pixels. Il
+    reprend ici le retrait de la planche : un seul bord droit pour toute la page.
+  */
+  @media (min-width: 900px) {
+    .project-page-shell[data-template='split'] .project-page-aside {
+      max-width: none;
+      padding-inline-end: var(--project-plate-inset);
+    }
   }
 
   .project-page-aside :global(a) {
