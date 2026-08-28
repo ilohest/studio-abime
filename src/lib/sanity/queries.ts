@@ -56,6 +56,18 @@ const FEATURED_PROJECT = /* groq */ `${VISIBLE_PROJECT} && featured == true`;
 /** Ordre éditorial de référence : du plus récent au plus ancien. */
 const PROJECT_ORDER = /* groq */ `order(coalesce(year, 0) desc, _createdAt desc)`;
 
+/**
+ * Projets situés APRÈS le projet courant dans l'ordre éditorial.
+ *
+ * La comparaison reprend exactement celle qui calcule le numéro d'un projet
+ * (`number`, plus bas) : « suivant » veut donc dire le numéro d'après, et le
+ * parcours par les flèches suit la numérotation que le visiteur voit.
+ */
+const PROJECT_AFTER_CURRENT = /* groq */ `${VISIBLE_PROJECT} && (
+  coalesce(year, 0) < coalesce(^.year, 0) ||
+  (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt < ^._createdAt)
+)`;
+
 const PROJECT_CARD = /* groq */ `{
   _id,
   title,
@@ -370,7 +382,25 @@ export const projectBySlugQuery = /* groq */ `
     "image": thumbnail ${IMAGE},
     "noIndex": false
   },
-  "next": *[${VISIBLE_PROJECT} && _id != ^._id] | ${PROJECT_ORDER}[0] ${PROJECT_CARD}
+  // Projet suivant — un tour complet du catalogue.
+  //
+  // L'ancienne règle prenait le premier projet du classement en excluant le
+  // seul projet courant. Depuis n'importe quelle page elle renvoyait donc
+  // toujours vers le premier du catalogue, et depuis celui-ci vers le
+  // deuxième : les flèches faisaient l'aller-retour entre deux projets, les
+  // autres étaient inatteignables.
+  //
+  // On prend maintenant le premier projet qui vient APRÈS le courant. Le
+  // second terme du select() referme la boucle : arrivé au dernier on repart
+  // au premier, et le visiteur qui suit les flèches finit par tout voir.
+  //
+  // NB : commentaires en // et jamais en bloc — GROQ ne connaît pas /* */,
+  // qui partirait dans la requête et la ferait échouer au parsing.
+  "next": select(
+    count(*[${PROJECT_AFTER_CURRENT}]) > 0 =>
+      *[${PROJECT_AFTER_CURRENT}] | ${PROJECT_ORDER}[0] ${PROJECT_CARD},
+    *[${VISIBLE_PROJECT} && _id != ^._id] | ${PROJECT_ORDER}[0] ${PROJECT_CARD}
+  )
 }`;
 
 /** Index portfolio : tous les projets de la langue. */
