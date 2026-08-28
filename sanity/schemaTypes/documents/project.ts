@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField } from '../../lib/i18n';
+import { previousSlugsField, slugField } from '../../lib/slugFields';
 import { definePageBuilder } from '../objects/sections';
 import { DEFAULT_PROJECT_TEMPLATE, PROJECT_TEMPLATES } from '../../lib/projectTemplates';
 import { MAX_FEATURED_PROJECTS } from '../../../src/lib/references';
@@ -42,14 +43,8 @@ export const project = defineType({
       description: 'Affiché entre parenthèses au-dessus du titre, et dans les listes.',
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: 'slug',
-      title: 'Identifiant d’URL',
-      type: 'slug',
-      hidden: true,
-      options: { source: 'title', maxLength: 96 },
-      description: 'Reprise du titre à chaque publication — renommer déplace donc la page.',
-    }),
+    slugField,
+    previousSlugsField,
 
     /* ── Diffusion ────────────────────────────────────────────────────────── */
     defineField({

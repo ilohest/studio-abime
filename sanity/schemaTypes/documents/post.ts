@@ -1,5 +1,6 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
 import { languageField } from "../../lib/i18n";
+import { previousSlugsField, slugField } from "../../lib/slugFields";
 import {
   JOURNAL_CATEGORIES,
   defaultJournalCategory,
@@ -36,14 +37,8 @@ export const post = defineType({
       group: "meta",
       validation: (rule) => rule.required(),
     }),
-    defineField({
-      name: "slug",
-      title: "Identifiant d’URL",
-      type: "slug",
-      hidden: true,
-      options: { source: "title", maxLength: 96 },
-      description: "Reprise du titre à chaque publication — renommer déplace donc la page.",
-    }),
+    slugField,
+    previousSlugsField,
     defineField({
       name: "category",
       title: "Rubrique",

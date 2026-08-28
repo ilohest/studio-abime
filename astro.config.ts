@@ -8,6 +8,8 @@ import sanity from '@sanity/astro';
 import tailwindcss from '@tailwindcss/vite';
 
 import { locales, defaultLocale, prefixDefaultLocale } from './src/i18n/config';
+import { isLocale } from './src/i18n/config';
+import { postPath, projectPath } from './src/i18n/routes';
 
 const {
   PUBLIC_SANITY_PROJECT_ID,
@@ -89,7 +91,110 @@ async function resolveMaintenanceFlag(): Promise<boolean> {
   }
 }
 
+/**
+ * REDIRECTIONS — les adresses qu'une page a portées avant aujourd'hui.
+ *
+ * Corriger l'adresse d'une page publiée la déplace : les liens déjà partagés
+ * — signets, e-mails, publications — pointent vers l'ancienne. Le Studio
+ * propose alors de mémoriser celle-ci (voir `slugOnPublishAction.tsx`), et
+ * c'est ici qu'elle redevient une adresse qui mène quelque part.
+ *
+ * Les redirections sont posées AU BUILD, dans le fichier `_redirects` que
+ * l'adaptateur écrit pour Cloudflare : elles sont servies par le CDN, sans
+ * réveiller le moindre Worker, et ne coûtent donc rien.
+ */
+async function resolvePreviousSlugRedirects(): Promise<Record<string, string>> {
+  if (!PUBLIC_SANITY_PROJECT_ID) return {};
+
+  const dataset = PUBLIC_SANITY_DATASET || 'production';
+  const apiVersion = PUBLIC_SANITY_API_VERSION || '2025-02-19';
+  const query = encodeURIComponent(
+    `{
+      "moved": *[_type in ["project", "post"] && defined(slug.current) && count(previousSlugs) > 0]{
+        _type, language, "slug": slug.current, previousSlugs
+      },
+      "live": *[_type in ["project", "post"] && defined(slug.current)]{
+        _type, language, "slug": slug.current
+      }
+    }`,
+  );
+
+  // `api` et non `apicdn`, pour la raison exposée dans `src/lib/sanity/client.ts` :
+  // le build suit une publication de trop près pour se fier à un cache.
+  const endpoint =
+    `https://${PUBLIC_SANITY_PROJECT_ID}.api.sanity.io/v${apiVersion}` +
+    `/data/query/${dataset}?query=${query}&perspective=published`;
+
+  try {
+    const response = await fetch(endpoint);
+    if (!response.ok) throw new Error(`Sanity a répondu ${response.status}.`);
+
+    type Row = { _type?: string; language?: string; slug?: string; previousSlugs?: string[] };
+    const { result } = (await response.json()) as {
+      result?: { moved?: Row[]; live?: Row[] };
+    };
+
+    const pathOf = (row: Row, slug: string) =>
+      (row._type === 'post' ? postPath : projectPath)(row.language as never, slug);
+
+    /*
+      Toutes les adresses SERVIES aujourd'hui. Une ancienne adresse reprise
+      depuis par une autre page ne doit surtout pas être redirigée : c'est la
+      page qui l'occupe maintenant qui doit répondre. Sans cette garde, publier
+      un nouveau projet sous une adresse libérée le rendrait invisible, renvoyé
+      vers le projet qui l'avait quittée.
+    */
+    const liveePaths = new Set(
+      (result?.live ?? [])
+        .filter((row) => row.slug && isLocale(row.language))
+        .map((row) => pathOf(row, row.slug!)),
+    );
+
+    const redirects: Record<string, string> = {};
+
+    for (const row of result?.moved ?? []) {
+      if (!row.slug || !isLocale(row.language)) continue;
+      const destination = pathOf(row, row.slug);
+
+      for (const previous of row.previousSlugs ?? []) {
+        if (!previous || previous === row.slug) continue;
+
+        const source = pathOf(row, previous);
+        if (source === destination) continue;
+        if (liveePaths.has(source)) {
+          console.warn(
+            `[redirections] ${source} est réoccupée par une autre page — ` +
+              `redirection ignorée, la page en place répond.`,
+          );
+          continue;
+        }
+
+        redirects[source] = destination;
+      }
+    }
+
+    const count = Object.keys(redirects).length;
+    if (count > 0) console.info(`[redirections] ${count} ancienne(s) adresse(s) redirigée(s).`);
+
+    return redirects;
+  } catch (error) {
+    /*
+      On n'arrête PAS le build, à la différence de l'interrupteur de maintenance.
+      Là, un repli silencieux publiait un site qui devait rester caché ; ici, le
+      pire est qu'une ancienne adresse réponde 404 le temps d'un déploiement —
+      un incident réparable par une simple reconstruction, quand bloquer toute
+      publication sur un hoquet de Sanity ne le serait pas.
+    */
+    console.warn(
+      `[redirections] Anciennes adresses illisibles (${(error as Error).message}) — ` +
+        `le site part sans elles. Relancer un build les rétablira.`,
+    );
+    return {};
+  }
+}
+
 const maintenanceEnabled = await resolveMaintenanceFlag();
+const previousSlugRedirects = await resolvePreviousSlugRedirects();
 
 /*
   L'interrupteur est posé dans l'environnement AVANT qu'Astro ne le lise : il
@@ -108,6 +213,9 @@ export default defineConfig({
   trailingSlash: 'never',
 
   redirects: {
+    // Adresses qu'une page a portées avant aujourd'hui. En PREMIER : une
+    // redirection héritée du contenu ne doit jamais écraser celles du code.
+    ...previousSlugRedirects,
     '/projets': '/experiences',
   },
 
