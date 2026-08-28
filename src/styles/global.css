@@ -16,7 +16,8 @@
 @theme {
   /* ── Familles ────────────────────────────────────────────────────────────── */
   --font-titre: "GT Canon Mono", ui-monospace, "SFMono-Regular", monospace;
-  --font-sous-titre: "Commuters Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Nom de famille imposé par Adobe Fonts — ne pas « corriger » la casse. */
+  --font-sous-titre: "commuters-sans", ui-sans-serif, system-ui, sans-serif;
   --font-copy: "GT Canon Narrow M", ui-serif, Georgia, serif;
   --font-annotation: "GT Canon Narrow S", ui-serif, Georgia, serif;
 
@@ -1186,6 +1187,18 @@
     letter-spacing: var(--tracking-annotation);
     font-style: italic;
     color: var(--color-muted);
+  }
+
+  /*
+    Dans un article du Journal, une image posée dans le fil du texte est une
+    figure comme celles composées en blocs : sa légende prend le corps des
+    notes et la couleur du texte, sans quoi deux légendes voisines se
+    liraient à deux tailles selon la façon dont l'image a été saisie.
+  */
+  .journal-composition .prose-abime figcaption {
+    font-size: var(--text-note);
+    line-height: 1.25;
+    color: var(--color-ink);
   }
 
   /**

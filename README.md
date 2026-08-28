@@ -191,6 +191,13 @@ SANITY_API_READ_TOKEN="<token Viewer>"   # requis pour lire les brouillons
 
 Ce drapeau bascule trois choses d'un coup : stega activé, CDN désactivé, et routes en rendu à la demande (au lieu du pré-rendu statique).
 
+> Le rendu à la demande est décidé par `output` dans `astro.config.ts`, et non
+> par un `export const prerender` dans les pages. Astro **n'évalue pas** un
+> `prerender` calculé : il n'en reconnaît qu'un littéral `true` ou `false`, et
+> ignore silencieusement une expression, même juste. Une page qui croyait passer
+> en rendu à la demande restait donc pré-rendue. Deux drapeaux font aujourd'hui
+> basculer le site entier : l'édition visuelle et le mode maintenance.
+
 **En production, le laisser à `"false"`** : le site redevient 100 % statique, sans stega ni JavaScript d'édition.
 
 Le token `SANITY_API_READ_TOKEN` n'est **pas** préfixé `PUBLIC_` : il reste côté serveur et n'est jamais envoyé au navigateur.
@@ -257,7 +264,9 @@ La baseline du pied de page a une valeur par défaut dans le composant ; dès qu
 
 Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le curseur système n'est masqué qu'une fois le nôtre en place (si le script échoue, l'utilisateur garde son curseur), et `prefers-reduced-motion` supprime le retard.
 
-> **⚠️ Licence des fontes.** Commuters Sans est actuellement le fichier **« Fontspring DEMO »** (`.otf`) : jeu de glyphes réduit et licence non valable pour une mise en production web. Remplacer `public/fonts/CommutersSans-SemiBold.otf` par la version webfont sous licence (`.woff2`) avant mise en ligne — le nom de famille CSS étant inchangé, aucune autre modification ne sera nécessaire.
+> **Licence des fontes.** Les trois GT Canon sont auto-hébergées dans `public/fonts/`. Commuters Sans, elle, vient du projet Adobe Fonts de la cliente : le kit est chargé dans le `<head>` de `BaseLayout.astro` et la licence Adobe **interdit d'héberger le fichier soi-même**. Le fichier « Fontspring DEMO » qui servait de doublure a été supprimé. Le nom de famille CSS est celui d'Adobe, `commuters-sans`, et non `"Commuters Sans"`.
+>
+> **⚠️ Graisse manquante.** Le kit ne publie que les graisses 400 et 700, alors que les sous-titres appellent la 600 : la correspondance CSS remonte donc vers la 700, un dessin réel mais plus lourd que la maquette. Le SemiBold existe chez Adobe pour cette famille — il reste à le cocher dans le projet web côté cliente. L'URL du kit ne changeant pas, aucune modification de code ne sera nécessaire ce jour-là.
 
 ---
 
@@ -400,6 +409,51 @@ aujourd'hui qu'un `.mp4` de 6 Mo sur la page 404, ce qui est sans conséquence ;
 si des vidéos de fond arrivent un jour sur les pages courantes, c'est là qu'il
 faudra regarder Cloudflare Stream.
 
+### Fermer le site (mode maintenance)
+
+Le site peut être masqué derrière un écran de maintenance — une feuille posée
+sur le papier de la charte, un mot aux visiteurs, et un champ de mot de passe
+pour ceux qui doivent quand même voir le site.
+
+**L'interrupteur est dans le back-office** : Réglages du site → *Écran de
+maintenance*. La cliente y allume ou éteint le rideau, écrit le titre, le mot
+aux visiteurs et la signature, puis publie. Comme pour tout le reste, la
+publication déclenche le webhook de reconstruction : la bascule prend effet au
+bout des deux minutes du build.
+
+**Le mot de passe n'est pas dans Sanity**, et ne peut pas y être : le contenu
+d'un dataset est lisible publiquement par l'API — c'est ce qui permet au site de
+se construire sans jeton. Un mot de passe écrit dans le back-office serait donc
+affiché à qui sait le demander. Il vit en variable d'environnement
+`MAINTENANCE_PASSWORD` sur le projet Cloudflare « Site », et se change en la
+modifiant puis en relançant un déploiement. Laissée vide, la variable produit un
+écran sans formulaire : personne n'entre, pas même vous.
+
+Ce que la bascule change réellement :
+
+| | Site ouvert | Site fermé |
+| --- | --- | --- |
+| Rendu | HTML statique sur le CDN | à la demande, par le Worker |
+| Pages publiées | 29 fichiers HTML | **aucun** — rien à trouver |
+| `robots.txt` | ouvert, avec le sitemap | `Disallow: /` |
+| `sitemap.xml` | toutes les URLs | vide |
+| Réponse HTTP | `200` | `503` + `Retry-After` |
+
+Le point important est la deuxième ligne : fermer le site ne pose pas un rideau
+devant des pages en ligne, il les empêche d'être publiées. Le HTML du site
+n'existe nulle part sur le CDN tant que le rideau est tiré — il n'y a donc rien
+à contourner. Le mot de passe (`src/middleware.ts`) ouvre l'accès au rendu à la
+demande pour trente jours, via un cookie qui ne contient que l'empreinte du mot
+de passe.
+
+`MAINTENANCE_MODE="on"|"off"` court-circuite le back-office. Deux usages :
+travailler l'écran en local sans toucher au dataset, et rouvrir le site en
+urgence si Sanity est injoignable.
+
+> **⚠️ Le webhook doit inclure le type `maintenance`.** S'il ne déclenche un
+> build que sur certains types de documents, publier l'interrupteur ne changerait
+> rien en ligne.
+
 ### Le Studio
 
 Le Studio n'est **pas** embarqué dans le site (voir `astro.config.ts`) : il est
@@ -455,6 +509,8 @@ sur l'environnement de preview, où l'édition visuelle est utilisée.
 | `PUBLIC_SHOPIFY_STORE_DOMAIN` | `xxx.myshopify.com` | idem | non |
 | `PUBLIC_SHOPIFY_STOREFRONT_TOKEN` | jeton Storefront | idem | non (public par conception) |
 | `PUBLIC_SHOPIFY_API_VERSION` | `2026-07` | idem | non |
+| `MAINTENANCE_PASSWORD` | mot de passe de l'écran de maintenance | idem | **oui** |
+| `MAINTENANCE_MODE` | vide (Sanity décide) | vide | non |
 
 `SANITY_API_READ_TOKEN` ne sert qu'à lire les brouillons : il n'a d'utilité que
 sur l'environnement de preview. Le laisser vide en production, c'est une clé de
@@ -495,6 +551,7 @@ Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity
 - [ ] fiche d'entreprise complétée dans le Studio (Réglages → Identité et réseaux sociaux) : sans elle, les données structurées se limitent au nom et à la description du site ;
 - [ ] site déclaré dans la Google Search Console, sitemap soumis (`/sitemap.xml`) ;
 - [ ] `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` bien à `"false"` en production — c'est lui qui autorise l'indexation.
+- [ ] `MAINTENANCE_PASSWORD` posé sur le projet Cloudflare « Site » si le site est mis en ligne fermé — sans lui, l'écran de maintenance n'a pas de porte.
 
 ---
 

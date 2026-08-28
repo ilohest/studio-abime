@@ -22,17 +22,38 @@
     exactement ce que la garniture a pris — la ligne ne bouge pas d'un pixel,
     l'accent cesse d'être rogné, et le bas du masque continue de cacher le mot
     avant son entrée.
+
+    Même chose sur les côtés : en ITALIQUE, la lettre penche hors de sa chasse
+    — le haut du « d », la queue du « q » débordent à droite et à gauche du mot
+    — et le masque les tranchait net. On ouvre donc aussi latéralement, rendu
+    par la même marge négative : la chasse du mot, donc l'espacement de la
+    ligne, reste inchangée.
   */
   .text-reveal-word-mask {
     display: inline-block;
     padding-top: 0.16em;
     margin-top: -0.16em;
+    padding-inline: 0.2em;
+    margin-inline: -0.2em;
     overflow: clip;
     vertical-align: bottom;
   }
 
   .text-reveal-word {
     will-change: transform;
+  }
+
+  /*
+    `text-indent` s'hérite, et chaque mot devient ici un bloc en ligne : sans
+    cette remise à zéro, un paragraphe en alinéa transmet son retrait à CHACUN
+    de ses mots, qui se retrouvent larges de tout l'alinéa. Le texte se brise
+    alors en deux ou trois mots par ligne. L'alinéa du paragraphe lui-même
+    n'est pas touché : il porte sur sa propre première ligne, donc sur le
+    premier masque.
+  */
+  .text-reveal-word-mask,
+  .text-reveal-word {
+    text-indent: 0;
   }
 
   @media (prefers-reduced-motion: reduce) {

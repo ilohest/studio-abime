@@ -414,6 +414,23 @@ export interface LaboService {
   _key: string;
   title: string;
   description: string;
+  /** Prestations couvertes par l'étape, listées sous sa description. */
+  tools?: string[];
+}
+
+/**
+ * Composition d'un paragraphe du manifeste.
+ *
+ * `pleine` occupe la page entière ; `colonne` est retraité sur une colonne
+ * étroite alignée à droite, comme une note portée en marge ; `declaration`
+ * tient la pleine largeur dans le grand corps de la citation d'ouverture.
+ */
+export type LaboParagraphLayout = 'pleine' | 'colonne' | 'declaration';
+
+export interface LaboParagraph {
+  _key: string;
+  text: string;
+  layout?: LaboParagraphLayout;
 }
 
 /** Page éditoriale Labo, structurée comme une seule expérience narrative. */
@@ -423,15 +440,22 @@ export interface LaboPage {
   language: Locale;
   title: string;
   eyebrow: string;
-  philosophy: string[];
-  whyTitle?: string;
-  whyLead?: string;
-  principles: string[];
-  whyClosing?: string;
+  /*
+    Le champ a d'abord été un tableau de chaînes, avant que chaque paragraphe
+    porte sa largeur de composition. Les deux formes restent lisibles : une
+    chaîne héritée est traitée comme un paragraphe de colonne.
+  */
+  philosophy: Array<string | LaboParagraph>;
   servicesTitle?: string;
   services: LaboService[];
   note?: string;
-  closingLines: string[];
+  teamTitle?: string;
+  teamLead?: string;
+  teamBody?: string;
+  foundationTitle?: string;
+  foundationImage?: SanityImage;
+  foundationParagraphs: string[];
+  foundationSignature?: string;
   archiveProjects: ProjectCard[];
   seo?: Seo;
 }

@@ -1,5 +1,6 @@
 import { shopifyFetch } from './client';
 import { shopifyConfigured } from './env';
+import { COMMON_FACTS, EDITION_MAX, EDITION_SHOW, FAMILIES, toFamily } from './families';
 import {
   collectionByHandleQuery,
   collectionsQuery,
@@ -7,11 +8,13 @@ import {
   productHandlesQuery,
   productsQuery,
 } from './queries';
+import type { FamilyFact, ProductFamily } from './families';
 import type {
   Collection,
   Money,
   Product,
   ProductCard,
+  ProductFact,
   ProductMedia,
   ProductOption,
   ProductVariant,
@@ -55,6 +58,7 @@ interface RawProductCard {
   handle: string;
   title: string;
   availableForSale: boolean;
+  productType: string | null;
   excerpt: string | null;
   media: { nodes: RawMedia[] };
   options: Array<{ name: string; optionValues: Array<{ name: string }> }>;
@@ -62,8 +66,21 @@ interface RawProductCard {
 }
 
 interface RawMetafield {
+  namespace: string;
+  key: string;
   value: string;
   type: string;
+}
+
+interface RawVariant {
+  id: string;
+  title: string;
+  sku: string | null;
+  availableForSale: boolean;
+  price: Money;
+  compareAtPrice: Money | null;
+  selectedOptions: Array<{ name: string; value: string }>;
+  editionMax: { value: string } | null;
 }
 
 interface RawProduct extends RawProductCard {
@@ -71,9 +88,13 @@ interface RawProduct extends RawProductCard {
   tags: string[];
   /** Liste complète des médias — voir l'alias dans `productByHandleQuery`. */
   allMedia: { nodes: RawMedia[] };
-  variants: { nodes: Array<Omit<ProductVariant, 'selectedOptions'> & { selectedOptions: ProductVariant['selectedOptions'] }> };
-  whereInfo: RawMetafield | null;
-  whenInfo: RawMetafield | null;
+  variants: { nodes: RawVariant[] };
+  /*
+    Un emplacement par identifiant demandé, dans l'ordre de la demande, et
+    `null` là où le produit ne porte rien. On n'exploite jamais les positions :
+    la liste est indexée par `namespace.key` dès la conversion.
+  */
+  metafields: Array<RawMetafield | null>;
   collections: { nodes: Array<{ handle: string }> };
 }
 
@@ -104,14 +125,14 @@ function toMedia(raw: RawMedia): ProductMedia {
  * Met en forme la valeur d'un metafield pour l'affichage.
  *
  * Un metafield de type date arrive en `AAAA-MM-JJ` brut ; on le formate à la
- * française plutôt que de l'afficher tel quel. Tout autre type (texte libre,
- * la forme la plus probable pour « Où ») ressort inchangé.
+ * française plutôt que de l'afficher tel quel. Tout autre type — texte libre,
+ * choix limité — ressort inchangé, débarrassé de ses espaces de bord.
  */
 function formatMetafield(metafield: RawMetafield | null, locale = 'fr-BE'): string | null {
   if (!metafield) return null;
 
   const isDateType = metafield.type === 'date' || metafield.type === 'date_time';
-  if (!isDateType) return metafield.value;
+  if (!isDateType) return metafield.value.trim() || null;
 
   const date = new Date(metafield.value);
   if (Number.isNaN(date.getTime())) return metafield.value;
@@ -129,6 +150,105 @@ function formatMetafield(metafield: RawMetafield | null, locale = 'fr-BE'): stri
     timeStyle: metafield.type === 'date_time' ? 'short' : undefined,
     timeZone: 'Europe/Brussels',
   }).format(date);
+}
+
+/**
+ * Range les metafields par `namespace.key`.
+ *
+ * Les emplacements vides sont écartés ici une bonne fois : un champ créé dans
+ * l'admin mais jamais rempli revient en chaîne vide, et une fiche technique
+ * n'a pas à porter une étiquette sans réponse en face.
+ */
+function indexMetafields(raw: Array<RawMetafield | null>): Map<string, RawMetafield> {
+  const index = new Map<string, RawMetafield>();
+
+  for (const metafield of raw) {
+    if (!metafield || !metafield.value.trim()) continue;
+    index.set(`${metafield.namespace}.${metafield.key}`, metafield);
+  }
+
+  return index;
+}
+
+function readFact(fact: FamilyFact, index: Map<string, RawMetafield>): ProductFact | null {
+  const found =
+    index.get(`${fact.namespace}.${fact.key}`) ??
+    (fact.legacy ? index.get(`${fact.legacy.namespace}.${fact.legacy.key}`) : undefined);
+
+  const value = formatMetafield(found ?? null);
+  return value ? { label: fact.label, value } : null;
+}
+
+/**
+ * La jauge d'édition limitée : « 30 » exemplaires, « 12 » places.
+ *
+ * Volontairement une quantité totale et non un restant. Afficher « 8 sur 30 »
+ * demanderait `quantityAvailable`, donc la portée
+ * `unauthenticated_read_product_inventory`, que l'app Headless n'a pas (voir
+ * la note dans `types.ts`). Annoncer la taille de l'édition tient la promesse
+ * du champ sans mentir sur ce qu'on sait.
+ *
+ * La valeur est lue sur le produit d'abord, sur les variantes ensuite : selon
+ * le niveau où la définition a été créée dans l'admin, l'un des deux répond.
+ * Quand les variantes ne s'accordent pas — un A4 tiré à 50, un A2 à 20 — on
+ * affiche la fourchette plutôt qu'un chiffre choisi au hasard.
+ */
+function toEditionFact(
+  family: ProductFamily | null,
+  index: Map<string, RawMetafield>,
+  variants: ProductVariant[],
+): ProductFact | null {
+  if (!family) return null;
+  if (index.get(`${EDITION_SHOW.namespace}.${EDITION_SHOW.key}`)?.value !== 'true') return null;
+
+  const label = FAMILIES[family].editionLabel;
+
+  const onProduct = Number(index.get(`${EDITION_MAX.namespace}.${EDITION_MAX.key}`)?.value);
+  if (Number.isFinite(onProduct) && onProduct > 0) return { label, value: String(onProduct) };
+
+  const onVariants = variants
+    .map((variant) => variant.editionMax)
+    .filter((max): max is number => typeof max === 'number' && max > 0);
+
+  if (onVariants.length === 0) return null;
+
+  const low = Math.min(...onVariants);
+  const high = Math.max(...onVariants);
+
+  return { label, value: low === high ? String(low) : `${low}–${high}` };
+}
+
+/**
+ * Fiche technique d'un produit : les champs de sa famille, puis la jauge, puis
+ * les champs communs. Un produit sans famille n'affiche que les communs.
+ */
+function toFacts(
+  family: ProductFamily | null,
+  index: Map<string, RawMetafield>,
+  variants: ProductVariant[],
+): ProductFact[] {
+  const declared = family ? FAMILIES[family].facts : [];
+
+  return [
+    ...declared.map((fact) => readFact(fact, index)),
+    toEditionFact(family, index, variants),
+    ...COMMON_FACTS.map((fact) => readFact(fact, index)),
+  ].filter((fact): fact is ProductFact => fact !== null);
+}
+
+function toVariant(raw: RawVariant): ProductVariant {
+  const max = Number(raw.editionMax?.value);
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    sku: raw.sku,
+    availableForSale: raw.availableForSale,
+    price: raw.price,
+    compareAtPrice: raw.compareAtPrice,
+    selectedOptions: raw.selectedOptions,
+    editionMax: Number.isFinite(max) && max > 0 ? max : null,
+  };
 }
 
 function toOptions(raw: RawProductCard['options']): ProductOption[] {
@@ -159,6 +279,7 @@ function toProductCard(raw: RawProductCard): ProductCard {
     options: toOptions(raw.options),
     minPrice: raw.priceRange.minVariantPrice,
     maxPrice: raw.priceRange.maxVariantPrice,
+    family: toFamily(raw.productType),
   };
 }
 
@@ -186,14 +307,18 @@ export async function getProductByHandle(handle: string): Promise<Product | null
   const raw = data.product;
   if (!raw) return null;
 
+  const card = toProductCard(raw);
+  const variants = raw.variants.nodes.map(toVariant);
+  const metafields = indexMetafields(raw.metafields);
+
   return {
-    ...toProductCard(raw),
+    ...card,
     descriptionHtml: raw.descriptionHtml ?? '',
     tags: raw.tags,
     media: raw.allMedia.nodes.map(toMedia),
-    variants: raw.variants.nodes,
-    where: formatMetafield(raw.whereInfo),
-    when: formatMetafield(raw.whenInfo),
+    variants,
+    facts: toFacts(card.family, metafields, variants),
+    showEdition: metafields.get(`${EDITION_SHOW.namespace}.${EDITION_SHOW.key}`)?.value === 'true',
     primaryCollectionHandle: raw.collections.nodes[0]?.handle ?? null,
   };
 }

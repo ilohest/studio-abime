@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { isLocale, type Locale } from '~/i18n/config';
 import { postPath, projectPath } from '~/i18n/routes';
 import { buildRouteManifest } from '~/lib/routing';
+import { indexingAllowed } from '~/lib/seo/indexing';
 import { resolveImage } from '~/lib/sanity/image';
 import { loadQuery } from '~/lib/sanity/loadQuery';
 import { sitemapImagesQuery } from '~/lib/sanity/queries';
@@ -71,6 +72,20 @@ function documentPath(row: SitemapImageRow, locale: Locale): string {
 
 export const GET: APIRoute = async ({ site, url }) => {
   const origin = (site ?? new URL(url.origin)).origin;
+
+  /*
+    Le sitemap est un fichier pré-rendu : il est servi par le CDN sans passer
+    par le portier de maintenance. Publier la carte complète des URLs d'un site
+    que l'on vient de fermer reviendrait à en donner le plan par la fenêtre. On
+    le vide tant que l'indexation est fermée (`src/lib/seo/indexing.ts`).
+  */
+  if (!indexingAllowed) {
+    return new Response(
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" />\n',
+      { headers: { 'Content-Type': 'application/xml; charset=utf-8' } },
+    );
+  }
 
   const [routes, imageRows] = await Promise.all([
     buildRouteManifest(),

@@ -112,6 +112,17 @@ const defaultAlternate = alternates[defaultLocale];
       crossorigin
     />
 
+    <!--
+      Commuters Sans est servie par Adobe Fonts (projet web de la cliente) : sa
+      licence interdit de l'héberger à côté des trois autres. Les deux
+      « preconnect » ouvrent à l'avance les connexions vers le CSS du kit et vers
+      les fichiers de fonte, qui vivent sur deux domaines distincts — sans eux,
+      la fonte n'est demandée qu'après trois allers-retours réseau.
+    -->
+    <link rel="preconnect" href="https://use.typekit.net" crossorigin />
+    <link rel="preconnect" href="https://p.typekit.net" crossorigin />
+    <link rel="stylesheet" href="https://use.typekit.net/faf7gxq.css" />
+
     <Seo
       locale={locale}
       site={site}

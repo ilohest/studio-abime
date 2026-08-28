@@ -146,27 +146,6 @@ export function toJournalCategoryViews(posts: PostCardView[]): JournalCategoryVi
 /* Composition d'un article                                                    */
 /* -------------------------------------------------------------------------- */
 
-const ROMAN = [
-  [10, 'X'],
-  [9, 'IX'],
-  [5, 'V'],
-  [4, 'IV'],
-  [1, 'I'],
-] as const;
-
-/** Chiffre romain — la numérotation des planches d'une flore, pas des pages. */
-export function toRoman(value: number): string {
-  let rest = Math.max(1, Math.floor(value));
-  let out = '';
-  for (const [weight, symbol] of ROMAN) {
-    while (rest >= weight) {
-      out += symbol;
-      rest -= weight;
-    }
-  }
-  return out;
-}
-
 export type JournalFigureView = JournalFigure & { label: string | null };
 export type JournalNoteView = JournalNote & { index: number };
 
@@ -206,7 +185,12 @@ export function toJournalRows(blocks: JournalBlock[] = []): JournalRow[] {
     }
 
     if (block._type === 'journalFigure') {
-      const label = `Fig. ${toRoman(++figureCount)}`;
+      /*
+        Le repère s'écrit comme partout ailleurs sur le site — « fig. 01 » —
+        et non en chiffres romains : la légende d'un article se lit dans la
+        même forme que celle d'une planche d'accueil ou d'une fiche projet.
+      */
+      const label = `fig. ${String(++figureCount).padStart(2, '0')}`;
 
       if (stegaClean(block.placement) === 'marge') {
         pushAside(block._key, { ...block, label });

@@ -76,7 +76,10 @@ export default defineConfig({
   schema: {
     types: schemaTypes,
     // Les types techniques ne doivent pas apparaître dans le menu « Créer ».
-    templates: (templates) => templates.filter((template) => template.schemaType !== 'siteSettings'),
+    templates: (templates) =>
+      templates.filter(
+        (template) => template.schemaType !== 'siteSettings' && template.schemaType !== 'maintenance',
+      ),
   },
 
   plugins: [
@@ -179,6 +182,7 @@ export default defineConfig({
     actions: (prev, { schemaType }) => {
       if (
         schemaType === 'siteSettings' ||
+        schemaType === 'maintenance' ||
         schemaType === 'localizedSettings' ||
         schemaType === 'projectsPage' ||
         schemaType === 'laboPage' ||

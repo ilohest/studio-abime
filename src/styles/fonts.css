@@ -1,13 +1,22 @@
 /**
  * Fontes du design system Studio Abîme.
  *
- * Fichiers dans `public/fonts/`.
- * `font-display: swap` + préchargement du corps de texte dans le <head> (BaseLayout).
+ * Les trois GT Canon sont auto-hébergées : fichiers dans `public/fonts/`,
+ * `font-display: swap` + préchargement du corps de texte dans le <head>
+ * (BaseLayout).
  *
- * ⚠️ Commuters Sans est actuellement un fichier « Fontspring DEMO » (.otf) :
- *    jeu de glyphes réduit et licence NON valable pour une mise en production web.
- *    Remplacer par la licence webfont (woff2) avant mise en ligne — le nom de famille
- *    CSS restant identique, aucun autre changement ne sera nécessaire.
+ * Commuters Sans fait exception : elle vient d'Adobe Fonts, dont la licence
+ * interdit d'héberger le fichier soi-même. Elle est donc déclarée non pas ici
+ * mais par le kit chargé dans le <head>, sous le nom de famille « commuters-sans »
+ * (c'est Adobe qui le fixe, d'où la casse inhabituelle dans `global.css`).
+ *
+ * ⚠️ Le kit ne publie aujourd'hui que les graisses 400 et 700, alors que les
+ *    sous-titres appellent la 600 (`--text-sous-titre--font-weight`). L'algorithme
+ *    de correspondance CSS cherche alors vers le haut : c'est la 700 qui est
+ *    servie — un vrai dessin, mais plus lourd que la maquette, pas un faux gras.
+ *    Le SemiBold existe bien chez Adobe (la famille va du Thin au Black) : il
+ *    suffit de le cocher dans le projet web côté cliente. Rien à changer ici ce
+ *    jour-là, l'URL du kit ne bouge pas.
  */
 
 /* Titres */
@@ -43,11 +52,4 @@
   font-display: swap;
 }
 
-/* Sous-titres */
-@font-face {
-  font-family: 'Commuters Sans';
-  src: url('/fonts/CommutersSans-SemiBold.otf') format('opentype');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
+/* Sous-titres — Commuters Sans : déclarée par le kit Adobe Fonts, voir l'en-tête. */

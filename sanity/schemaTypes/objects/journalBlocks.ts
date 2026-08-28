@@ -8,7 +8,7 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
  * que de la MISE EN PAGE (largeur de la colonne, échelle des images).
  * Changer de modèle ne demande donc jamais de ressaisir quoi que ce soit.
  *
- * La numérotation — « Fig. I », « [1] » — est calculée au rendu, dans l'ordre
+ * La numérotation — « fig. 01 », « [1] » — est calculée au rendu, dans l'ordre
  * des blocs. Rien à tenir à jour à la main.
  */
 
@@ -103,17 +103,34 @@ export const journalFigure = defineType({
     }),
   ],
   preview: {
-    select: { caption: 'caption', media: 'images.0', count: 'images', placement: 'placement' },
-    prepare: ({ caption, media, count, placement }) => ({
-      title: caption?.slice(0, 70) || 'Figure sans légende',
-      subtitle: [
-        `${Array.isArray(count) ? count.length : 0} image(s)`,
-        placement === 'marge' ? 'en marge' : null,
-      ]
-        .filter(Boolean)
-        .join(' · '),
-      media,
-    }),
+    /*
+      Les images sont sélectionnées une à une, et non par le tableau entier.
+      Le `select` d'un aperçu ne sait transporter que des valeurs simples : lui
+      demander `images` renvoie `undefined`, et la figure s'annonçait « 0 image »
+      alors qu'elle en portait trois. Trois entrées suffisent — la validation du
+      champ n'en autorise pas davantage.
+    */
+    select: {
+      caption: 'caption',
+      media: 'images.0',
+      second: 'images.1',
+      third: 'images.2',
+      placement: 'placement',
+    },
+    prepare: ({ caption, media, second, third, placement }) => {
+      const count = [media, second, third].filter(Boolean).length;
+
+      return {
+        title: caption?.slice(0, 70) || 'Figure sans légende',
+        subtitle: [
+          count === 0 ? 'aucune image' : `${count} image${count > 1 ? 's' : ''}`,
+          placement === 'marge' ? 'en marge' : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        media,
+      };
+    },
   },
 });
 

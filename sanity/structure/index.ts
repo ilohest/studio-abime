@@ -11,6 +11,9 @@ import Documentation from '../components/Documentation';
 /** Identifiant figé du document de réglages globaux (instance unique). */
 export const SITE_SETTINGS_ID = 'siteSettings';
 
+/** Identifiant figé de l'interrupteur de maintenance (instance unique). */
+export const MAINTENANCE_ID = 'maintenance';
+
 /** Types pilotés par une entrée dédiée : on les retire de la liste générique. */
 const HANDLED_TYPES = [
   'page',
@@ -23,6 +26,7 @@ const HANDLED_TYPES = [
   'shopPage',
   'siteSettings',
   'localizedSettings',
+  'maintenance',
   'translation.metadata',
 ];
 
@@ -259,6 +263,21 @@ export const structure: StructureResolver = (S, context) =>
                     .schemaType('siteSettings')
                     .documentId(SITE_SETTINGS_ID)
                     .title('Identité et réseaux sociaux'),
+                ),
+
+              // Interrupteur, pas contenu : il masque le site entier. Il est
+              // séparé du reste des réglages pour qu'on ne l'active — ni ne
+              // l'oublie allumé — par distraction.
+              S.divider(),
+
+              S.listItem()
+                .title('Écran de maintenance')
+                .id('maintenance')
+                .child(
+                  S.document()
+                    .schemaType('maintenance')
+                    .documentId(MAINTENANCE_ID)
+                    .title('Écran de maintenance'),
                 ),
             ]),
         ),

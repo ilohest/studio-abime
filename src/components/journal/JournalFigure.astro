@@ -1,11 +1,16 @@
 ---
 import { stegaClean } from '@sanity/client/stega';
 
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import type { JournalFigureView } from '~/lib/journal';
 
 /**
  * Figure d'article : une à trois images sous une légende numérotée.
+ *
+ * La légende est celle du reste du site — « fig. 01 » en italique, un tiret,
+ * puis le texte au corps romain, à la taille des notes : c'est `FigureCaption`
+ * qui la compose, ici comme en page d'accueil.
  *
  * L'échelle est portée par une variable et non par une classe par cas : la
  * même figure se compose donc à l'identique dans la colonne de lecture et dans
@@ -45,10 +50,11 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
       </div>
 
       {figure.caption && (
-        <figcaption class="journal-figure__caption">
-          {figure.label && <span class="journal-figure__label">{figure.label}</span>}
-          {figure.caption}
-        </figcaption>
+        <FigureCaption
+          reference={figure.label ?? undefined}
+          text={figure.caption}
+          class="journal-figure__caption"
+        />
       )}
     </figure>
   )
@@ -58,7 +64,7 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
   .journal-figure {
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
+    gap: 0.6rem;
     margin: 0;
   }
 
@@ -107,26 +113,17 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
     height: auto;
   }
 
+  /*
+    Même corps qu'en page d'accueil — la taille des notes — dans la colonne
+    comme dans la marge : une légende ne change pas de voix selon la place
+    qu'elle occupe. La famille et l'italique du repère viennent de
+    `.figure-caption`, partagée avec tout le site.
+  */
   .journal-figure__caption {
-    font-family: var(--font-annotation);
-    font-size: var(--text-copy);
-    font-style: italic;
-    letter-spacing: var(--tracking-annotation);
-    line-height: 1.35;
-    text-wrap: pretty;
-  }
-
-  /* Le numéro de planche reste romain et droit : c'est une cote, pas du texte. */
-  .journal-figure__label {
-    margin-right: 0.4em;
-    font-family: var(--font-titre);
-    font-size: 0.85em;
-    font-style: normal;
-    letter-spacing: var(--tracking-copy);
-  }
-
-  .journal-figure--marge .journal-figure__caption {
     font-size: var(--text-note);
+    line-height: 1.25;
+    color: var(--color-ink);
+    text-wrap: pretty;
   }
 
   @media (max-width: 767px) {

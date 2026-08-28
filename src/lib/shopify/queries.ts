@@ -14,6 +14,8 @@
  * deux cas.
  */
 
+import { metafieldIdentifiersLiteral } from './families';
+
 /** Ce qu'une bande de l'index a besoin de connaître. */
 export const productCardFragment = /* GraphQL */ `
   fragment ProductCard on Product {
@@ -21,6 +23,10 @@ export const productCardFragment = /* GraphQL */ `
     handle
     title
     availableForSale
+    # « Type de produit » de l'admin : c'est lui qui donne la famille, donc le
+    # bouton et la fiche technique. Demandé dès la carte pour que la grille
+    # puisse s'en servir sans une seconde requête.
+    productType
     # Texte brut tronqué : le propos affiché dans l'index, sans balises à nettoyer.
     excerpt: description(truncateAt: 260)
     # Deux médias : le premier s'affiche, le second apparaît au survol.
@@ -128,14 +134,15 @@ export const productByHandleQuery = /* GraphQL */ `
           handle
         }
       }
-      # Metafields du produit — remplis uniquement sur certains tirages
-      # (la collection « Outils de com »). Le champ type sert à distinguer
-      # une date d'un simple texte libre au moment de l'affichage.
-      whereInfo: metafield(namespace: "custom", key: "ou") {
-        value
-        type
-      }
-      whenInfo: metafield(namespace: "custom", key: "quand") {
+      # Metafields du produit — une seule demande pour les trois familles, la
+      # liste des emplacements étant composée par le module families. Les
+      # champs qu'un produit ne porte pas reviennent vides et sont écartés à
+      # la conversion, si bien qu'une fiche n'affiche jamais que ceux de sa
+      # famille. Le champ type sert à distinguer une date d'un texte libre au
+      # moment de l'affichage.
+      metafields(identifiers: [${metafieldIdentifiersLiteral()}]) {
+        namespace
+        key
         value
         type
       }
@@ -181,6 +188,36 @@ export const productByHandleQuery = /* GraphQL */ `
             name
             value
           }
+          # La jauge peut être définie sur la variante plutôt que sur le
+          # produit : un A2 n'a pas le même tirage qu'un A4, ni la session de
+          # mars le même nombre de places que celle de juin. Demandée aux deux
+          # niveaux, elle reste vide là où la définition n'existe pas.
+          editionMax: metafield(namespace: "studio", key: "quantite_max") {
+            value
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Stock réel, variante par variante.
+ *
+ * Requête à part, et non un champ de plus sur la fiche : le site est construit
+ * en statique, un nombre de places figé au build serait faux dès la première
+ * inscription. Celle-ci part donc du navigateur, à l'ouverture de la fiche.
+ *
+ * Elle n'est émise que si la portée d'inventaire est accordée — sans elle,
+ * l'API refuse la requête en entier plutôt que de renvoyer un champ vide.
+ */
+export const productInventoryQuery = /* GraphQL */ `
+  query ProductInventory($handle: String!) {
+    product(handle: $handle) {
+      variants(first: 50) {
+        nodes {
+          id
+          quantityAvailable
         }
       }
     }

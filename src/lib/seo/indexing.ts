@@ -15,7 +15,15 @@ import { visualEditingEnabled } from '~/lib/sanity/env';
  * accidents de référencement les plus courants, et l'un des plus longs à
  * rattraper.
  */
-export const indexingAllowed = !visualEditingEnabled;
+export const indexingAllowed =
+  !visualEditingEnabled &&
+  /*
+    Deuxième cas de fermeture : le mode maintenance (voir
+    `src/lib/maintenance.ts`). Un site masqué derrière un mot de passe n'a rien
+    à faire indexer — et une page que Google ne peut pas atteindre finirait
+    signalée en erreur dans la Search Console.
+  */
+  import.meta.env.MAINTENANCE_ENABLED !== 'true';
 
 /**
  * Directives `robots` d'une page indexable.

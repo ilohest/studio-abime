@@ -5,8 +5,13 @@ import { getSiteContext } from '~/lib/siteContext';
 import { defaultLocale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
 
-/** La 404 reste pre-rendue pour etre disponible independamment du CMS. */
-export const prerender = true;
+/*
+ * Pas d'`export const prerender` ici : la page suit le mode de rendu du site
+ * (`output` dans `astro.config.ts`). En production elle est donc pre-rendue,
+ * disponible independamment du CMS ; pendant la maintenance elle passe a la
+ * demande, sans quoi le CDN la servirait telle quelle — avec sa video et sa
+ * typographie — alors que le site est ferme.
+ */
 
 /** La prévisualisation directe et toute réécriture vers cette page restent de vraies 404 HTTP. */
 Astro.response.status = 404;

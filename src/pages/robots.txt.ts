@@ -11,7 +11,9 @@ import { indexingAllowed } from '~/lib/seo/indexing';
  * domaine. Généré, il suit l'origine réellement servie : la preview annonce sa
  * preview, la production annonce la production, sans variante à maintenir.
  *
- * Surtout, il se ferme entièrement hors production. Un domaine de preview
+ * Surtout, il se ferme entièrement hors production — et pendant que le site est
+ * masqué par le mode maintenance, pour la même raison : ce qu'un robot ne doit
+ * pas retenir, il vaut mieux qu'il ne le demande pas. Un domaine de preview
  * ouvert aux robots sert exactement le même contenu que le site public : Google
  * y verrait un duplicata intégral, et rien ne garantit qu'il retiendrait la
  * bonne version comme canonique. Le même verrou existe côté balise `robots`
@@ -26,7 +28,7 @@ export const GET: APIRoute = ({ site, url }) => {
   if (!indexingAllowed) {
     return respond(
       [
-        '# Environnement de préproduction — hors index, volontairement.',
+        '# Hors index, volontairement : préproduction ou site en maintenance.',
         'User-agent: *',
         'Disallow: /',
         '',

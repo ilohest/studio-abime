@@ -7,6 +7,8 @@
  * soit il ne l'est pas et il quitte la requête.
  */
 import type { PolicyRouteKey } from '~/i18n/routes';
+import type { ProductFamily } from './families';
+import type { TranslationKey } from '~/i18n/ui';
 
 /** Montant Shopify : la valeur arrive en chaîne pour éviter les arrondis flottants. */
 export interface Money {
@@ -67,6 +69,22 @@ export interface ProductVariant {
   compareAtPrice: Money | null;
   /** Valeurs choisies sur chaque axe, dans l'ordre des options du produit. */
   selectedOptions: Array<{ name: string; value: string }>;
+  /**
+   * Tirage ou nombre de places de cette variante. `null` quand la jauge est
+   * définie au niveau du produit, ou pas définie du tout.
+   */
+  editionMax: number | null;
+}
+
+/**
+ * Une ligne de fiche technique, déjà résolue.
+ *
+ * L'étiquette reste une clé de traduction : la mise en forme du texte a lieu
+ * dans la vue, qui seule connaît la langue de la page.
+ */
+export interface ProductFact {
+  label: TranslationKey;
+  value: string;
 }
 
 /** Ce qu'une bande de l'index affiche. */
@@ -84,6 +102,12 @@ export interface ProductCard {
   options: ProductOption[];
   minPrice: Money;
   maxPrice: Money;
+  /**
+   * Famille déduite du « Type de produit » Shopify. `null` quand le champ est
+   * vide ou porte une valeur inconnue : la fiche retombe alors sur le bouton
+   * générique et n'affiche que les champs communs.
+   */
+  family: ProductFamily | null;
 }
 
 /** Fiche complète. */
@@ -94,12 +118,19 @@ export interface Product extends ProductCard {
   /** Étiquettes Shopify — servent à relier un tirage à sa série. */
   tags: string[];
   /**
-   * Metafields « Où » / « Quand » — renseignés seulement sur certains
-   * tirages (la collection « Outils de com »). `null` sur tout le reste du
-   * catalogue : ce n'est pas une fiche technique obligatoire.
+   * Fiche technique : les metafields que la famille du produit déclare
+   * afficher, dans son ordre, déjà mis en forme et débarrassés des vides.
+   * Liste vide sur un produit qui n'en porte aucun — la vue n'affiche alors
+   * rien plutôt qu'une liste de définitions creuse.
    */
-  where: string | null;
-  when: string | null;
+  facts: ProductFact[];
+  /**
+   * La jauge est-elle demandée sur cette fiche ? Porte le metafield
+   * `studio.afficher_jauge`, et gouverne les deux affichages d'un seul geste :
+   * la ligne de fiche technique rendue au build et le décompte du restant
+   * ajouté à l'hydratation. Le premier sans le second serait bancal.
+   */
+  showEdition: boolean;
   /** Handle de la première collection du tirage — `null` s'il n'en a aucune. */
   primaryCollectionHandle: string | null;
 }

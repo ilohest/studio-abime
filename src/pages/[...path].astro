@@ -75,11 +75,12 @@ import type {
  * dupliquer des fichiers à chaque nouvelle langue. Ici, `src/lib/routing.ts`
  * porte toute la logique : ajouter une langue ne touche AUCUN fichier de route.
  *
- * Rendu : statique par défaut ; à la demande quand l'édition visuelle est
- * activée, afin que le Presentation Tool reçoive du contenu frais à chaque
- * frappe de l'éditeur.
+ * Rendu : statique par défaut ; à la demande quand l'édition visuelle ou le
+ * mode maintenance sont actifs. Cette route ne décide pas elle-même : le mode
+ * est posé pour tout le site par `output` dans `astro.config.ts` — Astro
+ * n'évalue pas un `export const prerender` calculé, il n'en lit que le
+ * littéral, et une expression y serait silencieusement ignorée.
  */
-export const prerender = import.meta.env.PUBLIC_SANITY_VISUAL_EDITING_ENABLED !== 'true';
 
 export async function getStaticPaths() {
   const routes = await buildRouteManifest();
@@ -352,6 +353,13 @@ const seo =
           ? shopPage?.seo
           : document?.seo;
 
+/*
+  Le manifeste du Labo accepte encore des paragraphes saisis en simple chaîne,
+  d'avant que chacun porte sa largeur de composition.
+*/
+const laboParagraphText = (paragraph: LaboPage['philosophy'][number] | undefined) =>
+  typeof paragraph === 'string' ? paragraph : paragraph?.text;
+
 /** Extrait propre à la page, à défaut de description SEO saisie. */
 const descriptionFallback =
   route.kind === 'project'
@@ -369,7 +377,7 @@ const descriptionFallback =
               : route.kind === 'shop'
                 ? shopPage?.intro?.trim()
                 : route.kind === 'labo'
-                  ? laboPage?.philosophy?.[0]
+                  ? laboParagraphText(laboPage?.philosophy?.[0])
                   : route.kind === 'policy'
                     ? shopPolicy?.body?.replace(/<[^>]*>/g, ' ').trim()
                     : undefined;

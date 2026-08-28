@@ -31,6 +31,22 @@ export const storefrontToken = import.meta.env.PUBLIC_SHOPIFY_STOREFRONT_TOKEN ?
  */
 export const apiVersion = import.meta.env.PUBLIC_SHOPIFY_API_VERSION || '2026-07';
 
+/**
+ * Le jeton porte-t-il la portée `unauthenticated_read_product_inventory` ?
+ *
+ * Elle conditionne la lecture du stock réel — donc l'affichage du nombre de
+ * places ou d'exemplaires restants. Sans elle, l'API ne renvoie pas une valeur
+ * vide : elle rejette TOUTE la requête qui ose demander `quantityAvailable`,
+ * et la fiche entière disparaîtrait. D'où ce drapeau explicite plutôt qu'une
+ * tentative suivie d'un rattrapage : on ne demande le stock que lorsqu'on sait
+ * pouvoir le lire.
+ *
+ * À basculer sur « true » une fois la portée accordée à la vitrine dans le
+ * canal Headless. `npm run shopify:families` dit à tout moment où on en est.
+ */
+export const inventoryScopeGranted =
+  (import.meta.env.PUBLIC_SHOPIFY_INVENTORY_SCOPE ?? '').trim().toLowerCase() === 'true';
+
 /** `true` quand la boutique est joignable : domaine et jeton renseignés. */
 export const shopifyConfigured = Boolean(storeDomain && storefrontToken);
 

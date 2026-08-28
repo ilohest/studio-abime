@@ -7,6 +7,8 @@ import ProductPurchase from '~/components/vue/ProductPurchase.vue';
 import { shopIndexPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { formatMoney } from '~/lib/shopify/catalogue';
+import { FAMILIES } from '~/lib/shopify/families';
+import { inventoryScopeGranted } from '~/lib/shopify/env';
 import type { Locale } from '~/i18n/config';
 import type { Product, ProductCard } from '~/lib/shopify/types';
 import type { VariantView } from '~/components/vue/ProductPurchase.vue';
@@ -50,7 +52,14 @@ const variantViews: VariantView[] = product.variants.map((variant) => ({
 }));
 
 const purchaseLabels = {
-  addToCart: t('shop.addToCart'),
+  /*
+    Le bouton porte la famille : on ne met pas un tirage au panier comme on
+    s'inscrit à une formation. Le libellé reste en code — c'est de la mise en
+    scène, pas du contenu que le back-office aurait à éditer. Un produit sans
+    famille retombe sur la formule neutre.
+  */
+  addToCart: t(product.family ? FAMILIES[product.family].cta : 'shop.addToCart'),
+  remaining: t(product.family ? FAMILIES[product.family].remainingLabel : 'shop.copiesRemaining'),
   adding: t('shop.adding'),
   soldOut: t('shop.soldOut'),
   unavailable: t('shop.unavailable'),
@@ -115,10 +124,18 @@ const priceFallback =
         <p class="product__price type-copy">{priceFallback}</p>
       </noscript>
 
+      {/*
+        `showRemaining` conjugue trois conditions : la cliente a coché la jauge
+        sur cette fiche, le produit appartient à une famille, et le jeton a la
+        portée d'inventaire. Faute d'une seule, l'îlot n'émet aucune requête et
+        la fiche s'en tient au total rendu ci-dessus.
+      */}
       <ProductPurchase
         client:visible
+        handle={product.handle}
         options={product.options}
         variants={variantViews}
+        showRemaining={product.showEdition && product.family !== null && inventoryScopeGranted}
         labels={purchaseLabels}
       />
 
@@ -129,24 +146,19 @@ const priceFallback =
       }
 
       {/*
-        Renseigné uniquement sur certains tirages (la collection « Outils de
-        com ») : la plupart du catalogue n'a ni l'un ni l'autre, d'où les deux
-        gardes séparées plutôt qu'une condition sur le couple.
+        Fiche technique : uniquement les champs que la famille du produit
+        déclare, dans son ordre, et seulement ceux qui sont remplis. Une
+        formation montre sa date et ses prérequis, un tirage son édition —
+        jamais l'inverse, même si les deux définitions existent côté admin.
       */}
-      {(product.where || product.when) && (
+      {product.facts.length > 0 && (
         <dl class="product__facts">
-          {product.where && (
+          {product.facts.map((fact) => (
             <div class="product__fact">
-              <dt>{t('shop.where')}</dt>
-              <dd>{product.where}</dd>
+              <dt>{t(fact.label)}</dt>
+              <dd>{fact.value}</dd>
             </div>
-          )}
-          {product.when && (
-            <div class="product__fact">
-              <dt>{t('shop.when')}</dt>
-              <dd>{product.when}</dd>
-            </div>
-          )}
+          ))}
         </dl>
       )}
 

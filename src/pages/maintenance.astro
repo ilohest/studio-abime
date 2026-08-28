@@ -1,0 +1,353 @@
+---
+import '~/styles/global.css';
+
+import Wordmark from '~/components/brand/Wordmark.astro';
+
+import { accessPossible, getMaintenanceContent, maintenanceEnabled } from '~/lib/maintenance';
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ÉCRAN DE MAINTENANCE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Une feuille posée sur le papier de la charte : c'est tout ce qu'un visiteur
+ * voit du site tant que le rideau est tiré (voir `src/middleware.ts`).
+ *
+ * Page volontairement autonome — ni layout, ni en-tête, ni pied de page, ni la
+ * moindre ligne de JavaScript. Le formulaire d'accès est un `<details>` et un
+ * `<form>` natifs : ce qui protège le site ne doit pas dépendre d'un script
+ * qui pourrait ne pas se charger. Elle n'appelle pas non plus le kit Adobe
+ * Fonts : les trois fontes auto-hébergées suffisent ici.
+ *
+ * Rendu à la demande, toujours : c'est le seul mode où un mot de passe peut
+ * être vérifié ailleurs que dans le navigateur du visiteur.
+ */
+export const prerender = false;
+
+/* Rideau levé : cette adresse n'a pas à exister sur un site ouvert. */
+if (!maintenanceEnabled) return Astro.rewrite('/404');
+
+/*
+  On n'arrive normalement ici que par la réécriture du portier, qui dépose son
+  état dans `locals`. Sans lui, c'est que la personne a déjà son laissez-passer
+  et a tapé l'adresse à la main : on la renvoie au site plutôt que de lui
+  montrer une porte qu'elle a déjà franchie.
+*/
+if (!Astro.locals.maintenance) return Astro.redirect('/', 302);
+
+const { title, message, signature } = await getMaintenanceContent();
+const { next: destination = '/', refused = false } = Astro.locals.maintenance ?? {};
+
+/*
+  503, et non 200 : c'est le code qui dit « indisponible, revenez » plutôt que
+  « voilà la page ». Il évite qu'un moteur de recherche prenne l'écran de
+  maintenance pour le contenu du site et le mette à l'index à sa place.
+*/
+Astro.response.status = 503;
+Astro.response.headers.set('Retry-After', '86400');
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+---
+
+<!doctype html>
+<html lang="fr" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <link
+      rel="preload"
+      href="/fonts/GT-Canon-M-Narrow-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/GT-Canon-Mono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <title>{title} — Studio Abîme</title>
+  </head>
+
+  <body class="ecran">
+    {/*
+      Deux volets, deux fois la même feuille de papier : la pliure au milieu
+      est le seul décor de l'écran. Le volet de gauche ne porte rien — c'est du
+      papier, et c'est tout ce qu'on demande de lui.
+    */}
+    <div class="volet volet--nu" aria-hidden="true"></div>
+
+    <main class="volet volet--texte">
+      {/*
+        Le wordmark est enveloppé : le composant ne relaie pas les attributs
+        qu'on lui passe, et une classe posée dessus n'atteindrait jamais son SVG.
+      */}
+      <div class="wordmark">
+        <Wordmark title="Studio Abîme — Labo de Com." />
+      </div>
+
+      <p class="type-note mention">Site en préparation</p>
+
+      <h1 class="titre">{title}</h1>
+
+      <p class="type-copy message">{message}</p>
+
+      {
+        accessPossible && (
+          <details class="acces" open={refused}>
+            <summary class="type-note">J’ai un mot de passe</summary>
+
+            <form method="post" action={destination} class="formulaire">
+              <input type="hidden" name="next" value={destination} />
+
+              <label class="type-note" for="mot-de-passe">
+                Mot de passe
+              </label>
+
+              <div class="champ">
+                <input
+                  id="mot-de-passe"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  autofocus={refused}
+                  aria-describedby={refused ? 'acces-refuse' : undefined}
+                />
+              </div>
+
+              {refused && (
+                <p class="erreur type-note" id="acces-refuse" role="alert">
+                  Mot de passe incorrect.
+                </p>
+              )}
+
+              <button type="submit" class="button-minimal envoyer">
+                <span class="button-minimal__label">Entrer</span>
+                <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+              </button>
+            </form>
+          </details>
+        )
+      }
+
+      {signature && <p class="type-note signature">{signature}</p>}
+    </main>
+  </body>
+</html>
+
+<style>
+  /*
+    L'écran est coupé en deux volets de papier. Aucun cadre, aucune carte : le
+    texte est posé à même la feuille de droite, comme une note écrite dessus.
+  */
+  .ecran {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    color: var(--color-ink);
+  }
+
+  /*
+    Chaque volet porte sa PROPRE occurrence de la texture, cadrée sur sa moitié
+    d'écran : le papier se relit deux fois, et la ligne de partage tombe au
+    milieu comme une pliure. Une seule image étirée sur toute la largeur
+    n'aurait donné qu'un fond continu.
+  */
+  .volet {
+    position: relative;
+    /* Tenue le temps que l'image arrive, et rien de plus : le papier est
+       montré tel quel, sans teinte ni voile par-dessus. */
+    background-color: var(--color-papier);
+    overflow: hidden;
+  }
+
+  .volet::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("/textures/papier-froisse.jpg");
+    background-size: cover;
+    background-position: center;
+    pointer-events: none;
+  }
+
+  /* Le volet de droite retourne l'image : deux feuilles, et non deux copies. */
+  .volet--texte::before {
+    transform: scaleX(-1);
+  }
+
+  .volet--texte {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(2.5rem, 6vw, 5rem) clamp(1.75rem, 5vw, 4.5rem);
+  }
+
+  /* Le contenu repasse au-dessus du grain. */
+  .volet--texte > * {
+    position: relative;
+    z-index: 1;
+    max-width: 34rem;
+  }
+
+  /*
+    Le partage en deux ne tient qu'à partir d'une fenêtre large : en dessous,
+    la moitié droite serait une colonne trop étroite pour le titre, qui se
+    casserait en trois lignes. Le volet nu disparaît alors, le papier reste.
+  */
+  @media (max-width: 64rem) {
+    .ecran {
+      grid-template-columns: 1fr;
+    }
+
+    .volet--nu {
+      display: none;
+    }
+  }
+
+  .wordmark {
+    width: clamp(9rem, 30%, 12rem);
+    color: var(--color-ink);
+  }
+
+  .mention {
+    margin-top: 2.5rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  /*
+    Le style Titre de la charte, ramené à une échelle qui tient sur un
+    téléphone sans casser le mot le plus long.
+  */
+  .titre {
+    margin-top: 0.75rem;
+    font-family: var(--font-titre);
+    font-size: clamp(1.75rem, 6vw, var(--text-titre));
+    line-height: var(--text-titre--line-height);
+    letter-spacing: var(--tracking-titre);
+    text-transform: uppercase;
+    text-wrap: balance;
+  }
+
+  .message {
+    margin-top: 1.5rem;
+    max-width: 34ch;
+    color: var(--color-muted);
+    white-space: pre-line;
+  }
+
+  /* ── Accès ─────────────────────────────────────────────────────────────── */
+
+  .acces {
+    margin-top: 2.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .acces summary {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5em;
+    color: var(--color-muted);
+    cursor: pointer;
+    list-style: none;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .acces summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .acces summary::before {
+    content: "+";
+    font-size: 1.1em;
+    line-height: 1;
+  }
+
+  .acces[open] summary::before {
+    content: "–";
+  }
+
+  .acces summary:hover,
+  .acces summary:focus-visible {
+    color: var(--color-ink);
+  }
+
+  .formulaire {
+    margin-top: 1.25rem;
+  }
+
+  .formulaire label {
+    display: block;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .champ {
+    margin-top: 0.5rem;
+    /* Le filet est porté par le conteneur, comme dans le formulaire de contact :
+       il reste posé sous le champ quel que soit son état. */
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .champ input {
+    width: 100%;
+    min-width: 0;
+    padding: 0.35rem 0;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-annotation);
+    font-size: var(--text-copy);
+    font-style: italic;
+    line-height: 1.35;
+    letter-spacing: var(--tracking-annotation);
+  }
+
+  .champ input:focus-visible {
+    outline: 0;
+    box-shadow: 0 2px 0 var(--color-ink);
+  }
+
+  .envoyer {
+    margin-top: 1.25rem;
+    cursor: pointer;
+  }
+
+  .erreur {
+    margin-top: 0.85rem;
+    color: var(--color-ink);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ── Signature ─────────────────────────────────────────────────────────── */
+
+  .signature {
+    margin-top: 2.75rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feuille {
+      transform: none;
+    }
+
+    .champ button {
+      transition: none;
+    }
+  }
+</style>

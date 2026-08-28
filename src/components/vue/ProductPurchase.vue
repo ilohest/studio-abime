@@ -13,8 +13,9 @@
  * fourchette de prix et formats disponibles sont rendus par Astro — seul l'achat
  * demande l'hydratation.
  */
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { add, cartState } from '~/lib/shopify/cartStore';
+import { fetchInventory } from '~/lib/shopify/inventory';
 
 export interface VariantView {
   id: string;
@@ -26,8 +27,15 @@ export interface VariantView {
 }
 
 const props = defineProps<{
+  /** Identifiant d'URL du produit — sert à relire son stock au montage. */
+  handle: string;
   options: Array<{ name: string; values: string[] }>;
   variants: VariantView[];
+  /**
+   * La cliente a demandé la jauge sur cette fiche. Faux, on ne va même pas
+   * chercher le stock : pas de requête inutile sur un tirage courant.
+   */
+  showRemaining: boolean;
   labels: {
     addToCart: string;
     adding: string;
@@ -37,6 +45,8 @@ const props = defineProps<{
     quantity: string;
     decrease: string;
     increase: string;
+    /** Décompte accordé à la famille : « places restantes », « exemplaires restants ». */
+    remaining: string;
   };
 }>();
 
@@ -81,6 +91,28 @@ function select(optionName: string, value: string): void {
 
 const canBuy = computed(() => Boolean(currentVariant.value?.available) && !cartState.busy);
 
+/*
+  Stock lu à l'hydratation, jamais au build : la page est statique, le nombre
+  de places ne l'est pas. Tant que la réponse n'est pas là — ou que la portée
+  d'inventaire manque — la carte reste vide et la fiche n'annonce que le total
+  déjà rendu par Astro.
+*/
+const remaining = ref<Map<string, number>>(new Map());
+
+onMounted(async () => {
+  if (!props.showRemaining) return;
+  remaining.value = await fetchInventory(props.handle);
+});
+
+/** « 12 places restantes » — `null` quand la variante ne suit pas son stock. */
+const remainingLabel = computed(() => {
+  const variant = currentVariant.value;
+  if (!variant) return null;
+
+  const left = remaining.value.get(variant.id);
+  return left === undefined ? null : `${left} ${props.labels.remaining}`;
+});
+
 async function onSubmit(): Promise<void> {
   const variant = currentVariant.value;
   if (!variant?.available) return;
@@ -92,11 +124,20 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <form class="purchase" @submit.prevent="onSubmit">
+    <!--
+      Le décompte partage la ligne du prix, poussé au bord droit : deux faces de
+      la même offre, ce qu'elle coûte et ce qu'il en reste. `aria-live` porte
+      sur la ligne entière, si bien que passer d'une session à l'autre fait
+      annoncer le nouveau prix ET le nouveau restant d'un seul tenant.
+    -->
     <p class="purchase__price type-copy" aria-live="polite">
       <span>{{ currentVariant?.priceLabel ?? '—' }}</span>
       <s v-if="currentVariant?.compareAtLabel" class="purchase__compare">
         {{ currentVariant.compareAtLabel }}
       </s>
+      <span v-if="remainingLabel" class="purchase__remaining type-note">
+        {{ remainingLabel }}
+      </span>
     </p>
 
     <fieldset v-for="option in options" :key="option.name" class="purchase__option">
@@ -172,6 +213,12 @@ async function onSubmit(): Promise<void> {
 .purchase__price {
   display: flex;
   align-items: baseline;
+  /*
+    Enroulement autorisé : sur les fiches étroites, « 12 places restantes » ne
+    tient pas à côté d'un prix barré. Il passe alors à la ligne suivante en
+    restant collé à droite, plutôt que de comprimer le prix.
+  */
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin: 0;
 }
@@ -179,6 +226,20 @@ async function onSubmit(): Promise<void> {
 .purchase__compare {
   color: var(--color-muted);
   font-size: calc(var(--text-copy) * 0.8);
+}
+
+/*
+  `margin-left: auto` plutôt qu'un `justify-content: space-between` sur le
+  parent : le prix barré doit rester accolé au prix, et seul le décompte part
+  au bord droit. Un `space-between` les aurait tous les trois écartés.
+
+  Registre « note » et non « annotation » : cette dernière est plus GRANDE que
+  le corps de texte (20 px contre 18), ce qui donnait au décompte plus de poids
+  qu'au prix qu'il accompagne. La note le remet à sa place de mention discrète.
+*/
+.purchase__remaining {
+  color: var(--color-muted);
+  margin-left: auto;
 }
 
 .purchase__option {
