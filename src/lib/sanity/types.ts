@@ -459,9 +459,16 @@ export interface NavigationItem extends SanityLink {
 /**
  * Fiche d'identité de l'entreprise.
  *
- * Elle n'est rendue nulle part : elle alimente le nœud `Organization` des
- * données structurées (`src/lib/seo/jsonLd.ts`). Tous les champs sont
- * optionnels — un champ vide n'est pas publié plutôt que d'être deviné.
+ * Deux lecteurs, et deux comportements opposés devant un champ vide :
+ *
+ *  · les données structurées (`src/lib/seo/jsonLd.ts`) l'OMETTENT — une fiche
+ *    partielle vaut mieux qu'une fiche inventée ;
+ *  · les pages légales (`src/lib/organizationIdentity.ts`) le SIGNALENT — un
+ *    « [À COMPLÉTER : … ] » en clair dans le texte, parce qu'une mention
+ *    légale absente est une infraction, pas un affichage moins riche.
+ *
+ * Tous les champs sont optionnels : c'est la page qui décide quoi faire du
+ * silence, pas le schéma.
  */
 export interface OrganizationIdentity {
   /** Logo carré destiné aux résultats de recherche (jamais rendu sur le site). */
@@ -476,6 +483,20 @@ export interface OrganizationIdentity {
   vatId?: string;
   /** Date ISO (`2019-04-01`). */
   foundingDate?: string;
+
+  /*
+    Les quatre suivants ne servent PAS aux données structurées : Schema.org n'a
+    pas de propriété pour eux. Ils n'existent que pour être cités dans les pages
+    légales (voir `src/lib/organizationIdentity.ts`), où la loi les impose.
+  */
+  /** SRL, SA, entreprise personne physique… */
+  legalForm?: string;
+  /** Numéro BCE. Laissé vide, il est déduit du numéro de TVA. */
+  companyNumber?: string;
+  /** Arrondissement judiciaire compétent — celui du siège. */
+  judicialDistrict?: string;
+  /** Nom et adresse de l'hébergeur, mention obligatoire des mentions légales. */
+  host?: string;
 }
 
 /** Réglages globaux, partagés par toutes les langues. */

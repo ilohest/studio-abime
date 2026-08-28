@@ -19,6 +19,7 @@ import { maintenance } from './singletons/maintenance';
 import { link } from './objects/link';
 import { seo } from './objects/seo';
 import { richText, inlineImage } from './objects/richText';
+import { identityValue } from './objects/identityValue';
 import { sectionTypes } from './objects/sections';
 import { journalBlockTypes } from './objects/journalBlocks';
 
@@ -47,6 +48,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   seo,
   richText,
   inlineImage,
+  identityValue,
 
   // Sections du page builder
   ...sectionTypes,

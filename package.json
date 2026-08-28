@@ -14,7 +14,7 @@
     "sanity": "sanity",
     "shopify:check": "node --env-file=.env scripts/shopify-check.mjs",
     "shopify:families": "node --env-file=.env --experimental-strip-types scripts/shopify-families.mjs",
-    "legal:seed": "node --env-file=.env scripts/seed-legal-pages.mjs",
+    "legal:seed": "node --env-file=.env --experimental-strip-types scripts/seed-legal-pages.mjs",
     "projects:demo": "node --env-file=.env scripts/seed-project-templates.mjs",
     "labo:publish": "node --env-file=.env --experimental-strip-types scripts/publish-labo-page.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",

@@ -2,8 +2,14 @@ import { toHTML, type PortableTextHtmlComponents } from '@portabletext/to-html';
 import { resolveImage } from './sanity/image';
 import { resolveLink } from './routing';
 import { figureLabel } from './figureLabel';
+import {
+  identityPlaceholder,
+  isIdentityFieldKey,
+  resolveIdentityValue,
+  type IdentityContext,
+} from './organizationIdentity';
 import type { PortableTextBlock, SanityImage, SanityLink } from './sanity/types';
-import type { Locale } from '~/i18n/config';
+import { getLocaleMeta, type Locale } from '~/i18n/config';
 
 /**
  * Rendu du Portable Text en HTML.
@@ -20,9 +26,45 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function components(locale: Locale): Partial<PortableTextHtmlComponents> {
+function components(
+  locale: Locale,
+  identity: Omit<IdentityContext, 'dateLocale'> | undefined,
+): Partial<PortableTextHtmlComponents> {
   return {
     types: {
+      /**
+       * Renvoi vers la fiche d'entreprise (voir `organizationIdentity.ts`).
+       *
+       * Trois issues, et aucune n'est le silence :
+       *  · la valeur existe        → elle s'affiche ;
+       *  · le champ est vide       → « [À COMPLÉTER : … ] », en clair ;
+       *  · la clé est inconnue     → idem, car un schéma déployé avant le rendu
+       *    laisserait sinon un blanc que personne ne verrait passer.
+       *
+       * Le `<span>` porte une classe : une mention à compléter doit sauter aux
+       * yeux sur la page (voir `.identity-value--missing` dans global.css).
+       */
+      identityValue: ({ value }) => {
+        const key = (value as { field?: unknown })?.field;
+
+        if (!isIdentityFieldKey(key)) {
+          return `<span class="identity-value identity-value--missing">[À COMPLÉTER : information inconnue]</span>`;
+        }
+
+        const resolved = identity
+          ? resolveIdentityValue(key, {
+              ...identity,
+              dateLocale: getLocaleMeta(locale).htmlLang,
+            })
+          : undefined;
+
+        if (!resolved) {
+          return `<span class="identity-value identity-value--missing">${escapeHtml(identityPlaceholder(key))}</span>`;
+        }
+
+        return `<span class="identity-value">${escapeHtml(resolved)}</span>`;
+      },
+
       inlineImage: ({ value }) => {
         const image = value as SanityImage & { caption?: string };
         const resolved = resolveImage(image, { width: 1280 });
@@ -54,10 +96,16 @@ function components(locale: Locale): Partial<PortableTextHtmlComponents> {
   };
 }
 
+/**
+ * @param identity Fiche d'entreprise et date de révision du document, pour
+ *   résoudre les renvois `identityValue`. Omise, les renvois affichent leur
+ *   « [À COMPLÉTER : … ] » — jamais du vide.
+ */
 export function renderPortableText(
   blocks: PortableTextBlock[] | undefined | null,
   locale: Locale,
+  identity?: Omit<IdentityContext, 'dateLocale'>,
 ): string {
   if (!blocks?.length) return '';
-  return toHTML(blocks, { components: components(locale) });
+  return toHTML(blocks, { components: components(locale, identity) });
 }

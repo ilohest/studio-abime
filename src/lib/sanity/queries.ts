@@ -196,7 +196,11 @@ export const siteSettingsQuery = /* groq */ `
     addressLocality,
     addressCountry,
     vatId,
-    foundingDate
+    foundingDate,
+    legalForm,
+    companyNumber,
+    judicialDistrict,
+    host
   }
 }`;
 

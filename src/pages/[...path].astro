@@ -514,7 +514,7 @@ const jsonLd = buildPageGraph({
     )
   }
 
-  {page && <SectionRenderer sections={pageSections} locale={locale} />}
+  {page && <SectionRenderer sections={pageSections} locale={locale} documentUpdatedAt={page.updatedAt} />}
 
   {
     route.kind === 'projectIndex' && (

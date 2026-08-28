@@ -17,10 +17,18 @@
  *
  * 2. Le script ne remplace JAMAIS un document existant. Relancé, il ignore ce
  *    qui est déjà là. Les seules pertes possibles sont donc celles que l'on
- *    demande explicitement.
+ *    demande explicitement — c'est-à-dire `--replace`, et rien d'autre :
  *
- * Les emplacements à compléter sont écrits « [À COMPLÉTER : … ] » : une
- * recherche du crochet ouvrant dans le Studio les trouve tous.
+ *      npm run legal:seed              crée ce qui manque
+ *      npm run legal:seed -- --replace RÉÉCRIT les trois pages
+ *
+ *    `--replace` sert à reposer la trame après une évolution du modèle. Il
+ *    écrase le texte en place, brouillon comme version publiée : à n'employer
+ *    que tant que les pages n'ont pas été relues.
+ *
+ * Les coordonnées du studio ne sont pas écrites dans la trame : elles y sont
+ * renvoyées (`{{vatId}}`, `{{address}}`…) et lues au rendu dans Réglages du
+ * site → Identité. Une seule saisie pour les trois pages, et rien à recopier.
  *
  * Ce script est autonome, comme `shopify-check.mjs` : il lit `process.env` et ne
  * dépend d'aucun module du site. Il a besoin d'un jeton d'ÉCRITURE, à créer sur
@@ -32,6 +40,20 @@
  * navigateur, et n'est utilisé que par ce script, en local.
  */
 import { createClient } from "@sanity/client";
+
+/*
+  Le registre des informations citables, importé plutôt que recopié : la trame
+  ci-dessous ne peut donc pas renvoyer vers un champ que le site ne saurait pas
+  afficher. (Le fichier est en TypeScript, d'où `--experimental-strip-types`
+  dans le script npm — il ne contient aucun import de valeur, seulement des
+  types, effacés au chargement.)
+*/
+import { IDENTITY_FIELDS } from "../src/lib/organizationIdentity.ts";
+
+const IDENTITY_KEYS = new Set(IDENTITY_FIELDS.map((field) => field.value));
+
+/** Réécrit les pages en place au lieu de sauter celles qui existent. */
+const replace = process.argv.includes("--replace");
 
 const projectId = process.env.PUBLIC_SANITY_PROJECT_ID;
 const dataset = process.env.PUBLIC_SANITY_DATASET || "production";
@@ -68,7 +90,7 @@ const key = (prefix) => `${prefix}${(counter++).toString(36)}`;
  * acceptée par le schéma `richText`. Le reste de la ligne devient du texte nu :
  * la trame n'a pas besoin de gras ni d'italique.
  */
-function toSpans(text) {
+function linkSpans(text) {
   const spans = [];
   const marks = [];
   const pattern = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
@@ -114,6 +136,45 @@ function toSpans(text) {
   return { spans, marks };
 }
 
+/**
+ * Découpe une ligne en enfants de bloc : du texte, et des RENVOIS.
+ *
+ * `{{vatId}}` ne produit pas du texte mais un objet `identityValue` — un renvoi
+ * vers Réglages du site → Identité. C'est ce qui fait que les mentions légales
+ * n'ont plus de coordonnées écrites en dur : le studio déménage, les trois
+ * pages suivent, et aucune ne peut rester en arrière.
+ *
+ * La clé est vérifiée contre le registre partagé : une faute de frappe arrête
+ * le script au lieu de publier une page trouée.
+ */
+function toChildren(text) {
+  const children = [];
+  const marks = [];
+
+  for (const part of text.split(/(\{\{[A-Za-z]+\}\})/)) {
+    if (!part) continue;
+
+    const reference = part.match(/^\{\{([A-Za-z]+)\}\}$/);
+    if (reference) {
+      const field = reference[1];
+      if (!IDENTITY_KEYS.has(field)) {
+        throw new Error(
+          `Renvoi inconnu dans la trame : « ${field} ». ` +
+            `Clés valides : ${[...IDENTITY_KEYS].join(", ")}.`,
+        );
+      }
+      children.push({ _type: "identityValue", _key: key("i"), field });
+      continue;
+    }
+
+    const { spans, marks: linkMarks } = linkSpans(part);
+    children.push(...spans);
+    marks.push(...linkMarks);
+  }
+
+  return { children, marks };
+}
+
 /*
   Les noms de style employés dans la trame ci-dessous sont ceux d'un rédacteur —
   « p », « li » — et non ceux du schéma. Le schéma `richText` n'expose que quatre
@@ -135,7 +196,7 @@ function block([style, text]) {
   const resolved = BLOCK_STYLES[style];
   if (!resolved) throw new Error(`Style inconnu dans la trame : « ${style} »`);
 
-  const { spans, marks } = toSpans(text);
+  const { children, marks } = toChildren(text);
 
   return {
     _type: "block",
@@ -143,7 +204,7 @@ function block([style, text]) {
     style: resolved,
     ...(style === "li" ? { listItem: "bullet", level: 1 } : {}),
     markDefs: marks,
-    children: spans,
+    children,
   };
 }
 
@@ -180,15 +241,29 @@ function legalPage({ id, title, description, body }) {
 
 /* ── Contenu ─────────────────────────────────────────────────────────────── */
 
-const TODO = {
-  form: "[À COMPLÉTER : forme juridique — SRL, entreprise personne physique…]",
-  address: "[À COMPLÉTER : rue, numéro, code postal, commune]",
-  bce: "[À COMPLÉTER : numéro d’entreprise BCE — 0XXX.XXX.XXX]",
-  vat: "[À COMPLÉTER : numéro de TVA — BE 0XXX.XXX.XXX]",
-  phone: "[À COMPLÉTER : numéro de téléphone, ou supprimer cette ligne]",
-  host: "[À COMPLÉTER : nom et adresse de l’hébergeur du site]",
-  email: "[À COMPLÉTER : adresse e-mail professionnelle du studio]",
-  court: "[À COMPLÉTER : arrondissement judiciaire — celui du siège]",
+/*
+  Les informations d'entreprise ne sont plus ÉCRITES dans la trame : elles y
+  sont RENVOYÉES. Chaque `{{clé}}` devient un objet `identityValue` qui va lire
+  Réglages du site → Identité et réseaux sociaux au moment du rendu.
+
+  C'est ce qui change tout pour la suite : ces trois pages répètent les mêmes
+  coordonnées une douzaine de fois. Écrites en clair, il aurait suffi d'oublier
+  une occurrence lors d'un déménagement pour que le site affiche deux sièges
+  sociaux différents — et ce serait la page fausse qui engagerait le studio.
+
+  Tant qu'un champ n'est pas rempli, le rendu affiche « [À COMPLÉTER : … ] »
+  souligné : le trou reste visible en ligne, il ne disparaît pas en silence.
+*/
+const REF = {
+  form: "{{legalForm}}",
+  address: "{{address}}",
+  bce: "{{companyNumber}}",
+  vat: "{{vatId}}",
+  phone: "{{phone}}",
+  host: "{{host}}",
+  email: "{{email}}",
+  court: "{{judicialDistrict}}",
+  updated: "{{updatedAt}}",
 };
 
 const pages = [
@@ -204,16 +279,16 @@ const pages = [
       ],
 
       ["h2", "Éditeur du site"],
-      ["p", `Studio Abîme — ${TODO.form}`],
-      ["p", `Siège : ${TODO.address}`],
-      ["p", `Numéro d’entreprise (BCE) : ${TODO.bce}`],
-      ["p", `Numéro de TVA : ${TODO.vat}`],
-      ["p", `E-mail : ${TODO.email}`],
-      ["p", `Téléphone : ${TODO.phone}`],
+      ["p", `Studio Abîme — ${REF.form}`],
+      ["p", `Siège : ${REF.address}`],
+      ["p", `Numéro d’entreprise (BCE) : ${REF.bce}`],
+      ["p", `Numéro de TVA : ${REF.vat}`],
+      ["p", `E-mail : ${REF.email}`],
+      ["p", `Téléphone : ${REF.phone}`],
       ["p", "Responsable de la publication : Isaure Lohest."],
 
       ["h2", "Hébergement"],
-      ["p", `Le site est hébergé par ${TODO.host}`],
+      ["p", `Le site est hébergé par ${REF.host}`],
       [
         "p",
         "Le contenu éditorial est géré via Sanity (Sanity AS, Norvège). La boutique et le tunnel de paiement sont opérés par Shopify International Ltd (Irlande), qui héberge à ce titre les données de commande.",
@@ -241,7 +316,7 @@ const pages = [
       ["h2", "Droit applicable"],
       [
         "p",
-        `Le présent site est soumis au droit belge. En cas de litige, et à défaut de résolution amiable, les cours et tribunaux de l’arrondissement de ${TODO.court} sont seuls compétents — sans préjudice des règles protectrices applicables aux consommateurs.`,
+        `Le présent site est soumis au droit belge. En cas de litige, et à défaut de résolution amiable, les cours et tribunaux de l’arrondissement de ${REF.court} sont seuls compétents — sans préjudice des règles protectrices applicables aux consommateurs.`,
       ],
 
       ["h2", "Litiges de consommation"],
@@ -266,7 +341,7 @@ const pages = [
     description:
       "Comment Studio Abîme collecte, utilise et protège vos données personnelles sur le site et dans la boutique, et comment exercer vos droits.",
     body: [
-      ["p", "[À COMPLÉTER : date de dernière mise à jour]"],
+      ["p", `Dernière mise à jour : ${REF.updated}`],
       [
         "p",
         "Studio Abîme exploite ce site et la boutique qui y est rattachée. Cette politique décrit les données personnelles que nous traitons, pourquoi, avec qui nous les partageons, et les droits dont vous disposez. Elle couvre l’ensemble du site — pages du studio, formulaire de contact et boutique.",
@@ -275,7 +350,7 @@ const pages = [
       ["h2", "Responsable du traitement"],
       [
         "p",
-        `Studio Abîme, ${TODO.address}, numéro d’entreprise ${TODO.bce}, est responsable du traitement de vos données personnelles au sens du RGPD. Pour toute question, écrivez à ${TODO.email}.`,
+        `Studio Abîme, ${REF.address}, numéro d’entreprise ${REF.bce}, est responsable du traitement de vos données personnelles au sens du RGPD. Pour toute question, écrivez à ${REF.email}.`,
       ],
 
       ["h2", "Les données que nous traitons"],
@@ -354,7 +429,7 @@ const pages = [
         "li",
         "Resend — acheminement des e-mails envoyés depuis le formulaire de contact.",
       ],
-      ["p", `Hébergement du site : ${TODO.host}`],
+      ["p", `Hébergement du site : ${REF.host}`],
       [
         "p",
         "Nous pouvons également communiquer des données lorsque la loi l’exige, notamment en réponse à une demande d’une autorité compétente, ou pour établir et défendre nos droits en justice.",
@@ -392,7 +467,7 @@ const pages = [
       ],
       [
         "p",
-        `Pour exercer ces droits, écrivez-nous à ${TODO.email}. Nous pourrons vous demander de justifier votre identité avant de répondre, et nous vous répondrons dans le mois.`,
+        `Pour exercer ces droits, écrivez-nous à ${REF.email}. Nous pourrons vous demander de justifier votre identité avant de répondre, et nous vous répondrons dans le mois.`,
       ],
       [
         "p",
@@ -431,7 +506,7 @@ const pages = [
     description:
       "Les cookies déposés par le site Studio Abîme, leur rôle, et comment les contrôler depuis votre navigateur.",
     body: [
-      ["p", "[À COMPLÉTER : date de dernière mise à jour]"],
+      ["p", `Dernière mise à jour : ${REF.updated}`],
       [
         "p",
         "Un cookie est un petit fichier déposé sur votre appareil lorsque vous consultez un site. Il permet notamment de garder en mémoire ce que vous y faites d’une page à l’autre.",
@@ -502,9 +577,21 @@ const results = await Promise.all(
       ids: [doc._id, published],
     });
 
-    if (existing) {
+    if (existing && !replace) {
       skip(`${label} — déjà présent (${existing}), inchangé.`);
       return false;
+    }
+
+    if (existing) {
+      /*
+        On réécrit la forme TROUVÉE, et non systématiquement le brouillon : une
+        page déjà publiée doit le rester. La recréer en brouillon la ferait
+        disparaître du site — et donc du pied de page — jusqu'à ce que
+        quelqu'un pense à republier.
+      */
+      await client.createOrReplace({ ...doc, _id: existing });
+      ok(`${label} — réécrit (${existing}).`);
+      return true;
     }
 
     await client.create(doc);
@@ -516,14 +603,16 @@ const results = await Promise.all(
   process.exit(1);
 });
 
-const created = results.filter(Boolean).length;
+const written = results.filter(Boolean).length;
 
 console.log(
-  created > 0
-    ? `\n  ${created} brouillon(s) créé(s) dans le dataset « ${dataset} ».\n\n` +
-        "  Prochaines étapes, dans le Studio :\n" +
-        "    1. rechercher « [À COMPLÉTER » dans chaque page et remplir les trous ;\n" +
-        "    2. relire — ces textes vous engagent ;\n" +
+  written > 0
+    ? `\n  ${written} page(s) ${replace ? "réécrite(s)" : "créée(s)"} dans le dataset « ${dataset} ».\n\n` +
+        "  Les coordonnées du studio ne sont plus à saisir page par page :\n" +
+        "    1. remplir Réglages du site → Identité et réseaux sociaux ;\n" +
+        "       tout champ vide laisse un « [À COMPLÉTER » souligné EN LIGNE ;\n" +
+        "    2. relire les trois textes — ils vous engagent ;\n" +
         "    3. publier. Le lien apparaît alors dans le pied de page.\n"
-    : "\n  Rien à créer : les trois pages existent déjà.\n",
+    : "\n  Rien à créer : les trois pages existent déjà.\n" +
+      "  Pour reposer la trame par-dessus : npm run legal:seed -- --replace\n",
 );

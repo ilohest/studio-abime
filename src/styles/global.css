@@ -1168,6 +1168,28 @@
     border-inline-start: 1px solid var(--color-line);
   }
 
+  /*
+    Information reprise de la fiche d'entreprise (voir
+    `src/lib/organizationIdentity.ts`). Une fois renseignée, elle doit se lire
+    comme le reste de la phrase : aucun style propre.
+  */
+  .identity-value--missing {
+    /*
+      Tant qu'elle ne l'est pas, en revanche, elle doit être impossible à
+      manquer. Ces pages se relisent en diagonale, et un « [À COMPLÉTER] » gris
+      au milieu d'un paragraphe gris se lit exactement zéro fois — jusqu'au jour
+      où c'est un tiers qui le remarque.
+
+      Le trait souligné plutôt qu'un aplat de couleur : la charte n'a pas de
+      rouge, et la page reste imprimable telle quelle.
+    */
+    font-family: var(--font-note);
+    font-style: normal;
+    text-decoration: underline wavy;
+    text-underline-offset: 0.25em;
+    opacity: 0.85;
+  }
+
   .prose-abime ul {
     list-style: disc;
     padding-inline-start: 1.25rem;

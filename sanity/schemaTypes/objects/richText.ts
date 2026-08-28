@@ -46,6 +46,11 @@ export const richText = defineType({
         { title: 'Puces', value: 'bullet' },
         { title: 'Numérotée', value: 'number' },
       ],
+      /*
+        Objets EN LIGNE — insérés dans le fil d'une phrase, à la différence des
+        membres du tableau parent (`inlineImage`), qui occupent un bloc entier.
+      */
+      of: [defineArrayMember({ type: 'identityValue' })],
       marks: {
         decorators: [
           { title: 'Italique', value: 'em' },

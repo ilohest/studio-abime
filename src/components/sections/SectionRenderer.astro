@@ -34,9 +34,11 @@ import type { Section } from '~/lib/sanity/types';
 interface Props {
   sections?: Section[] | null;
   locale: Locale;
+  /** Date de révision du document, relayée aux blocs qui savent la citer. */
+  documentUpdatedAt?: string;
 }
 
-const { sections, locale } = Astro.props;
+const { sections, locale, documentUpdatedAt } = Astro.props;
 
 if (import.meta.env.DEV) {
   const known = ['manifestoHero', 'servicesMenu', 'studioStatement', 'pullQuote', 'plateSpread', 'projectShowcase', 'fullBleedImage', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
@@ -70,7 +72,7 @@ if (import.meta.env.DEV) {
       case 'heroSection':
         return <HeroSection section={section} locale={locale} isFirst={isFirst} />;
       case 'richTextSection':
-        return <RichTextSection section={section} locale={locale} />;
+        return <RichTextSection section={section} locale={locale} documentUpdatedAt={documentUpdatedAt} />;
       case 'mediaSection':
         return <MediaSection section={section} />;
       case 'projectListSection':

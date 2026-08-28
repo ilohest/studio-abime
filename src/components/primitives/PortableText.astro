@@ -1,16 +1,42 @@
 ---
 import { renderPortableText } from '~/lib/portableText';
+import { getSiteContext } from '~/lib/siteContext';
 import type { Locale } from '~/i18n/config';
 import type { PortableTextBlock } from '~/lib/sanity/types';
 
+/**
+ * Rendu d'un texte riche.
+ *
+ * La fiche d'entreprise est lue ICI plutôt que reçue en propriété : les pages
+ * légales y renvoient (« siège établi [Adresse] »), et faire descendre ces
+ * réglages depuis la route jusqu'ici traverserait tout le page builder pour un
+ * besoin qui ne concerne que trois pages.
+ *
+ * Le coût est nul : `getSiteContext` est mémoïsé par langue pour la durée du
+ * build, et la route l'a déjà appelé avant de rendre quoi que ce soit. Cet
+ * `await` retombe donc toujours sur une promesse résolue — aucune requête
+ * supplémentaire, quel que soit le nombre de textes rendus.
+ */
 interface Props {
   value?: PortableTextBlock[] | null;
   locale: Locale;
   class?: string;
+  /**
+   * `_updatedAt` du document qui porte ce texte, pour le renvoi « Date de
+   * dernière mise à jour ». Absent, le renvoi affiche son « [À COMPLÉTER] » —
+   * ce qui est correct : sans document daté, il n'y a pas de date à annoncer.
+   */
+  updatedAt?: string;
 }
 
-const { value, locale, class: className = '' } = Astro.props;
-const html = renderPortableText(value, locale);
+const { value, locale, class: className = '', updatedAt } = Astro.props;
+
+const site = await getSiteContext(locale);
+
+const html = renderPortableText(value, locale, {
+  organization: site.settings?.organization,
+  updatedAt,
+});
 ---
 
 {html && <div class:list={['prose-abime', className]} set:html={html} />}
