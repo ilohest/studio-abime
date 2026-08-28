@@ -3,6 +3,7 @@ import { resolveImage } from './sanity/image';
 import { resolveLink } from './routing';
 import { figureLabel } from './figureLabel';
 import {
+  identityHref,
   identityPlaceholder,
   isIdentityFieldKey,
   resolveIdentityValue,
@@ -62,7 +63,18 @@ function components(
           return `<span class="identity-value identity-value--missing">${escapeHtml(identityPlaceholder(key))}</span>`;
         }
 
-        return `<span class="identity-value">${escapeHtml(resolved)}</span>`;
+        /*
+          Une adresse e-mail devient cliquable : le texte qui l'entoure invite à
+          écrire, autant que la main suive. Un trou, lui, ne devient jamais un
+          lien — `mailto:[À COMPLÉTER…]` ouvrirait le client de messagerie sur
+          un destinataire absurde.
+        */
+        const href = identityHref(key, resolved);
+        const label = escapeHtml(resolved);
+
+        return href
+          ? `<a class="identity-value" href="${escapeHtml(href)}">${label}</a>`
+          : `<span class="identity-value">${label}</span>`;
       },
 
       inlineImage: ({ value }) => {

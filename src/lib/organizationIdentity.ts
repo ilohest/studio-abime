@@ -197,6 +197,23 @@ function formatUpdatedAt(iso: string | undefined, dateLocale: string): string | 
   }).format(new Date(time));
 }
 
+/**
+ * Adresse actionnable d'une valeur résolue, s'il y en a une.
+ *
+ * Une adresse e-mail citée dans des mentions légales n'est pas de la
+ * décoration : c'est le point de contact que le texte lui-même désigne comme
+ * la voie pour exercer ses droits — « écrivez-nous à … ». La donner en texte
+ * mort oblige à la sélectionner à la main, ce qui sur un téléphone revient à
+ * ne pas la donner. Le hero de la page d'accueil applique déjà cette règle à
+ * ses propres mentions (`ManifestoHero.astro`) ; elle vaut ici aussi.
+ *
+ * Le téléphone suivrait la même logique en `tel:` — une ligne à ajouter le
+ * jour où le numéro sera renseigné.
+ */
+export function identityHref(key: IdentityFieldKey, value: string): string | undefined {
+  return key === 'email' ? `mailto:${value}` : undefined;
+}
+
 export interface IdentityContext {
   organization?: OrganizationIdentity | null;
   /** `_updatedAt` du document qui porte le texte — pour la clé `updatedAt`. */
