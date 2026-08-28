@@ -265,7 +265,7 @@ La baseline du pied de page a une valeur par défaut dans le composant ; dès qu
 
 Trois garde-fous : activé uniquement sur pointeur fin (jamais sur tactile), le curseur système n'est masqué qu'une fois le nôtre en place (si le script échoue, l'utilisateur garde son curseur), et `prefers-reduced-motion` supprime le retard.
 
-> **Licence des fontes.** Les trois GT Canon sont auto-hébergées dans `public/fonts/`. Commuters Sans, elle, vient du projet Adobe Fonts de la cliente : le kit est chargé dans le `<head>` de `BaseLayout.astro` et la licence Adobe **interdit d'héberger le fichier soi-même**. Le fichier « Fontspring DEMO » qui servait de doublure a été supprimé. Le nom de famille CSS est celui d'Adobe, `commuters-sans`, et non `"Commuters Sans"`.
+> **Licence des fontes.** Les trois GT Canon sont auto-hébergées dans `public/fonts/`. Commuters Sans, elle, vient du projet Adobe Fonts de la cliente : le kit est chargé dans le `<head>` de `BaseLayout.astro` et la licence Adobe **interdit d'héberger le fichier soi-même** — il n'y a donc, volontairement, aucun fichier Commuters Sans dans `public/fonts/`. Le nom de famille CSS est celui d'Adobe, `commuters-sans`, et non `"Commuters Sans"`.
 >
 > **⚠️ Graisse manquante.** Le kit ne publie que les graisses 400 et 700, alors que les sous-titres appellent la 600 : la correspondance CSS remonte donc vers la 700, un dessin réel mais plus lourd que la maquette. Le SemiBold existe chez Adobe pour cette famille — il reste à le cocher dans le projet web côté cliente. L'URL du kit ne changeant pas, aucune modification de code ne sera nécessaire ce jour-là.
 
@@ -543,8 +543,8 @@ Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity
 
 ### Avant la première mise en ligne
 
-- [ ] remplacer la fonte **Commuters Sans « Fontspring DEMO »** par sa version sous
-      licence web (voir § Design system) — la licence actuelle n'autorise pas la production ;
+- [ ] graisse **SemiBold (600) de Commuters Sans** cochée dans le projet Adobe Fonts côté
+      cliente — sans elle les sous-titres sont rendus en 700 (voir § Design system) ;
 - [ ] pages légales publiées (`npm run legal:seed` crée les brouillons) ;
 - [ ] domaine de l'expéditeur vérifié chez Resend (enregistrements SPF/DKIM dans la zone DNS) ;
 - [ ] boutique Shopify sur un forfait payant, jeton Storefront de production ;
