@@ -1175,19 +1175,16 @@
   */
   .identity-value--missing {
     /*
-      Tant qu'elle ne l'est pas, en revanche, elle doit être impossible à
-      manquer. Ces pages se relisent en diagonale, et un « [À COMPLÉTER] » gris
-      au milieu d'un paragraphe gris se lit exactement zéro fois — jusqu'au jour
-      où c'est un tiers qui le remarque.
+      Tant qu'elle ne l'est pas, elle passe en dactylo : le « [À COMPLÉTER : … ] »
+      en capitales entre crochets se repère déjà seul dans un paragraphe, et la
+      fonte des notes machine suffit à le désigner comme une marque de travail
+      plutôt que comme du texte publié.
 
-      Le trait souligné plutôt qu'un aplat de couleur : la charte n'a pas de
-      rouge, et la page reste imprimable telle quelle.
+      Pas de soulignement : dans une page qui porte de vrais liens soulignés, un
+      second trait sous un mot non cliquable se lit comme un lien mort.
     */
     font-family: var(--font-note);
     font-style: normal;
-    text-decoration: underline wavy;
-    text-underline-offset: 0.25em;
-    opacity: 0.85;
   }
 
   .prose-abime ul {

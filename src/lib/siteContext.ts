@@ -1,4 +1,5 @@
 import { loadQuery } from './sanity/loadQuery';
+import { visualEditingEnabled } from './sanity/env';
 import { legalPagesQuery, localizedSettingsQuery, siteSettingsQuery } from './sanity/queries';
 import { getShopPolicies } from './shopify/policies';
 import type { LegalLink, LocalizedSettings, SiteContext, SiteSettings } from './sanity/types';
@@ -11,13 +12,36 @@ import type { Locale } from '~/i18n/config';
  *
  * Mémoïsé par langue pour la durée du process : au build, les centaines de pages
  * générées ne déclenchent qu'une seule paire de requêtes par langue.
- * Le cache est volontairement désactivé en mode édition visuelle, où l'on veut
- * toujours refléter le dernier état du brouillon.
+ *
+ * ── Pourquoi le cache s'arrête aux processus de build ───────────────────────
+ * Un build vit quelques secondes : y garder les réglages en mémoire est sans
+ * risque, et c'est même ce qui rend le rendu de chaque page gratuit — voir
+ * `PortableText.astro`, qui appelle cette fonction pour résoudre les renvois
+ * vers la fiche d'entreprise.
+ *
+ * Un serveur de développement, lui, vit des heures. Le même cache y fige les
+ * réglages au tout premier rendu : on modifie l'adresse du studio dans le
+ * Studio, on recharge la page, et rien ne bouge — la valeur d'avant est servie
+ * jusqu'au redémarrage. Le symptôme est déroutant au possible, parce que le
+ * contenu des pages, lui, se rafraîchit normalement : seuls les réglages
+ * restent en arrière.
+ *
+ * Le cache est donc éteint en développement et en édition visuelle, les deux
+ * situations où quelqu'un regarde le site pendant qu'il le modifie.
  */
 const cache = new Map<string, Promise<SiteContext>>();
 
+/*
+  Le rendu à la demande sert chaque visite : sans cache, chaque page ferait
+  deux requêtes de plus. Le cas ne se présente qu'en mode maintenance, où le
+  site est fermé — mais autant ne pas le payer pour rien.
+*/
+const cacheEnabled = !import.meta.env.DEV && !visualEditingEnabled;
+
 export function getSiteContext(locale: Locale, options: { fresh?: boolean } = {}): Promise<SiteContext> {
-  if (!options.fresh) {
+  const useCache = cacheEnabled && !options.fresh;
+
+  if (useCache) {
     const cached = cache.get(locale);
     if (cached) return cached;
   }
@@ -32,7 +56,7 @@ export function getSiteContext(locale: Locale, options: { fresh?: boolean } = {}
     return { locale, settings, localized, legalLinks };
   })();
 
-  if (!options.fresh) cache.set(locale, promise);
+  if (useCache) cache.set(locale, promise);
   return promise;
 }
 
