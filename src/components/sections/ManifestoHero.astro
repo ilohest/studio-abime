@@ -232,6 +232,26 @@ const metaLines = (section.metaLines ?? []).map((line) => {
       grid-row: 1;
     }
 
+    /*
+      Les deux partagent la même cellule : les mentions en haut, le manifeste
+      dessous (d'où les 12rem de retrait plus bas). Mais un élément de grille
+      s'étire par défaut sur toute la hauteur de sa cellule — les deux boîtes
+      se retrouvaient donc superposées au pixel près, et `.manifesto-left-page`,
+      plus bas dans le DOM, recouvrait les mentions.
+
+      Invisible à l'œil, les deux blocs étant transparents, mais l'adresse
+      e-mail devenait impossible à cliquer : le clic atteignait le manifeste.
+
+      `align-self: start` ramène les mentions à la hauteur de leur contenu, et
+      le `z-index` leur rend la bande qu'elles occupent réellement. Le manifeste
+      garde tout le reste.
+    */
+    .manifesto-meta {
+      align-self: start;
+      position: relative;
+      z-index: 1;
+    }
+
     .manifesto-left-page {
       padding-top: 12rem;
     }
