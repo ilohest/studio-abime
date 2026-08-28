@@ -169,8 +169,14 @@ export default defineConfig({
       projectId: PUBLIC_SANITY_PROJECT_ID,
       dataset: PUBLIC_SANITY_DATASET || 'production',
       apiVersion: PUBLIC_SANITY_API_VERSION || '2025-02-19',
-      // CDN désactivé en mode édition visuelle pour toujours servir la donnée fraîche.
-      useCdn: !visualEditingEnabled,
+      /*
+        Toujours l'API directe, jamais le CDN — même raison qu'au-dessus pour
+        l'interrupteur de maintenance : un build déclenché par une publication
+        lirait sinon l'état d'avant celle-ci. Le vrai client du site est
+        `src/lib/sanity/client.ts`, qui pose la même valeur ; celle-ci ne sert
+        qu'à ne pas laisser traîner ici un réglage qui le contredirait.
+      */
+      useCdn: false,
       /**
        * Pas de `studioBasePath` : le Studio n'est PAS embarqué dans le site.
        * Il est déployé à part sur https://studio.studio-abime.com (`npm run

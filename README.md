@@ -190,7 +190,9 @@ PUBLIC_SANITY_VISUAL_EDITING_ENABLED="true"
 SANITY_API_READ_TOKEN="<token Viewer>"   # requis pour lire les brouillons
 ```
 
-Ce drapeau bascule trois choses d'un coup : stega activé, CDN désactivé, et routes en rendu à la demande (au lieu du pré-rendu statique).
+Ce drapeau bascule deux choses d'un coup : stega activé, et routes en rendu à la demande (au lieu du pré-rendu statique). Il commande aussi la lecture des brouillons et la fermeture à l'indexation (`src/lib/seo/indexing.ts`).
+
+Le CDN de Sanity, lui, ne dépend plus de ce drapeau : il est désactivé partout (`src/lib/sanity/client.ts`). Un site pré-rendu ne joue chaque requête qu'une fois, au build — le cache n'a rien à y mutualiser, et il servirait l'état d'avant la publication qui vient de déclencher la reconstruction.
 
 > Le rendu à la demande est décidé par `output` dans `astro.config.ts`, et non
 > par un `export const prerender` dans les pages. Astro **n'évalue pas** un
