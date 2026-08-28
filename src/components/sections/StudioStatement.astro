@@ -5,6 +5,8 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { figureLabel } from '~/lib/figureLabel';
+import { projectsIndexPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { StudioStatement } from '~/lib/sanity/types';
 
@@ -20,7 +22,8 @@ interface Props {
   locale: Locale;
 }
 
-const { section } = Astro.props;
+const { section, locale } = Astro.props;
+const t = useTranslations(locale);
 
 /**
  * Les trois notions structurantes de la déclaration reçoivent la voix
@@ -131,6 +134,21 @@ const figures = (section.figures ?? []).map((figure) => ({
                 {section.marker && (
                   <p class="type-note statement__marker">{section.marker}</p>
                 )}
+
+                {/*
+                  Placé dans la planche pour venir sous la dernière figure.
+
+                  Libellé et destination sont FIXÉS EN CODE, comme les titres de
+                  section : ce bouton mène à la seule page vers laquelle le
+                  manifeste puisse conduire. En faire un champ, c'était proposer
+                  de le vider — et le vider laissait la déclaration sans suite.
+                */}
+                <div class="statement__actions">
+                  <a href={projectsIndexPath(locale)} class="button-minimal">
+                    <span class="button-minimal__label">{t('home.enterStudio')}</span>
+                    <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+                  </a>
+                </div>
               </div>
             )
           }
@@ -340,6 +358,21 @@ const figures = (section.figures ?? []).map((figure) => ({
     text-align: center;
   }
 
+  .statement__actions {
+    grid-column: span 3 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-start;
+    margin-top: clamp(1.5rem, 4vh, 2.5rem);
+  }
+
+  .statement__plate[data-lower-row] .statement__actions {
+    grid-column: span 3 / -1;
+    grid-row: 3;
+    justify-content: flex-end;
+    margin-top: calc(-1 * clamp(2rem, 4vw, 4rem));
+  }
+
   /* ── Mobile : la planche s'empile, plus de débord ─────────────────────── */
   @media (max-width: 767px) {
     .statement {
@@ -433,6 +466,13 @@ const figures = (section.figures ?? []).map((figure) => ({
     .statement__marker {
       align-self: flex-start;
       text-align: left;
+    }
+
+    .statement__actions,
+    .statement__plate[data-lower-row] .statement__actions {
+      align-self: flex-end;
+      justify-content: flex-end;
+      margin-top: clamp(1.5rem, 4vh, 2.5rem);
     }
   }
 
