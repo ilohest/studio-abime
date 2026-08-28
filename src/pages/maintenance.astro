@@ -2,6 +2,7 @@
 import '~/styles/global.css';
 
 import Wordmark from '~/components/brand/Wordmark.astro';
+import Stamp from '~/components/brand/Stamp.astro';
 
 import { accessPossible, getMaintenanceContent, maintenanceEnabled } from '~/lib/maintenance';
 
@@ -79,7 +80,11 @@ Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
       est le seul décor de l'écran. Le volet de gauche ne porte rien — c'est du
       papier, et c'est tout ce qu'on demande de lui.
     */}
-    <div class="volet volet--nu" aria-hidden="true"></div>
+    <div class="volet volet--nu" aria-hidden="true">
+      <div class="tampon">
+        <Stamp variant="plongee-cercle" rotate={-9} />
+      </div>
+    </div>
 
     <main class="volet volet--texte">
       {/*
@@ -174,6 +179,17 @@ Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     background-size: cover;
     background-position: center;
     pointer-events: none;
+  }
+
+  /* Le tampon est pressé au bas de la feuille de gauche, seule chose posée
+     dessus. Il disparaît avec elle sur les petits écrans. */
+  .tampon {
+    position: absolute;
+    left: clamp(1.75rem, 5vw, 4.5rem);
+    bottom: clamp(2rem, 5vw, 4rem);
+    z-index: 1;
+    width: clamp(6rem, 11vw, 10rem);
+    color: var(--color-ink);
   }
 
   /* Le volet de droite retourne l'image : deux feuilles, et non deux copies. */

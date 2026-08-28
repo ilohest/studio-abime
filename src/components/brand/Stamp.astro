@@ -1,6 +1,7 @@
 ---
 import stamp from '~/assets/brand/stamp-labo-de-com.svg?raw';
 import plongee from '~/assets/brand/plongee-sous-le-visible.svg?raw';
+import plongeeCercle from '~/assets/brand/submark-plongee.svg?raw';
 
 /**
  * Tampons de marque (submarks), inlinés pour hériter de `currentColor`.
@@ -10,7 +11,7 @@ import plongee from '~/assets/brand/plongee-sous-le-visible.svg?raw';
  * neutralisée si l'utilisateur a réduit les animations.
  */
 interface Props {
-  variant?: 'labo' | 'plongee';
+  variant?: 'labo' | 'plongee' | 'plongee-cercle';
   class?: string;
   /** Inclinaison en degrés. */
   rotate?: number;
@@ -18,7 +19,7 @@ interface Props {
 }
 
 const { variant = 'labo', class: className = '', rotate = -8, spin = false } = Astro.props;
-const svg = variant === 'labo' ? stamp : plongee;
+const svg = variant === 'labo' ? stamp : variant === 'plongee-cercle' ? plongeeCercle : plongee;
 ---
 
 <span

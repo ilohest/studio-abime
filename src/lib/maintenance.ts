@@ -1,4 +1,4 @@
-import { loadQuery } from '~/lib/sanity/loadQuery';
+import { loadQuery } from "~/lib/sanity/loadQuery";
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -32,31 +32,35 @@ import { loadQuery } from '~/lib/sanity/loadQuery';
  * Constante littérale après compilation : les branches mortes disparaissent du
  * bundle, et le mot de passe avec elles quand le mode est éteint.
  */
-export const maintenanceEnabled = import.meta.env.MAINTENANCE_ENABLED === 'true';
+export const maintenanceEnabled =
+  import.meta.env.MAINTENANCE_ENABLED === "true";
 
 /** Mot de passe d'accès. Vide = personne n'entre, l'écran reste seul. */
-const password = (import.meta.env.MAINTENANCE_PASSWORD ?? '').trim();
+const password = (import.meta.env.MAINTENANCE_PASSWORD ?? "").trim();
 
 /** Sans mot de passe configuré, le formulaire d'accès n'est même pas affiché. */
 export const accessPossible = password.length > 0;
 
 /** Chemin de l'écran vers lequel le middleware réécrit les requêtes. */
-export const MAINTENANCE_PATH = '/maintenance';
+export const MAINTENANCE_PATH = "/maintenance";
 
 /** Cookie porteur du laissez-passer. */
-export const MAINTENANCE_COOKIE = 'abime-acces';
+export const MAINTENANCE_COOKIE = "abime-acces";
 
 /** Durée du laissez-passer : trente jours, pour ne pas ressaisir à chaque visite. */
 export const MAINTENANCE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 /** Paramètre d'URL signalant un mot de passe refusé (voir `src/middleware.ts`). */
-export const MAINTENANCE_ERROR_PARAM = 'acces';
+export const MAINTENANCE_ERROR_PARAM = "acces";
 
 async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
   return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 /**
@@ -71,7 +75,10 @@ export function accessToken(): Promise<string> {
 
 export async function passwordMatches(candidate: string): Promise<boolean> {
   if (!accessPossible) return false;
-  return (await sha256Hex(`studio-abime:acces:${candidate.trim()}`)) === (await accessToken());
+  return (
+    (await sha256Hex(`studio-abime:acces:${candidate.trim()}`)) ===
+    (await accessToken())
+  );
 }
 
 /**
@@ -80,8 +87,13 @@ export async function passwordMatches(candidate: string): Promise<boolean> {
  * serait un tremplin de redirection vers n'importe quel domaine.
  */
 export function safeNextPath(value: unknown): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
-  if (value.startsWith(MAINTENANCE_PATH)) return '/';
+  if (
+    typeof value !== "string" ||
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  )
+    return "/";
+  if (value.startsWith(MAINTENANCE_PATH)) return "/";
   return value;
 }
 
@@ -96,10 +108,10 @@ export interface MaintenanceContent {
  * rempli — ou si Sanity ne répond pas au moment précis où le site est fermé.
  */
 export const MAINTENANCE_FALLBACK: MaintenanceContent = {
-  title: 'Nous revenons très vite.',
+  title: "Nous revenons très vite.",
   message:
-    'Le site du Studio Abîme se prépare encore. Nous plongeons un peu plus loin sous le visible, et nous remontons bientôt.',
-  signature: 'Studio Abîme',
+    "Le site du Studio Abîme se prépare. Nous plongeons un peu plus loin sous le visible, et nous remontons bientôt.",
+  signature: "Studio Abîme",
 };
 
 /*
