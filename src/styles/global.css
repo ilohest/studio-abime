@@ -447,14 +447,45 @@
 }
 
 @layer utilities {
+  /**
+   * Le trait qui se trace — soulignement animé de la gauche vers la droite.
+   *
+   * Un filet peint en fond (`linear-gradient` de la couleur du texte) dont on
+   * anime la LARGEUR, de 0 à 100 %, ancré à gauche. C'est ce qui donne le
+   * mouvement d'un trait qu'on tire à la règle plutôt qu'un soulignement qui
+   * apparaît d'un bloc.
+   *
+   * Pourquoi un fond et non un `::after` en `scaleX` : le pseudo-élément est
+   * une boîte unique, qui se place mal dès qu'un lien passe à la ligne. Le
+   * fond, lui, suit le texte fragment par fragment — un lien de deux lignes
+   * dans un paragraphe reste correctement souligné. La contrepartie est
+   * d'animer `background-size` plutôt qu'une transformation, mais sur un filet
+   * d'un pixel, à l'échelle d'un survol, c'est sans conséquence.
+   *
+   * `currentColor` et `em` partout : le filet prend la couleur et l'échelle de
+   * son texte, donc rien à régler à chaque emploi.
+   *
+   * ➜ EMPLOI : sur tout lien qui se souligne AU SURVOL. Les liens déjà
+   *   soulignés en permanence (`.prose-abime a`) n'en relèvent pas — le trait
+   *   y porte l'information « ceci est un lien », il ne peut pas attendre.
+   */
+  .link-underline,
   .button-minimal__label {
     background-image: linear-gradient(currentColor, currentColor);
     background-position: left calc(100% - 0.04em);
     background-repeat: no-repeat;
     background-size: 0 1px;
     transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Le filet est peint en fond : pas de second trait par-dessus. */
+    text-decoration: none;
   }
 
+  /*
+    Le survol est écouté sur le lien lui-même, et sur le bouton pour son
+    libellé : c'est le bouton entier qui est la cible, pas ses trois mots.
+  */
+  .link-underline:hover,
+  .link-underline:focus-visible,
   .button-minimal:hover .button-minimal__label,
   .button-minimal:focus-visible .button-minimal__label {
     background-size: 100% 1px;
@@ -477,6 +508,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .link-underline,
     .button-minimal__label {
       transition: none;
     }

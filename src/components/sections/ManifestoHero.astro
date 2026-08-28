@@ -70,7 +70,7 @@ const metaLines = (section.metaLines ?? []).map((line) => {
               <dt>{line.label} :</dt>
               <dd>
                 {line.href ? (
-                  <a href={line.href} class="underline-offset-2 hover:underline">
+                  <a href={line.href} class="link-underline">
                     {line.value}
                   </a>
                 ) : (

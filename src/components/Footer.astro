@@ -69,7 +69,7 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
             <ul class="flex flex-col gap-1">
               {nav.map((item) => (
                 <li>
-                  <SmartLink link={item} locale={locale} class="underline-offset-2 hover:underline" />
+                  <SmartLink link={item} locale={locale} class="link-underline" />
                 </li>
               ))}
             </ul>
@@ -105,7 +105,7 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
             <ul class="footer-legal__list">
               {legalLinks.map((item) => (
                 <li>
-                  <a href={item.href} class="underline-offset-2 hover:underline">
+                  <a href={item.href} class="link-underline">
                     {item.label}
                   </a>
                 </li>
