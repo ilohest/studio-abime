@@ -22,9 +22,26 @@ function slugify(value: string) {
 }
 
 /**
- * Génère l'URL technique à la première publication, sans champ à gérer dans le
- * Studio. Partagé par les projets et les articles du Journal : dans les deux
- * cas, l'éditeur saisit un titre, jamais un slug.
+ * Tient l'URL technique alignée sur le titre, à chaque publication, sans champ
+ * à gérer dans le Studio. Partagé par les projets et les articles du Journal :
+ * dans les deux cas, l'éditeur saisit un titre, jamais un slug.
+ *
+ * ── Pourquoi à CHAQUE publication, et non à la première ─────────────────────
+ * La règle précédente ne posait le slug que s'il n'y en avait pas. Un document
+ * publié une fois sous un titre provisoire gardait donc cette URL pour
+ * toujours : c'est ainsi que « Jacqueline Atelier. » se retrouvait servi à
+ * l'adresse `/experiences/projet-3`, sans que rien dans le back-office ne le
+ * laisse voir — le champ y est masqué.
+ *
+ * ⚠️ UNE URL PUBLIÉE CHANGE DONC AVEC SON TITRE. Tant que le site n'est pas
+ *    indexé, c'est exactement ce qu'on veut. Une fois en ligne, retoucher un
+ *    titre — même pour une coquille — déplace la page : l'ancienne adresse ne
+ *    répond plus, et les liens déjà partagés tombent. Le jour où cela devient
+ *    un risque réel, la parade est de conserver les slugs précédents et de les
+ *    rediriger, plutôt que de revenir à un slug figé qui ment sur son titre.
+ *
+ * Un titre vide ne touche à rien : mieux vaut garder l'ancienne URL que la
+ * remplacer par une vide, qui dépublierait la page.
  */
 export const SlugOnPublishAction: DocumentActionComponent = (props) => {
   const { patch, publish } = useDocumentOperation(props.id, props.type);
@@ -43,7 +60,7 @@ export const SlugOnPublishAction: DocumentActionComponent = (props) => {
     onHandle: () => {
       setIsPublishing(true);
 
-      if (!existingSlug) {
+      if (generatedSlug && generatedSlug !== existingSlug) {
         patch.execute([{ set: { slug: { _type: 'slug', current: generatedSlug } } }]);
       }
 

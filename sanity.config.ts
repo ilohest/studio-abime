@@ -194,8 +194,8 @@ export default defineConfig({
         );
       }
 
-      // Projets et articles partagent la même règle : l'URL technique est
-      // générée à la première publication, jamais saisie à la main.
+      // Projets et articles partagent la même règle : l'URL technique suit le
+      // titre à chaque publication, jamais saisie à la main.
       if (schemaType === 'project' || schemaType === 'post') {
         const isPost = schemaType === 'post';
 

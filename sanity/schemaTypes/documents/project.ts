@@ -48,7 +48,7 @@ export const project = defineType({
       type: 'slug',
       hidden: true,
       options: { source: 'title', maxLength: 96 },
-      description: 'Généré automatiquement à la première publication.',
+      description: 'Reprise du titre à chaque publication — renommer déplace donc la page.',
     }),
 
     /* ── Diffusion ────────────────────────────────────────────────────────── */
