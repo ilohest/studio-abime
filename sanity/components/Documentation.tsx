@@ -74,6 +74,16 @@ const SANITY: Chapitre[] = [
         texte:
           'Chaque page en a un : titre et description affichés dans Google et sur les réseaux. Laissé vide, le site reprend le titre de la page et la description générale définie dans Réglages du site → Textes et SEO.',
       },
+      {
+        titre: 'L’adresse d’une page, dans l’onglet SEO',
+        texte:
+          'Elle est composée à partir du titre la première fois que vous publiez, puis elle ne bouge plus. C’est voulu : renommer un projet pour une coquille ne doit pas déplacer sa page, sinon les liens déjà partagés cesseraient de fonctionner à chaque correction.',
+      },
+      {
+        titre: 'Corriger une adresse sans rien casser',
+        texte:
+          'Si l’adresse ne convient pas — une page publiée sous un titre provisoire garde ce titre dans son adresse — modifiez-la dans l’onglet SEO. Au moment de publier, le Studio vous montre l’ancienne et la nouvelle, et vous propose de rediriger. Acceptez : l’ancienne adresse continuera de mener à la page, et rien de ce qui a été partagé ne se perdra. Ne refusez que si vous êtes certaine que personne n’a jamais eu cette adresse.',
+      },
     ],
   },
   {

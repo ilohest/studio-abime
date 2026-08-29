@@ -177,6 +177,39 @@ Ce choix vient d'une contrainte : les segments d'URL sont traduits et le préfix
 | `/experiences` | index du portfolio |
 | `/experiences/<slug>` | document `project`, rendu selon son modèle |
 
+### L'adresse d'une page, et ses adresses passées
+
+Le modèle est celui de Shopify, et il tient à une asymétrie : un titre se
+retouche souvent — une coquille, une majuscule, un point final — alors qu'une
+adresse publiée est une promesse faite à tous ceux qui l'ont copiée.
+
+1. **L'adresse est tirée du titre à la première publication**, puis elle ne bouge
+   plus d'elle-même. Renommer une page ne la déplace pas.
+2. **Elle reste modifiable à la main** (onglet SEO). C'est indispensable : une
+   page publiée sous un titre provisoire garderait sinon son adresse provisoire
+   pour toujours.
+3. **La corriger propose une redirection.** Au moment de publier — tant qu'on est
+   en brouillon, rien n'a bougé — le Studio montre les deux adresses et laisse le
+   choix entre rediriger l'ancienne et déplacer sans rediriger.
+
+L'ancienne adresse est versée dans `previousSlugs` (champ masqué), d'où
+`astro.config.ts` tire une redirection `301` au build. Elle atterrit dans le
+fichier `_redirects` de Cloudflare : servie par le CDN, sans réveiller de Worker,
+donc gratuite et sans limite.
+
+Deux gardes valent d'être connues :
+
+- une ancienne adresse **réoccupée depuis** par une autre page n'est jamais
+  redirigée — sans quoi publier un projet sous une adresse libérée le rendrait
+  invisible, renvoyé vers celui qui l'avait quittée. Le build le signale ;
+- les redirections héritées du contenu sont posées **avant** celles du code : une
+  donnée ne peut pas écraser une route écrite dans `astro.config.ts`.
+
+> Contrairement à l'interrupteur de maintenance, une lecture ratée n'arrête
+> **pas** le build. Le pire est ici qu'une ancienne adresse réponde 404 le temps
+> d'un déploiement — réparable en reconstruisant. Bloquer toute publication sur
+> un hoquet de Sanity coûterait davantage.
+
 ---
 
 ## Édition visuelle (Presentation Tool)
