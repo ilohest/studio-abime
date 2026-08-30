@@ -88,6 +88,7 @@ const figures = (section.figures ?? []).map((figure) => ({
                 reference={note.reference}
                 text={note.text}
                 class="statement__note"
+                editable={sectionFieldAttribute(documentId, documentType, section._key, 'note')}
               />
             )}
           </div>
@@ -143,6 +144,12 @@ const figures = (section.figures ?? []).map((figure) => ({
                         reference={figure.label.reference}
                         text={figure.label.text}
                         class="statement__caption"
+                        editable={sectionFieldAttribute(
+                          documentId,
+                          documentType,
+                          section._key,
+                          `figures[_key=="${figure._key}"].caption`,
+                        )}
                       />
                     )}
                   </figure>

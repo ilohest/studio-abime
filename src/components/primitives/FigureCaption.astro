@@ -10,6 +10,17 @@ interface Props {
   as?: 'figcaption' | 'p' | 'span';
   class?: string;
   id?: string;
+  /**
+   * Attribut `data-sanity` désignant le champ d'où vient la légende
+   * (`src/lib/visualEditing.ts`).
+   *
+   * Il ne sert QU'AU REPÈRE de tête. Le reste de la légende porte encore sa
+   * traîne d'édition visuelle et reste cliquable tout seul : `figureLabel()`
+   * détache le repère par le DÉBUT de la chaîne, or la traîne est accrochée à
+   * la fin — elle part donc avec le texte, et le repère se retrouve seul,
+   * lisible mais inerte.
+   */
+  editable?: string;
 }
 
 const {
@@ -18,6 +29,7 @@ const {
   text,
   as: Tag = 'figcaption',
   class: className,
+  editable,
   ...attributes
 } = Astro.props as Props;
 
@@ -31,7 +43,9 @@ const label = value === undefined
     <Tag class:list={['figure-caption', className]} {...attributes}>
       {label.reference && (
         <span class="figure-caption__prefix">
-          <span class="figure-caption__reference">{label.reference}</span>
+          <span class="figure-caption__reference" data-sanity={editable}>
+            {label.reference}
+          </span>
           {label.text && <span class="figure-caption__separator"> - </span>}
         </span>
       )}
