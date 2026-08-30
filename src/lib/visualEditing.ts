@@ -42,21 +42,23 @@ import { dataset, projectId, studioUrl, visualEditingEnabled } from './sanity/en
  */
 
 /**
- * Attribut `data-sanity` désignant un champ d'une section du page builder.
+ * Attribut `data-sanity` désignant quelque chose DANS une section du page
+ * builder — un champ, ou un élément d'un de ses tableaux.
  *
  * Rend `undefined` hors édition visuelle : en production, l'attribut n'existe
  * pas et pas un octet n'est ajouté aux pages.
  *
- * @param documentId  `_id` du document qui porte la section
+ * @param documentId   `_id` du document qui porte la section
  * @param documentType `_type` du document (`page`, `project`…)
- * @param sectionKey  `_key` de la section dans le tableau `sections`
- * @param field       nom du champ dans la section (`statement`, `text`…)
+ * @param sectionKey   `_key` de la section dans le tableau `sections`
+ * @param path         chemin RELATIF à la section — `statement`, `text`, ou
+ *                     `figures[_key=="f5"]` pour viser un élément de tableau
  */
 export function sectionFieldAttribute(
   documentId: string | undefined,
   documentType: string | undefined,
   sectionKey: string | undefined,
-  field: string,
+  path: string,
 ): string | undefined {
   if (!visualEditingEnabled) return undefined;
   if (!documentId || !documentType || !sectionKey) return undefined;
@@ -68,9 +70,36 @@ export function sectionFieldAttribute(
     id: documentId,
     type: documentType,
     /*
-      Le chemin désigne la section par sa CLÉ et non par son rang : réordonner
-      le page builder ne doit pas faire pointer l'attribut vers le voisin.
+      La section est désignée par sa CLÉ et non par son rang : réordonner le
+      page builder ne doit pas faire pointer l'attribut vers le voisin. Même
+      raison pour les éléments de tableau visés par `path`.
     */
-    path: `sections[_key=="${sectionKey}"].${field}`,
+    path: `sections[_key=="${sectionKey}"].${path}`,
   }).toString();
+}
+
+/**
+ * Les images ne portent JAMAIS de traîne d'édition visuelle : stega n'encode
+ * que des chaînes de caractères, et une image est un objet — une référence
+ * d'asset, un recadrage, un texte alternatif. Une planche d'images est donc
+ * entièrement inerte dans le Presentation Tool tant qu'on ne désigne pas
+ * chaque figure explicitement.
+ *
+ * On vise la FIGURE et non son image : le clic ouvre alors l'entrée complète —
+ * image, légende et réglages de mise en page — c'est-à-dire ce que l'éditrice
+ * cherche à changer quand elle clique sur une planche.
+ */
+export function figureAttribute(
+  documentId: string | undefined,
+  documentType: string | undefined,
+  sectionKey: string | undefined,
+  figureKey: string | undefined,
+): string | undefined {
+  if (!figureKey) return undefined;
+  return sectionFieldAttribute(
+    documentId,
+    documentType,
+    sectionKey,
+    `figures[_key=="${figureKey}"]`,
+  );
 }

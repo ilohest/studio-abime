@@ -279,7 +279,12 @@ const panelId = `services-menu-${mode}`;
     width: 100%;
     max-width: 32rem;
     flex-direction: column;
-    gap: clamp(2.5rem, 6vh, 4.5rem);
+    /*
+      Même resserrement qu'au menu mobile, et pour la même raison : chaque
+      groupe porte déjà ses sous-entrées, un blanc trop large les faisait lire
+      comme cinq listes sans rapport plutôt que comme un sommaire.
+    */
+    gap: clamp(2rem, 4.8vh, 3.6rem);
     margin-inline-start: var(--rail-groups-margin, 0);
   }
 
@@ -530,13 +535,15 @@ const panelId = `services-menu-${mode}`;
     }
 
     /*
-      Écart resserré : chaque groupe porte déjà ses sous-entrées, et un blanc
-      trop large les faisait lire comme cinq listes sans rapport plutôt que
-      comme un sommaire. La borne basse tient le rythme sur un écran court.
+      À l'inverse du rail de bureau, le menu tactile s'AÈRE. Ce qu'on y vise
+      n'est pas un pointeur d'un pixel mais un doigt : entre deux groupes, le
+      blanc est ce qui évite d'ouvrir « Journal » en voulant toucher « Shop ».
+      L'écran haut le rend gratuit — la liste tient largement, et le blanc
+      qu'elle laissait en bas est mieux employé entre les lignes.
     */
     .services-rail__groups {
       max-width: 20rem;
-      gap: clamp(1.2rem, 3.2svh, 1.9rem);
+      gap: clamp(1.75rem, 5svh, 3rem);
       margin: auto;
     }
 

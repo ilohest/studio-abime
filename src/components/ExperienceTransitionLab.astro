@@ -212,6 +212,22 @@ const elementNumbers = Object.fromEntries(
   const CARD_COLUMN_SHIFT = 0.3;
 
   /*
+    Sur écran étroit, l'éventail se referme à DEUX colonnes et la piste est plus
+    courte : la table finissait de sortir par le haut alors que les fiches
+    étaient encore sous le bord bas, et l'écran restait un moment entièrement
+    vide au milieu du geste. Elles partent donc de moins loin et entrent plus
+    tôt — les deux mouvements se croisent au lieu de laisser un trou entre eux.
+    Le décalage de colonne se resserre d'autant : à deux colonnes, l'éventail
+    n'a pas besoin de la même amplitude qu'à quatre.
+  */
+  const narrowCardMotion = {
+    travelVh: 68,
+    enterStart: 0.06,
+    enterEnd: 0.72,
+    columnShift: 0.2,
+  };
+
+  /*
     Tant que les fiches volent séparées, elles ne peuvent plus compter sur leur
     voisine pour fermer leur cadre : chacune peint alors ses quatre côtés. Et
     elles ne captent la souris qu'une fois presque posées — sans quoi elles
@@ -399,6 +415,15 @@ const elementNumbers = Object.fromEntries(
 
       const columnCount = window.innerWidth >= 1440 ? 4 : window.innerWidth >= 900 ? 3 : 2;
       const totalIncoming = Math.max(1, columnCount - 1);
+      const motion =
+        columnCount > 2
+          ? {
+              travelVh: CARD_TRAVEL_VH,
+              enterStart: CARD_ENTER_START,
+              enterEnd: CARD_ENTER_END,
+              columnShift: CARD_COLUMN_SHIFT,
+            }
+          : narrowCardMotion;
 
       flightCards.forEach((card, index) => {
         const columnIndex = index % columnCount;
@@ -406,8 +431,8 @@ const elementNumbers = Object.fromEntries(
         const columnProgress = ease(
           range(
             progress,
-            CARD_ENTER_START + rightToLeft * CARD_COLUMN_SHIFT,
-            CARD_ENTER_END + rightToLeft * CARD_COLUMN_SHIFT,
+            motion.enterStart + rightToLeft * motion.columnShift,
+            motion.enterEnd + rightToLeft * motion.columnShift,
           ),
         );
         /*
@@ -416,7 +441,7 @@ const elementNumbers = Object.fromEntries(
           monte donc à sa taille définitive, et la trame reste jointive
           pendant toute la montée.
         */
-        const rise = (CARD_TRAVEL_VH / 100) * window.innerHeight * (1 - columnProgress);
+        const rise = (motion.travelVh / 100) * window.innerHeight * (1 - columnProgress);
         card.style.transform = `translate3d(0, ${rise.toFixed(3)}px, 0)`;
         card.style.opacity = String(range(columnProgress, 0.04, 0.32));
       });

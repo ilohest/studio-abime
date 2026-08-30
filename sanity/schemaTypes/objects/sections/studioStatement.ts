@@ -31,7 +31,14 @@ export const studioStatement = defineType({
       type: 'text',
       rows: 3,
       group: 'text',
-      description: 'Fig. 04',
+      /*
+        Le repère et le texte tiennent dans un seul champ : `figureLabel()` les
+        sépare au rendu. La description doit donc dire la CONVENTION, pas
+        donner un exemple isolé — « Fig. 04 » seul se lisait comme une étiquette
+        du champ, et personne ne devinait qu'il fallait l'écrire dans le texte.
+      */
+      description:
+        'Commencez par le repère, puis la note : « fig.04 — On étudie la communication… ». Le repère est détaché et composé à part. Sans lui, seule la note s’affiche.',
     }),
     defineField({
       name: 'marker',

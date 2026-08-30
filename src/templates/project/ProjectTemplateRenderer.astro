@@ -2,6 +2,7 @@
 import { stegaClean } from '@sanity/client/stega';
 
 import ProjectElementCell from '~/components/project/ProjectElementCell.astro';
+import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 import ProjectFacts from '~/components/project/ProjectFacts.astro';
 
 import SplitTemplate from './SplitTemplate.astro';
@@ -54,6 +55,19 @@ const Template = (() => {
 ---
 
 <div class="project-page-shell" data-project-shell data-template={template}>
+  {/*
+    Copie mobile du lien de retour — même parti que le relevé du gabarit
+    « Colonne fixe », qui rend le sien deux fois : le lien vit DANS le gabarit,
+    à la place que sa mise en page lui donne au bureau — en tête de la colonne
+    fixe, où il reste visible tant qu'elle colle. Sous 900 px, le cartouche
+    rentre dans le flux et passait devant lui : on lisait la case et le relevé
+    avant de savoir comment revenir. Un second lien ouvre donc la page, et
+    celui du gabarit s'efface — comme en tête d'un article du Journal.
+  */}
+  <div class="project-page-back container-wide">
+    <ProjectBackLink locale={locale} />
+  </div>
+
   {/*
     Le cartouche de tête : la case que le visiteur vient de quitter, et sous
     elle le relevé du projet. Posé hors du flux, en haut à DROITE — il ne
@@ -146,6 +160,11 @@ const Template = (() => {
     pointer-events: auto;
   }
 
+  /* Au bureau, le lien du gabarit suffit : celui-ci n'existe que pour le flux. */
+  .project-page-back {
+    display: none;
+  }
+
   /*
     Sous 900 px, la colonne de droite n'a plus la largeur d'accueillir le
     relevé : le bloc rentre dans le flux, en tête de page. Il y repousse le
@@ -153,6 +172,26 @@ const Template = (() => {
     petit écran ce que le grand donne.
   */
   @media (max-width: 899px) {
+    .project-page-back {
+      display: block;
+      /*
+        C'est lui, désormais, qui démarre la page : il porte le dégagement de la
+        barre de marque, fixée en haut de l'écran sous 767 px (au-dessus,
+        `--mobile-brand-clearance` vaut zéro et le `max` retombe sur l'écart
+        courant).
+      */
+      padding-top: max(clamp(1.5rem, 3vw, 2.5rem), var(--mobile-brand-clearance));
+    }
+
+    /*
+      Le lien que porte le gabarit s'efface : les deux se suivraient à trois
+      lignes d'intervalle. Ciblé par la racine du gabarit — un `<article>`,
+      chez les trois — plutôt que par une négation.
+    */
+    .project-page-shell > :global(article) :global(.back-link) {
+      display: none;
+    }
+
     .project-page-aside {
       position: static;
       padding-top: clamp(1.5rem, 3vw, 2.5rem);
@@ -166,14 +205,10 @@ const Template = (() => {
 
   /*
     Sous 767 px, le repère de marque et le bouton de menu sont fixés en haut de
-    l'écran (voir `--mobile-brand-clearance`) : la case doit démarrer sous eux,
-    sans quoi elle se superpose au bouton de menu.
+    l'écran (voir `--mobile-brand-clearance`) : c'est le lien de retour, en tête
+    de page, qui démarre sous eux — le cartouche le suit dans le flux.
   */
   @media (max-width: 767px) {
-    .project-page-aside {
-      padding-top: max(clamp(1.5rem, 3vw, 2.5rem), var(--mobile-brand-clearance));
-    }
-
     /*
       Le relevé rejoint l'ordre de lecture mobile — après le titre, avant la
       description — porté par chaque gabarit (`.mobile-facts`) : sa copie dans
