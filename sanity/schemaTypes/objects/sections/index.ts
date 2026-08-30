@@ -1,6 +1,5 @@
 import { defineArrayMember, defineField } from 'sanity';
 import type { ConditionalProperty } from '@sanity/types';
-import type { ArrayOfObjectsInputProps } from 'sanity';
 
 import { manifestoHero } from './manifestoHero';
 import { servicesMenu } from './servicesMenu';
@@ -52,8 +51,9 @@ export function definePageBuilder(
     /** Masque le champ selon le document — un modèle de page qui compose autrement. */
     hidden?: ConditionalProperty;
     /**
-     * Fige la COMPOSITION : plus de bouton « Add item », plus de glisser-déposer.
-     * Le contenu de chaque bloc reste entièrement modifiable.
+     * Fige la COMPOSITION : ni ajout, ni suppression, ni duplication, ni copie,
+     * ni réordonnancement. Le contenu de chaque bloc reste entièrement
+     * modifiable — c'est le seul geste qui subsiste.
      *
      * À poser sur les pages dont l'enchaînement des blocs est une décision de
      * design et non un choix éditorial. La page d'accueil en est l'exemple : sa
@@ -90,20 +90,29 @@ export function definePageBuilder(
       insertMenu: { filter: true, showIcons: true },
       // Le glisser-déposer réordonne : c'est déjà changer la composition.
       sortable: !locked,
+      /*
+        Les SIX actions que Sanity expose sur un tableau. Les couper toutes
+        retire le bouton d'ajout ET le menu « ⋮ » de chaque bloc — dupliquer,
+        copier, insérer avant/après, supprimer. Il ne reste que l'ouverture du
+        bloc et l'édition de ses champs.
+
+        `disableActions` est marqué @beta par Sanity. C'est malgré tout la bonne
+        voie : l'alternative — remplacer le composant d'item pour lui retirer
+        son menu — obligerait à réimplémenter le pli, le glisser, la validation
+        et la présence, et casserait à la première évolution du Studio.
+      */
+      ...(locked
+        ? {
+            disableActions: [
+              'add',
+              'addBefore',
+              'addAfter',
+              'remove',
+              'duplicate',
+              'copy',
+            ] as const,
+          }
+        : {}),
     },
-    ...(locked
-      ? {
-          components: {
-            /*
-              `arrayFunctions` est le bloc de boutons sous la liste — « Add
-              item » et ses variantes. Le remplacer par un composant vide les
-              retire sans toucher au reste du formulaire : chaque bloc garde son
-              formulaire d'édition complet.
-            */
-            input: (props: ArrayOfObjectsInputProps) =>
-              props.renderDefault({ ...props, arrayFunctions: () => null }),
-          },
-        }
-      : {}),
   });
 }
