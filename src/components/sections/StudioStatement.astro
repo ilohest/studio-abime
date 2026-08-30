@@ -7,6 +7,7 @@ import { stegaClean } from '@sanity/client/stega';
 import { figureLabel } from '~/lib/figureLabel';
 import { projectsIndexPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
+import { sectionFieldAttribute } from '~/lib/visualEditing';
 import type { Locale } from '~/i18n/config';
 import type { StudioStatement } from '~/lib/sanity/types';
 
@@ -20,17 +21,32 @@ import type { StudioStatement } from '~/lib/sanity/types';
 interface Props {
   section: StudioStatement;
   locale: Locale;
+  documentId?: string;
+  documentType?: string;
 }
 
-const { section, locale } = Astro.props;
+const { section, locale, documentId, documentType } = Astro.props;
 const t = useTranslations(locale);
+
+/*
+  La déclaration est découpée pour mettre trois expressions en italique. Le
+  découpage disperse le texte en plusieurs nœuds et laisse la traîne d'édition
+  visuelle orpheline dans le dernier fragment : on la retire franchement, et on
+  désigne le champ par un attribut (voir `src/lib/visualEditing.ts`).
+*/
+const statementEditable = sectionFieldAttribute(
+  documentId,
+  documentType,
+  section._key,
+  'statement',
+);
 
 /**
  * Les trois notions structurantes de la déclaration reçoivent la voix
  * manuscrite de l'exemple, sans transformer le champ Sanity en contenu riche.
  * La chaîne originale — et ses marqueurs d'édition visuelle — reste intacte.
  */
-const statementParts = section.statement.split(/(les outils|les langages|espace)/gi);
+const statementParts = stegaClean(section.statement).split(/(les outils|les langages|espace)/gi);
 const emphasizedStatementParts = new Set(['espace', 'les outils', 'les langages']);
 
 /*
@@ -56,7 +72,7 @@ const figures = (section.figures ?? []).map((figure) => ({
             gauches restent alignés, quelle que soit la largeur de composition.
           */}
           <div class="statement__lede">
-            <p class="type-declaration statement__text">
+            <p class="type-declaration statement__text" data-sanity={statementEditable}>
               {statementParts.map((part) =>
                 emphasizedStatementParts.has(part.toLocaleLowerCase('fr')) ? (
                   <em class="statement__emphasis">{part}</em>

@@ -1,15 +1,24 @@
 ---
 import { stegaClean } from '@sanity/client/stega';
+import { sectionFieldAttribute } from '~/lib/visualEditing';
 import type { PullQuote } from '~/lib/sanity/types';
 
 interface Props {
   section: PullQuote;
+  documentId?: string;
+  documentType?: string;
 }
 
-const { section } = Astro.props;
+const { section, documentId, documentType } = Astro.props;
 // L'animation manipule la chaîne : les marqueurs invisibles de Visual Editing
 // doivent être retirés pour ne pas être comptés comme des lettres.
 const cleanText = stegaClean(section.text);
+
+/*
+  Les retirer rend le texte inéditable — l'overlay n'a plus rien à lire. On
+  désigne donc le champ explicitement (voir `src/lib/visualEditing.ts`).
+*/
+const editable = sectionFieldAttribute(documentId, documentType, section._key, 'text');
 
 let charIndex = 0;
 const textLines = cleanText.split(/\n+/).map((line) => ({
@@ -35,7 +44,7 @@ const textLines = cleanText.split(/\n+/).map((line) => ({
   <div class="pull-quote__grain surface-paper-grain"></div>
 
   <div class="pull-quote__inner">
-    <blockquote class="pull-quote__text" aria-label={cleanText}>
+    <blockquote class="pull-quote__text" aria-label={cleanText} data-sanity={editable}>
       <span class="pull-quote__lines" aria-hidden="true">
         {
           textLines.map((line, lineIndex) => (

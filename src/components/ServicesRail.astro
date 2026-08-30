@@ -483,7 +483,13 @@ const panelId = `services-menu-${mode}`;
       display: flex;
       align-items: center;
       overflow-y: auto;
-      padding: 6rem 1.5rem 2rem;
+      /*
+        La garniture du haut dégage le repère de marque, posé par-dessus le
+        panneau (`--mobile-logo-top` plus la hauteur du mot et de sa mention).
+        Six rem laissaient le premier groupe lui coller au sous-titre : le menu
+        commençait avant que l'enseigne ait fini.
+      */
+      padding: 7.75rem 1.5rem 2rem;
       background-color: var(--color-papier);
       background-image:
         linear-gradient(rgb(239 235 226 / 72%), rgb(239 235 226 / 72%)),
@@ -523,9 +529,14 @@ const panelId = `services-menu-${mode}`;
       max-width: none;
     }
 
+    /*
+      Écart resserré : chaque groupe porte déjà ses sous-entrées, et un blanc
+      trop large les faisait lire comme cinq listes sans rapport plutôt que
+      comme un sommaire. La borne basse tient le rythme sur un écran court.
+    */
     .services-rail__groups {
       max-width: 20rem;
-      gap: clamp(1.5rem, 4svh, 2.4rem);
+      gap: clamp(1.2rem, 3.2svh, 1.9rem);
       margin: auto;
     }
 

@@ -36,9 +36,16 @@ interface Props {
   locale: Locale;
   /** Date de révision du document, relayée aux blocs qui savent la citer. */
   documentUpdatedAt?: string;
+  /**
+   * Identité du document portant ces sections. Sert aux blocs qui transforment
+   * leur texte (découpe, `stegaClean`) et doivent donc désigner leur champ
+   * explicitement pour rester éditables — voir `src/lib/visualEditing.ts`.
+   */
+  documentId?: string;
+  documentType?: string;
 }
 
-const { sections, locale, documentUpdatedAt } = Astro.props;
+const { sections, locale, documentUpdatedAt, documentId, documentType } = Astro.props;
 
 if (import.meta.env.DEV) {
   const known = ['manifestoHero', 'servicesMenu', 'studioStatement', 'pullQuote', 'plateSpread', 'projectShowcase', 'fullBleedImage', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
@@ -60,9 +67,22 @@ if (import.meta.env.DEV) {
       case 'servicesMenu':
         return <ServicesMenu section={section} locale={locale} />;
       case 'studioStatement':
-        return <StudioStatement section={section} locale={locale} />;
+        return (
+          <StudioStatement
+            section={section}
+            locale={locale}
+            documentId={documentId}
+            documentType={documentType}
+          />
+        );
       case 'pullQuote':
-        return <PullQuote section={section} />;
+        return (
+          <PullQuote
+            section={section}
+            documentId={documentId}
+            documentType={documentType}
+          />
+        );
       case 'plateSpread':
         return <PlateSpread section={section} />;
       case 'projectShowcase':
