@@ -1200,6 +1200,29 @@
     border-inline-start: 1px solid var(--color-line);
   }
 
+  /**
+   * Édition visuelle — rendre au pointeur ce que la mise en page lui refuse.
+   *
+   * Certaines scènes sont volontairement transparentes au pointeur pour ne pas
+   * bloquer ce qui vit derrière : le manifeste de l'accueil pose
+   * `pointer-events: none` sur toute sa scène afin que le menu reste
+   * atteignable. Tout ce qu'elle contient en hérite.
+   *
+   * En production c'est exactement ce qu'on veut. Dans le Presentation Tool,
+   * c'est ce qui empêchait de survoler un texte pour l'éditer : l'overlay
+   * connaissait bien ces champs — le Studio savait faire défiler jusqu'à eux —
+   * mais le pointeur ne les atteignait jamais, donc rien ne se surlignait. Un
+   * champ éditable dans un sens et pas dans l'autre, sans rien pour le dire.
+   *
+   * La règle ne vise que les éléments PORTANT une désignation d'édition. Comme
+   * l'attribut n'est émis qu'en édition visuelle (voir
+   * `src/lib/visualEditing.ts`), elle n'a aucun effet sur le site publié — il
+   * n'y a pas un seul `data-sanity` dans un build de production.
+   */
+  [data-sanity] {
+    pointer-events: auto;
+  }
+
   /*
     Information reprise de la fiche d'entreprise (voir
     `src/lib/organizationIdentity.ts`). Une fois renseignée, elle doit se lire

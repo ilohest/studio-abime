@@ -35,7 +35,12 @@ export const page = defineType({
   ],
   fields: [
     languageField,
-    definePageBuilder({ group: 'content' }),
+    /*
+      Composition figée : la succession des blocs d'une page relève de la mise
+      en page, pas de l'édition. On modifie ce que chaque bloc dit, jamais quels
+      blocs il y a ni dans quel ordre.
+    */
+    definePageBuilder({ group: 'content', locked: true }),
     defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' }),
   ],
   preview: {

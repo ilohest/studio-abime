@@ -93,7 +93,7 @@ const SANITY: Chapitre[] = [
       {
         titre: 'Pages',
         texte:
-          'Une entrée par page du site. Leur place et leur adresse sont fixées : vous en modifiez les textes et les images, pas l’emplacement. La page d’accueil est la seule à se composer en blocs — vous pouvez en ajouter, en retirer, les réordonner.',
+          'Une entrée par page du site. Leur place et leur adresse sont fixées : vous en modifiez les textes et les images, pas l’emplacement. La succession des blocs est fixée elle aussi — c’est la mise en page, pas de l’édition. Vous changez ce que chaque bloc dit ; vous n’en ajoutez pas, n’en retirez pas et ne les réordonnez pas.',
       },
       {
         titre: 'Projets',
