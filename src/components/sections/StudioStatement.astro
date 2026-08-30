@@ -231,6 +231,23 @@ const figures = (section.figures ?? []).map((figure) => ({
     pointer-events: none;
   }
 
+  /*
+    …sauf dans le Presentation Tool, où c'est l'inverse qui compte.
+
+    Cette transparence au pointeur rendait la scène entière inéditable : ni le
+    texte de la note, ni les légendes des figures ne pouvaient être survolés, et
+    l'overlay n'avait donc rien à surligner. Le piège est qu'on ne peut pas y
+    remédier élément par élément — un texte éditable par sa traîne stega ne
+    porte aucun attribut sur lequel s'accrocher.
+
+    On rend donc la scène sensible au pointeur pendant l'édition. Le menu placé
+    derrière y perd ses clics ; c'est sans importance dans un aperçu dont
+    l'objet est de modifier la page, pas de la parcourir.
+  */
+  :global(html[data-visual-editing]) .statement__intro-stage {
+    pointer-events: auto;
+  }
+
   .statement__scene {
     transform: translate3d(var(--intro-x), calc(-1 * var(--scene-lift)), 0);
     will-change: transform;

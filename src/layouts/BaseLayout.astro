@@ -89,7 +89,17 @@ const defaultAlternate = alternates[defaultLocale];
 ---
 
 <!doctype html>
-<html lang={meta.htmlLang} dir={meta.dir}>
+{/*
+  `data-visual-editing` marque les pages servies au Presentation Tool. Il donne
+  aux composants un moyen de lever, pour l'édition seulement, une règle de mise
+  en page qui empêcherait de cliquer un champ — voir `StudioStatement.astro`.
+  L'attribut n'est pas émis en production.
+*/}
+<html
+  lang={meta.htmlLang}
+  dir={meta.dir}
+  data-visual-editing={visualEditingEnabled ? '' : undefined}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
