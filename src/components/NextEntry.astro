@@ -108,16 +108,49 @@ const { href, label, number, symbol, title, image, class: className } = Astro.pr
     width: clamp(15rem, 22vw, 20rem);
   }
 
-  /* Sous 640 px, la fiche prend la largeur et la légende repasse au-dessus. */
+  /*
+    Sous 640 px, la légende repasse au-dessus de la fiche — la ligne n'a plus la
+    largeur de les tenir côte à côte.
+
+    La fiche, elle, garde la MOITIÉ de la ligne. Étalée sur toute la largeur,
+    elle arrivait à l'échelle d'une image de pleine page : on ne lisait plus une
+    vignette qui annonce la suite, mais un second projet ouvert à la fin du
+    premier. À demi-largeur elle reprend son rang d'annonce, et son bord droit
+    tombe sur celui du reste de la page.
+  */
   @media (max-width: 639px) {
     .next-entry__layout {
+      /*
+        Une seule mesure pour les deux lignes : la légende se cale sur la fiche
+        et non sur la page. Le plancher garde le titre lisible sur les écrans
+        les plus étroits.
+      */
+      --next-entry-width: max(50%, 11rem);
       grid-template-columns: minmax(0, 1fr);
       justify-content: stretch;
+      justify-items: end;
       gap: 0.6rem;
     }
 
+    /*
+      La légende prend la boîte de la fiche et s'y aligne à gauche : son texte
+      démarre donc exactement au bord gauche de la vignette. La réserve de 7 px
+      est celle que le cadre garde pour ses croix — sans elle, la légende
+      partirait 7 px trop à gauche.
+    */
     .next-entry__caption {
+      width: var(--next-entry-width);
+      padding-inline-start: 7px;
       white-space: normal;
+    }
+
+    /*
+      La largeur est portée par le cadre, et non par la fiche : celle-ci est
+      dans un bloc dimensionné par son contenu, où un pourcentage n'aurait rien
+      eu de stable à quoi se rapporter.
+    */
+    .next-entry__frame {
+      width: var(--next-entry-width);
     }
 
     .next-entry__item {
