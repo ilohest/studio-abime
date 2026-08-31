@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Box, Card, Container, Heading, Stack, Tab, TabList, TabPanel, Text } from '@sanity/ui';
+import { Box, Card, Container, Heading, Stack, Tab, TabList, TabPanel, Text } from '@sanity/ui';
 
 /**
  * Mode d'emploi du back-office, affiché dans une entrée de la structure.
@@ -52,17 +52,17 @@ const SANITY: Chapitre[] = [
       {
         titre: 'Brouillon et publication',
         texte:
-          'Rien de ce que vous écrivez n’apparaît sur le site avant d’avoir été publié. Tant que la pastille « Draft » est allumée, vos modifications sont enregistrées mais restent privées. Le bouton Publish, en bas de l’écran, les met en ligne.',
+          'Rien n’apparaît sur le site avant d’être publié. Tant que la pastille « Draft » est allumée, vos modifications sont enregistrées mais restent privées ; le bouton Publish, en bas de l’écran, les met en ligne.',
       },
       {
         titre: 'Le sélecteur « Drafts / Published », tout en haut',
         texte:
-          'Il choisit la version que le Studio vous montre. Sur « Drafts », vous voyez vos brouillons et vous pouvez écrire : c’est la position de travail, celle qu’il faut garder. Sur « Published », vous voyez le site tel qu’il est en ligne en ce moment, et les champs deviennent non modifiables — c’est une vitrine, pas une erreur. Si plus rien ne réagit sous vos doigts, regardez ce sélecteur en premier : il est probablement resté sur « Published ».',
+          'Il choisit la version que le Studio vous montre. Gardez-le sur « Drafts » : c’est la position de travail, la seule où l’on puisse écrire. Sur « Published », vous consultez le site tel qu’il est en ligne et les champs se figent — si plus rien ne réagit sous vos doigts, regardez ce sélecteur en premier.',
       },
       {
         titre: 'Voir avant de publier',
         texte:
-          'L’onglet Presentation, en haut de l’écran, affiche le site à côté du formulaire. Vous cliquez un texte dans la page, il s’ouvre à gauche ; vous le modifiez, la page se met à jour en direct.',
+          'L’onglet Presentation affiche le site à côté du formulaire. Vous cliquez un texte dans la page, il s’ouvre à gauche ; vous le modifiez, la page se met à jour en direct.',
       },
       {
         titre: 'Les images',
@@ -72,17 +72,12 @@ const SANITY: Chapitre[] = [
       {
         titre: 'L’onglet SEO',
         texte:
-          'Chaque page en a un : titre et description affichés dans Google et sur les réseaux. Laissé vide, le site reprend le titre de la page et la description générale définie dans Réglages du site → Textes et SEO.',
+          'Chaque page en a un : le titre et la description affichés dans Google et sur les réseaux. Laissés vides, le site reprend le titre de la page et la description générale de Réglages du site → Textes et SEO.',
       },
       {
-        titre: 'L’adresse d’une page, dans l’onglet SEO',
+        titre: 'L’adresse d’une page',
         texte:
-          'Elle est composée à partir du titre la première fois que vous publiez, puis elle ne bouge plus. C’est voulu : renommer un projet pour une coquille ne doit pas déplacer sa page, sinon les liens déjà partagés cesseraient de fonctionner à chaque correction.',
-      },
-      {
-        titre: 'Corriger une adresse sans rien casser',
-        texte:
-          'Si l’adresse ne convient pas — une page publiée sous un titre provisoire garde ce titre dans son adresse — modifiez-la dans l’onglet SEO. Au moment de publier, le Studio vous montre l’ancienne et la nouvelle, et vous propose de rediriger. Acceptez : l’ancienne adresse continuera de mener à la page, et rien de ce qui a été partagé ne se perdra. Ne refusez que si vous êtes certaine que personne n’a jamais eu cette adresse.',
+          'Elle se forme à partir du titre à la première publication, puis ne bouge plus : corriger une coquille ne doit pas déplacer une page dont l’adresse circule déjà. Pour la changer malgré tout, modifiez-la dans l’onglet SEO ; à la publication, le Studio propose de rediriger l’ancienne adresse vers la nouvelle. Acceptez, sauf si vous êtes certaine que personne ne l’a jamais eue.',
       },
     ],
   },
@@ -93,12 +88,12 @@ const SANITY: Chapitre[] = [
       {
         titre: 'Pages',
         texte:
-          'Une entrée par page du site. Leur place et leur adresse sont fixées : vous en modifiez les textes et les images, pas l’emplacement. La succession des blocs l’est aussi — c’est la mise en page, pas de l’édition. Vous ouvrez un bloc et vous changez ce qu’il dit ; vous ne pouvez ni en ajouter, ni en retirer, ni les réordonner. C’est voulu : rien de ce que vous ferez ici ne peut casser une page.',
+          'Une entrée par page du site. Vous en changez les textes et les images ; l’emplacement de la page et l’ordre de ses blocs sont fixés. C’est voulu : rien de ce que vous ferez ici ne peut casser une page.',
       },
       {
         titre: 'Projets',
         texte:
-          'Le portfolio. Chaque fiche porte son visuel, ses informations et son texte. La case « Projet favori » a un effet visible ailleurs : les favoris alimentent la table des éléments de la page Expériences, la sélection de l’accueil et l’archive du Labo.',
+          'Le portfolio. Chaque fiche porte son visuel, ses informations et son texte. La case « Projet favori » compte ailleurs : les favoris alimentent la table des éléments de la page Expériences, la sélection de l’accueil et l’archive du Labo.',
       },
       {
         titre: 'Clients',
@@ -114,14 +109,14 @@ const SANITY: Chapitre[] = [
       {
         titre: 'Mentions légales, confidentialité, cookies',
         texte:
-          'Ces trois pages décrivent l’entreprise, pas la boutique : elles s’écrivent ici, dans Pages, sous le trait de séparation.',
+          'Ces trois pages décrivent l’entreprise et non la boutique : elles s’écrivent ici, dans Pages, sous le trait de séparation.',
       },
     ],
   },
   {
     titre: 'Ce qui se gère dans Shopify',
     chapeau:
-      'La boutique a son propre back-office. Rien de ce qui suit ne se trouve dans Sanity — le site va le chercher directement chez Shopify, et affiche toujours l’état le plus récent. Le détail est dans l’onglet « La boutique » ci-dessus.',
+      'Rien de ce qui suit ne s’écrit ici : le site le lit directement chez Shopify. Le détail est dans l’onglet « La boutique ».',
     ton: 'caution',
     points: [
       {
@@ -131,41 +126,40 @@ const SANITY: Chapitre[] = [
       },
       {
         titre: 'CGV, Livraison, Retours et remboursements',
-        texte:
-          'Ces trois pages s’écrivent dans l’admin Shopify, sous Paramètres → Politiques. Elles servent à la fois au tunnel de paiement et au site : une seule saisie, deux affichages. Une politique laissée vide n’a pas de page sur le site.',
+        texte: 'Ces trois pages s’écrivent dans l’admin Shopify, sous Paramètres → Politiques.',
       },
       {
         titre: 'Commandes et paiements',
         texte:
-          'Commandes, clients de la boutique, expéditions, moyens de paiement, taxes et frais de port : tout se passe dans Shopify.',
+          'Commandes, clients de la boutique, expéditions, moyens de paiement, taxes et frais de port.',
       },
     ],
   },
   {
     titre: 'Ce qui n’est ni dans l’un ni dans l’autre',
     chapeau:
-      'Certaines choses sont fixées dans le code du site. C’est voulu : ce sont des décisions de conception, pas du contenu — elles ne bougent pas d’une page à l’autre et ne doivent pas pouvoir se défaire par inadvertance.',
+      'Certaines choses sont fixées dans le code du site : ce sont des décisions de conception, pas du contenu.',
     ton: 'default',
     points: [
       {
         titre: 'La navigation et les intitulés de section',
         texte:
-          'Le menu principal, les numéros de section (01. Le Labo, 02. Expériences…) et les titres des pages d’index sont portés par le site.',
+          'Le menu principal, les numéros de section (01. Le Labo, 02. Expériences…) et les titres des pages d’index.',
       },
       {
         titre: 'La mise en page',
         texte:
-          'Typographie, couleurs, tailles, marges, animations : la charte est appliquée en code. Le back-office porte le contenu, jamais la forme.',
+          'Typographie, couleurs, tailles, marges, animations : le back-office porte le contenu, jamais la forme.',
       },
       {
         titre: 'Les rubriques du Journal',
         texte:
-          'Cahier de recherche et Actualités structurent la page autant qu’elles classent les articles : elles sont fixées, mais vous choisissez librement la rubrique de chaque article.',
+          'Cahier de recherche et Actualités sont fixées — mais vous choisissez librement la rubrique de chaque article.',
       },
       {
         titre: 'Les libellés des boutons de la boutique',
         texte:
-          '« J’investis dans une vision », « dans un outil », « dans mes connaissances » : chaque famille de produits a le sien, écrit dans le code du site. Rien à saisir dans Shopify.',
+          '« J’investis dans une vision », « dans un outil », « dans mes connaissances » : chaque famille de produits a le sien. Rien à saisir dans Shopify.',
       },
     ],
   },
@@ -185,7 +179,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Le site n’est pas un thème Shopify',
         texte:
-          'La boutique est « headless » : Shopify tient le catalogue, les paiements et les commandes, et le site va les chercher pour les afficher à sa manière. Conséquence pratique : la section « Boutique en ligne → Thèmes » de l’admin ne sert à rien ici, et ce qu’on y modifierait n’aurait aucun effet sur le site.',
+          'Shopify tient le catalogue, les paiements et les commandes ; le site va les chercher et les affiche à sa manière. Conséquence pratique : la section « Boutique en ligne → Thèmes » ne sert à rien ici — ce qu’on y modifie n’a aucun effet sur le site.',
       },
       {
         titre: 'Le délai d’affichage',
@@ -223,14 +217,14 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'À ne pas confondre avec « Catégorie »',
         texte:
-          'Juste au-dessus se trouve un champ « Catégorie », qui propose une liste toute faite venue de Shopify. Il sert aux taxes et à Google, pas au site. Vous pouvez le renseigner, mais ce n’est pas lui qui range le produit.',
+          'Juste au-dessus se trouve un champ « Catégorie », avec une liste toute faite venue de Shopify. Il sert aux taxes et à Google, pas au site : ce n’est pas lui qui range le produit.',
       },
     ],
   },
   {
     titre: '02. Les collections se remplissent toutes seules',
     chapeau:
-      'Les trois collections du site — Ce qui se transmet, Ce qui se contemple, Ce qui s’utilise — sont automatisées. Chacune ramasse les produits dont le « Type de produit » correspond, sans intervention.',
+      'Les trois collections du site — Ce qui se transmet, Ce qui se contemple, Ce qui s’utilise — ramassent chacune les produits dont le « Type de produit » correspond, sans intervention.',
     ton: 'default',
     points: [
       {
@@ -246,7 +240,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Ce que vous pouvez modifier',
         texte:
-          'Le titre affiché, le texte d’introduction et l’image de la collection. En revanche, ne touchez ni aux conditions, ni à l’adresse (le « handle ») : la première casse le rangement, la seconde casse tous les liens existants vers la collection.',
+          'Le titre affiché, le texte d’introduction et l’image de la collection — rien d’autre. Ses conditions et son adresse sont à laisser tranquilles (voir « À éviter »).',
       },
     ],
   },
@@ -259,7 +253,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Tous les champs apparaissent sur toutes les fiches',
         texte:
-          'C’est une limite de Shopify, pas un oubli : l’admin ne sait pas masquer un champ selon la famille du produit. Vous verrez donc « Prérequis » sur un tirage. Ne le remplissez pas — le site n’affiche que les champs de la famille du produit, et ce qui est saisi ailleurs reste invisible. Cela ne casse rien, c’est juste du travail perdu.',
+          'C’est une limite de Shopify, pas un oubli : l’admin ne sait pas masquer un champ selon la famille du produit. Vous verrez donc « Prérequis » sur un tirage — ne le remplissez pas. Le site n’affiche que les champs de la famille du produit : ce qui est saisi ailleurs ne casse rien, c’est juste du travail perdu.',
       },
       {
         titre: 'Sur tous les produits',
@@ -307,7 +301,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Ne pas créer de nouveau champ sans prévenir',
         texte:
-          'Un champ créé dans l’admin n’apparaît pas sur le site pour autant : il faut que le site sache aller le chercher, et que la définition ait l’autorisation d’être lue par la vitrine. Les deux se règlent en code. Dites-le, c’est l’affaire de quelques minutes.',
+          'Un champ créé ici n’apparaît pas sur le site pour autant : il faut d’abord apprendre au site à le lire. Dites-le, c’est l’affaire de quelques minutes.',
       },
     ],
   },
@@ -353,7 +347,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Le restant',
         texte:
-          'C’est l’inventaire Shopify, dans la section Inventaire de chaque variante. Il descend tout seul à chaque vente. Pour qu’il s’affiche, il faut cocher « Suivre la quantité » et saisir la quantité de départ — la même que le total.',
+          'C’est l’inventaire Shopify, dans la section Inventaire de chaque variante. Il descend tout seul à chaque vente. Pour qu’il s’affiche, cochez « Suivre la quantité » et saisissez la quantité de départ — la même que le total.',
       },
       {
         titre: 'Quand la quantité diffère selon la déclinaison',
@@ -363,7 +357,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Une formation n’est pas un objet',
         texte:
-          'Dans la fiche d’une formation, décochez « Ceci est un produit physique » — sinon Shopify réclame un poids et applique des frais de port à une inscription. Et activez le suivi du stock : c’est lui qui ferme les inscriptions quand la session est pleine.',
+          'Dans sa fiche, décochez « Ceci est un produit physique » — sinon Shopify réclame un poids et applique des frais de port à une inscription. Et activez le suivi du stock : c’est lui qui ferme les inscriptions quand la session est pleine.',
       },
     ],
   },
@@ -372,10 +366,7 @@ const SHOPIFY: Chapitre[] = [
     chapeau: 'Quatre gestes, du plus réversible au plus définitif. Prenez toujours le plus doux qui fasse l’affaire.',
     ton: 'default',
     points: [
-      {
-        titre: 'Actif',
-        texte: 'Le produit est en ligne. C’est l’état normal.',
-      },
+      { titre: 'Actif', texte: 'Le produit est en ligne. C’est l’état normal.' },
       {
         titre: 'Brouillon',
         texte:
@@ -408,14 +399,14 @@ const SHOPIFY: Chapitre[] = [
           'Admin Shopify → Paramètres → Politiques. Ces trois textes servent à la fois au tunnel de paiement et aux pages du site : une seule saisie, deux affichages, aucune divergence possible.',
       },
       {
+        titre: 'Ils n’ont pas de brouillon',
+        texte:
+          'Contrairement à un produit, une politique est en ligne dès qu’elle est enregistrée. Relisez avant d’enregistrer.',
+      },
+      {
         titre: 'Une politique vide n’a pas de page',
         texte:
           'Tant qu’un de ces textes n’est pas écrit, le site ne publie pas la page correspondante et n’y renvoie pas. Rien à désactiver.',
-      },
-      {
-        titre: 'À ne pas confondre',
-        texte:
-          'Mentions légales, confidentialité et cookies décrivent l’entreprise et non la boutique : celles-là s’écrivent dans l’autre back-office, dans Pages.',
       },
     ],
   },
@@ -425,8 +416,7 @@ const SHOPIFY: Chapitre[] = [
     points: [
       {
         titre: 'Tout se passe dans Shopify',
-        texte:
-          'Commandes, préparation, expédition, remboursements, clients, taxes et frais de port : le site ne fait que rediriger vers le paiement, il ne conserve rien.',
+        texte: 'Le site ne fait que conduire au paiement : il ne conserve ni commande, ni client.',
       },
       {
         titre: 'Une commande d’inscription',
@@ -448,7 +438,7 @@ const SHOPIFY: Chapitre[] = [
       {
         titre: 'Modifier ou supprimer une définition de champ',
         texte:
-          'Dans Paramètres → Données personnalisées, chaque champ a un nom technique que le site connaît par cœur. Le renommer ou le supprimer fait disparaître l’information de toutes les fiches d’un coup, sans avertissement.',
+          'Dans Paramètres → Données personnalisées, chaque champ a un nom que le site connaît par cœur. Le renommer ou le supprimer fait disparaître l’information de toutes les fiches d’un coup, sans avertissement.',
       },
       {
         titre: 'Changer les conditions d’une collection',
@@ -481,7 +471,7 @@ const ONGLETS: Onglet[] = [
     id: 'shopify',
     titre: 'La boutique',
     chapeau:
-      'Tout ce qui concerne les produits, les collections, le stock et les commandes se fait dans l’admin Shopify. Cet onglet suit l’ordre dans lequel les questions se posent : d’abord ranger un produit, puis le décrire, puis le publier.',
+      'Tout se fait dans l’admin Shopify. Les chapitres suivent l’ordre des questions : ranger un produit, le décrire, le publier.',
     chapitres: SHOPIFY,
   },
 ];
@@ -571,18 +561,6 @@ export default function Documentation() {
               </Stack>
             </TabPanel>
           ))}
-
-          <Card padding={4} radius={2} tone="transparent">
-            <Stack gap={3}>
-              <Badge tone="primary">En cas de doute</Badge>
-              <Text muted size={1} style={{ lineHeight: 1.6 }}>
-                Dans ce back-office, une modification enregistrée n’est jamais perdue : tant qu’elle
-                n’est pas publiée, le site continue d’afficher la version précédente. Dans Shopify,
-                il n’y a pas de brouillon pour les textes — mais rien n’oblige à publier un produit :
-                laissez-le en « Brouillon » le temps de le préparer.
-              </Text>
-            </Stack>
-          </Card>
 
           <Card padding={4} radius={2} shadow={1} tone="positive">
             <Stack gap={3}>
