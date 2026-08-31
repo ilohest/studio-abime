@@ -443,6 +443,18 @@ export const clientsQuery = /* groq */ `
   | order(_createdAt asc, _id asc){ _id, name, sector }`;
 
 /** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
+/** Contenu éditorial de la page Contact (section « Informations »). */
+export const contactPageQuery = /* groq */ `
+*[_type == "contactPage" && language == $locale][0]{
+  _id,
+  _type,
+  language,
+  opening,
+  "paragraphs": coalesce(paragraphs, []),
+  mailInvitation,
+  seo ${SEO}
+}`;
+
 export const laboPageQuery = /* groq */ `
 *[_type == "laboPage" && language == $locale][0]{
   _id,

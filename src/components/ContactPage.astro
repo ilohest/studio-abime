@@ -9,8 +9,29 @@ import papier from '~/assets/sections/papier-lumiere.webp';
 import planche from '~/assets/sections/planche-main.webp';
 import binderClip from '~/assets/contact/binder-clip.webp';
 
-const email = 'elodie@studioabime.com';
-const instagramUrl = 'https://www.instagram.com/studioabime/';
+import { getSiteContext } from '~/lib/siteContext';
+import type { Locale } from '~/i18n/config';
+import type { ContactPage } from '~/lib/sanity/types';
+
+interface Props {
+  page: ContactPage;
+  locale: Locale;
+}
+
+const { page, locale } = Astro.props;
+
+/*
+  L'adresse et le réseau social ne sont pas des champs de cette page : ils
+  vivent dans Réglages du site → Identité, d'où les tirent aussi le pied de page
+  et les données structurées. Les recopier ici en ferait une seconde source,
+  et deux sources divergent toujours — l'adresse était écrite en dur à trois
+  endroits avant ce changement.
+*/
+const site = await getSiteContext(locale);
+const email = site.settings?.organization?.email?.trim();
+const instagram = site.settings?.socialLinks?.find(
+  (link) => link.platform?.toLowerCase() === 'instagram',
+);
 
 const photographs = [
   { src: atelier, alt: 'Bandes de papier suspendues dans l’atelier' },
@@ -38,25 +59,35 @@ const phases = [
       <span class="contact-information-index type-note">[01 — Informations]</span>
       <div class="contact-information-copy">
         <h2 id="contact-information-title" class="sr-only">Informations</h2>
-        <p class="contact-information-copy__opening">Bienvenue dans le Studio,</p>
-        <p>Écrire ici, c’est déjà commencer.</p>
-        <p>On vous lit et on répond en quelques jours.</p>
-        <p>
-          Si ce que vous décrivez ne relève pas de nos services, on vous le dit, et on vous
-          oriente.
-        </p>
-        <p class="contact-information-copy__mail">
-          Le formulaire vous fait peur&nbsp;? Envoyez vos mots à&nbsp;<a
-            class="contact-social-link contact-email-link"
-            href={`mailto:${email}`}
-          ><span class="contact-social-link__label">{email}</span></a>
-        </p>
-        <p class="contact-information-copy__social type-note">
-          <a class="contact-social-link" href={instagramUrl} target="_blank" rel="noopener noreferrer">
-            <span class="contact-social-link__label">Instagram</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        </p>
+        {page.opening && (
+          <p class="contact-information-copy__opening">{page.opening}</p>
+        )}
+
+        {page.paragraphs.map((paragraph) => (
+          <p>{paragraph}</p>
+        ))}
+
+        {/*
+          L'invitation ne s'affiche que si l'adresse existe : une phrase qui
+          annonce un e-mail sans l'écrire ne veut rien dire.
+        */}
+        {page.mailInvitation && email && (
+          <p class="contact-information-copy__mail">
+            {page.mailInvitation}&nbsp;<a
+              class="contact-social-link contact-email-link"
+              href={`mailto:${email}`}
+            ><span class="contact-social-link__label">{email}</span></a>
+          </p>
+        )}
+
+        {instagram?.url && (
+          <p class="contact-information-copy__social type-note">
+            <a class="contact-social-link" href={instagram.url} target="_blank" rel="noopener noreferrer">
+              <span class="contact-social-link__label">{instagram.platform}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </p>
+        )}
       </div>
     </section>
   </div>
@@ -125,7 +156,17 @@ const phases = [
       </figure>
 
       <div class="contact-form-panel">
-        <form class="contact-form" action="/api/contact" method="post" data-contact-form>
+        {/*
+          `data-contact-email` : le script du formulaire ne voit pas le
+          frontmatter, l'adresse de secours lui est donc passée par le DOM.
+        */}
+        <form
+          class="contact-form"
+          action="/api/contact"
+          method="post"
+          data-contact-form
+          data-contact-email={email}
+        >
       <div class="contact-field">
         <label for="contact-name">Nom &amp; Prénom</label>
         <input
@@ -337,8 +378,22 @@ const phases = [
         if (!reducedMotion.matches) confirmation.classList.add('is-entering');
         confirmation.focus({ preventScroll: true });
       } catch {
-        status.innerHTML =
-          'Le message n’a pas pu partir. Écrivez-nous directement à <a href="mailto:elodie@studioabime.com">elodie@studioabime.com</a>.';
+        /*
+          L'adresse vient des réglages du site, comme partout ailleurs : elle
+          était écrite en dur ici, et ce message d'échec est précisément
+          l'endroit où une adresse périmée fait le plus de dégâts — le
+          formulaire vient de tomber, il ne reste que ce recours.
+        */
+        const fallbackEmail = form.dataset.contactEmail;
+        status.textContent = fallbackEmail
+          ? 'Le message n’a pas pu partir. Écrivez-nous directement à '
+          : 'Le message n’a pas pu partir. Merci de réessayer dans un instant.';
+        if (fallbackEmail) {
+          const link = document.createElement('a');
+          link.href = `mailto:${fallbackEmail}`;
+          link.textContent = fallbackEmail;
+          status.append(link, '.');
+        }
       } finally {
         submit.disabled = false;
         submit.removeAttribute('aria-busy');

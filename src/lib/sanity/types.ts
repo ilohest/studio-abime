@@ -426,6 +426,18 @@ export interface LaboParagraph {
 }
 
 /** Page éditoriale Labo, structurée comme une seule expérience narrative. */
+/** Page Contact — seule la section « Informations » est éditoriale. */
+export interface ContactPage {
+  _id: string;
+  _type: 'contactPage';
+  language: Locale;
+  opening?: string;
+  paragraphs: string[];
+  /** Phrase précédant l'adresse e-mail, tirée elle des réglages du site. */
+  mailInvitation?: string;
+  seo?: Seo;
+}
+
 export interface LaboPage {
   _id: string;
   _type: 'laboPage';

@@ -37,6 +37,7 @@ import {
   projectsPageQuery,
   clientsQuery,
   laboPageQuery,
+  contactPageQuery,
   laboArchiveProjectsQuery,
   journalIndexQuery,
   journalPageQuery,
@@ -47,10 +48,12 @@ import { getHomeFallback } from '~/content/homeFallback';
 import { getJournalCategory } from '~/content/journalCategories';
 import { getShopIntro } from '~/content/shopFallback';
 import { getLaboFallback } from '~/content/laboFallback';
+import { getContactFallback } from '~/content/contactFallback';
 import { useTranslations } from '~/i18n/ui';
 import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard, ShopPolicy } from '~/lib/shopify/types';
 import type {
   Client,
+  ContactPage as ContactPageContent,
   JournalPage,
   LaboPage,
   Page,
@@ -106,6 +109,7 @@ let projects: ProjectCard[] = [];
 let projectsPage: ProjectsPage | null = null;
 let clients: Client[] = [];
 let laboPage: LaboPage | null = null;
+let contactPage: ContactPageContent | null = null;
 let journalPage: JournalPage | null = null;
 let posts: PostCard[] = [];
 let post: Post | null = null;
@@ -190,6 +194,12 @@ if (route.kind === 'labo') {
 } else if (route.kind === 'contact') {
   // La page contact est une expérience de marque dédiée : son contenu essentiel
   // reste disponible même lorsque Sanity est momentanément indisponible.
+  contactPage =
+    (await loadQuery<ContactPageContent | null>({
+      query: contactPageQuery,
+      locale,
+      fallback: null,
+    })) ?? getContactFallback(locale);
 } else if (route.kind === 'home') {
   page = await loadQuery<Page | null>({ query: homePageQuery, locale, fallback: null });
   // Tant qu'aucune page d'accueil n'est désignée dans Sanity, on sert le
@@ -482,7 +492,7 @@ const jsonLd = buildPageGraph({
     )
   }
 
-  {route.kind === 'contact' && <ContactPage />}
+  {route.kind === 'contact' && contactPage && <ContactPage page={contactPage} locale={locale} />}
 
   {shopProduct && <ProductPage product={shopProduct} related={shopRelated} locale={locale} />}
 

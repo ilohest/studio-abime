@@ -24,6 +24,7 @@ const HANDLED_TYPES = [
   'laboPage',
   'journalPage',
   'shopPage',
+  'contactPage',
   'siteSettings',
   'localizedSettings',
   'maintenance',
@@ -204,6 +205,10 @@ export const structure: StructureResolver = (S, context) =>
                 .title('Page Shop')
                 .id('shopPage')
                 .child(localizedSingleton(S, 'shopPage', 'Page Shop')),
+              S.listItem()
+                .title('Page Contact')
+                .id('contactPage')
+                .child(localizedSingleton(S, 'contactPage', 'Page Contact')),
 
               // Les pages légales restent au même rang que les précédentes, mais
               // ne relèvent pas du même geste éditorial : le trait les sépare
