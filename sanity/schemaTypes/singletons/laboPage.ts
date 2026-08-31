@@ -11,7 +11,6 @@ export const laboPage = defineType({
   type: 'document',
   initialValue: {
     title: 'Le Labo',
-    eyebrow: 'La philosophie — un laboratoire créatif',
     philosophy: [
       { _key: 'ouverture', _type: 'laboParagraph', layout: 'pleine', text: 'Un labo de com, car avant de donner naissance à de nouvelles visions, il faut les expérimenter.' },
       { _key: 'destinataires', _type: 'laboParagraph', layout: 'pleine', text: 'Celles et ceux qui gardent la foi en une version de demain plus apaisée et sont prêt·e·s à revoir leur façon de communiquer. On n’a pas de solution toute faite à proposer, plutôt l’envie de consolider vos fondations, ensemble. Un virage doux, pas une rupture.' },
@@ -22,8 +21,6 @@ export const laboPage = defineType({
       { _key: 'sobriete', _type: 'laboParagraph', layout: 'declaration', text: 'L’optique choisie est la sobriété. On s’appuie sur vos ressources disponibles et pas sur celles qu’il faudrait avoir, tout en réfléchissant à celles qu’il serait judicieux de développer. On vous aide à trouver des solutions alternatives et on ne produit que lorsque c’est véritablement nécessaire.' },
       { _key: 'collectif', _type: 'laboParagraph', layout: 'colonne', text: 'Et durant toute la traversée, on ne vous laisse pas avancer seul·e. On partage avec vous notre réseau de partenaires de confiance, on s’appuie sur ce en quoi on croit le plus : le collectif.' },
     ],
-    servicesTitle: 'On y travaille',
-    teamTitle: 'L’équipe',
     teamLead: 'Studio Abîme n’est ni une personne ni une agence. C’est un lieu de travail que des humain·e·s ont choisi, parce qu’on y partage la même conviction : plonger sous le visible pour mieux s’ancrer. On y cherche des solutions ensemble, car c’est comme ça qu’on va plus loin.',
     teamBody: 'Parfois les projets ne nécessitent qu’une personne, parfois plusieurs. On ne se rencontre pas forcément autour d’un même nom mais on s’épaule pour construire des projets solides. On se réunit autour de ce qu’une histoire demande en partageant les ressources et l’expérience que chacun peut lui offrir.',
     foundationTitle: 'Note de fondation',
@@ -73,8 +70,17 @@ export const laboPage = defineType({
     ],
     note: 'Chaque accompagnement se construit sur mesure, en fonction du moment, du besoin et du rythme.',
   },
+  /*
+    Les onglets suivent les sections de la page, dans leur ordre d'apparition :
+    on cherche un texte là où on le voit à l'écran. La note de fondation n'a pas
+    le sien — elle est posée DANS la section « L'équipe », et c'est là qu'on la
+    trouve.
+  */
   groups: [
-    { name: 'content', title: 'Contenu', default: true },
+    { name: 'header', title: 'En-tête', default: true },
+    { name: 'services', title: 'Services' },
+    { name: 'philosophy', title: 'Philosophie' },
+    { name: 'team', title: 'L’équipe' },
     { name: 'seo', title: 'SEO' },
   ],
   fields: [
@@ -83,16 +89,8 @@ export const laboPage = defineType({
       name: 'title',
       title: 'Titre',
       type: 'string',
-      group: 'content',
+      group: 'header',
       initialValue: 'Le Labo',
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'eyebrow',
-      title: 'Sur-titre',
-      type: 'string',
-      group: 'content',
-      initialValue: 'La philosophie — un laboratoire créatif',
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -101,7 +99,7 @@ export const laboPage = defineType({
       description:
         'Le premier paragraphe est la citation d’ouverture. Les suivants se composent soit sur toute la largeur, soit sur une colonne étroite alignée à droite.',
       type: 'array',
-      group: 'content',
+      group: 'philosophy',
       of: [
         defineArrayMember({
           name: 'laboParagraph',
@@ -130,21 +128,14 @@ export const laboPage = defineType({
       validation: (rule) => rule.required().min(1),
     }),
     defineField({
-      name: 'servicesTitle',
-      title: 'Titre des champs de recherche',
-      type: 'string',
-      group: 'content',
-      initialValue: 'On y travaille',
-    }),
-    defineField({
       name: 'services',
-      title: 'Champs de recherche',
+      title: 'Services',
       type: 'array',
-      group: 'content',
+      group: 'services',
       of: [
         defineArrayMember({
           name: 'laboService',
-          title: 'Champ de recherche',
+          title: 'Service',
           type: 'object',
           fields: [
             defineField({ name: 'title', title: 'Titre', type: 'string', validation: (rule) => rule.required() }),
@@ -163,21 +154,14 @@ export const laboPage = defineType({
       ],
       validation: (rule) => rule.required().min(1).max(8),
     }),
-    defineField({ name: 'note', title: 'Note d’accompagnement', type: 'text', rows: 3, group: 'content' }),
-    defineField({
-      name: 'teamTitle',
-      title: 'Titre « L’équipe »',
-      type: 'string',
-      group: 'content',
-      initialValue: 'L’équipe',
-    }),
-    defineField({ name: 'teamLead', title: 'Ouverture de l’équipe', type: 'text', rows: 5, group: 'content' }),
-    defineField({ name: 'teamBody', title: 'Texte de l’équipe', type: 'text', rows: 5, group: 'content' }),
+    defineField({ name: 'note', title: 'Note', type: 'text', rows: 3, group: 'services' }),
+    defineField({ name: 'teamLead', title: 'Ouverture de l’équipe', type: 'text', rows: 5, group: 'team' }),
+    defineField({ name: 'teamBody', title: 'Texte de l’équipe', type: 'text', rows: 5, group: 'team' }),
     defineField({
       name: 'foundationTitle',
       title: 'Titre de la note de fondation',
       type: 'string',
-      group: 'content',
+      group: 'team',
       initialValue: 'Note de fondation',
     }),
     defineField({
@@ -185,7 +169,7 @@ export const laboPage = defineType({
       title: 'Image de la note de fondation',
       description: 'Petite image posée à gauche de la note. Portrait ou détail, format vertical de préférence.',
       type: 'image',
-      group: 'content',
+      group: 'team',
       options: { hotspot: true },
       fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
     }),
@@ -193,14 +177,14 @@ export const laboPage = defineType({
       name: 'foundationParagraphs',
       title: 'Note de fondation',
       type: 'array',
-      group: 'content',
+      group: 'team',
       of: [defineArrayMember({ type: 'text', rows: 4 })],
     }),
     defineField({
       name: 'foundationSignature',
       title: 'Signature',
       type: 'string',
-      group: 'content',
+      group: 'team',
       initialValue: 'Élodie',
     }),
     defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' }),

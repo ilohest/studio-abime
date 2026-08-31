@@ -7,7 +7,6 @@ const fr: LaboPage = {
   _type: 'laboPage',
   language: 'fr',
   title: 'Le Labo',
-  eyebrow: 'La philosophie — un labo de com',
   /*
     Le premier paragraphe est la citation d'ouverture ; les suivants portent
     leur largeur de composition — pleine page, ou colonne étroite alignée à
@@ -55,7 +54,6 @@ const fr: LaboPage = {
       text: 'Et durant toute la traversée, on ne vous laisse pas avancer seul·e. On partage avec vous notre réseau de partenaires de confiance, on s’appuie sur ce en quoi on croit le plus : le collectif.',
     },
   ],
-  servicesTitle: 'On y travaille',
   /*
     Les cinq étapes se lisent dans l'ordre : chacune reprend là où la
     précédente s'arrête. Cet ordre est aussi celui des orbites de l'en-tête.
@@ -93,7 +91,6 @@ const fr: LaboPage = {
     },
   ],
   note: 'Chaque accompagnement se construit sur mesure, en fonction du moment, du besoin et du rythme.',
-  teamTitle: 'L’équipe',
   teamLead: 'Studio Abîme n’est ni une personne ni une agence. C’est un lieu de travail que des humain·e·s ont choisi, parce qu’on y partage la même conviction : plonger sous le visible pour mieux s’ancrer. On y cherche des solutions ensemble, car c’est comme ça qu’on va plus loin.',
   teamBody: 'Parfois les projets ne nécessitent qu’une personne, parfois plusieurs. On ne se rencontre pas forcément autour d’un même nom mais on s’épaule pour construire des projets solides. On se réunit autour de ce qu’une histoire demande en partageant les ressources et l’expérience que chacun peut lui offrir.',
   foundationTitle: 'Note de fondation',

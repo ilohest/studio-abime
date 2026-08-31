@@ -431,17 +431,14 @@ export interface LaboPage {
   _type: 'laboPage';
   language: Locale;
   title: string;
-  eyebrow: string;
   /*
     Le champ a d'abord été un tableau de chaînes, avant que chaque paragraphe
     porte sa largeur de composition. Les deux formes restent lisibles : une
     chaîne héritée est traitée comme un paragraphe de colonne.
   */
   philosophy: Array<string | LaboParagraph>;
-  servicesTitle?: string;
   services: LaboService[];
   note?: string;
-  teamTitle?: string;
   teamLead?: string;
   teamBody?: string;
   foundationTitle?: string;

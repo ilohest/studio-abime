@@ -55,54 +55,6 @@ export const localizedSettings = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'projectsIntro',
-      title: 'Texte d’introduction',
-      type: 'text',
-      rows: 4,
-      hidden: true,
-      deprecated: { reason: 'Ce contenu a été déplacé dans Pages → Page Expériences.' },
-    }),
-
-    defineField({
-      name: 'projectsNotes',
-      title: 'Cartes de texte — page Expériences',
-      type: 'array',
-      hidden: true,
-      deprecated: { reason: 'Ces cartes ont été déplacées dans Pages → Page Expériences.' },
-      description:
-        'Chaque texte occupe une case de la grille à la place d’un projet — les projets suivants se décalent, aucun n’est masqué. Le texte s’affiche en bas à droite de la case, en italique.',
-      of: [
-        defineArrayMember({
-          type: 'object',
-          fields: [
-            defineField({
-              name: 'text',
-              title: 'Texte',
-              type: 'text',
-              rows: 4,
-              validation: (rule) => rule.required(),
-            }),
-            defineField({
-              name: 'position',
-              title: 'Position dans la grille',
-              type: 'number',
-              description:
-                'On compte les cases à partir de 1 pour celle en haut à gauche, puis de gauche à droite (2, 3, 4…) et ligne après ligne. Laissé vide, ou au-delà du nombre de cases, le texte se place en dernier.',
-              validation: (rule) => rule.min(1).integer(),
-            }),
-          ],
-          preview: {
-            select: { text: 'text', position: 'position' },
-            prepare: ({ text, position }) => ({
-              title: text?.slice(0, 60) || 'Carte de texte',
-              subtitle: position ? `Position ${position}` : 'En fin de grille',
-            }),
-          },
-        }),
-      ],
-    }),
-
-    defineField({
       name: 'headerNav',
       title: 'Menu principal',
       type: 'array',
