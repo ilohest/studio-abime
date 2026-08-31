@@ -2,6 +2,7 @@ import { defineDocuments, defineLocations } from 'sanity/presentation';
 import type { PresentationPluginOptions } from 'sanity/presentation';
 import { defaultLocale, isLocale, locales } from '../../src/i18n/config';
 import {
+  contactPath,
   getSegment,
   journalIndexPath,
   shopIndexPath,
@@ -106,6 +107,13 @@ const locations: PresentationPluginOptions['resolve'] = {
       }),
     }),
 
+    contactPage: defineLocations({
+      select: { language: 'language' },
+      resolve: (doc: Selected | null) => ({
+        locations: [{ title: 'Page Contact', href: contactPath(toLocale(doc?.language)) }],
+      }),
+    }),
+
     localizedSettings: defineLocations({
       select: { language: 'language' },
       resolve: (doc: Selected | null) => ({
@@ -125,6 +133,7 @@ const locations: PresentationPluginOptions['resolve'] = {
       const labo = getSegment('labo', locale);
       const journal = getSegment('journal', locale);
       const shop = getSegment('shop', locale);
+      const contact = getSegment('contact', locale);
 
       return [
         {
@@ -155,6 +164,18 @@ const locations: PresentationPluginOptions['resolve'] = {
         {
           route: `${prefix}/${projects}/:slug`,
           filter: `_type == "project" && slug.current == $slug && language == $language`,
+          params: { language: locale },
+        },
+        /*
+          Avant la route attrape-tout `:slug` : sans quoi `/contact` serait
+          cherché parmi les documents `page`, où il n'existe pas — la page
+          d'aperçu s'ouvrirait sans rien à éditer.
+        */
+        {
+          route: `${prefix}/${contact}`,
+          // `coalesce` pour la même raison que dans `contactPageQuery` : un
+          // document né sans langue doit rester joignable.
+          filter: `_type == "contactPage" && coalesce(language, $language) == $language`,
           params: { language: locale },
         },
         {
