@@ -44,6 +44,7 @@ const cartLabels = {
   cart: t('cart.title'),
   close: t('cart.close'),
   empty: t('cart.empty'),
+  browseShop: t('cart.browseShop'),
   subtotal: t('cart.subtotal'),
   checkout: t('cart.checkout'),
   remove: t('cart.remove'),
@@ -199,7 +200,7 @@ const panelId = `services-menu-${mode}`;
                         menu est replié sur mobile — il ne croiserait jamais
                         l'observateur d'intersection.
                       */}
-                      <CartDrawer client:load labels={cartLabels} />
+                      <CartDrawer client:load labels={cartLabels} shopHref={shopHref} />
                     </li>
                   )}
                 </ul>

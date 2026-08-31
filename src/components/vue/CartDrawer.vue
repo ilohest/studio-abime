@@ -36,6 +36,7 @@ const props = defineProps<{
     cart: string;
     close: string;
     empty: string;
+    browseShop: string;
     subtotal: string;
     checkout: string;
     remove: string;
@@ -47,6 +48,8 @@ const props = defineProps<{
     calculatedAtCheckout: string;
     error: string;
   };
+  /** Adresse de l'index de la boutique, construite côté Astro. */
+  shopHref: string;
 }>();
 
 /*
@@ -93,6 +96,22 @@ onBeforeUnmount(() => {
 
 function onKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape' && cartState.open) closeCart();
+}
+
+/*
+  Panier vide : on referme le tiroir AVANT de naviguer, sinon la page suivante
+  se charge derrière un panneau resté ouvert et le visiteur doit le fermer pour
+  voir ce qu'il vient de demander.
+
+  Déjà sur la boutique, on se contente de fermer : un bouton qui recharge la
+  page où l'on se trouve est une impasse déguisée en action.
+*/
+function browseShop() {
+  closeCart();
+
+  const cible = props.shopHref.replace(/\/$/, '');
+  const courante = window.location.pathname.replace(/\/$/, '');
+  if (courante !== cible) window.location.href = props.shopHref;
 }
 
 /*
@@ -150,7 +169,14 @@ watch(
           {{ props.labels.error }}
         </p>
 
-        <p v-if="count === 0" class="cart__empty type-copy">{{ props.labels.empty }}</p>
+        <div v-if="count === 0" class="cart__empty-state">
+          <p class="cart__empty type-copy">{{ props.labels.empty }}</p>
+
+          <button type="button" class="button-minimal cart__browse" @click="browseShop">
+            <span class="button-minimal__label">{{ props.labels.browseShop }}</span>
+            <span class="button-minimal__arrow" aria-hidden="true">&#8627;</span>
+          </button>
+        </div>
 
         <ul v-else class="cart__lines" role="list">
           <li v-for="line in lines" :key="line.id" class="cart__line">
@@ -351,6 +377,26 @@ watch(
 .cart__error {
   margin: 0;
   color: var(--color-muted);
+}
+
+/*
+  Le panier vide n'est pas qu'un constat : c'est le seul endroit du tiroir où
+  l'on peut proposer quelque chose. Le texte garde son ton discret, le bouton
+  reprend celui des appels à l'action du site.
+*/
+.cart__empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/*
+  L'écart est posé sur le bouton et non en `gap` du conteneur : le constat et
+  l'action ne sont pas deux éléments d'une liste, c'est une phrase suivie d'une
+  proposition. Le blanc qui les sépare doit se voir.
+*/
+.cart__browse {
+  margin-top: clamp(2rem, 5vh, 3rem);
 }
 
 .cart__lines {
