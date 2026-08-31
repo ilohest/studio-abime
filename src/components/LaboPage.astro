@@ -233,7 +233,15 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       en-tête, plus la garde laissée à la barre de marque. Mesuré au chargement,
       après le chargement des fontes — qui change la hauteur des lignes — et à
       chaque redimensionnement.
+
+      Uniquement à partir de 768 px, où la grille montre les neuf fiches d'un
+      coup : viser l'en-tête donne alors l'index entier, la fiche demandée
+      comprise. En dessous, elles s'empilent sur toute la hauteur de l'écran —
+      atterrir sur l'en-tête reviendrait à répondre « cherchez vous-même » à qui
+      vient de désigner un service. La fiche y garde donc sa propre ancre, et le
+      repli CSS suffit.
     */
+    const wideLayout = window.matchMedia('(min-width: 768px)');
     const servicesSection = document.querySelector('.labo-services');
     const serviceCards = [...document.querySelectorAll('.labo-service')];
 
@@ -242,6 +250,14 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
       const measureServiceAnchors = () => {
         measureFrame = 0;
+
+        if (!wideLayout.matches) {
+          serviceCards.forEach((card) => {
+            if (card instanceof HTMLElement) card.style.removeProperty('--service-anchor-offset');
+          });
+          return;
+        }
+
         const guard = Number.parseFloat(getComputedStyle(servicesSection).scrollMarginTop) || 0;
         const sectionTop = servicesSection.getBoundingClientRect().top;
 
@@ -1190,6 +1206,9 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     l'en-tête. Le navigateur atterrit alors toujours sur « Index orbital », et
     `:target` désigne la fiche demandée. La valeur exacte est posée au chargement
     par le script ; la valeur de repli sert tant qu'il n'a pas mesuré.
+
+    En dessous de 768 px, le script ne pose rien : c'est le repli qui s'applique,
+    et le clic mène à la fiche elle-même (voir le script de la section).
   */
   .labo-service {
     display: block;
