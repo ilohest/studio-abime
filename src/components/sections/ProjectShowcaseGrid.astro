@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import { projectInitials } from '~/lib/viewModels';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { ProjectShowcase } from '~/lib/sanity/types';
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
+const t = useTranslations(locale);
 const projects = section.projects ?? [];
 const fallbackItems = (section.fallbackItems ?? []).map((item) => ({
   key: item._key,
@@ -38,7 +40,7 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
       data-project-showcase-grid
     >
       {/* Marche intermédiaire entre le titre de la page et les fiches. */}
-      <h2 class="sr-only">Sélection de projets</h2>
+      <h2 class="sr-only">{t('home.projectSelection')}</h2>
 
       <ProjectCatalogRail
         projects={projects}

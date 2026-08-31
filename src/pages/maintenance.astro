@@ -5,6 +5,14 @@ import Wordmark from '~/components/brand/Wordmark.astro';
 import Stamp from '~/components/brand/Stamp.astro';
 
 import { accessPossible, getMaintenanceContent, maintenanceEnabled } from '~/lib/maintenance';
+import { defaultLocale } from '~/i18n/config';
+import { useTranslations } from '~/i18n/ui';
+
+/*
+  Langue par défaut, et non celle de la visite : l'écran de maintenance est
+  servi avant tout routage — il n'y a pas encore de page, donc pas de langue.
+*/
+const t = useTranslations(defaultLocale);
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -95,7 +103,7 @@ Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
         <Wordmark title="Studio Abîme — Labo de Com." />
       </div>
 
-      <p class="type-note mention">Site en préparation</p>
+      <p class="type-note mention">{t('maintenance.inPreparation')}</p>
 
       <h1 class="titre">{title}</h1>
 

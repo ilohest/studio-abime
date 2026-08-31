@@ -10,6 +10,7 @@ import planche from '~/assets/sections/planche-main.webp';
 import binderClip from '~/assets/contact/binder-clip.webp';
 
 import { getSiteContext } from '~/lib/siteContext';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 import type { ContactPage } from '~/lib/sanity/types';
 
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const { page, locale } = Astro.props;
+const t = useTranslations(locale);
 
 /*
   L'adresse et le réseau social ne sont pas des champs de cette page : ils
@@ -94,8 +96,8 @@ const phases = [
 
   <section id="enquete" class="contact-enquiry-section" aria-labelledby="form-title">
     <header class="contact-enquiry-heading">
-      <span class="type-note">[02 — Enquête]</span>
-      <h2 id="form-title" class="sr-only">Enquête</h2>
+      <span class="type-note">[02 — {t('contact.enquiry')}]</span>
+      <h2 id="form-title" class="sr-only">{t('contact.enquiry')}</h2>
     </header>
 
     <div class="contact-enquiry-layout">
@@ -168,7 +170,7 @@ const phases = [
           data-contact-email={email}
         >
       <div class="contact-field">
-        <label for="contact-name">Nom &amp; Prénom</label>
+        <label for="contact-name">{t('contact.fieldName')}</label>
         <input
           id="contact-name"
           name="fullName"
@@ -183,7 +185,7 @@ const phases = [
       <div class="contact-field">
         <div class="contact-label-group">
           <label for="contact-method">Comment vous contacter</label>
-          <p id="contact-method-note" class="contact-field__note">Réponse par le canal indiqué.</p>
+          <p id="contact-method-note" class="contact-field__note">{t('contact.methodNote')}</p>
         </div>
         <input
           id="contact-method"
@@ -215,7 +217,7 @@ const phases = [
         aria-labelledby="contact-phase-label"
       >
         <p id="contact-phase-label" class="contact-field__label">
-          À quelle phase de développement se trouve-t-il&nbsp;?
+          {t('contact.phaseQuestion')}
         </p>
         <div class="contact-options">
           {
@@ -252,7 +254,7 @@ const phases = [
         <div class="contact-label-group">
           <label for="contact-resources">De quoi disposez-vous comme ressources&nbsp;?</label>
           <p id="contact-resources-note" class="contact-field__note">
-            Du temps, un budget, une équipe, des images déjà faites. On part de là, pas d’ailleurs.
+            {t('contact.resourcesHint')}
           </p>
         </div>
         <textarea
@@ -280,7 +282,7 @@ const phases = [
 
       <div class="contact-field contact-field--textarea contact-field--last">
         <label for="contact-availability">
-          Et quel temps avez-vous à consacrer à la création de votre communication&nbsp;?
+          {t('contact.availabilityQuestion')}
         </label>
         <textarea
           id="contact-availability"

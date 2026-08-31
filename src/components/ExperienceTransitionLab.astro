@@ -2,6 +2,7 @@
 import ProjectGrid from '~/components/ProjectGrid.astro';
 
 import { projectPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 import { projectInitials, type ProjectEditorialCard } from '~/lib/viewModels';
 import { buildReferenceSlots, referenceName, referenceSector } from '~/lib/references';
 import type { Locale } from '~/i18n/config';
@@ -23,6 +24,7 @@ interface ElementCell {
 }
 
 const { projects, locale, editorialCards = [], clients = [] } = Astro.props;
+const t = useTranslations(locale);
 
 const mainRows: Array<Array<[number | string, string, number]>> = [
   [[1, 'H', 1], [2, 'He', 18]],
@@ -80,7 +82,7 @@ const elementNumbers = Object.fromEntries(
   <div class="motion-lab__runway" data-motion-runway>
     <div class="motion-lab__stage" data-motion-stage>
       <div class="motion-lab__meta type-note" aria-hidden="true">
-        <span>TABLE DES ÉLÉMENTS</span>
+        <span>{t('project.elementTable')}</span>
         <span data-motion-state>VUE D’ENSEMBLE</span>
       </div>
 

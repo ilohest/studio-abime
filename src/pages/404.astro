@@ -4,6 +4,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { getSiteContext } from '~/lib/siteContext';
 import { defaultLocale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
 
 /*
  * Pas d'`export const prerender` ici : la page suit le mode de rendu du site
@@ -17,6 +18,7 @@ import { localizedPath } from '~/i18n/routes';
 Astro.response.status = 404;
 
 const locale = defaultLocale;
+const t = useTranslations(locale);
 const site = await getSiteContext(locale);
 const homeHref = localizedPath(locale);
 
@@ -72,7 +74,7 @@ const canvasCopy = phrases.join(' ');
 
       <div class="return-action">
         <a class="button-minimal" href={homeHref}>
-          <span class="button-minimal__label">Remonter à la surface</span>
+          <span class="button-minimal__label">{t('error.backToSurface')}</span>
           <span class="button-minimal__arrow" aria-hidden="true">↳</span>
         </a>
       </div>

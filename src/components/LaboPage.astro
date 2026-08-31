@@ -116,7 +116,7 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       </div>
       <div class="labo-orbits__core">
         <span class="type-note">Le fond</span>
-        <strong>précède</strong>
+        <strong>{t('labo.emphasisPrecedes')}</strong>
         <span class="type-note">la forme</span>
       </div>
 
@@ -269,7 +269,7 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     <aside class="labo-philosophy__margin" aria-hidden="true">
       <div class="labo-philosophy__index type-note">[02 — Manifeste - Philosophie]</div>
       <div class="labo-philosophy__scale">
-        <span>ÉTUDE DU FOND</span>
+        <span>{t('labo.studyOfSubstance')}</span>
       </div>
       <div class="labo-philosophy__marginalia">
         <span class="type-note">OBSERVATION</span>
@@ -279,7 +279,7 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
     <div class="labo-philosophy__page">
       <header class="labo-philosophy__folio type-note" aria-hidden="true">
-        <span>Studio Abîme · Cahier de recherche</span>
+        <span>{t('labo.researchNotebook')}</span>
         <span>MANIFESTE</span>
       </header>
 
@@ -323,7 +323,7 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
   <section class="labo-team container-wide" id="equipe" aria-labelledby="labo-team-title">
     <h2 id="labo-team-title" class="sr-only">{t('labo.sectionTeam')}</h2>
     <div class="labo-team__heading">
-      <span class="type-note">[03 — Le collectif - L’équipe]</span>
+      <span class="type-note">[03 — {t('labo.collective')}]</span>
     </div>
 
     {page.teamLead && <p class="labo-team__lead" data-text-reveal>{page.teamLead}</p>}
