@@ -25,9 +25,10 @@ export default defineCliConfig({
    * sans cela Vite recopie les fontes, textures et médias du site (~9 Mo) dans
    * le build du Studio, qui n'en utilise aucun.
    *
-   * Ce dossier ne contient que `_redirects`, qui renvoie toutes les URLs vers
-   * `index.html` : le Studio est une application à routage client, et rafraîchir
-   * la page sur `/structure/...` demanderait sinon un fichier inexistant.
+   * Le dossier est vide, et doit le rester : tout ce qu'on y dépose est recopié
+   * à la racine du build. Le repli du routage client — renvoyer `index.html`
+   * quand l'URL désigne une vue plutôt qu'un fichier — est réglé côté
+   * hébergeur, par `not_found_handling` dans `wrangler.studio.jsonc`.
    */
   vite: (config) => ({ ...config, publicDir: 'sanity/static' }),
 });

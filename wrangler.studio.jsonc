@@ -27,9 +27,11 @@
       disque. Cette valeur renvoie alors `index.html`, qui relit l'URL et
       restitue la vue attendue.
 
-      `sanity/static/_redirects` fait la même chose pour Cloudflare Pages, et
-      reste dans le build : les deux ne se contredisent pas, et le fichier
-      couvre le jour où le Studio serait redéployé ailleurs.
+      C'est la SEULE façon de le faire ici. Un `_redirects` portant la règle
+      `/* /index.html 200` — la convention Cloudflare Pages — fait échouer le
+      déploiement : le serveur d'assets retire de lui-même les `/index` et les
+      `.html`, `/index.html` redevient `/`, qui redéclenche `/*`, et l'API
+      refuse la boucle (code 100324).
     */
     "not_found_handling": "single-page-application"
   }
