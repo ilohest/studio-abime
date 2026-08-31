@@ -392,10 +392,19 @@ domaine peut vivre dans le même compte, acheté au prix coûtant du registre.
 `@astrojs/cloudflare` produit un build hybride : toutes les pages partent en HTML
 statique sur le CDN, et **un seul Worker** est déployé, pour `/api/contact`.
 
-Réglages du projet Cloudflare « Site » (Workers & Pages → connecter le dépôt) :
+Réglages du projet Cloudflare « Site » (Workers & Pages → importer le dépôt) :
 
 - **Build command** : `npm run build`
-- **Build output directory** : `dist`
+- **Deploy command** : `npx wrangler deploy --config dist/server/wrangler.json`
+
+Il n'y a pas de champ « répertoire de sortie » : le tableau de bord ne propose
+plus que Workers Builds, où c'est la commande de déploiement qui désigne ce
+qu'il faut publier. Le `wrangler.jsonc` de la racine est volontairement
+incomplet — il ne porte que `html_handling` ; c'est l'adaptateur Astro qui
+écrit la configuration complète **pendant le build**, dans
+`dist/server/wrangler.json`, avec le point d'entrée et le dossier d'assets. Un
+`npx wrangler deploy` sec lirait le fichier de la racine et échouerait faute de
+point d'entrée.
 
 Comme les pages sont pré-rendues, une publication dans Sanity n'apparaît en ligne
 qu'après un nouveau build. Le câblage à faire une fois pour toutes :
@@ -444,6 +453,45 @@ n'autorisent pas à faire du CDN gratuit un serveur de vidéo. Le site n'héberg
 aujourd'hui qu'un `.mp4` de 6 Mo sur la page 404, ce qui est sans conséquence ;
 si des vidéos de fond arrivent un jour sur les pages courantes, c'est là qu'il
 faudra regarder Cloudflare Stream.
+
+### Domaines et redirections
+
+Le site n'est servi qu'à **une seule adresse** : `studioabime.com`. Tout le
+reste y mène par une 301, pour qu'une même page n'existe jamais à deux URLs.
+
+| Zone Cloudflare | DNS | Règle |
+| --- | --- | --- |
+| `studioabime.com` | apex : domaine personnalisé du Worker<br>`www` : CNAME proxifié vers l'apex | Redirect Rule sur `Hostname equals www.studioabime.com` |
+| `studioabime.be` | `A @` et `A www` → `192.0.2.1`, proxifiés | Redirect Rule sur **All incoming requests** |
+| `studioabime.fr` | idem | idem |
+
+Cible, dans les trois cas :
+`concat("https://studioabime.com", http.request.uri.path)`, en 301, avec
+*Preserve query string*.
+
+Trois choses qui ne s'improvisent pas :
+
+- **La règle du `.com` doit filtrer sur le nom d'hôte**, jamais « All incoming
+  requests » : cette zone sert le vrai site, et une règle attrape-tout
+  redirigerait l'apex vers lui-même.
+- **`192.0.2.1` est une adresse de documentation réservée**, qui ne mène nulle
+  part. C'est voulu : le trafic n'y va jamais, la règle l'intercepte au bord du
+  réseau. L'enregistrement n'existe que pour faire résoudre le nom — sans lui,
+  la redirection n'est jamais atteinte.
+- **Une Redirect Rule ne s'applique qu'à sa propre zone.** Une règle visant
+  `.be` posée dans la zone `.fr` ne se déclenchera jamais.
+
+`SSL/TLS → Full (strict)` et `Always Use HTTPS` sont à activer sur la zone
+`studioabime.com` : sans le second, le site répond en clair sur le port 80.
+
+> **Le `robots.txt` en ligne n'est pas celui du dépôt.** Le réglage **AI Crawl
+> Control** de la zone injecte, *avant* le vôtre, un bloc qui refuse les robots
+> d'entraînement (GPTBot, ClaudeBot, Google-Extended…) et pose un
+> `Content-Signal` valant réserve de droits au titre de l'article 4 de la
+> directive européenne 2019/790. `Googlebot` n'est pas concerné : le
+> référencement classique reste intact. À connaître avant de s'étonner du
+> contenu servi — et avant de conclure qu'un `Disallow: /` de maintenance
+> protège quoi que ce soit, ce bloc contenant son propre `Allow: /`.
 
 ### Fermer le site (mode maintenance)
 
@@ -501,12 +549,23 @@ n'oblige pas à redéployer l'autre.
 Réglages du projet Cloudflare « Studio » :
 
 - **Build command** : `npm run studio:build`
-- **Build output directory** : `dist-studio`
+- **Deploy command** : `npx wrangler deploy --config wrangler.studio.jsonc`
+
+Le Studio n'a pas d'adaptateur pour lui écrire sa configuration : elle est
+posée à la main dans `wrangler.studio.jsonc`, nommée pour ne pas entrer en
+conflit avec celle du site. Elle n'a **pas de `main`** — le Studio est
+entièrement statique, Cloudflare sert des fichiers et rien n'est facturé.
 
 Le Studio est une application à routage client : rafraîchir la page sur
-`/structure/...` demanderait un fichier qui n'existe pas. Le fichier
-`sanity/static/_redirects`, recopié dans le build, renvoie donc toutes les URLs
-vers `index.html`.
+`/structure/...` demanderait un fichier qui n'existe pas. C'est
+`not_found_handling: "single-page-application"` qui renvoie alors `index.html`.
+
+> **⚠️ Ne pas remettre de `_redirects` dans `sanity/static/`.** La règle
+> `/* /index.html 200`, convention de Cloudflare Pages, fait **échouer** le
+> déploiement sur Workers : le serveur d'assets retire de lui-même les `/index`
+> et les `.html`, si bien que `/index.html` redevient `/`, qui redéclenche
+> `/*`. L'API rejette la boucle (code 100324) — et le fait à la toute dernière
+> étape, après avoir monté les 398 fichiers, ce qui rend l'échec discret.
 
 ### Origines CORS
 
@@ -516,10 +575,24 @@ Sanity → manage → API → **CORS origins** :
 | Origine | Identifiants |
 | --- | --- |
 | `https://studio.studioabime.com` | oui (le Studio s'authentifie) |
-| `https://studioabime.com` | oui (lecture des brouillons en édition visuelle) |
+| `https://studioabime.com` | **non** (voir ci-dessous) |
 | l'URL de preview du site | oui |
 | `http://localhost:3333` | oui |
 | `http://localhost:4321` | oui |
+
+Les identifiants autorisent une origine à joindre le jeton de session Sanity à
+ses requêtes — donc à agir au nom de la personne connectée. On ne les accorde
+qu'aux origines où quelqu'un s'authentifie réellement. La production n'en fait
+pas partie : `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` y vaut `"false"`, le site
+est du HTML statique et le navigateur d'un visiteur ne parle jamais à Sanity.
+Les accorder élargirait la surface pour rien. À cocher le jour où l'édition
+visuelle serait activée en production.
+
+L'URL de preview change à chaque déploiement de branche (Workers Builds la
+préfixe d'un identifiant de version) : déclarez-la au moment où vous travaillez
+sur une branche, plutôt que de poser un joker `https://*.workers.dev` — qui
+autoriserait n'importe quel site hébergé là à émettre des requêtes
+authentifiées.
 
 ### Variables d'environnement
 
@@ -540,17 +613,35 @@ sur l'environnement de preview, où l'édition visuelle est utilisée.
 | `PUBLIC_SITE_URL` | `https://studioabime.com` | URL de preview | non |
 | `RESEND_API_KEY` | clé Resend | clé Resend | **oui** |
 | `CONTACT_FROM_EMAIL` | expéditeur vérifié chez Resend | idem | non |
-| `CONTACT_TO_EMAIL` | destinataire du formulaire | idem | non |
+| `CONTACT_TO_EMAIL` | *(à laisser vide)* | votre adresse de test | non |
 | `CONTACT_REPLY_TO_EMAIL` | adresse de réponse | idem | non |
 | `PUBLIC_SHOPIFY_STORE_DOMAIN` | `xxx.myshopify.com` | idem | non |
 | `PUBLIC_SHOPIFY_STOREFRONT_TOKEN` | jeton Storefront | idem | non (public par conception) |
 | `PUBLIC_SHOPIFY_API_VERSION` | `2026-07` | idem | non |
+| `PUBLIC_SHOPIFY_INVENTORY_SCOPE` | `"true"` | idem | non |
 | `MAINTENANCE_PASSWORD` | mot de passe de l'écran de maintenance | idem | **oui** |
 | `MAINTENANCE_MODE` | vide (Sanity décide) | vide | non |
 
 `SANITY_API_READ_TOKEN` ne sert qu'à lire les brouillons : il n'a d'utilité que
-sur l'environnement de preview. Le laisser vide en production, c'est une clé de
-moins à exposer.
+sur l'environnement de preview. L'absenter de la production, c'est une clé de
+moins à exposer — et il n'y ferait rien de toute façon, `draftsEnabled` étant
+faux dès que l'édition visuelle est désactivée.
+
+`CONTACT_TO_EMAIL` est à **laisser absent en production** : `src/pages/api/contact.ts`
+retombe alors sur l'adresse de la cliente, écrite dans le dépôt et donc relue à
+chaque revue. Une valeur saisie à la main dans un tableau de bord ne l'est
+jamais. Sur l'environnement de preview, en revanche, posez-y votre propre
+adresse : c'est ce qui permet d'essayer le formulaire sans écrire à la cliente.
+
+> **⚠️ Les quatre variables Shopify échouent en silence.** `src/lib/shopify/env.ts`
+> ne lève volontairement aucune erreur quand la boutique n'est pas configurée :
+> `shopifyConfigured` passe à faux et le catalogue renvoie une liste vide. Le
+> build reste **vert**, et le site part sans ses produits, sans ses collections
+> et sans `/cgv` ni `/retours` — dix pages en moins, aucune alerte. Le contrôle
+> après déploiement : `curl -s https://studioabime.com/sitemap.xml | grep -c '<loc>'`
+> doit compter 30 URLs, pas 20. `PUBLIC_SHOPIFY_INVENTORY_SCOPE` compte autant
+> que les autres : sans elle, la requête réclame `quantityAvailable` sans en
+> avoir le droit et Shopify rejette **toute** la requête.
 
 `SANITY_API_WRITE_TOKEN` reste **local uniquement** (script `npm run legal:seed`).
 Il ne doit être présent sur aucun environnement en ligne.
@@ -588,6 +679,11 @@ Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity
 - [ ] site déclaré dans la Google Search Console, sitemap soumis (`/sitemap.xml`) ;
 - [ ] `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` bien à `"false"` en production — c'est lui qui autorise l'indexation.
 - [ ] `MAINTENANCE_PASSWORD` posé sur le projet Cloudflare « Site » si le site est mis en ligne fermé — sans lui, l'écran de maintenance n'a pas de porte.
+- [ ] `curl -s https://studioabime.com/sitemap.xml | grep -c '<loc>'` renvoie **30** —
+      moins signifie que la boutique n'est pas passée, et elle échoue en silence ;
+- [ ] `grep -rl "/_image" dist/client --include="*.html"` ne renvoie rien après un build ;
+- [ ] `Always Use HTTPS` et `SSL/TLS → Full (strict)` activés sur la zone ;
+- [ ] les six adresses testées : apex, `www`, `.be`, `.fr` et leurs versions `http://`.
 
 ---
 
