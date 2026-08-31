@@ -18,6 +18,19 @@ import {
   setQuantity,
 } from '~/lib/shopify/cartStore';
 
+/*
+  Ce composant a deux racines : le déclencheur, qui reste dans le menu, et le
+  tiroir, qui part vers `body`. Vue ne peut donc pas décider seul où poser les
+  attributs venus de l'extérieur — dont le marqueur de styles scopés
+  (`data-astro-cid-…`) qu'Astro accroche à toute île placée dans un composant
+  qui en porte. Il renonce, et le signale à chaque rendu en développement.
+
+  On désigne donc la destination : le déclencheur, seul des deux à vivre
+  réellement dans le rail. Le tiroir, lui, sort du conteneur au montage — il
+  n'a rien à faire du marqueur d'un parent dont il n'est plus l'enfant.
+*/
+defineOptions({ inheritAttrs: false });
+
 const props = defineProps<{
   labels: {
     cart: string;
@@ -105,6 +118,7 @@ watch(
 <template>
   <button
     ref="trigger"
+    v-bind="$attrs"
     type="button"
     class="cart-trigger"
     :aria-expanded="cartState.open"
