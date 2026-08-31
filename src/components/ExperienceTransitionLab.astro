@@ -167,7 +167,7 @@ const elementNumbers = Object.fromEntries(
   champ à l'atterrissage : elles gardent leur entrée discrète, jouée à leur
   arrivée à l'écran (voir le script plus bas).
 */}
-<div class="motion-lab__settled container-wide" data-settled-catalog>
+<div class="motion-lab__settled" data-settled-catalog>
   <div class="motion-lab__settled-layer" data-settled-layer>
     <ProjectGrid
       projects={projects}
@@ -744,6 +744,14 @@ const elementNumbers = Object.fromEntries(
     donner au navigateur QUELQUE CHOSE à épingler pendant la montée : une
     grille restée dans le flux ne peut être tenue immobile qu'à la main, image
     par image, et c'est ce qui la faisait trembler.
+  */
+  /*
+    Aucun conteneur ici : la grille vit dans le `container-wide` de la page, qui
+    lui donne déjà sa largeur et sa gouttière. En porter un second appliquait le
+    retrait deux fois — les filets de la grille rentraient d'un cran par rapport
+    à la ligne de repères posée au-dessus d'elle, « Table des éléments » d'un
+    côté, l'état de la scène de l'autre. Les deux sont désormais d'aplomb, et
+    les fiches récupèrent la largeur que ce cran leur prenait.
   */
   .motion-lab__settled {
     position: relative;
