@@ -4,6 +4,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
 
 import { projectGallery } from '~/lib/projectGallery';
 import type { Locale } from '~/i18n/config';
@@ -53,6 +54,12 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
           <h1 class="banner__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
         </header>
 
+        {/*
+          Sous 900 px seulement : au bureau, la case et le relevé se tiennent
+          dans le cartouche de tête, en haut à droite.
+        */}
+        <ProjectMobileHead project={project} locale={locale} class="banner__mobile-head" />
+
         <div class="banner__body">
           <SectionRenderer sections={project.sections} locale={locale} />
         </div>
@@ -93,6 +100,21 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
 
   .banner__header {
     margin-top: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  /*
+    Le dégagement de la barre de marque est porté par le lien de retour, en tête
+    de page (voir `ProjectTemplateRenderer`) : le gabarit le reprenait à son
+    compte, et l'écart se comptait deux fois avant le titre.
+  */
+  @media (max-width: 899px) {
+    .banner__inner {
+      padding-block-start: 0;
+    }
+
+    .banner__header {
+      margin-top: clamp(1.25rem, 4vw, 2rem);
+    }
   }
 
   /* Même police que le texte courant : la mention se lit comme une note. */

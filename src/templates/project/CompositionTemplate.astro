@@ -2,6 +2,7 @@
 import JournalComposition from '~/components/journal/JournalComposition.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
@@ -48,6 +49,12 @@ const blocks = project.blocks ?? [];
       </h1>
     </header>
 
+    {/*
+      Sous 900 px seulement : au bureau, la case et le relevé se tiennent dans
+      le cartouche de tête, en haut à droite.
+    */}
+    <ProjectMobileHead project={project} locale={locale} class="composition__mobile-head" />
+
     {
       blocks.length > 0 && (
         <div class="composition__body">
@@ -81,6 +88,21 @@ const blocks = project.blocks ?? [];
     .composition__header {
       padding-right: 22rem;
       max-width: none;
+    }
+  }
+
+  /*
+    Le dégagement de la barre de marque est porté par le lien de retour, en tête
+    de page (voir `ProjectTemplateRenderer`) : le gabarit le reprenait à son
+    compte, et l'écart se comptait deux fois avant le titre.
+  */
+  @media (max-width: 899px) {
+    .composition__inner {
+      padding-block-start: 0;
+    }
+
+    .composition__header {
+      margin-top: clamp(1.25rem, 4vw, 2rem);
     }
   }
 
@@ -122,9 +144,10 @@ const blocks = project.blocks ?? [];
     );
   }
 
+  /* L'écart d'avant le corps est déjà porté par le cartouche mobile. */
   @media (max-width: 899px) {
     .composition__body {
-      margin-top: clamp(2.5rem, 6vw, 4rem);
+      margin-top: 0;
     }
   }
 </style>

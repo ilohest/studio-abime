@@ -1,0 +1,65 @@
+---
+import ProjectElementCell from '~/components/project/ProjectElementCell.astro';
+import ProjectFacts from '~/components/project/ProjectFacts.astro';
+
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Cartouche du projet dans l'ordre de lecture MOBILE — la case, puis le relevé.
+ *
+ * Au bureau, les deux se tiennent hors du flux, dans le coin haut droit de la
+ * page (voir `ProjectTemplateRenderer`) : la mise en page les donne à voir en
+ * même temps que le titre, et l'ordre du document n'a pas d'importance.
+ *
+ * Sur écran étroit il n'y a plus de coin : tout s'empile, et le cartouche posé
+ * en tête passait AVANT le titre. On ouvrait donc la page sur un sigle et un
+ * numéro, sans savoir de quel projet il s'agissait. Chaque gabarit rend ce bloc
+ * après son titre ; le cartouche du coin, lui, s'efface à cette taille.
+ *
+ * Il porte les deux, et non le seul relevé comme auparavant : la case
+ * appartient au même geste — c'est elle que le visiteur vient de cliquer.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+  class?: string;
+}
+
+const { project, locale, class: className } = Astro.props;
+---
+
+<div class:list={['project-mobile-head', className]}>
+  <ProjectElementCell project={project} />
+  <ProjectFacts project={project} locale={locale} />
+</div>
+
+<style>
+  /* Au bureau, c'est le cartouche du coin qui fait le travail. */
+  .project-mobile-head {
+    display: none;
+  }
+
+  @media (max-width: 899px) {
+    /*
+      La case garde le bord droit qu'elle occupe au bureau, le relevé prend
+      toute la largeur : les deux se lisent comme un seul bloc, aligné à droite
+      comme les valeurs du relevé lui-même.
+    */
+    .project-mobile-head {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      align-items: flex-end;
+      /*
+        La case a besoin d'air des deux côtés : c'est un objet, pas une ligne de
+        texte, et collée au titre comme au relevé elle se lisait comme la suite
+        de l'un ou l'autre. Le bloc porte donc ses écarts lui-même — avant,
+        après, et entre ses deux pièces — plutôt que de les laisser à chacun des
+        trois gabarits, où ils auraient divergé.
+      */
+      gap: clamp(2rem, 7vw, 2.75rem);
+      margin-block: clamp(3.5rem, 10vw, 4.5rem) clamp(2.5rem, 8vw, 3.5rem);
+    }
+  }
+</style>

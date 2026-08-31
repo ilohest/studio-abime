@@ -4,7 +4,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
-import ProjectFacts from '~/components/project/ProjectFacts.astro';
+import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
 
 import { projectGallery } from '~/lib/projectGallery';
 import type { Locale } from '~/i18n/config';
@@ -56,10 +56,11 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
         </header>
 
         {/*
-          Sous 767 px seulement : au bureau le relevé reste dans le cartouche
-          de tête, en colonne collante à droite (voir `ProjectTemplateRenderer`).
+          Sous 900 px seulement : au bureau, la case et le relevé restent dans
+          le cartouche de tête, en colonne collante à droite (voir
+          `ProjectTemplateRenderer`).
         */}
-        <ProjectFacts project={project} locale={locale} class="split__mobile-facts" />
+        <ProjectMobileHead project={project} locale={locale} class="split__mobile-head" />
 
         <div class="split__body">
           <SectionRenderer sections={project.sections} locale={locale} />
@@ -170,10 +171,6 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     margin-top: clamp(6rem, 16vw, 12rem);
   }
 
-  /* Copie mobile du relevé — masquée au bureau, où le cartouche de tête suffit. */
-  .split__paneInner :global(.split__mobile-facts) {
-    display: none;
-  }
 
   .split__body {
     width: 100%;
@@ -281,9 +278,24 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
       position: relative;
     }
 
+    /*
+      Le dégagement de la barre de marque est porté par le lien de retour, en
+      tête de page (voir `ProjectTemplateRenderer`) : le gabarit le reprenait à
+      son compte, et l'écart se comptait deux fois avant le titre.
+    */
     .split__paneInner {
       max-width: none;
+      padding-top: 0;
       padding-inline: var(--spacing-gutter);
+    }
+
+    /*
+      La grande respiration d'avant le titre n'a de sens qu'au bureau, où elle
+      descend la colonne sous le cartouche du coin. Empilée, elle n'ouvre plus
+      qu'un trou entre le retour et le titre.
+    */
+    .split__header {
+      margin-top: clamp(1.25rem, 4vw, 2rem);
     }
 
     .split__gallery {
@@ -293,9 +305,5 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
       padding-inline: var(--gallery-inset);
     }
 
-    .split__paneInner :global(.split__mobile-facts) {
-      display: block;
-      margin-top: clamp(2.5rem, 7vw, 3.5rem);
-    }
   }
 </style>

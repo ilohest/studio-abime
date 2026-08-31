@@ -167,9 +167,11 @@ const Template = (() => {
 
   /*
     Sous 900 px, la colonne de droite n'a plus la largeur d'accueillir le
-    relevé : le bloc rentre dans le flux, en tête de page. Il y repousse le
-    contenu, mais rien ne disparaît — masquer la fiche reviendrait à retirer au
-    petit écran ce que le grand donne.
+    cartouche. Il rentrerait dans le flux, mais EN TÊTE — avant le titre : la
+    page s'ouvrirait sur un sigle et un numéro sans dire de quel projet il
+    s'agit. Il s'efface donc ici, et chaque gabarit rend le sien après son
+    titre (`ProjectMobileHead`). Rien ne disparaît : c'est le même contenu, à
+    sa place dans l'ordre de lecture.
   */
   @media (max-width: 899px) {
     .project-page-back {
@@ -193,30 +195,9 @@ const Template = (() => {
     }
 
     .project-page-aside {
-      position: static;
-      padding-top: clamp(1.5rem, 3vw, 2.5rem);
-      pointer-events: auto;
-    }
-
-    .project-page-aside__unit {
-      width: auto;
-    }
-  }
-
-  /*
-    Sous 767 px, le repère de marque et le bouton de menu sont fixés en haut de
-    l'écran (voir `--mobile-brand-clearance`) : c'est le lien de retour, en tête
-    de page, qui démarre sous eux — le cartouche le suit dans le flux.
-  */
-  @media (max-width: 767px) {
-    /*
-      Le relevé rejoint l'ordre de lecture mobile — après le titre, avant la
-      description — porté par chaque gabarit (`.mobile-facts`) : sa copie dans
-      le cartouche de tête, pensée pour la colonne fixe du bureau, s'efface ici.
-    */
-    .project-page-aside :global(.project-page-aside__facts) {
       display: none;
     }
   }
+
 
 </style>
