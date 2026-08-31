@@ -1428,6 +1428,16 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       font-size: var(--text-note);
     }
 
+    /*
+      Le noyau tombe ici sous les 6.5 rem : à cette taille, le grain ne se lit
+      plus — il ne reste qu'une animation qui repeint le disque huit fois par
+      seconde, sur les appareils qui ont le moins à y consacrer. On la retire
+      plutôt que de la laisser tourner pour rien.
+    */
+    .labo-orbits__core::before {
+      display: none;
+    }
+
     .labo-philosophy,
     .labo-section-heading,
     .labo-archive__layout {
