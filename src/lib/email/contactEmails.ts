@@ -85,7 +85,7 @@ const emailShell = (
             </tr>
             <tr>
               <td style="${footerBorder}padding:22px 0 0;color:#66615d;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.5;">
-                studio-abime.com · elodie@studioabime.com
+                studioabime.com · elodie@studioabime.com
               </td>
             </tr>
           </table>

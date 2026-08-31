@@ -5,7 +5,7 @@ import { defineCliConfig } from 'sanity/cli';
  *
  * Le CLI sert à deux choses : les opérations de données (datasets, import/export,
  * tokens, typegen) et la construction du Studio autonome — `sanity dev` en local,
- * `sanity build` pour le déploiement sur studio.studio-abime.com.
+ * `sanity build` pour le déploiement sur studio.studioabime.com.
  *
  * `studioHost` ne concerne que `sanity deploy` (hébergement gratuit sur
  * studio-abime.sanity.studio). Il est conservé comme filet de secours : si le

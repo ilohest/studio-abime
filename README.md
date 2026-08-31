@@ -376,8 +376,8 @@ Deux applications, **deux projets Cloudflare** branchés sur ce même dépôt.
 
 | Projet | Build | Sortie | Domaine |
 | --- | --- | --- | --- |
-| Site | `npm run build` | `dist/` | `studio-abime.com` |
-| Studio | `npm run studio:build` | `dist-studio/` | `studio.studio-abime.com` |
+| Site | `npm run build` | `dist/` | `studioabime.com` |
+| Studio | `npm run studio:build` | `dist-studio/` | `studio.studioabime.com` |
 
 Le choix de Cloudflare n'est pas qu'une question de prix. Son offre gratuite
 autorise l'usage commercial — ce que le plan Hobby de Vercel interdit
@@ -515,8 +515,8 @@ Sanity → manage → API → **CORS origins** :
 
 | Origine | Identifiants |
 | --- | --- |
-| `https://studio.studio-abime.com` | oui (le Studio s'authentifie) |
-| `https://studio-abime.com` | oui (lecture des brouillons en édition visuelle) |
+| `https://studio.studioabime.com` | oui (le Studio s'authentifie) |
+| `https://studioabime.com` | oui (lecture des brouillons en édition visuelle) |
 | l'URL de preview du site | oui |
 | `http://localhost:3333` | oui |
 | `http://localhost:4321` | oui |
@@ -534,10 +534,10 @@ sur l'environnement de preview, où l'édition visuelle est utilisée.
 | `PUBLIC_SANITY_PROJECT_ID` | identique | identique | non |
 | `PUBLIC_SANITY_DATASET` | `production` | `production` | non |
 | `PUBLIC_SANITY_API_VERSION` | `2025-02-19` | idem | non |
-| `PUBLIC_SANITY_STUDIO_URL` | `https://studio.studio-abime.com` | idem | non |
+| `PUBLIC_SANITY_STUDIO_URL` | `https://studio.studioabime.com` | idem | non |
 | `PUBLIC_SANITY_VISUAL_EDITING_ENABLED` | `"false"` | `"true"` | non |
 | `SANITY_API_READ_TOKEN` | — | token **Viewer** | **oui** |
-| `PUBLIC_SITE_URL` | `https://studio-abime.com` | URL de preview | non |
+| `PUBLIC_SITE_URL` | `https://studioabime.com` | URL de preview | non |
 | `RESEND_API_KEY` | clé Resend | clé Resend | **oui** |
 | `CONTACT_FROM_EMAIL` | expéditeur vérifié chez Resend | idem | non |
 | `CONTACT_TO_EMAIL` | destinataire du formulaire | idem | non |
@@ -572,7 +572,7 @@ donc son propre jeu, volontairement minimal :
 | `SANITY_STUDIO_PROJECT_ID` | identique au site |
 | `SANITY_STUDIO_DATASET` | `production` |
 | `SANITY_STUDIO_API_VERSION` | `2025-02-19` |
-| `SANITY_STUDIO_SITE_URL` | `https://studio-abime.com` — l'origine chargée dans l'aperçu du Presentation Tool |
+| `SANITY_STUDIO_SITE_URL` | `https://studioabime.com` — l'origine chargée dans l'aperçu du Presentation Tool |
 
 Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity.
 

@@ -299,7 +299,7 @@ interface Crumb {
  * Il n'existe pas à l'écran — la navigation du site vit en pied de page — mais
  * il existe dans la structure des URLs, et c'est cette structure que Google
  * affiche à la place de l'URL brute sous le titre d'un résultat. Le déclarer
- * revient à choisir « studio-abime.com › Expériences › Nom du projet » plutôt
+ * revient à choisir « studioabime.com › Expériences › Nom du projet » plutôt
  * qu'une URL tronquée.
  */
 function breadcrumbTrail(

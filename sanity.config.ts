@@ -18,7 +18,7 @@ import type { DuplicateDocumentActionComponent } from 'sanity';
  * Configuration du Studio Sanity.
  *
  * Le Studio est une application autonome, déployée à part sur
- * https://studio.studio-abime.com (`npm run studio:dev` / `npm run studio:build`).
+ * https://studio.studioabime.com (`npm run studio:dev` / `npm run studio:build`).
  * Le site et le back-office vivent donc sur deux origines distinctes : les deux
  * doivent être déclarées dans les origines CORS du projet Sanity, et l'origine
  * du site prévisualisé est fournie ci-dessous au Presentation Tool.

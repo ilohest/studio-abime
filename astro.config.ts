@@ -209,7 +209,7 @@ if (maintenanceEnabled) {
 }
 
 export default defineConfig({
-  site: PUBLIC_SITE_URL || 'https://studio-abime.com',
+  site: PUBLIC_SITE_URL || 'https://studioabime.com',
   trailingSlash: 'never',
 
   redirects: {
@@ -287,7 +287,7 @@ export default defineConfig({
       useCdn: false,
       /**
        * Pas de `studioBasePath` : le Studio n'est PAS embarqué dans le site.
-       * Il est déployé à part sur https://studio.studio-abime.com (`npm run
+       * Il est déployé à part sur https://studio.studioabime.com (`npm run
        * studio:build`, voir README § Déploiement) et se lance en local avec
        * `npm run studio:dev` sur le port 3333.
        *
