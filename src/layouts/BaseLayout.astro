@@ -29,8 +29,6 @@ interface Props {
   hideFooter?: boolean;
   /** Affiche le rail de services persistant des pages intérieures. */
   showServicesRail?: boolean;
-  /** Active les overlays Sanity uniquement sur les pages dont le contenu provient du CMS. */
-  enableVisualEditing?: boolean;
   /** URLs de la même page dans les autres langues (hreflang + sélecteur). */
   alternates?: Partial<Record<Locale, string>>;
   /**
@@ -61,7 +59,6 @@ const {
   bodyClass = '',
   hideFooter = false,
   showServicesRail = true,
-  enableVisualEditing = true,
   alternates = {},
   jsonLd = null,
   shareImage = null,
@@ -198,6 +195,6 @@ const defaultAlternate = alternates[defaultLocale];
       Combiné au stega, il rend chaque texte cliquable et remonte les
       modifications au Presentation Tool.
     */}
-    {enableVisualEditing && visualEditingEnabled && <VisualEditing enabled />}
+    {visualEditingEnabled && <VisualEditing enabled />}
   </body>
 </html>
