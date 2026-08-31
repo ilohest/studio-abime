@@ -27,6 +27,7 @@ export const TRANSLATED_DOCUMENT_TYPES = [
   'laboPage',
   'journalPage',
   'shopPage',
+  'contactPage',
 ] as const;
 
 /** Configuration attendue par le plugin document-internationalization. */

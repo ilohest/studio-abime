@@ -443,9 +443,21 @@ export const clientsQuery = /* groq */ `
   | order(_createdAt asc, _id asc){ _id, name, sector }`;
 
 /** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
-/** Contenu éditorial de la page Contact (section « Informations »). */
+/**
+ * Contenu éditorial de la page Contact (section « Informations »).
+ *
+ * `coalesce(language, $defaultLocale)` et non `language` seul : un singleton
+ * créé avant que son type ne soit déclaré traduit naît sans langue, et le champ
+ * étant en lecture seule, personne ne peut le lui donner après coup. Le
+ * document existe alors, se remplit, et le site continue de servir son contenu
+ * de repli sans que rien ne l'explique.
+ *
+ * Le filtre garde son sens le jour où une seconde langue arrive — un document
+ * explicitement anglais ne passera pas pour du français — mais il ne punit plus
+ * l'absence de valeur.
+ */
 export const contactPageQuery = /* groq */ `
-*[_type == "contactPage" && language == $locale][0]{
+*[_type == "contactPage" && coalesce(language, $defaultLocale) == $locale][0]{
   _id,
   _type,
   language,
