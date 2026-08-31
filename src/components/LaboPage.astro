@@ -1110,11 +1110,17 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     photographie se cale sur son milieu plutôt que sur son bord haut.
   */
   .labo-foundation {
+    /*
+      Le blanc qui détache la note de fondation de ce qui la précède. Nommé
+      parce qu'en colonne il sert deux fois : au-dessus de la photographie, et
+      entre elle et la feuille (voir le bloc mobile).
+    */
+    --foundation-blank: clamp(5rem, 9vw, 9rem);
     display: grid;
     grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
     align-items: center;
     gap: clamp(1.5rem, 4vw, 4rem);
-    margin-top: clamp(5rem, 9vw, 9rem);
+    margin-top: var(--foundation-blank);
   }
 
   .labo-foundation__figure {
@@ -1606,6 +1612,13 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
     .labo-foundation {
       grid-template-columns: 1fr;
+      /*
+        En colonne, la photographie n'est plus à côté de la feuille mais
+        au-dessus : la gouttière devient un blanc vertical, de même nature que
+        celui qui sépare la figure du texte qui la précède. Les deux valent donc
+        la même chose — sinon l'image paraît tomber sur la note.
+      */
+      gap: var(--foundation-blank);
     }
 
     .labo-foundation__figure {
