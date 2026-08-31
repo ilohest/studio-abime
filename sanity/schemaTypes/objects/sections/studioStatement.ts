@@ -1,4 +1,4 @@
-import { defineArrayMember, defineField, defineType } from 'sanity';
+import { defineArrayMember, defineField, defineType } from "sanity";
 
 /**
  * Manifeste illustré — déclaration en grand, note de bas de bloc et planche de
@@ -9,114 +9,120 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
  * numérotation automatique par section la casserait au premier réagencement.
  */
 export const studioStatement = defineType({
-  name: 'studioStatement',
-  title: 'Manifeste illustré',
-  type: 'object',
+  name: "studioStatement",
+  title: "Manifeste illustré",
+  type: "object",
   groups: [
-    { name: 'text', title: 'Textes', default: true },
-    { name: 'figures', title: 'Figures' },
+    { name: "text", title: "Textes", default: true },
+    { name: "figures", title: "Figures" },
   ],
   fields: [
     defineField({
-      name: 'statement',
-      title: 'Déclaration',
-      type: 'text',
+      name: "statement",
+      title: "Déclaration",
+      type: "text",
       rows: 4,
-      group: 'text',
+      group: "text",
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'note',
-      title: 'Note',
-      type: 'text',
+      name: "note",
+      title: "Note",
+      type: "text",
       rows: 3,
-      group: 'text',
+      group: "text",
       /*
         Le repère et le texte tiennent dans un seul champ : `figureLabel()` les
         sépare au rendu. La description doit donc dire la CONVENTION, pas
         donner un exemple isolé — « Fig. 04 » seul se lisait comme une étiquette
         du champ, et personne ne devinait qu'il fallait l'écrire dans le texte.
       */
-      description:
-        'Commencez par le repère, puis la note : « fig.04 — On étudie la communication… ». Le repère est détaché et composé à part. Sans lui, seule la note s’affiche.',
+      description: "",
     }),
     defineField({
-      name: 'marker',
-      title: 'Mention technique',
-      type: 'string',
-      group: 'text',
-      description: 'Courte annotation posée entre les figures.',
-    }),
-    defineField({
-      name: 'figures',
-      title: 'Figures',
-      type: 'array',
-      group: 'figures',
+      name: "figures",
+      title: "Figures",
+      type: "array",
+      group: "figures",
       of: [
         defineArrayMember({
-          type: 'object',
+          type: "object",
           fields: [
             defineField({
-              name: 'image',
-              title: 'Visuel',
-              type: 'image',
+              name: "image",
+              title: "Visuel",
+              type: "image",
               options: { hotspot: true },
-              fields: [defineField({ name: 'alt', title: 'Texte alternatif', type: 'string' })],
+              fields: [
+                defineField({
+                  name: "alt",
+                  title: "Texte alternatif",
+                  type: "string",
+                }),
+              ],
               validation: (rule) => rule.required(),
             }),
             defineField({
-              name: 'caption',
-              title: 'Légende',
-              type: 'string',
+              name: "caption",
+              title: "Légende",
+              type: "string",
               description:
-                'Ex. « fig.05 — Compréhension de la constitution ». Le repère de tête est mis en forme automatiquement.',
+                "Ex. « fig.05 — Compréhension de la constitution ». Le repère de tête est mis en forme automatiquement.",
             }),
             defineField({
-              name: 'span',
-              title: 'Largeur',
-              type: 'number',
+              name: "span",
+              title: "Largeur",
+              type: "number",
               initialValue: 3,
-              description: 'Nombre de colonnes occupées, sur une grille de 12.',
+              description: "Nombre de colonnes occupées, sur une grille de 12.",
               validation: (rule) => rule.min(1).max(12).integer(),
             }),
             defineField({
-              name: 'bleed',
-              title: 'Débord',
-              type: 'string',
-              initialValue: 'none',
+              name: "bleed",
+              title: "Débord",
+              type: "string",
+              initialValue: "none",
               options: {
                 list: [
-                  { value: 'none', title: 'Aucun' },
-                  { value: 'left', title: 'Sort par la gauche' },
-                  { value: 'right', title: 'Sort par la droite' },
+                  { value: "none", title: "Aucun" },
+                  { value: "left", title: "Sort par la gauche" },
+                  { value: "right", title: "Sort par la droite" },
                 ],
-                layout: 'radio',
-                direction: 'horizontal',
+                layout: "radio",
+                direction: "horizontal",
               },
             }),
             defineField({
-              name: 'pushRight',
-              title: 'Repousser à droite',
-              type: 'boolean',
+              name: "pushRight",
+              title: "Repousser à droite",
+              type: "boolean",
               initialValue: false,
-              description: 'Occupe l’espace libre restant avant cette figure.',
+              description: "Occupe l’espace libre restant avant cette figure.",
             }),
           ],
           preview: {
-            select: { caption: 'caption', media: 'image' },
+            select: { caption: "caption", media: "image" },
             prepare: ({ caption, media }) => ({
-              title: caption || 'Figure',
+              title: caption || "Figure",
               media,
             }),
           },
         }),
       ],
     }),
+    defineField({
+      name: "marker",
+      title: "Mention technique",
+      type: "string",
+      group: "figures",
+      description:
+        "Courte annotation posée AU MILIEU de la planche, à une place fixée par la mise en page. On en change le texte, pas l’emplacement.",
+    }),
   ],
   preview: {
-    select: { statement: 'statement', figures: 'figures' },
+    select: { statement: "statement", figures: "figures" },
     prepare: ({ statement, figures }) => ({
-      title: 'Manifeste illustré',
+      title: "Manifeste illustré",
       subtitle: statement?.slice(0, 60),
       media: figures?.[0]?.image,
     }),
