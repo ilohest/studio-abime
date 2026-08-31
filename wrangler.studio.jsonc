@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+
+  /*
+    LE STUDIO, DÉPLOYÉ À PART
+    ─────────────────────────
+    Configuration distincte de `wrangler.jsonc`, qui est celle du site : les deux
+    applications vivent dans ce dépôt mais partent vers deux projets Cloudflare
+    séparés (voir README § Déploiement). Le nom de fichier est passé à la
+    commande de déploiement du projet « Studio » :
+
+        npx wrangler deploy --config wrangler.studio.jsonc
+
+    Aucun `main` ici, à la différence du site : le Studio est une application
+    entièrement statique, sans code serveur. Cloudflare sert les fichiers, rien
+    de plus — et rien n'est facturé.
+  */
+  "name": "studio-abime-studio",
+  "compatibility_date": "2026-08-26",
+
+  "assets": {
+    "directory": "./dist-studio",
+
+    /*
+      Le Studio est une application à routage client : rafraîchir la page sur
+      `/structure/project;abc` demande un fichier qui n'existe pas sur le
+      disque. Cette valeur renvoie alors `index.html`, qui relit l'URL et
+      restitue la vue attendue.
+
+      `sanity/static/_redirects` fait la même chose pour Cloudflare Pages, et
+      reste dans le build : les deux ne se contredisent pas, et le fichier
+      couvre le jour où le Studio serait redéployé ailleurs.
+    */
+    "not_found_handling": "single-page-application"
+  }
+}
