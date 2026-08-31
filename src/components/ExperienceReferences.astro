@@ -60,9 +60,14 @@ const footnotes = buildClientFootnotes(projects, clients);
       fin de la section précédente. En réservant une hauteur d'écran moins la
       place du pied, l'ancre atteint sa cible et la page se clôt sur la note
       suivie du pied, sans blanc résiduel.
+
+      La réserve retire 16 rem et non 12 : la note est courte, et l'écart entre
+      la dernière référence et le pied virait au trou. Les 4 rem rendus laissent
+      affleurer le haut de la grille au bas de la page — un rappel de ce qu'on
+      vient de quitter, plutôt qu'un vide.
     */
-    min-block-size: calc(100svh - 12rem);
-    padding-block: clamp(3rem, 7vw, 6rem) clamp(4rem, 9vw, 8rem);
+    min-block-size: calc(100svh - 16rem);
+    padding-block: clamp(3rem, 7vw, 6rem) clamp(2.5rem, 6vw, 5rem);
     /*
       Zéro, et non la garde habituelle : la note doit venir jusqu'au bord haut
       de l'écran, sinon la bande laissée libre montre la fin de la section
@@ -166,7 +171,7 @@ const footnotes = buildClientFootnotes(projects, clients);
   */
   @media (max-width: 767px) {
     .references {
-      min-block-size: calc(78svh - 6rem);
+      min-block-size: calc(70svh - 6rem);
       /* Dégage le titre de la barre de marque, fixe en haut de l'écran. */
       padding-block-start: 5.5rem;
     }
