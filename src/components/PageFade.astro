@@ -1,0 +1,96 @@
+---
+/**
+ * Fondu du fond d'une page à l'autre.
+ *
+ * Le site navigue par chargements complets : passer des Expériences (Lumière)
+ * au Journal (Ciel) fait claquer la couleur d'un seul coup. Ce voile rejoue la
+ * teinte de la page QUITTÉE par-dessus la nouvelle, puis s'efface : l'œil lit un
+ * glissement de fond, pas une rupture.
+ *
+ * Le script est en ligne et placé au seuil du <body> : il s'exécute pendant
+ * l'analyse du document, donc AVANT le premier rendu. Le voile est ainsi déjà
+ * posé quand la page apparaît — sinon on verrait la nouvelle couleur une
+ * fraction de seconde avant le fondu, exactement ce qu'il s'agit d'éviter.
+ *
+ * Rien ne se passe quand les deux pages partagent leur fond, ni quand le
+ * visiteur a demandé moins d'animation : le fondu n'a alors rien à raconter.
+ */
+---
+
+<script is:inline>
+  (() => {
+    const KEY = 'sa:page-surface';
+
+    /*
+      La couleur de la page qui s'ouvre, lue sur le <body> : la feuille de
+      styles est déjà en tête et la classe de page est portée par la balise
+      elle-même, la valeur est donc juste dès l'analyse.
+    */
+    const current = getComputedStyle(document.body).backgroundColor;
+
+    let previous = null;
+    try {
+      previous = sessionStorage.getItem(KEY);
+      sessionStorage.setItem(KEY, current);
+    } catch {
+      /* Navigation privée, stockage refusé : on se passe du fondu. */
+    }
+
+    // Retour par le cache d'historique : le script ne rejoue pas, on remet la
+    // couleur de cette page en mémoire pour la navigation suivante.
+    addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      try {
+        sessionStorage.setItem(KEY, current);
+      } catch {
+        /* idem */
+      }
+    });
+
+    if (!previous || previous === current) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const veil = document.createElement('div');
+    veil.className = 'page-fade';
+    veil.style.backgroundColor = previous;
+    document.body.appendChild(veil);
+
+    const clear = () => veil.remove();
+    veil.addEventListener('animationend', clear, { once: true });
+    // Filet : un onglet en arrière-plan ne joue pas ses animations.
+    setTimeout(clear, 2000);
+  })();
+</script>
+
+<style is:global>
+  /*
+    Le voile est créé par le script : sa règle doit être globale, l'attribut de
+    portée d'Astro ne serait jamais posé dessus.
+
+    Au-dessus du rail de services (82), sous le curseur (9999) — qui reste donc
+    visible pendant le fondu, sans quoi le pointeur disparaîtrait à chaque
+    changement de page.
+  */
+  .page-fade {
+    position: fixed;
+    z-index: 200;
+    animation: page-fade 720ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  @keyframes page-fade {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-fade {
+      display: none;
+    }
+  }
+</style>
