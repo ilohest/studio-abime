@@ -71,11 +71,22 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
       items.length > 0 && (
         <div class="banner__gallery">
           {items.map((item) => (
-            <figure class="banner__figure" style={`--span:${item.span}`}>
+            <figure class="banner__figure" data-span={item.span}>
               <SanityImage
                 image={item.image}
                 width={1400}
-                sizes="(min-width: 900px) 32vw, 100vw"
+                sizes={
+                  /*
+                    Une case sur trois au bureau, une sur deux en dessous — un
+                    visuel d'une colonne y descend à la moitié de l'écran, et
+                    non plus à sa pleine largeur.
+                  */
+                  item.span === 1
+                    ? '(min-width: 900px) 32vw, 50vw'
+                    : item.span === 2
+                      ? '(min-width: 900px) 66vw, 100vw'
+                      : '100vw'
+                }
                 class="banner__image"
               />
               {item.caption && (
@@ -206,8 +217,21 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
     justify-content: flex-end;
   }
 
+  /*
+    La largeur est portée par un attribut plutôt que par une variable : c'est
+    la seule forme qu'une requête de média peut redéfinir, et la planche a
+    justement besoin d'en changer la lecture sur écran étroit.
+  */
   .banner__figure {
-    grid-column: span var(--span, 1);
+    grid-column: span 1;
+  }
+
+  .banner__figure[data-span='2'] {
+    grid-column: span 2;
+  }
+
+  .banner__figure[data-span='3'] {
+    grid-column: span 3;
   }
 
   /*
@@ -237,8 +261,24 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
       max-width: none;
     }
 
+    /*
+      La trame se resserre de 3 cases à 2, et non à 1 : deux visuels d'une
+      colonne continuent de se ranger côte à côte, ce qui donne à la planche son
+      rythme — des paires, coupées de loin en loin par une image large.
+
+      Ramener la LARGEUR MAXIMALE au nombre de colonnes est ce qui compte ici.
+      Une figure qui en réclame trois dans une trame qui n'en déclare que deux
+      s'en fait ajouter une troisième, IMPLICITE, à droite : les colonnes
+      explicites retombent alors à zéro, les figures d'une seule case n'ont plus
+      de largeur du tout, et leur visuel déborde par-dessus la figure voisine.
+      C'est ce qui empilait deux images sur la même case.
+    */
     .banner__gallery {
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .banner__figure[data-span='3'] {
+      grid-column: span 2;
     }
   }
 </style>
