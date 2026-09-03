@@ -225,7 +225,7 @@ export const localizedSettingsQuery = /* groq */ `
   defaultSeoImage ${IMAGE},
   "headerNav": coalesce(headerNav[]{ _key, ...${LINK} }, []),
   "footerNav": coalesce(footerNav[]{ _key, ...${LINK} }, []),
-  footerText ${PORTABLE_TEXT}
+  footerText
 }`;
 
 /* -------------------------------------------------------------------------- */

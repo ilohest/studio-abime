@@ -521,7 +521,8 @@ export interface LocalizedSettings {
   defaultSeoImage?: SanityImage;
   headerNav: NavigationItem[];
   footerNav: NavigationItem[];
-  footerText?: PortableTextBlock[];
+  /** Baseline du pied de page — voir `Footer.astro` pour la phrase de repli. */
+  footerText?: string;
 }
 
 /** Données communes à toutes les pages, injectées par le layout. */

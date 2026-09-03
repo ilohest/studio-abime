@@ -72,13 +72,26 @@ export const localizedSettings = defineType({
       hidden: true,
       deprecated: { reason: 'La navigation n’est plus administrée depuis le Studio.' },
     }),
+    /*
+      La baseline du pied de page. Elle était partie avec la navigation, dont
+      elle n'a jamais relevé : une navigation est une structure, cette phrase
+      est du texte — et le texte se rédige au Studio.
+
+      Une chaîne, et non du texte riche : ce qui s'affiche est une seule ligne
+      de prose, au corps de note. Le texte riche y aurait ouvert titres, listes
+      et images, autant d'affordances qu'aucun pied de page ne peut honorer.
+    */
     defineField({
       name: 'footerText',
-      title: 'Texte de pied de page',
-      type: 'richText',
-      readOnly: true,
-      hidden: true,
-      deprecated: { reason: 'La navigation n’est plus administrée depuis le Studio.' },
+      title: 'Phrase de pied de page',
+      type: 'string',
+      group: 'general',
+      description:
+        'Baseline affichée sous la mention de copyright. Laissée vide, c’est la phrase par défaut du site qui s’affiche.',
+      validation: (rule) =>
+        rule
+          .max(200)
+          .warning('Au-delà de 200 caractères, la phrase ne tient plus sur la ligne du pied de page.'),
     }),
   ],
   preview: {

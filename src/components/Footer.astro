@@ -1,6 +1,5 @@
 ---
 import SmartLink from '~/components/primitives/SmartLink.astro';
-import PortableText from '~/components/primitives/PortableText.astro';
 import Wordmark from '~/components/brand/Wordmark.astro';
 import LocaleSwitcher from '~/components/LocaleSwitcher.astro';
 
@@ -19,9 +18,13 @@ interface Props {
 const { locale, site, alternates } = Astro.props;
 
 /**
- * Baseline par défaut : sert tant que le texte de pied de page n'est pas
- * renseigné dans Sanity (« Réglages du site » → Navigation). Dès qu'il l'est,
- * c'est le contenu du CMS qui s'affiche.
+ * Baseline par défaut : sert tant que la phrase n'est pas renseignée dans
+ * Sanity (« Textes et SEO » → Général → « Phrase de pied de page »). Dès
+ * qu'elle l'est, c'est le contenu du CMS qui s'affiche.
+ *
+ * Elle reste ici plutôt que d'être seulement une valeur initiale du Studio :
+ * un pied de page ne doit jamais paraître amputé parce qu'un champ est vide,
+ * ni sur un jeu de données neuf, ni dans une langue qu'on vient d'ouvrir.
  */
 const DEFAULT_BASELINE =
   'Créer depuis le fond. Donner forme avec justesse. À la frontière du sensible, du social et du créatif.';
@@ -42,7 +45,7 @@ const social = site.settings?.socialLinks ?? [];
 const siteTitle = site.localized?.siteTitle ?? 'Studio Abîme';
 const year = new Date().getFullYear();
 const homeHref = localizedPath(locale);
-const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
+const baseline = site.localized?.footerText?.trim() || DEFAULT_BASELINE;
 ---
 
 <footer>
@@ -54,13 +57,7 @@ const hasCmsBaseline = (site.localized?.footerText?.length ?? 0) > 0;
       <div class="max-w-[68ch]">
         <p class="type-note uppercase">© {year} {siteTitle}</p>
 
-        {
-          hasCmsBaseline ? (
-            <PortableText value={site.localized?.footerText} locale={locale} class="type-note mt-1" />
-          ) : (
-            <p class="type-note mt-1">{DEFAULT_BASELINE}</p>
-          )
-        }
+        <p class="type-note mt-1">{baseline}</p>
       </div>
 
       <div class="type-note flex flex-wrap gap-x-12 gap-y-2">
