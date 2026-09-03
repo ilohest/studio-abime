@@ -4,7 +4,14 @@ import ProjectGrid from '~/components/ProjectGrid.astro';
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { projectInitials, type ProjectEditorialCard } from '~/lib/viewModels';
-import { buildReferenceSlots, referenceName, referenceSector } from '~/lib/references';
+import {
+  buildReferenceSlots,
+  REFERENCE_SLOTS,
+  referenceName,
+  referenceSector,
+  referenceSymbolName,
+  type ReferenceSlot,
+} from '~/lib/references';
 import type { Locale } from '~/i18n/config';
 import type { Client, ProjectCard } from '~/lib/sanity/types';
 
@@ -71,6 +78,152 @@ const elementNumbers = Object.fromEntries(
     .filter((slot) => slot.source.kind === 'project')
     .map((slot) => [(slot.source as { project: ProjectCard }).project._id, slot.atomicNumber]),
 );
+
+/*
+  L'EXTRAIT DE PLANCHE — la table telle qu'elle se lit sur un écran étroit.
+
+  Dix-huit colonnes dans 327 px donnent des cases de dix-sept pixels : ni
+  lisibles, ni touchables, et la table y perdait jusqu'à ses liens. Le mobile
+  n'est pas une réduction : on n'y rétrécit donc pas la planche, on la
+  RECOMPOSE — une rangée par PÉRIODE, quatre cases par rangée.
+
+  Chaque période garde d'abord ses cases habitées ; elle se complète ensuite par
+  son gaz noble de fermeture, son alcalin d'ouverture, puis par l'élément qui
+  tombe au milieu du plus grand intervalle restant. Les références se
+  répartissent ainsi sur toute la hauteur de la planche, à leur vraie place dans
+  la classification, au lieu de se masser dans un coin.
+
+  Ce qui fait reconnaître Mendeleïev survit intact : les sept périodes, le TROU
+  de la première rangée — l'hydrogène seul face à l'hélium —, les deux séries
+  DÉTACHÉES en bas, et les vrais numéros atomiques, 22, 26, 29, 47…, jamais un
+  compteur de 1 à n. C'est par ces numéros que la planche et la note de bas de
+  page se lisent l'une par l'autre.
+*/
+const PLATE_COLUMNS = 4;
+
+/*
+  Seules les SEPT CASES RÉSERVÉES habitent la planche. Elles reçoivent d'abord
+  les projets mis en avant : une expérience mise en avant est donc toujours
+  affichée, et toujours cliquable — ce qui manquait le plus à l'ancienne
+  version. Les clients en surnombre, eux, occupent sur la table complète les
+  cases 1, 2, 3… ; ils rempliraient ici les trois premières périodes et
+  chasseraient les éléments qui donnent son dessin à la planche. La note de bas
+  de page les porte tous, en toutes lettres, à un écran de là.
+*/
+const plateSlotByAtom = new Map(
+  referenceSlots
+    .filter((slot) =>
+      REFERENCE_SLOTS.includes(slot.atomicNumber as (typeof REFERENCE_SLOTS)[number]),
+    )
+    .map((slot) => [slot.atomicNumber, slot] as const),
+);
+
+interface PlateElement {
+  number: number | string;
+  symbol: string;
+}
+
+type PlateEntry =
+  | { kind: 'cell'; element: PlateElement; slot?: ReferenceSlot }
+  | { kind: 'void' }
+  | { kind: 'spacer' };
+
+const plateVoid: PlateEntry = { kind: 'void' };
+
+const plateEntry = (element: PlateElement): PlateEntry => ({
+  kind: 'cell',
+  element,
+  slot: typeof element.number === 'number' ? plateSlotByAtom.get(element.number) : undefined,
+});
+
+/*
+  Quatre éléments choisis dans une période. Les cases habitées sont acquises
+  d'office ; le reste se remplit par priorité — fermeture, ouverture, puis le
+  milieu du plus grand intervalle, ce qui ÉCARTE les cases retenues au lieu de
+  les agglutiner.
+*/
+function pickPeriod(elements: PlateElement[]): PlateElement[] {
+  const chosen = new Set<number>();
+  elements.forEach((element, index) => {
+    if (typeof element.number === 'number' && plateSlotByAtom.has(element.number)) chosen.add(index);
+  });
+
+  [elements.length - 1, 0].forEach((index) => {
+    if (chosen.size < PLATE_COLUMNS && index >= 0) chosen.add(index);
+  });
+
+  while (chosen.size < PLATE_COLUMNS && chosen.size < elements.length) {
+    const sorted = [...chosen].sort((a, b) => a - b);
+    let widest = -1;
+    let candidate = -1;
+    for (let index = 0; index <= sorted.length; index += 1) {
+      const from = index === 0 ? -1 : sorted[index - 1]!;
+      const to = index === sorted.length ? elements.length : sorted[index]!;
+      const gap = to - from - 1;
+      if (gap > widest) {
+        widest = gap;
+        candidate = Math.floor((from + to) / 2);
+      }
+    }
+    if (candidate < 0 || candidate >= elements.length || chosen.has(candidate)) break;
+    chosen.add(candidate);
+  }
+
+  return [...chosen].sort((a, b) => a - b).map((index) => elements[index]!);
+}
+
+/*
+  Les deux séries — 57–71 et 89–103 — sont retirées des périodes qui les
+  portent : elles ne se lisent qu'en bas de planche, détachées, comme sur la
+  table imprimée.
+*/
+const plateRows: PlateEntry[][] = mainRows.map((period) => {
+  const elements: PlateElement[] = period
+    .filter(([, symbol]) => symbol !== '—')
+    .map(([number, symbol]) => ({ number, symbol }));
+  const picked = pickPeriod(elements).map(plateEntry);
+
+  /*
+    Rangée courte — la première période. Ses deux cases s'écartent aux
+    extrémités, et le vide entre elles EST le dessin : l'hydrogène seul face à
+    l'hélium, tout en haut de la table.
+  */
+  if (picked.length < PLATE_COLUMNS) {
+    const spread: PlateEntry[] = Array.from({ length: PLATE_COLUMNS }, () => plateVoid);
+    spread[0] = picked[0] ?? plateVoid;
+    if (picked.length > 1) spread[PLATE_COLUMNS - 1] = picked[picked.length - 1]!;
+    return spread;
+  }
+
+  return picked;
+});
+
+// Rangée détachée, rentrée d'une case de chaque côté.
+const plateSeriesRow: PlateEntry[] = [
+  plateVoid,
+  plateEntry({ number: '57–71', symbol: '—' }),
+  plateEntry({ number: '89–103', symbol: '—' }),
+  plateVoid,
+];
+
+/*
+  Une colonne par pile de cases — même structure que la table, pour que la
+  chorégraphie de sortie (colonne par colonne, de droite à gauche) s'applique
+  aux deux planches sans rien savoir de leur contenu.
+*/
+const plateColumns: PlateEntry[][] = Array.from({ length: PLATE_COLUMNS }, (_, columnIndex) => [
+  ...plateRows.map((row) => row[columnIndex]!),
+  { kind: 'spacer' } as PlateEntry,
+  plateSeriesRow[columnIndex]!,
+]);
+
+/*
+  Les colonnes sont des grilles indépendantes : sans piste commune, leurs
+  rangées ne s'alignent pas d'une colonne à l'autre. La piste est donc calculée
+  ici — elle dépend du nombre de périodes, que la feuille de style ne connaît
+  pas — et posée une fois pour toutes sur la planche.
+*/
+const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-series-gap) var(--plate-cell)`;
 ---
 
 <section
@@ -107,6 +260,7 @@ const elementNumbers = Object.fromEntries(
                   const reference = slot?.source;
                   const linkedProject = reference?.kind === 'project' ? reference.project : undefined;
                   const name = reference ? referenceName(reference) : undefined;
+                  const symbolName = reference ? referenceSymbolName(reference) : undefined;
                   const sector = reference ? referenceSector(reference) : undefined;
                   const client = reference?.kind === 'client' ? reference.client : undefined;
                   const Tag = reference ? 'a' : 'span';
@@ -134,7 +288,7 @@ const elementNumbers = Object.fromEntries(
                     >
                       <span class="element-cell__number">{element.number}</span>
                       <strong class="element-cell__symbol">
-                        {name ? projectInitials(name) : element.symbol}
+                        {symbolName ? projectInitials(symbolName) : element.symbol}
                       </strong>
                       <span class="element-cell__name">
                         {sector ?? name ?? (element.symbol === '—' ? 'série' : 'élément')}
@@ -147,6 +301,85 @@ const elementNumbers = Object.fromEntries(
           }
         </div>
       </div>
+
+      {
+        plateColumns.length > 0 && (
+          <div class="motion-lab__plate-layer" data-plate-layer>
+            <div class="element-plate" style={`--plate-track: ${plateTrack};`}>
+              {plateColumns.map((entries, columnIndex) => (
+                <div
+                  class="element-plate__column"
+                  data-element-column
+                  data-column-index={columnIndex}
+                >
+                  {entries.map((entry) => {
+                    if (entry.kind === 'spacer')
+                      return <span class="element-plate__spacer" aria-hidden="true" />;
+                    if (entry.kind === 'void')
+                      return <span class="element-plate__gap" aria-hidden="true" />;
+
+                    const slot = entry.slot;
+                    const reference = slot?.source;
+                    const linkedProject =
+                      reference?.kind === 'project' ? reference.project : undefined;
+                    const Tag = reference ? 'a' : 'span';
+
+                    return (
+                      <Tag
+                        class:list={[
+                          'element-cell',
+                          'element-cell--plate',
+                          {
+                            'element-cell--reference': reference,
+                            'element-cell--project': linkedProject,
+                          },
+                        ]}
+                        href={
+                          linkedProject
+                            ? projectPath(locale, linkedProject.slug)
+                            : slot
+                              ? `#reference-${slot.atomicNumber}`
+                              : undefined
+                        }
+                      >
+                        {/*
+                          Le numéro et le symbole sortent du nom accessible d'une
+                          case habitée : lus à voix haute, « 22 LQDS » précèdent
+                          le seul mot utile. Le lien s'annonce donc par le nom en
+                          clair, exactement celui qu'on voit — ce qu'exige le
+                          critère « intitulé dans le nom ».
+                        */}
+                        <span
+                          class="element-cell__number"
+                          aria-hidden={reference ? 'true' : undefined}
+                        >
+                          {entry.element.number}
+                        </span>
+                        <strong
+                          class="element-cell__symbol"
+                          aria-hidden={reference ? 'true' : undefined}
+                        >
+                          {reference
+                            ? projectInitials(referenceSymbolName(reference))
+                            : entry.element.symbol}
+                        </strong>
+                        {reference && (
+                          <span class="element-cell__label">{referenceName(reference)}</span>
+                        )}
+                        {reference && (
+                          <span class="sr-only">
+                            {linkedProject ? ' — voir l’expérience' : ' — voir la référence'}
+                          </span>
+                        )}
+                      </Tag>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      }
 
     </div>
   </div>
@@ -197,36 +430,44 @@ const elementNumbers = Object.fromEntries(
   const COLUMN_LIVE_OPACITY = 0.4;
 
   /*
-    Montée de la première page écran du catalogue — les valeurs d'origine de
-    la grille-couche.
+    Montée de la première page écran du catalogue.
 
-    L'écart entre colonnes (0,30 de la piste) est plus large que celui de la
-    table qui se vide (0,26) : la grille se remplit donc en éventail plus
-    ouvert que celui par lequel la table s'efface. Son entrée commence tôt,
-    pendant que la table sort encore — les deux mouvements se croisent au lieu
-    de se succéder. La dernière colonne se pose à 1, à la fin exacte de la
-    piste : c'est l'instant où la scène cesse d'être épinglée, et une colonne
-    posée plus tôt resterait immobile jusque-là.
+    LES DEUX GESTES SE SUCCÈDENT, ILS NE SE CROISENT PLUS. La table quittait
+    l'écran lentement pendant que les fiches montaient déjà par-dessus elle :
+    on lisait deux compositions superposées, et aucune des deux. La table sort
+    donc plus vite (0,30 de piste par colonne au lieu de 0,41), et les fiches
+    n'entrent qu'après.
+
+    « Après » ne veut pas dire « plus tard » : leur course commence à 0,20,
+    alors que la table est encore là — mais elle commence 1,12 hauteur d'écran
+    SOUS le bord bas, si bien qu'une fiche ne franchit la ligne de flottaison
+    qu'à 0,38, l'instant précis où la dernière case a fini de sortir par le
+    haut. C'est la longueur de la course, et non le retard du départ, qui tient
+    les deux gestes séparés — le relais se passe sans blanc entre eux.
+
+    La dernière colonne se pose à 1, à la fin exacte de la piste : c'est
+    l'instant où la scène cesse d'être épinglée, et une colonne posée plus tôt
+    resterait immobile jusque-là.
   */
   const CARD_TRAVEL_VH = 112;
-  const CARD_ENTER_START = 0.18;
-  const CARD_ENTER_END = 0.7;
-  const CARD_COLUMN_SHIFT = 0.3;
+  const CARD_ENTER_START = 0.2;
+  const CARD_ENTER_END = 0.86;
+  const CARD_COLUMN_SHIFT = 0.14;
 
   /*
     Sur écran étroit, l'éventail se referme à DEUX colonnes et la piste est plus
-    courte : la table finissait de sortir par le haut alors que les fiches
-    étaient encore sous le bord bas, et l'écran restait un moment entièrement
-    vide au milieu du geste. Elles partent donc de moins loin et entrent plus
-    tôt — les deux mouvements se croisent au lieu de laisser un trou entre eux.
-    Le décalage de colonne se resserre d'autant : à deux colonnes, l'éventail
-    n'a pas besoin de la même amplitude qu'à quatre.
+    courte : les mêmes valeurs y donneraient un relais mal réglé. La course est
+    donc raccourcie (0,95 hauteur d'écran) et le départ retardé d'autant, pour
+    que la ligne de flottaison soit franchie au même instant qu'au bureau —
+    quand la planche a fini de sortir. Le décalage de colonne se resserre
+    aussi : à deux colonnes, l'éventail n'a pas besoin de la même amplitude
+    qu'à quatre.
   */
   const narrowCardMotion = {
-    travelVh: 68,
-    enterStart: 0.06,
-    enterEnd: 0.72,
-    columnShift: 0.2,
+    travelVh: 95,
+    enterStart: 0.28,
+    enterEnd: 0.88,
+    columnShift: 0.12,
   };
 
   /*
@@ -243,12 +484,65 @@ const elementNumbers = Object.fromEntries(
     root.dataset.motionReady = 'true';
 
     const runway = root.querySelector('[data-motion-runway]');
-    const tableLayer = root.querySelector('[data-table-layer]');
-    const elementColumns = [...root.querySelectorAll('[data-element-column]')];
-    const tableLinks = [...root.querySelectorAll('a.element-cell')];
     const stateLabel = root.querySelector('[data-motion-state]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let frame = 0;
+
+    /*
+      DEUX PLANCHES, UNE SEULE EN SCÈNE. La table complète au-delà de 768 px,
+      son extrait en deçà — l'autre est simplement `display: none`, donc hors
+      mise en page, hors peinture, hors composition et hors parcours clavier.
+      Le script ne connaît que la planche affichée : la chorégraphie est écrite
+      pour des colonnes, et les deux planches en ont.
+    */
+    const narrowScreen = window.matchMedia('(max-width: 767px)');
+    const tableLayer = root.querySelector<HTMLElement>('[data-table-layer]');
+    const plateLayer = root.querySelector<HTMLElement>('[data-plate-layer]');
+    const allColumns = [...root.querySelectorAll<HTMLElement>('[data-element-column]')];
+
+    let motionLayer: HTMLElement | null = null;
+    let elementColumns: HTMLElement[] = [];
+    let tableLinks: HTMLElement[] = [];
+    let layerInteractive: boolean | null = null;
+
+    /*
+      Avancement et vivacité de chaque colonne, gardés en mémoire plutôt
+      qu'écrits dans le DOM. Un `data-*` posé à chaque image invalide le style
+      de son élément et rappelle le sélecteur : dix-huit colonnes, soixante fois
+      par seconde, pour une valeur que personne ne lit hors de ce script.
+    */
+    const columnTravel = new Map<HTMLElement, number>();
+    const columnLive = new Map<HTMLElement, boolean>();
+
+    const selectLayer = () => {
+      const next = (narrowScreen.matches ? plateLayer : tableLayer) ?? tableLayer;
+      if (next === motionLayer) return;
+
+      // La planche qui sort de scène est rendue à son état neuf : rien ne doit
+      // rester transformé sous un `display: none` qu'un changement de largeur
+      // lèvera.
+      allColumns.forEach((column) => {
+        column.style.transform = '';
+        column.style.opacity = '';
+        column.style.pointerEvents = '';
+      });
+      if (motionLayer) {
+        motionLayer.style.pointerEvents = '';
+        motionLayer.removeAttribute('aria-hidden');
+      }
+      columnTravel.clear();
+      columnLive.clear();
+      layerInteractive = null;
+
+      motionLayer = next;
+      elementColumns = next
+        ? [...next.querySelectorAll<HTMLElement>('[data-element-column]')]
+        : [];
+      tableLinks = next ? [...next.querySelectorAll<HTMLElement>('a.element-cell')] : [];
+    };
+
+    selectLayer();
+
 
     /*
       Le catalogue vit dans le flux, à sa hauteur propre — mais sa PREMIÈRE
@@ -379,23 +673,16 @@ const elementNumbers = Object.fromEntries(
     let layerTop = 0;
 
     const measureLinks = () => {
-      layerTop = tableLayer instanceof HTMLElement ? tableLayer.offsetTop : 0;
+      layerTop = motionLayer ? motionLayer.offsetTop : 0;
+      linkGeometry.clear();
       tableLinks.forEach((link) => {
-        if (link instanceof HTMLElement) {
-          linkGeometry.set(link, { top: link.offsetTop, height: link.offsetHeight });
-        }
+        linkGeometry.set(link, { top: link.offsetTop, height: link.offsetHeight });
       });
     };
 
     const renderColumns = (progress: number) => {
-      if (tableLayer instanceof HTMLElement) {
-        tableLayer.style.transform = 'none';
-        tableLayer.style.opacity = '1';
-      }
-
       const totalOutgoing = Math.max(1, elementColumns.length - 1);
       elementColumns.forEach((column, index) => {
-        if (!(column instanceof HTMLElement)) return;
         const rightToLeft = (totalOutgoing - index) / totalOutgoing;
         /*
           La première colonne part à 0, c'est-à-dire à l'instant PRÉCIS où la
@@ -404,13 +691,23 @@ const elementNumbers = Object.fromEntries(
           commencé à bouger — c'est là, et nulle part ailleurs, que le geste
           semblait marquer un arrêt.
         */
-        const columnProgress = ease(range(progress, rightToLeft * 0.26, 0.41 + rightToLeft * 0.26));
+        const columnProgress = ease(range(progress, rightToLeft * 0.18, 0.3 + rightToLeft * 0.18));
         const opacity = 1 - range(columnProgress, 0.72, 1);
         column.style.transform = `translate3d(0, ${(-118 * columnProgress).toFixed(3)}vh, 0)`;
         column.style.opacity = String(opacity);
-        column.dataset.live = String(opacity > COLUMN_LIVE_OPACITY);
         // Distance parcourue vers le haut, en pixels : sert au clavier.
-        column.dataset.travel = String(1.18 * window.innerHeight * columnProgress);
+        columnTravel.set(column, 1.18 * window.innerHeight * columnProgress);
+
+        /*
+          La souris n'est rendue ou retirée qu'AU CHANGEMENT. Posée à chaque
+          image, la propriété relançait le calcul de style de la colonne pour
+          une valeur qui ne bascule que deux fois sur toute la piste.
+        */
+        const live = opacity > COLUMN_LIVE_OPACITY;
+        if (columnLive.get(column) !== live) {
+          columnLive.set(column, live);
+          column.style.pointerEvents = live ? 'auto' : 'none';
+        }
       });
 
       if (flightCards.length === 0) return;
@@ -460,33 +757,28 @@ const elementNumbers = Object.fromEntries(
 
       renderColumns(progress);
 
-      if (tableLayer instanceof HTMLElement) {
-        tableLayer.style.pointerEvents = tableIsInteractive ? 'auto' : 'none';
-        tableLayer.setAttribute('aria-hidden', String(!tableIsInteractive));
+      /*
+        Écrit au changement seulement : `aria-hidden` reposé à chaque image est
+        une mutation d'attribut par image, et les technologies d'assistance
+        rejouent l'annonce avec.
+      */
+      if (motionLayer && layerInteractive !== tableIsInteractive) {
+        layerInteractive = tableIsInteractive;
+        motionLayer.style.pointerEvents = tableIsInteractive ? 'auto' : 'none';
+        motionLayer.setAttribute('aria-hidden', String(!tableIsInteractive));
       }
-      // Colonne par colonne : celles encore à l'écran gardent souris et clavier.
-      elementColumns.forEach((column) => {
-        if (column instanceof HTMLElement) {
-          column.style.pointerEvents = column.dataset.live === 'true' ? 'auto' : 'none';
-        }
-      });
       /*
         Le clavier suit la case, pas la colonne : une case déjà remontée hors du
         cadre ne doit plus recevoir le focus, même si sa colonne est encore
         lisible plus bas.
       */
       tableLinks.forEach((link) => {
-        if (!(link instanceof HTMLElement)) return;
-        // Case privée de son lien sur écran étroit : elle reste hors du parcours.
-        if (link instanceof HTMLAnchorElement && !link.hasAttribute('href')) {
-          link.tabIndex = -1;
-          return;
-        }
-        const column = link.closest('[data-element-column]');
-        const travel = column instanceof HTMLElement ? Number(column.dataset.travel ?? 0) : 0;
+        const column = link.closest<HTMLElement>('[data-element-column]');
+        const travel = column ? columnTravel.get(column) ?? 0 : 0;
         const geometry = linkGeometry.get(link);
         const onScreen = geometry ? layerTop + geometry.top + geometry.height - travel > 0 : false;
-        link.tabIndex = tableIsInteractive && onScreen ? 0 : -1;
+        const next = tableIsInteractive && onScreen ? 0 : -1;
+        if (link.tabIndex !== next) link.tabIndex = next;
       });
       /*
         Épinglée pendant la montée, rendue au flux dès qu'elle est posée. Au-
@@ -512,11 +804,14 @@ const elementNumbers = Object.fromEntries(
         );
       }
       if (stateLabel instanceof HTMLElement) {
-        stateLabel.textContent = progress < 0.22
+        const state = progress < 0.22
           ? 'VUE D’ENSEMBLE'
           : progress < 0.76
             ? 'TRANSFORMATION'
             : 'EXPÉRIENCES';
+        // Trois valeurs sur toute la piste : inutile de réécrire le nœud de
+        // texte à chaque image pour la même.
+        if (stateLabel.textContent !== state) stateLabel.textContent = state;
       }
     };
 
@@ -528,6 +823,23 @@ const elementNumbers = Object.fromEntries(
       measureLinks();
       measureCatalog();
       requestUpdate();
+    };
+
+    /*
+      Sur téléphone, la barre d'URL qui se rétracte émet un `resize` PENDANT le
+      défilement. Remesurer sur-le-champ dépingle la grille, lit trois
+      rectangles et la repingle : un calcul de mise en page synchrone en plein
+      geste — c'est là que le défilement s'accrochait.
+
+      On rend donc la main tout de suite, avec les seules mesures gratuites
+      (la piste continue de se jouer), et la remesure complète attend que la
+      barre ait fini de bouger.
+    */
+    let resizeTimer = 0;
+    const onResize = () => {
+      requestUpdate();
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(remeasure, 180);
     };
 
     /*
@@ -661,41 +973,22 @@ const elementNumbers = Object.fromEntries(
     });
 
     /*
-      Sur écran étroit, une case de la table mesure 17 px de large : dix-huit
-      colonnes tiennent dans 375 px, et aucune mise en page ne rattrapera ça.
-      C'est sous le seuil des cibles tactiles, et faute d'un `href` un lien
-      n'en est plus un — ni cliquable, ni atteignable au clavier, ni annoncé.
+      Le passage d'une planche à l'autre. Les cases changent de taille, de
+      nombre et de place : tout ce qui avait été mesuré est périmé, on remesure
+      entièrement.
 
-      Rien ne se perd : les projets s'ouvrent depuis la grille juste en dessous,
-      et les clients se lisent dans la note de bas de page, en toutes lettres.
-      La table redevient ce qu'elle est à cette taille — une planche.
+      C'est ici que disparaît l'ancien rattrapage — sur écran étroit, la table
+      se voyait retirer ses `href`, faute de cases visables à dix-sept pixels.
+      L'extrait n'a plus besoin de cette amputation : ses cases font la taille
+      d'un doigt, et une référence y reste un lien, au doigt comme au clavier.
     */
-    const narrowScreen = window.matchMedia('(max-width: 767px)');
-
-    const applyCellLinks = () => {
-      tableLinks.forEach((link) => {
-        if (!(link instanceof HTMLAnchorElement)) return;
-        if (narrowScreen.matches) {
-          const href = link.getAttribute('href');
-          if (href) {
-            link.dataset.href = href;
-            link.removeAttribute('href');
-          }
-        } else if (link.dataset.href) {
-          link.setAttribute('href', link.dataset.href);
-          delete link.dataset.href;
-        }
-      });
-    };
-
-    applyCellLinks();
     narrowScreen.addEventListener('change', () => {
-      applyCellLinks();
-      requestUpdate();
+      selectLayer();
+      remeasure();
     });
 
     window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', remeasure, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
     reducedMotion.addEventListener('change', remeasure);
     measureLinks();
     measureCatalog();
@@ -729,7 +1022,8 @@ const elementNumbers = Object.fromEntries(
        à la place que la table vient de quitter — sous les repères de la
        scène, dont la grille recouvrait autrement les deux lignes ;
      · la piste et l'entrée de la grille partagent le même ruban de
-       défilement, ce qui rend le croisement des deux gestes possible.
+       défilement, ce qui laisse à la montée des fiches la place de se jouer
+       en entier APRÈS la sortie de la table, sans allonger la piste.
 
     D'où la piste rendue à ses 300 vh d'origine : recouvrement compris, il
     reste 200 vh de défilement épinglé pour la transformation — la mesure
@@ -946,20 +1240,20 @@ const elementNumbers = Object.fromEntries(
     color: var(--color-lumiere);
   }
 
-  a.element-cell--reference:not(.element-cell--project) {
+  a.element-cell--reference:not(.element-cell--project):not(.element-cell--plate) {
     border-color: var(--motion-line);
     transition: border-color 220ms ease, opacity 220ms ease;
     opacity: 0.82;
   }
 
-  a.element-cell--reference:not(.element-cell--project):hover,
-  a.element-cell--reference:not(.element-cell--project):focus-visible {
+  a.element-cell--reference:not(.element-cell--project):not(.element-cell--plate):hover,
+  a.element-cell--reference:not(.element-cell--project):not(.element-cell--plate):focus-visible {
     border-color: var(--color-ink);
     opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    a.element-cell--reference:not(.element-cell--project) {
+    a.element-cell--reference:not(.element-cell--project):not(.element-cell--plate) {
       transition: none;
     }
   }
@@ -995,6 +1289,133 @@ const elementNumbers = Object.fromEntries(
     white-space: nowrap;
   }
 
+  /*
+    L'EXTRAIT DE PLANCHE — écran étroit.
+
+    Quatre colonnes, une rangée par période, des cases à la taille d'un doigt.
+    Le dessin de Mendeleïev tient à ce qui MANQUE autant qu'à ce qui est là : le
+    trou de la première rangée et le vide qui détache les deux séries sont donc
+    de vrais vides, sans filet — un cadre vide ferait une case inoccupée, pas
+    une lacune.
+
+    La planche ne s'affiche qu'en dessous de 768 px ; au-dessus, c'est la table
+    complète. L'une des deux est toujours `display: none`, donc hors mise en
+    page, hors peinture, hors composition et hors parcours clavier.
+  */
+  .motion-lab__plate-layer {
+    display: none;
+    position: absolute;
+    inset: 6.3rem 0 2.5rem;
+    /*
+      Calée sous la ligne de repères, pas centrée dans la scène : centrée, elle
+      ouvrait un grand blanc entre le titre et sa première rangée. Le vide qui
+      reste est SOUS la planche — c'est de là que monte le catalogue.
+    */
+    align-content: start;
+  }
+
+  .element-plate {
+    /*
+      Hauteur de case plafonnée mais fluide : neuf rangées doivent tenir dans
+      une hauteur d'écran, barre de marque déduite, sur le plus petit téléphone
+      comme sur le plus grand. Le plafond retient la case là où la place ne
+      manque pas.
+    */
+    --plate-cell: min(4.5rem, calc((100svh - 9rem) / 9));
+    --plate-series-gap: clamp(0.7rem, 3vw, 1.1rem);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+
+  .element-plate__column {
+    display: grid;
+    min-width: 0;
+    /* Piste commune calculée dans le frontmatter : sans elle, les rangées ne
+       s'aligneraient pas d'une colonne à l'autre. */
+    grid-template-rows: var(--plate-track);
+    gap: 0.25rem;
+    will-change: transform, opacity;
+  }
+
+  .element-plate__gap,
+  .element-plate__spacer {
+    display: block;
+  }
+
+  .element-cell--plate {
+    justify-content: start;
+    gap: 0.15rem;
+    padding: 0.3rem 0.25rem 0.35rem;
+    /*
+      UN SEUL FILET POUR TOUTE LA PLANCHE. Sur la table, la case d'un projet
+      s'entoure d'un trait plus noir : à dix-huit colonnes le contraste passe
+      pour de la texture, à quatre il fait une grille bancale, où certaines
+      cases pèsent plus lourd que leurs voisines. Ce qui distingue un projet,
+      ici, c'est son FOND et son nom — pas l'épaisseur de son cadre.
+    */
+    border-color: var(--motion-line);
+    text-align: center;
+  }
+
+  /*
+    Une case inhabitée est un élément de la classification, rien de plus : elle
+    tient le dessin, elle ne réclame pas le regard. Le filet reste le même,
+    l'encre recule.
+  */
+  .element-cell--plate:not(.element-cell--reference) {
+    color: var(--color-muted);
+  }
+
+  .element-cell--plate .element-cell__number {
+    align-self: start;
+    color: var(--color-muted);
+    font-size: 0.45rem;
+    letter-spacing: 0.04em;
+  }
+
+  .element-cell--plate .element-cell__symbol {
+    margin-block: auto;
+    font-size: clamp(0.8rem, 3.6vw, 1.05rem);
+    letter-spacing: -0.04em;
+  }
+
+  /*
+    Ce que la table ne pouvait pas dire : le nom, en clair. Deux lignes au
+    plus — au-delà, la case cesse d'être une case et devient un paragraphe.
+  */
+  .element-cell__label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.5rem;
+    line-height: 1.15;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  /*
+    Le survol de la table inverse l'encre — sur la planche, ce serait le doigt
+    qui poserait l'inversion et la laisserait allumée après le départ. Seule la
+    pression la joue.
+  */
+  .element-cell--plate.element-cell--project:active {
+    background: var(--color-ink);
+    color: var(--color-lumiere);
+  }
+
+  .element-cell--plate.element-cell--project:active .element-cell__number {
+    color: inherit;
+  }
+
+  @media (hover: none) {
+    .element-cell--plate.element-cell--project:hover {
+      background: var(--color-ciel);
+      color: var(--color-ink);
+    }
+  }
+
   @media (max-width: 899px) {
     /*
       Deux colonnes au lieu de trois : l'éventail se referme, la piste peut
@@ -1015,25 +1436,33 @@ const elementNumbers = Object.fromEntries(
     }
   }
 
-  @media (max-width: 560px) {
+  /*
+    Le seuil est celui de la barre de marque, fixée en haut de l'écran en deçà
+    de 768 px (voir `ServicesRail`) : c'est elle qui décide où la scène peut
+    commencer, et la planche complète devenait de toute façon illisible bien
+    avant.
+  */
+  @media (max-width: 767px) {
+    .motion-lab__table-layer {
+      display: none;
+    }
+
+    .motion-lab__plate-layer {
+      display: grid;
+    }
+
     /*
-      Les 18 colonnes ne laissent que 20 px de large aux cases sur un écran
-      étroit : les étirer sur toute la hauteur disponible (comportement par
-      défaut d'une piste `1fr`) les rend démesurément hautes, avec un
-      symbole minuscule perdu au milieu d'un grand vide. On fixe donc leur
-      hauteur et on les cale en haut de la couche, sous le repère « Table des
-      éléments », plutôt que de les centrer dans tout l'espace disponible —
-      ce qui les éloignait du repère au lieu de les en rapprocher.
+      Piste raccourcie d'un tiers : quatre colonnes au lieu de dix-huit et une
+      douzaine de cases au lieu de cent dix-huit — la transformation n'a plus
+      besoin de deux hauteurs d'écran pour se lire, et le catalogue arrive
+      d'autant plus vite.
     */
-    .element-table {
-      align-items: start;
+    .motion-lab__runway {
+      height: 180vh;
     }
 
-    .element-table__column {
-      height: auto;
-      grid-template-rows: repeat(7, minmax(0, 2.35rem)) 0.6rem repeat(2, minmax(0, 2.35rem));
-    }
-
+    /* Bandeau opaque sous la barre de marque : la planche passe dessous sans
+       venir se mêler à l'enseigne. */
     .motion-lab__stage::before {
       content: '';
       position: absolute;
@@ -1049,36 +1478,13 @@ const elementNumbers = Object.fromEntries(
       font-size: var(--text-note);
     }
 
-    .motion-lab__table-layer {
-      inset-block: 6.3rem 3.2rem;
-      inset-inline: 0;
-      width: 100%;
-    }
-
     /*
       La barre de marque pousse les repères à 4,5 rem : la grille se pose donc
-      plus bas encore, au même retrait que la table.
+      plus bas, au même retrait que la planche.
     */
     .motion-lab__settled {
       margin-top: calc(-100vh + 6.3rem);
     }
-
-    .element-table {
-      gap: 1px;
-    }
-
-    .element-table__column {
-      gap: 1px;
-    }
-
-    .element-cell {
-      padding: 1px;
-    }
-
-    .element-cell__name {
-      display: none;
-    }
-
   }
 
   @media (prefers-reduced-motion: reduce) {

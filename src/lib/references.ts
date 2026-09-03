@@ -60,6 +60,15 @@ export function referenceName(source: ReferenceSource): string {
   return source.project.client?.trim() || source.project.title;
 }
 
+/**
+ * Nom qui donne les INITIALES de la case. Un projet signe de son titre — c'est
+ * le symbole que sa page reprend en tête, et la case doit tenir la promesse de
+ * ce qui s'ouvrira. Un client, lui, n'a que son nom.
+ */
+export function referenceSymbolName(source: ReferenceSource): string {
+  return source.kind === 'project' ? source.project.title : source.client.name;
+}
+
 /** Secteur affiché à la place du mot « élément ». */
 export function referenceSector(source: ReferenceSource): string | undefined {
   const sector = source.kind === 'client' ? source.client.sector : source.project.sector;
