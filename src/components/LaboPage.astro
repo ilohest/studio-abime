@@ -1185,8 +1185,19 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
   .labo-services {
     padding-block: clamp(2rem, 3vw, 3.5rem) clamp(7rem, 11vw, 11rem);
-    /* Destination commune de toutes les fiches : l'en-tête « Index orbital ». */
-    scroll-margin-top: clamp(5rem, 10vw, 9rem);
+    /*
+      Destination commune de toutes les fiches : l'en-tête « Index orbital ».
+
+      La garde était de 9 rem au large : l'ancre déposait la section si bas que
+      le titre flottait au milieu de l'écran, précédé d'un tiers de page vide.
+      Elle se resserre — juste de quoi ne pas coller l'en-tête au bord — et
+      cède le pas, sur écran étroit, au dégagement de la barre de marque, qui
+      lui est fixe et masquerait le titre.
+
+      Le script des fiches lit cette valeur pour composer la sienne
+      (`--service-anchor-offset`) : la resserrer ici les resserre toutes.
+    */
+    scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
   }
 
   .labo-services__heading {
