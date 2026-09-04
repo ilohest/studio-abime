@@ -324,11 +324,54 @@ const phases = [
 </article>
 
 <script>
+  /*
+    APERÇU AUTOMATIQUE DE LA PILE.
+
+    Le battement des photographies ne se déclenchait qu'au survol : rien
+    n'annonçait qu'il existait, et un visiteur qui ne passait pas sur l'image
+    — au doigt, il n'y passe jamais — repartait sans l'avoir vu. La pile joue
+    donc son geste UNE FOIS, toute seule, quand elle arrive à l'écran, puis
+    s'arrête et rend la main au survol.
+
+    Une fois par chargement, et pas à chaque retour à l'écran : un mouvement
+    qui se relance à chaque passage cesse d'être une invitation pour devenir
+    un tic. L'observateur se débranche donc au premier déclenchement.
+  */
+  const PREVIEW_DELAY = 450;
+  const PREVIEW_DURATION = 2400;
+
   document.querySelectorAll<HTMLElement>('[data-photo-stack]').forEach((stack) => {
     stack.addEventListener('click', () => {
       const active = stack.toggleAttribute('data-active');
       stack.setAttribute('aria-pressed', String(active));
     });
+
+    // Mouvement refusé : la pile reste au repos, comme sous la règle de style.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!('IntersectionObserver' in window)) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+
+        /*
+          Un court délai après l'entrée : déclenché au pixel près, l'aperçu
+          commence pendant que la pile monte encore, et se perd dans le
+          défilement.
+        */
+        window.setTimeout(() => {
+          // Déjà ouverte d'un clic : on ne vient pas la refermer sous la main.
+          if (stack.hasAttribute('data-active')) return;
+          stack.setAttribute('data-preview', '');
+          window.setTimeout(() => stack.removeAttribute('data-preview'), PREVIEW_DURATION);
+        }, PREVIEW_DELAY);
+      },
+      // Plus de la moitié visible : la pile est bien arrivée, pas seulement effleurée.
+      { threshold: 0.55 },
+    );
+
+    observer.observe(stack);
   });
 
   document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach((form) => {
@@ -790,9 +833,15 @@ const phases = [
     font-size: var(--text-annotation);
   }
 
+  /*
+    `data-preview` : l'aperçu joué tout seul à l'arrivée de la pile à l'écran
+    (voir le script). Il emprunte exactement le battement du survol — c'est le
+    même geste, montré une fois pour qu'on sache qu'il existe.
+  */
   @media (hover: hover) and (pointer: fine) {
     .photo-stack:hover .photo-stack__image,
     .photo-stack:focus-visible .photo-stack__image,
+    .photo-stack[data-preview] .photo-stack__image,
     .photo-stack[data-active] .photo-stack__image {
       animation: shuffle-photographs 1s steps(1, end) infinite;
       animation-delay: calc(var(--photo-index) * -0.2s);
@@ -800,6 +849,7 @@ const phases = [
   }
 
   @media (hover: none), (pointer: coarse) {
+    .photo-stack[data-preview] .photo-stack__image,
     .photo-stack[data-active] .photo-stack__image {
       animation: shuffle-photographs 1s steps(1, end) infinite;
       animation-delay: calc(var(--photo-index) * -0.2s);
@@ -948,6 +998,7 @@ const phases = [
     .photo-stack__image,
     .photo-stack:hover .photo-stack__image,
     .photo-stack:focus-visible .photo-stack__image,
+    .photo-stack[data-preview] .photo-stack__image,
     .photo-stack[data-active] .photo-stack__image {
       animation: none;
     }
