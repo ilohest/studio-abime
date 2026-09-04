@@ -68,17 +68,6 @@ const referenceSlots = buildReferenceSlots(projects, clients);
 const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot]));
 
 /*
-  Un projet rangé dans la table porte le numéro de sa case jusque dans la
-  grille : c'est le même objet, vu deux fois. Les autres gardent leur rang
-  éditorial, faute de case qui leur corresponde.
-*/
-const elementNumbers = Object.fromEntries(
-  referenceSlots
-    .filter((slot) => slot.source.kind === 'project')
-    .map((slot) => [(slot.source as { project: ProjectCard }).project._id, slot.atomicNumber]),
-);
-
-/*
   L'EXTRAIT DE PLANCHE — la table telle qu'elle se lit sur un écran étroit.
 
   Dix-huit colonnes dans 327 px donnent des cases de dix-sept pixels : ni
@@ -450,12 +439,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
 */}
 <div class="motion-lab__settled" data-settled-catalog>
   <div class="motion-lab__settled-layer" data-settled-layer>
-    <ProjectGrid
-      projects={projects}
-      locale={locale}
-      editorialCards={editorialCards}
-      elementNumbers={elementNumbers}
-    />
+    <ProjectGrid projects={projects} locale={locale} editorialCards={editorialCards} />
   </div>
 </div>
 

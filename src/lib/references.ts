@@ -120,12 +120,6 @@ export function projectDisplayNumber(project: {
   return project.number;
 }
 
-/** Projets sans case réservée, dans l'ordre éditorial. */
-export function ordinaryProjects(projects: ProjectCard[]): ProjectCard[] {
-  const featured = new Set(featuredProjects(projects).map((project) => project._id));
-  return projects.filter((project) => !featured.has(project._id));
-}
-
 /** Projets favoris de la langue courante, dans l'ordre déjà trié par la requête. */
 export function featuredProjects(projects: ProjectCard[]): ProjectCard[] {
   return projects.filter((project) => project.featured).slice(0, MAX_FEATURED_PROJECTS);
@@ -176,16 +170,17 @@ export function buildReferenceSlots(
   const overflow = assign(sources.slice(REFERENCE_SLOTS.length), ASCENDING_SLOTS);
 
   /*
-    Les projets sans case réservée descendent depuis la fin. Ils entrent ainsi
-    dans la table au même titre que les autres références : le numéro qu'ils
-    portent sur leur page et dans le catalogue s'y retrouve.
-  */
-  const ordinary = assign(
-    ordinaryProjects(projects).map((project) => ({ kind: 'project' as const, project })),
-    DESCENDING_SLOTS,
-  );
+    LA TABLE NE MONTRE QUE LES FAVORIS ET LES CLIENTS. Un projet ordinaire y a
+    bien un NUMÉRO — pris par la fin, voir `DESCENDING_SLOTS` —, mais pas de
+    case : la table est une sélection, et l'inversion d'encre d'une case de
+    projet est ce qui la désigne comme telle. Les y faire tous entrer revenait
+    à n'en distinguer aucun.
 
-  return [...reserved, ...overflow, ...ordinary];
+    Son numéro le suit partout ailleurs : sur sa page, dans le relevé, dans la
+    grille du catalogue et sur la fiche du projet suivant — où il ne risque
+    plus de porter celui d'un client.
+  */
+  return [...reserved, ...overflow];
 }
 
 /** Client de la note de bas de page, avec l'appel de note qui lui revient. */

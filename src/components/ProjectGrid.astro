@@ -3,6 +3,7 @@ import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
+import { projectDisplayNumber } from '~/lib/references';
 import {
   insertProjectEditorialCards,
   projectInitials,
@@ -25,11 +26,6 @@ interface Props {
   showDetails?: boolean;
   /** Cartes éditoriales intercalées dans la grille, à leur rang. */
   editorialCards?: ProjectEditorialCard[];
-  /**
-   * Numéro de case dans la table des éléments, par identifiant de projet.
-   * Une carte ainsi désignée porte le chiffre de sa case plutôt que son rang.
-   */
-  elementNumbers?: Record<string, number>;
 }
 
 const {
@@ -38,7 +34,6 @@ const {
   revealText = false,
   showDetails = true,
   editorialCards = [],
-  elementNumbers = {},
 } = Astro.props;
 const t = useTranslations(locale);
 
@@ -89,8 +84,9 @@ const staticCatalogItems = insertProjectEditorialCards(staticCards, editorialCar
               class="project-catalog-number"
               data-text-reveal={revealText ? '' : undefined}
             >
-              {elementNumbers[entry.value.project._id] ??
-                String(entry.value.index + 1).padStart(2, '0')}
+              {String(
+                projectDisplayNumber(entry.value.project) ?? entry.value.index + 1,
+              ).padStart(2, '0')}
             </span>
             <span
               class="project-catalog-symbol"
