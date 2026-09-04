@@ -158,15 +158,29 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
     donne la hauteur, l'autre s'y raccroche. C'est ce pied commun qui tient les
     deux colonnes ensemble au-dessus de la planche.
   */
+  /*
+    La colonne de droite ne porte QUE le cartouche — case et relevé —, large de
+    20 rem au plus (voir `ProjectTemplateRenderer`). Lui donner la moitié de la
+    page revenait à réserver le double de ce qu'elle occupe, et le texte lisait
+    d'autant plus court. Elle est donc taillée à la mesure de son contenu, et
+    tout ce qu'elle rend va au texte.
+  */
   .banner__band {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
     align-items: end;
     gap: clamp(2rem, 6vw, 6rem);
     margin-top: clamp(1rem, 3vw, 2rem);
   }
 
+  /*
+    La colonne s'élargit, la JUSTIFICATION non : passé une certaine longueur de
+    ligne, l'œil perd le début de la suivante. Le texte prend donc la largeur
+    qu'on vient de lui donner jusqu'à une mesure confortable, et s'arrête là —
+    le titre, lui, garde toute la colonne.
+  */
   .banner__body {
+    max-width: 46rem;
     margin-top: clamp(2.5rem, 6vw, 4.5rem);
   }
 

@@ -96,12 +96,40 @@ const Template = (() => {
     const aside = shell.querySelector<HTMLElement>('.project-page-aside__unit');
     if (!aside) return;
 
+    /*
+      Piste du relevé collant, pour le seul gabarit « Bandeau » : du haut du
+      cartouche jusqu'au premier pixel de la planche. L'écart entre les deux
+      rectangles ne dépend pas du défilement — les deux bougent ensemble —, la
+      mesure reste donc juste à n'importe quelle position de la page.
+    */
+    const gallery =
+      shell.dataset.template === 'banner'
+        ? shell.querySelector<HTMLElement>('.banner__gallery')
+        : null;
+    const track = shell.querySelector<HTMLElement>('.project-page-aside');
+
     const publish = () => {
       shell.style.setProperty('--project-aside-height', `${Math.ceil(aside.getBoundingClientRect().height)}px`);
+
+      if (!gallery || !track) return;
+      const distance = gallery.getBoundingClientRect().top - track.getBoundingClientRect().top;
+      /*
+        Une piste plus courte que le cartouche ne collerait rien et rognerait
+        l'affichage : on la laisse alors retomber sur sa hauteur naturelle.
+      */
+      if (distance > aside.getBoundingClientRect().height) {
+        shell.style.setProperty('--project-aside-track', `${Math.ceil(distance)}px`);
+      } else {
+        shell.style.removeProperty('--project-aside-track');
+      }
     };
 
     publish();
-    if ('ResizeObserver' in window) new ResizeObserver(publish).observe(aside);
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(publish);
+      observer.observe(aside);
+      observer.observe(shell);
+    }
     document.fonts?.ready.then(publish);
   });
 </script>
@@ -140,6 +168,34 @@ const Template = (() => {
 
   .project-page-aside :global(.project-page-aside__facts) {
     align-self: stretch;
+  }
+
+  /*
+    BANDEAU — le relevé accompagne la lecture, puis s'efface.
+
+    Le gabarit lit son texte dans une colonne, la planche d'images en dessous.
+    Tant qu'on est dans le texte, le relevé a quelque chose à dire : il indique
+    de quel projet on parle, pour qui, en quelle année. Posé en tête, il
+    disparaissait au premier écran. Il COLLE donc pendant toute la lecture.
+
+    Il se retire quand les images arrivent : une planche se regarde en pleine
+    largeur, et une fiche restée dans le coin lui volerait son bord droit. La
+    piste s'arrête exactement là où la planche commence — la hauteur est
+    mesurée par le script, elle dépend de la longueur du texte que la feuille
+    de style ne connaît pas.
+
+    Sans planche, la variable n'est pas posée : la piste retombe sur la hauteur
+    du cartouche, et rien ne colle — c'est le comportement d'avant.
+  */
+  @media (min-width: 900px) {
+    .project-page-shell[data-template='banner'] .project-page-aside {
+      height: var(--project-aside-track, auto);
+    }
+
+    .project-page-shell[data-template='banner'] .project-page-aside__unit {
+      position: sticky;
+      top: clamp(1.5rem, 3vw, 2.5rem);
+    }
   }
 
   /*
