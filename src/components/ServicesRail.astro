@@ -314,18 +314,56 @@ const panelId = `services-menu-${mode}`;
     transition: opacity 0.25s ease-out;
   }
 
-  .services-rail__group.is-current .services-rail__label > span::before {
+  /*
+    LE POINT — un seul repère, trois usages.
+
+    Il désignait la page courante. Il désigne maintenant aussi l'entrée
+    SURVOLÉE, et la SECTION LUE quand une page en compte plusieurs : le menu
+    répond au geste avec le signe qu'il emploie déjà pour dire « c'est ici »,
+    plutôt qu'avec un vocabulaire de plus.
+
+    Il est donc posé en permanence et simplement ÉTEINT : on n'anime pas
+    l'apparition d'un `content`, alors qu'une opacité se fond. Le point ne prend
+    aucune place — il est hors du flux, dans la marge — et n'existe pour les
+    lecteurs d'écran dans aucun des trois cas : l'entrée courante s'annonce par
+    `aria-current`, et ni un survol ni un défilement n'ont à s'annoncer.
+  */
+  /*
+    Le point est CENTRÉ SUR LA LIGNE qu'il désigne, et non posé sur sa ligne de
+    base. Laissé à sa position statique, il suivait la base du texte : le glyphe
+    du point, qui se dessine à mi-hauteur d'x, se retrouvait haut sur les
+    libellés en capitales des groupes et bas sur les sous-entrées en bas de
+    casse. Le voici calé sur le milieu exact de la boîte du texte, quelle que
+    soit la casse.
+  */
+  .services-rail__label > span::before,
+  .services-rail__items li::before {
     content: '•';
     position: absolute;
     inset-inline-end: calc(100% + 0.45em);
+    top: 50%;
+    transform: translateY(-50%);
     color: currentColor;
     font-size: 1.25em;
     line-height: 1;
+    opacity: 0;
+    transition: opacity 0.25s ease-out;
+  }
+
+  .services-rail__group.is-current .services-rail__label > span::before {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .services-rail__label > span::before,
+    .services-rail__items li::before {
+      transition: none;
+    }
   }
 
   .services-rail__label > a:hover,
   .services-rail__label > a:focus-visible {
-    opacity: 0.55;
+    opacity: 1;
   }
 
   .services-rail__label > a[aria-current='page'] {
@@ -356,12 +394,7 @@ const panelId = `services-menu-${mode}`;
 
   /* Même point que le groupe actif, réutilisé à l'échelle de la sous-entrée. */
   .services-rail__items li.is-current::before {
-    content: '•';
-    position: absolute;
-    inset-inline-end: calc(100% + 0.45em);
-    color: currentColor;
-    font-size: 1.25em;
-    line-height: 1;
+    opacity: 1;
   }
 
   /*
@@ -392,7 +425,21 @@ const panelId = `services-menu-${mode}`;
 
   .services-rail__items a:hover,
   .services-rail__items a:focus-visible {
-    opacity: 0.55;
+    opacity: 1;
+  }
+
+  /*
+    Le survol allume le point plutôt que d'éteindre le mot. Réservé aux
+    pointeurs : sur un écran tactile, `:hover` reste collé après le doigt et
+    laisserait deux points allumés à la fois.
+  */
+  @media (hover: hover) {
+    .services-rail__label:hover > span::before,
+    .services-rail__label:focus-within > span::before,
+    .services-rail__items li:hover::before,
+    .services-rail__items li:focus-within::before {
+      opacity: 1;
+    }
   }
 
   @media (max-width: 767px) {
@@ -688,7 +735,78 @@ const panelId = `services-menu-${mode}`;
     window.addEventListener('journal:filter', apply);
   }
 
+  /*
+    LA SECTION LUE — le point suit le défilement.
+
+    Les sous-entrées du Labo, des Expériences et du Contact désignent des
+    ANCRES de la page courante : `/labo#philosophie`. Le serveur, lui, compare
+    `Astro.url.pathname` à un href qui porte son hash — une égalité qui ne peut
+    jamais être vraie. Ces points ne s'allumaient donc jamais. Le hash ne se lit
+    qu'ici, côté navigateur.
+
+    Le groupe « Journal » est laissé de côté : ses sous-entrées ne sont pas des
+    sections mais des filtres, et `syncJournalNav` s'en occupe déjà.
+  */
+  function syncSectionNav(rail: HTMLElement) {
+    const watched = [...rail.querySelectorAll<HTMLAnchorElement>('.services-rail__items a')]
+      .filter((link) => !link.closest('[data-nav-group="journal"]'))
+      .map((link) => {
+        const url = new URL(link.href, location.href);
+        if (url.pathname !== location.pathname || !url.hash) return null;
+        const section = document.querySelector<HTMLElement>(url.hash);
+        const item = link.closest<HTMLElement>('li');
+        return section && item ? { item, section } : null;
+      })
+      .filter((entry): entry is { item: HTMLElement; section: HTMLElement } => entry !== null)
+      .sort(
+        (a, b) =>
+          a.section.getBoundingClientRect().top - b.section.getBoundingClientRect().top,
+      );
+
+    if (watched.length === 0) return;
+
+    // Le groupe rend son point à la section lue : un seul point allumé à la
+    // fois, comme le fait déjà le Journal avec ses filtres.
+    const groups = [
+      ...new Set(
+        watched
+          .map(({ item }) => item.closest<HTMLElement>('.services-rail__group'))
+          .filter((group): group is HTMLElement => group !== null),
+      ),
+    ];
+
+    /*
+      La ligne de lecture, au tiers haut de l'écran. Au bord haut, la section
+      suivante s'allumerait avant qu'on ait fini la précédente ; au milieu, elle
+      attendrait un demi-écran de trop.
+    */
+    const READING_LINE = 0.3;
+    let frame = 0;
+
+    const apply = () => {
+      frame = 0;
+      const line = window.innerHeight * READING_LINE;
+      let active: HTMLElement | null = null;
+      // La dernière section à avoir franchi la ligne est celle qu'on lit.
+      for (const { item, section } of watched) {
+        if (section.getBoundingClientRect().top <= line) active = item;
+      }
+      for (const { item } of watched) item.classList.toggle('is-current', item === active);
+      for (const group of groups) group.classList.toggle('is-current', active === null);
+    };
+
+    const request = () => {
+      if (!frame) frame = requestAnimationFrame(apply);
+    };
+
+    apply();
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request, { passive: true });
+    window.addEventListener('hashchange', request);
+  }
+
   for (const rail of document.querySelectorAll<HTMLElement>('[data-services-rail]')) {
     syncJournalNav(rail);
+    syncSectionNav(rail);
   }
 </script>
