@@ -101,6 +101,21 @@ const PROJECT_CARD = /* groq */ `{
       (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
     )
   ]),
+  // Rang parmi les projets SANS case reservee : il donne le numero pris par la
+  // fin de la table (voir projectDisplayNumber). Ni accent grave ni bloc dans
+  // ces commentaires — le premier fermerait le litteral, le second partirait
+  // dans la requete.
+  "ordinaryRank": count(*[
+    _type == "project" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(visible, true) == true &&
+    featured != true &&
+    (
+      coalesce(year, 0) > coalesce(^.year, 0) ||
+      (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
+    )
+  ]),
   year,
   excerpt,
   listingFacts[]{ _key, label, value },
@@ -377,6 +392,21 @@ export const projectBySlugQuery = /* groq */ `
     defined(slug.current) &&
     coalesce(visible, true) == true &&
     featured == true &&
+    (
+      coalesce(year, 0) > coalesce(^.year, 0) ||
+      (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
+    )
+  ]),
+  // Rang parmi les projets SANS case reservee : il donne le numero pris par la
+  // fin de la table (voir projectDisplayNumber). Ni accent grave ni bloc dans
+  // ces commentaires — le premier fermerait le litteral, le second partirait
+  // dans la requete.
+  "ordinaryRank": count(*[
+    _type == "project" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(visible, true) == true &&
+    featured != true &&
     (
       coalesce(year, 0) > coalesce(^.year, 0) ||
       (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)

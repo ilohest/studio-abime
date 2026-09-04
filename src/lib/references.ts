@@ -35,9 +35,28 @@ const LAST_ELEMENT = 118;
  * Cases de débordement : toute la table, du début à la fin, moins les sept
  * réservées. Un client en surnombre prend la première venue.
  */
-const OVERFLOW_SLOTS = Array.from({ length: LAST_ELEMENT }, (_, index) => index + 1).filter(
+const FREE_SLOTS = Array.from({ length: LAST_ELEMENT }, (_, index) => index + 1).filter(
   (atomicNumber) => !REFERENCE_SLOTS.includes(atomicNumber as (typeof REFERENCE_SLOTS)[number]),
 );
+
+/**
+ * Cases de débordement des CLIENTS : la table par le début, 1, 2, 3…
+ */
+const ASCENDING_SLOTS = FREE_SLOTS;
+
+/**
+ * Cases des PROJETS SANS CASE RÉSERVÉE : la table par la fin, 118, 116, 115…
+ *
+ * Les deux séries partent des deux bouts et marchent l'une vers l'autre. Un
+ * projet publié a donc toujours un vrai numéro atomique — retrouvable dans la
+ * table, et jamais celui d'un client. Le rang au catalogue ne pouvait pas
+ * jouer ce rôle : il commence lui aussi à 1, et un projet s'y retrouvait avec
+ * le numéro d'une case déjà occupée par un client.
+ *
+ * Les sept cases réservées sont enjambées des deux côtés : elles sont promises
+ * aux favoris, et le restent même si personne ne les occupe.
+ */
+const DESCENDING_SLOTS = [...FREE_SLOTS].reverse();
 
 /** Entrée de la table : soit un projet publié, soit un client sans projet. */
 export type ReferenceSource =
@@ -83,12 +102,28 @@ export function referenceSector(source: ReferenceSource): string | undefined {
 export function projectDisplayNumber(project: {
   featured?: boolean;
   featuredRank?: number;
+  ordinaryRank?: number;
   number?: number;
 }): number | undefined {
   const rank = project.featuredRank;
-  return project.featured && typeof rank === 'number' && rank < MAX_FEATURED_PROJECTS
-    ? REFERENCE_SLOTS[rank]
-    : project.number;
+  if (project.featured && typeof rank === 'number' && rank < MAX_FEATURED_PROJECTS) {
+    return REFERENCE_SLOTS[rank];
+  }
+
+  // Sans case réservée, le projet descend depuis la fin de la table.
+  const ordinary = project.ordinaryRank;
+  if (typeof ordinary === 'number' && ordinary < DESCENDING_SLOTS.length) {
+    return DESCENDING_SLOTS[ordinary];
+  }
+
+  // Favori en surnombre : plus de case à donner, il ne reste que son rang.
+  return project.number;
+}
+
+/** Projets sans case réservée, dans l'ordre éditorial. */
+export function ordinaryProjects(projects: ProjectCard[]): ProjectCard[] {
+  const featured = new Set(featuredProjects(projects).map((project) => project._id));
+  return projects.filter((project) => !featured.has(project._id));
 }
 
 /** Projets favoris de la langue courante, dans l'ordre déjà trié par la requête. */
@@ -115,14 +150,42 @@ export function buildReferenceSlots(
     .slice(0, REFERENCE_SLOTS.length)
     .map((source, index) => ({ atomicNumber: REFERENCE_SLOTS[index]!, source }));
 
-  // Les sources en surnombre ne peuvent être que des clients : les favoris sont
-  // plafonnés au nombre de cases réservées.
-  const overflow = sources
-    .slice(REFERENCE_SLOTS.length)
-    .map((source, index) => ({ atomicNumber: OVERFLOW_SLOTS[index], source }))
-    .filter((slot): slot is ReferenceSlot => slot.atomicNumber !== undefined);
+  const taken = new Set<number>(reserved.map((slot) => slot.atomicNumber));
 
-  return [...reserved, ...overflow];
+  /*
+    Prend les cases libres d'une série, dans l'ordre, en sautant celles déjà
+    attribuées. Les deux séries marchent l'une vers l'autre : le jour où elles
+    se rejoindront, celle qui passe en second trouvera la case occupée et
+    prendra la suivante, plutôt que de doubler un numéro.
+  */
+  const assign = (list: ReferenceSource[], slots: number[]): ReferenceSlot[] => {
+    let cursor = 0;
+    return list.flatMap((source) => {
+      while (cursor < slots.length && taken.has(slots[cursor]!)) cursor += 1;
+      const atomicNumber = slots[cursor];
+      if (atomicNumber === undefined) return [];
+      cursor += 1;
+      taken.add(atomicNumber);
+      return [{ atomicNumber, source }];
+    });
+  };
+
+  // Les sources en surnombre ne peuvent être que des clients : les favoris sont
+  // plafonnés au nombre de cases réservées. Elles reprennent la table par le
+  // début.
+  const overflow = assign(sources.slice(REFERENCE_SLOTS.length), ASCENDING_SLOTS);
+
+  /*
+    Les projets sans case réservée descendent depuis la fin. Ils entrent ainsi
+    dans la table au même titre que les autres références : le numéro qu'ils
+    portent sur leur page et dans le catalogue s'y retrouve.
+  */
+  const ordinary = assign(
+    ordinaryProjects(projects).map((project) => ({ kind: 'project' as const, project })),
+    DESCENDING_SLOTS,
+  );
+
+  return [...reserved, ...overflow, ...ordinary];
 }
 
 /** Client de la note de bas de page, avec l'appel de note qui lui revient. */
