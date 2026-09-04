@@ -108,11 +108,20 @@ const Template = (() => {
         : null;
     const track = shell.querySelector<HTMLElement>('.project-page-aside');
 
+    /*
+      Le relevé se décroche AVANT la planche, pas contre elle. Collé jusqu'au
+      premier pixel de la première image, sa dernière ligne finissait posée sur
+      le bord du visuel — deux choses de nature différente qui se touchaient.
+      La piste s'arrête donc une respiration plus haut.
+    */
+    const RELEASE_GAP = 64;
+
     const publish = () => {
       shell.style.setProperty('--project-aside-height', `${Math.ceil(aside.getBoundingClientRect().height)}px`);
 
       if (!gallery || !track) return;
-      const distance = gallery.getBoundingClientRect().top - track.getBoundingClientRect().top;
+      const distance =
+        gallery.getBoundingClientRect().top - track.getBoundingClientRect().top - RELEASE_GAP;
       /*
         Une piste plus courte que le cartouche ne collerait rien et rognerait
         l'affichage : on la laisse alors retomber sur sa hauteur naturelle.
