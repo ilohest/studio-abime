@@ -181,6 +181,26 @@ const canvasCopy = phrases.join(' ');
     justify-content: flex-end;
   }
 
+  /*
+    Le libellé se lisait par-dessus le texte qui défile : deux encres de même
+    valeur au même endroit, et plus rien de lisible — ni le lien, ni la phrase
+    qu'il traverse.
+
+    Il repose donc sur une plaque jaune, cernée d'un filet d'encre. C'est le
+    seul bouton du site à porter un fond, et c'est délibéré : partout ailleurs
+    la page est calme et le trait suffit ; ici le fond bouge sous le texte, et
+    seul un aplat franc tient le libellé lisible.
+
+    La règle est posée sur cette page et non sur `button-minimal`, qui sert
+    partout ailleurs — c'est cette page-ci qui a un fond chargé, pas le bouton
+    qui a besoin d'une plaque.
+  */
+  .return-action .button-minimal {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--color-ink);
+    background: var(--color-lumiere);
+  }
+
   @media (max-width: 767px) {
     .error-content {
       --error-font-size: 0.64rem;
