@@ -97,16 +97,6 @@ export const project = defineType({
           .warning(),
     }),
     defineField({
-      name: 'headline',
-      title: 'Titre affiché',
-      type: 'text',
-      rows: 2,
-      group: 'meta',
-      description:
-        'Grande phrase en tête de la page projet, sous le nom entre parenthèses. Vide = le nom du projet.',
-      validation: (rule) => rule.max(160),
-    }),
-    defineField({
       name: 'excerpt',
       title: 'Accroche',
       type: 'text',
@@ -243,6 +233,23 @@ export const project = defineType({
       },
       description: PROJECT_TEMPLATES.map((t) => `${t.title} — ${t.description}`).join('\n'),
       validation: (rule) => rule.required(),
+    }),
+
+    /*
+      Le titre affiché ouvre la saisie du contenu : c'est la première phrase que
+      lit le visiteur, pas une donnée de la fiche. Il vivait avec le relevé —
+      client, secteur, année, services —, là où on ne pense pas à le chercher au
+      moment d'écrire la page.
+    */
+    defineField({
+      name: 'headline',
+      title: 'Titre affiché',
+      type: 'text',
+      rows: 2,
+      group: 'content',
+      description:
+        'Grande phrase en tête de la page projet, sous le nom entre parenthèses. Vide = le nom du projet.',
+      validation: (rule) => rule.max(160),
     }),
 
     /*
