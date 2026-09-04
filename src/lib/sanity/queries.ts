@@ -86,6 +86,21 @@ const PROJECT_CARD = /* groq */ `{
   client,
   sector,
   "featured": featured == true,
+  // Rang parmi les favoris : c'est lui qui donne au projet le numéro de sa case
+  // reservee dans la table des elements (voir projectDisplayNumber).
+  // NB : ni accent grave ni bloc dans ces commentaires — le premier fermerait
+  // le litteral de gabarit, le second partirait dans la requete.
+  "featuredRank": count(*[
+    _type == "project" &&
+    language == ^.language &&
+    defined(slug.current) &&
+    coalesce(visible, true) == true &&
+    featured == true &&
+    (
+      coalesce(year, 0) > coalesce(^.year, 0) ||
+      (coalesce(year, 0) == coalesce(^.year, 0) && _createdAt > ^._createdAt)
+    )
+  ]),
   year,
   excerpt,
   listingFacts[]{ _key, label, value },

@@ -226,6 +226,8 @@ export interface ProjectCard {
   sector?: string;
   /** Marqué favori : table des éléments, accueil et archive du Labo. */
   featured?: boolean;
+  /** Rang parmi les favoris — désigne la case réservée (`projectDisplayNumber`). */
+  featuredRank?: number;
   year?: number;
   excerpt?: string;
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;

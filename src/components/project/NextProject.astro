@@ -3,6 +3,7 @@ import NextEntry from '~/components/NextEntry.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
+import { projectDisplayNumber } from '~/lib/references';
 import { projectInitials } from '~/lib/viewModels';
 import type { Locale } from '~/i18n/config';
 import type { ProjectCard } from '~/lib/sanity/types';
@@ -21,6 +22,18 @@ interface Props {
 
 const { project, locale } = Astro.props;
 const t = useTranslations(locale);
+
+/*
+  LE MÊME NUMÉRO PARTOUT. Un projet rangé dans la table des éléments porte le
+  numéro de sa case — 29 pour Les Ponctuelles —, dans la case de tête, dans le
+  relevé, dans la grille du catalogue. La fiche de fin de page, elle, affichait
+  son rang éditorial : le visiteur qui venait de lire « N° 29 » en haut d'une
+  page en retrouvait « fig. 03 » en bas, pour le même objet.
+
+  Un projet sans case réservée retombe sur son rang au catalogue : c'est le seul
+  numéro qu'il possède en propre (voir `projectDisplayNumber`).
+*/
+const number = project ? projectDisplayNumber(project) ?? project.number ?? 1 : 1;
 ---
 
 {
@@ -28,7 +41,7 @@ const t = useTranslations(locale);
     <NextEntry
       href={projectPath(locale, project.slug)}
       label={t('project.next')}
-      number={String(project.number ?? 1).padStart(2, '0')}
+      number={String(number).padStart(2, '0')}
       symbol={projectInitials(project.title)}
       title={project.title}
       image={project.thumbnail}
