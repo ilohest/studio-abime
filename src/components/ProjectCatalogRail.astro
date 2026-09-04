@@ -12,6 +12,17 @@ interface Props {
   /** Aligne le rail sur les gouttières globales, comme sur l'accueil. */
   contained?: boolean;
   revealText?: boolean;
+  /*
+    Le rail ne sait pas ce qu'il transporte. Il est né pour les projets, mais
+    la boutique lui confie ses suggestions par le `slot` : le sélecteur de
+    carte et les libellés des flèches sont donc réglables, faute de quoi il
+    ferait défiler d'une largeur qu'il ne trouve pas, et s'annoncerait comme un
+    rail de projets au milieu d'une page produit.
+  */
+  itemSelector?: string;
+  controlsLabel?: string;
+  previousLabel?: string;
+  nextLabel?: string;
 }
 
 const {
@@ -21,10 +32,14 @@ const {
   itemCount = projects.length,
   contained = false,
   revealText = true,
+  itemSelector = '.project-catalog-item',
+  controlsLabel = 'Faire défiler les projets',
+  previousLabel = 'Projet précédent',
+  nextLabel = 'Projet suivant',
 } = Astro.props;
 ---
 
-<div class="project-catalog-rail" data-project-catalog-rail>
+<div class="project-catalog-rail" data-project-catalog-rail data-rail-item={itemSelector}>
   <div
     class:list={['project-catalog-rail__track', { 'container-wide': contained }]}
     data-project-catalog-rail-track
@@ -47,14 +62,14 @@ const {
   {itemCount > 1 && (
     <div
       class:list={['project-catalog-rail__controls', { 'container-wide': contained }]}
-      aria-label="Faire défiler les projets"
+      aria-label={controlsLabel}
     >
       <button
         class="project-catalog-rail__arrow"
         type="button"
         data-project-catalog-rail-previous
         data-cursor-interactive
-        aria-label="Projet précédent"
+        aria-label={previousLabel}
         disabled
       >
         <span aria-hidden="true">←</span>
@@ -64,7 +79,7 @@ const {
         type="button"
         data-project-catalog-rail-next
         data-cursor-interactive
-        aria-label="Projet suivant"
+        aria-label={nextLabel}
       >
         <span aria-hidden="true">→</span>
       </button>
@@ -202,7 +217,9 @@ const {
       };
 
       const moveOneCard = (direction: -1 | 1) => {
-        const card = track.querySelector<HTMLElement>('.project-catalog-item');
+        const card = track.querySelector<HTMLElement>(
+          rail.dataset.railItem || '.project-catalog-item',
+        );
         if (!card) return;
 
         track.scrollBy({

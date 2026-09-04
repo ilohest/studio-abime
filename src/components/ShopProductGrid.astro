@@ -33,20 +33,35 @@ interface Props {
    * de sens. Scroll natif, sans librairie : voir la charte du projet.
    */
   mobileCarousel?: boolean;
+  /**
+   * `true` : la grille devient une VOIE horizontale à toutes les largeurs, dont
+   * le défilement et les flèches sont tenus par `ProjectCatalogRail`. La grille
+   * ne porte alors pas son propre débordement — c'est le rail qui défile.
+   */
+  rail?: boolean;
 }
 
-const { products, locale, eagerFirstRow = false, mobileCarousel = false } = Astro.props;
+const {
+  products,
+  locale,
+  eagerFirstRow = false,
+  mobileCarousel = false,
+  rail = false,
+} = Astro.props;
 const t = useTranslations(locale);
 
 const mediaLabels = { video: t('shop.video'), noVisual: t('shop.noVisual') };
 // En carrousel, une carte mobile occupe une fraction de l'écran, pas sa pleine largeur.
-const CARD_SIZES = mobileCarousel
+const CARD_SIZES = mobileCarousel || rail
   ? '(max-width: 767px) 76vw, (max-width: 1199px) 50vw, (max-width: 1599px) 33vw, 25vw'
   : '(max-width: 767px) 100vw, (max-width: 1199px) 50vw, (max-width: 1599px) 33vw, 25vw';
 const EAGER_COUNT = 4;
 ---
 
-<ul class:list={['shop-grid', { 'shop-grid--carousel': mobileCarousel }]} role="list">
+<ul
+  class:list={['shop-grid', { 'shop-grid--carousel': mobileCarousel && !rail, 'shop-grid--rail': rail }]}
+  role="list"
+>
   {
     products.map((product, index) => {
       const href = productPath(locale, product.handle);
@@ -219,6 +234,45 @@ const EAGER_COUNT = 4;
   .shop-card__link:focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 0.35rem;
+  }
+
+  /*
+    EN RAIL — une voie horizontale, à toutes les largeurs.
+
+    Les cartes gardent la densité de la grille : quatre de front sur un très
+    grand écran, trois ensuite, deux sur tablette, et une largeur de trois
+    quarts sur téléphone — assez pour que la suivante affleure et annonce
+    qu'il y a une suite. La voie n'a pas de débordement propre : c'est le rail
+    qui défile, et lui seul, sinon deux barres de défilement se disputeraient
+    le même geste.
+  */
+  .shop-grid--rail {
+    display: flex;
+    grid-template-columns: none;
+    align-items: start;
+  }
+
+  .shop-grid--rail .shop-card {
+    flex: 0 0 calc((100% - 2 * clamp(1rem, 2vw, 1.75rem)) / 3);
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 1600px) {
+    .shop-grid--rail .shop-card {
+      flex-basis: calc((100% - 3 * clamp(1rem, 2vw, 1.75rem)) / 4);
+    }
+  }
+
+  @media (max-width: 1199px) {
+    .shop-grid--rail .shop-card {
+      flex-basis: calc((100% - clamp(1rem, 2vw, 1.75rem)) / 2);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .shop-grid--rail .shop-card {
+      flex-basis: 76%;
+    }
   }
 
   /* Une tuile de plus dès que la place le permet : c'est ce qui les rend plus petites. */

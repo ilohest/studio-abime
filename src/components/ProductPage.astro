@@ -2,6 +2,7 @@
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import ShopMedia from '~/components/primitives/ShopMedia.astro';
 import ShopProductGrid from '~/components/ShopProductGrid.astro';
+import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
 import ProductPurchase from '~/components/vue/ProductPurchase.vue';
 
 import { shopIndexPath } from '~/i18n/routes';
@@ -205,7 +206,23 @@ const priceFallback =
       <p class="product__related-title" aria-hidden="true">
         <FigureCaption as="span" value={`fig. 452 - ${t('shop.related')}`} />
       </p>
-      <ShopProductGrid products={related} locale={locale} mobileCarousel />
+      {/*
+        Le même rail que l'archive des projets : une voie qui défile et deux
+        flèches, qui s'éteignent d'elles-mêmes quand tout tient à l'écran. Une
+        page qui suggère quatre tirages et une page qui range douze projets
+        font le même geste — autant que ce soit le même objet.
+      */}
+      <ProjectCatalogRail
+        locale={locale}
+        ariaLabel={t('shop.related')}
+        itemCount={related.length}
+        itemSelector=".shop-card"
+        controlsLabel={t('shop.related')}
+        previousLabel={t('shop.previousSuggestion')}
+        nextLabel={t('shop.nextSuggestion')}
+      >
+        <ShopProductGrid products={related} locale={locale} rail />
+      </ProjectCatalogRail>
     </section>
   )}
 </article>
