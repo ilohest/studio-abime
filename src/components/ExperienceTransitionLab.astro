@@ -1505,17 +1505,14 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
       height: 180vh;
     }
 
-    /* Bandeau opaque sous la barre de marque : la planche passe dessous sans
-       venir se mêler à l'enseigne. */
-    .motion-lab__stage::before {
-      content: '';
-      position: absolute;
-      inset: 0 0 auto;
-      z-index: 4;
-      height: 4.2rem;
-      background: var(--color-lumiere);
-      pointer-events: none;
-    }
+    /*
+      Pas de bandeau sous la barre de marque. Il en portait un, opaque, pour
+      que les cases ne viennent pas se mêler à l'enseigne en remontant — mais
+      l'enseigne n'a de fond nulle part ailleurs sur le site : le contenu passe
+      dessous, et c'est ce passage qui dit qu'on défile. Le masque faisait ici
+      une exception que rien ne justifiait, et il coupait les cases net à
+      4,2 rem.
+    */
 
     .motion-lab__meta {
       inset-block-start: 4.5rem;
