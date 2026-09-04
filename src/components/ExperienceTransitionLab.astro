@@ -6,7 +6,6 @@ import { useTranslations } from '~/i18n/ui';
 import { projectInitials, type ProjectEditorialCard } from '~/lib/viewModels';
 import {
   buildReferenceSlots,
-  REFERENCE_SLOTS,
   referenceName,
   referenceSector,
   referenceSymbolName,
@@ -102,21 +101,30 @@ const elementNumbers = Object.fromEntries(
 const PLATE_COLUMNS = 4;
 
 /*
-  Seules les SEPT CASES RÉSERVÉES habitent la planche. Elles reçoivent d'abord
-  les projets mis en avant : une expérience mise en avant est donc toujours
-  affichée, et toujours cliquable — ce qui manquait le plus à l'ancienne
-  version. Les clients en surnombre, eux, occupent sur la table complète les
-  cases 1, 2, 3… ; ils rempliraient ici les trois premières périodes et
-  chasseraient les éléments qui donnent son dessin à la planche. La note de bas
-  de page les porte tous, en toutes lettres, à un écran de là.
+  La planche dit d'une case exactement ce que la table complète en dit : si un
+  projet ou un client l'occupe, il s'y lit. Elle n'a longtemps honoré que les
+  sept cases réservées, ce qui la faisait mentir deux fois — un client encodé
+  en case 1 apparaissait comme un hydrogène inerte, et la même case pouvait se
+  retrouver numérotée deux fois sur la planche.
 */
 const plateSlotByAtom = new Map(
-  referenceSlots
-    .filter((slot) =>
-      REFERENCE_SLOTS.includes(slot.atomicNumber as (typeof REFERENCE_SLOTS)[number]),
-    )
-    .map((slot) => [slot.atomicNumber, slot] as const),
+  referenceSlots.map((slot) => [slot.atomicNumber, slot] as const),
 );
+
+/*
+  Prend `count` entrées RÉGULIÈREMENT ESPACÉES dans une liste. Une période peut
+  porter plus de références qu'elle n'a de cases : on garde alors les plus
+  écartées, celles qui tiennent le dessin de la rangée, au lieu des premières
+  venues qui s'agglutineraient à gauche.
+*/
+function spread<T>(list: T[], count: number): T[] {
+  if (list.length <= count) return list;
+  if (count <= 1) return list.slice(0, count);
+  return Array.from(
+    { length: count },
+    (_, index) => list[Math.round((index * (list.length - 1)) / (count - 1))]!,
+  );
+}
 
 interface PlateElement {
   number: number | string;
@@ -143,10 +151,14 @@ const plateEntry = (element: PlateElement): PlateEntry => ({
   les agglutiner.
 */
 function pickPeriod(elements: PlateElement[]): PlateElement[] {
-  const chosen = new Set<number>();
-  elements.forEach((element, index) => {
-    if (typeof element.number === 'number' && plateSlotByAtom.has(element.number)) chosen.add(index);
-  });
+  const inhabited = elements
+    .map((element, index) => ({ element, index }))
+    .filter(
+      ({ element }) => typeof element.number === 'number' && plateSlotByAtom.has(element.number),
+    )
+    .map(({ index }) => index);
+
+  const chosen = new Set<number>(spread(inhabited, PLATE_COLUMNS));
 
   [elements.length - 1, 0].forEach((index) => {
     if (chosen.size < PLATE_COLUMNS && index >= 0) chosen.add(index);
@@ -198,11 +210,47 @@ const plateRows: PlateEntry[][] = mainRows.map((period) => {
   return picked;
 });
 
+/*
+  RANGÉE DÉTACHÉE — ce que les périodes n'ont pas pu loger.
+
+  Elle portait les deux séries, 57–71 et 89–103, qui ne désignent aucun élément
+  unique et n'ont donc jamais de référence : deux cases en vue, au bas de la
+  planche, pour deux tirets. Elle accueille maintenant les références restées
+  dehors — les clients d'abord, puisque ce sont eux que le surnombre laisse de
+  côté. C'est le rôle même de cette rangée sur la table imprimée : recevoir ce
+  qui ne tient pas dans la grille.
+
+  Les deux séries reprennent leur place si toutes les références ont trouvé la
+  leur : la rangée garde alors son dessin plutôt que de se vider.
+*/
+const platePlaced = new Set<number>();
+plateRows.forEach((row) =>
+  row.forEach((entry) => {
+    if (entry.kind === 'cell' && entry.slot) platePlaced.add(entry.slot.atomicNumber);
+  }),
+);
+
+const plateLeftovers = [
+  ...referenceSlots.filter(
+    (slot) => slot.source.kind === 'client' && !platePlaced.has(slot.atomicNumber),
+  ),
+  ...referenceSlots.filter(
+    (slot) => slot.source.kind !== 'client' && !platePlaced.has(slot.atomicNumber),
+  ),
+].slice(0, 2);
+
+const plateSeriesCell = (index: number, series: PlateElement): PlateEntry => {
+  const slot = plateLeftovers[index];
+  return slot
+    ? { kind: 'cell', element: { number: slot.atomicNumber, symbol: '—' }, slot }
+    : plateEntry(series);
+};
+
 // Rangée détachée, rentrée d'une case de chaque côté.
 const plateSeriesRow: PlateEntry[] = [
   plateVoid,
-  plateEntry({ number: '57–71', symbol: '—' }),
-  plateEntry({ number: '89–103', symbol: '—' }),
+  plateSeriesCell(0, { number: '57–71', symbol: '—' }),
+  plateSeriesCell(1, { number: '89–103', symbol: '—' }),
   plateVoid,
 ];
 
@@ -438,36 +486,48 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
     donc plus vite (0,30 de piste par colonne au lieu de 0,41), et les fiches
     n'entrent qu'après.
 
-    « Après » ne veut pas dire « plus tard » : leur course commence à 0,20,
-    alors que la table est encore là — mais elle commence 1,12 hauteur d'écran
+    « Après » ne veut pas dire « plus tard » : leur course commence à 0,28,
+    alors que la table est encore là — mais elle commence 1,26 hauteur d'écran
     SOUS le bord bas, si bien qu'une fiche ne franchit la ligne de flottaison
     qu'à 0,38, l'instant précis où la dernière case a fini de sortir par le
     haut. C'est la longueur de la course, et non le retard du départ, qui tient
     les deux gestes séparés — le relais se passe sans blanc entre eux.
 
+    LA MONTÉE RÉPOND À LA SORTIE, AU MÊME RÉGIME. Une colonne de fiches court
+    sur 0,30 de piste, exactement comme une colonne de la table, et l'éventail
+    s'ouvre à 0,42 : la grille se remplit colonne après colonne, du même geste
+    franc par lequel la table s'est vidée. Étalée sur 0,66 avec un éventail de
+    0,14, elle traînait : le même mouvement, mais mou, et la réponse ne se
+    lisait plus.
+
+    Seule compte la part VISIBLE de la course — ce que la fiche parcourt sous
+    le bord bas ne se voit pas. Mesurée à 1440 et 1920 px : une fiche traverse
+    l'écran en 0,17 de piste, une colonne de table le quitte en 0,18. Les deux
+    gestes vont désormais au même train.
+
     La dernière colonne se pose à 1, à la fin exacte de la piste : c'est
     l'instant où la scène cesse d'être épinglée, et une colonne posée plus tôt
     resterait immobile jusque-là.
   */
-  const CARD_TRAVEL_VH = 112;
-  const CARD_ENTER_START = 0.2;
-  const CARD_ENTER_END = 0.86;
-  const CARD_COLUMN_SHIFT = 0.14;
+  const CARD_TRAVEL_VH = 126;
+  const CARD_ENTER_START = 0.28;
+  const CARD_ENTER_END = 0.58;
+  const CARD_COLUMN_SHIFT = 0.42;
 
   /*
     Sur écran étroit, l'éventail se referme à DEUX colonnes et la piste est plus
-    courte : les mêmes valeurs y donneraient un relais mal réglé. La course est
-    donc raccourcie (0,95 hauteur d'écran) et le départ retardé d'autant, pour
+    courte. La course est ajustée à la hauteur d'écran du téléphone (1,22) pour
     que la ligne de flottaison soit franchie au même instant qu'au bureau —
-    quand la planche a fini de sortir. Le décalage de colonne se resserre
-    aussi : à deux colonnes, l'éventail n'a pas besoin de la même amplitude
-    qu'à quatre.
+    quand la planche a fini de sortir. Le régime de montée est celui du
+    bureau : une colonne court sur 0,32 de piste, l'éventail s'ouvre à 0,40.
+    À deux colonnes, c'est un franc relais de droite à gauche plutôt qu'un
+    éventail.
   */
   const narrowCardMotion = {
-    travelVh: 95,
+    travelVh: 122,
     enterStart: 0.28,
-    enterEnd: 0.88,
-    columnShift: 0.12,
+    enterEnd: 0.6,
+    columnShift: 0.4,
   };
 
   /*
