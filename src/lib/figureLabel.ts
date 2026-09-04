@@ -8,8 +8,14 @@
  * Les documents antérieurs portaient deux champs séparés : leurs valeurs sont
  * recomposées avant analyse, ce qui rend la bascule invisible côté contenu.
  */
-const REFERENCE = /^\s*((?:fig|pl|réf|ref|n°|no)\.?\s?\d+[a-z]?)\s*(?:[—–-]\s*)?/i;
-const FIGURE_REFERENCE = /^fig\.?\s*(\d+[a-z]?)$/i;
+/*
+  Les parenthèses sont tolérées — « fig. (34) » se lit comme « fig. 34 ».
+  L'éditrice en a mis, et un repère non reconnu part dans le TEXTE de la
+  légende : il s'y afficherait tel quel, en plus du repère calculé, et la
+  figure porterait deux numéros contradictoires.
+*/
+const REFERENCE = /^\s*((?:fig|pl|réf|ref|n°|no)\.?\s?\(?\d+[a-z]?\)?)\s*(?:[—–-]\s*)?/i;
+const FIGURE_REFERENCE = /^fig\.?\s*\(?(\d+[a-z]?)\)?$/i;
 
 export interface FigureLabel {
   /** Repère de tête, s'il y en a un. */

@@ -422,6 +422,50 @@
 }
 
 /**
+ * NUMÉROTATION AUTOMATIQUE DES FIGURES — pages projet.
+ *
+ * Une image légendée est une figure, et une figure porte un repère. L'éditrice
+ * n'a plus à l'écrire : elle saisit la légende, le numéro se calcule. Il court
+ * sur toute la page, dans l'ordre de lecture, quel que soit le gabarit et quel
+ * que soit le chemin de rendu — planche du bandeau, colonne fixe, figures de la
+ * composition, images glissées dans un texte riche. Aucun de ces chemins n'a à
+ * se concerter : c'est le compteur du navigateur qui les compte tous.
+ *
+ * Le compteur ne suit QUE les légendes de figure, c'est-à-dire les
+ * `figcaption`. Les étiquettes qui empruntent la même typographie sans désigner
+ * d'image — le renvoi vers le projet suivant, rendu en `span` — gardent la
+ * leur et ne décalent pas la série.
+ *
+ * Le repère saisi à la main, s'il en reste un, s'efface au profit du compteur :
+ * deux numéros se contrediraient, et c'est celui qui compte les figures qui a
+ * raison. Il est MASQUÉ et non supprimé — la légende reste intacte dans Sanity,
+ * et reprendrait sa place si cette règle disparaissait.
+ */
+.project-page-shell {
+  counter-reset: project-figure;
+}
+
+.project-page-shell figcaption.figure-caption {
+  counter-increment: project-figure;
+}
+
+.project-page-shell figcaption.figure-caption .figure-caption__prefix {
+  display: none;
+}
+
+.project-page-shell figcaption.figure-caption::before {
+  content: 'fig. ' counter(project-figure, decimal-leading-zero);
+  font-family: var(--font-annotation);
+  font-style: italic;
+  letter-spacing: var(--tracking-annotation);
+}
+
+/* Le tiret revient au corps romain, exactement comme dans une légende saisie. */
+.project-page-shell figcaption.figure-caption .figure-caption__text::before {
+  content: ' - ';
+}
+
+/**
  * Appel à l'action éditorial — volontairement réduit au libellé et à son
  * signe directionnel. Fonctionne sur un lien comme sur un bouton natif.
  */
