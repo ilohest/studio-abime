@@ -7,10 +7,12 @@ import {
   productByHandleQuery,
   productHandlesQuery,
   productsQuery,
+  shopCollectionsQuery,
 } from './queries';
 import type { FamilyFact, ProductFamily } from './families';
 import type {
   Collection,
+  CollectionCard,
   Money,
   Product,
   ProductCard,
@@ -353,6 +355,70 @@ export async function getCollections(): Promise<Array<Pick<Collection, 'id' | 'h
   });
 
   return data.collections.nodes;
+}
+
+/**
+ * Collections telles que les présente l'index de la boutique.
+ *
+ * ── Pourquoi l'index ne montre plus les tirages ─────────────────────────────
+ * La boutique affichait tout le catalogue d'un seul tenant, collections
+ * confondues. On y voyait des objets, pas un propos : « ce qui se contemple »,
+ * « ce qui s'utilise », « ce qui se transmet » sont trois manières de tenir un
+ * objet, et c'est ce classement qui dit quelque chose du studio. Mélangés, les
+ * tirages l'effacent.
+ *
+ * L'index annonce donc les trois entrées et leur nombre de pièces ; les pièces
+ * elles-mêmes ne se voient qu'en entrant dans une collection, et jamais avec
+ * celles d'une autre.
+ */
+export async function getShopCollections(): Promise<CollectionCard[]> {
+  const data = await shopifyFetch<{
+    collections: {
+      nodes: Array<{
+        id: string;
+        handle: string;
+        title: string;
+        description: string | null;
+        image: ShopImage | null;
+        products: { nodes: Array<{ id: string }> };
+      }>;
+    };
+  }>({
+    query: shopCollectionsQuery,
+    variables: { first: 20, products: 100 },
+    fallback: { collections: { nodes: [] } },
+  });
+
+  return data.collections.nodes.map((node) => ({
+    id: node.id,
+    handle: node.handle,
+    title: node.title,
+    description: node.description?.trim() ?? '',
+    image: node.image,
+    count: node.products.nodes.length,
+  }));
+}
+
+/**
+ * Numéro de classement d'une collection — « 01 », « 02 »…
+ *
+ * C'est le RANG dans la liste des collections, celui-là même qu'affiche l'index
+ * de la boutique sur ses intercalaires et en tête de notice. Un repère de
+ * classement ne vaut que s'il désigne la même chose partout : la page d'une
+ * collection le reprend donc, plutôt que d'en inventer un second.
+ *
+ * `getCollections()` et non `getShopCollections()` : c'est la requête légère,
+ * déjà émise par le rail sur chaque page. Les deux interrogent `collections`
+ * sans tri explicite et reçoivent donc le même ordre.
+ *
+ * `null` sur une collection introuvable — mieux vaut un titre sans numéro qu'un
+ * numéro faux.
+ */
+export async function getCollectionFolio(handle: string): Promise<string | null> {
+  const collections = await getCollections();
+  const rank = collections.findIndex((collection) => collection.handle === handle);
+
+  return rank === -1 ? null : String(rank + 1).padStart(2, '0');
 }
 
 /** Identifiants d'URL de toutes les collections — alimente `getStaticPaths()`. */

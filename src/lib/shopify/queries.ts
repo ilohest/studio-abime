@@ -262,6 +262,45 @@ export const collectionsQuery = /* GraphQL */ `
 `;
 
 /**
+ * Collections avec de quoi les PRÉSENTER, et non seulement les lister.
+ *
+ * Requête distincte de `collectionsQuery` à dessein : celle-ci alimente le rail
+ * de navigation, rendu sur CHAQUE page du site, et n'a besoin que d'un titre et
+ * d'un identifiant. Y ajouter les descriptions et les identifiants de produits
+ * alourdirait toutes les pages pour une seule.
+ *
+ * `description` et non `descriptionHtml` : l'index compose lui-même sa mise en
+ * page, il ne veut pas du balisage saisi dans l'admin.
+ *
+ * Les produits ne sont demandés que par leur identifiant : l'index de la
+ * boutique ne les montre pas, il les COMPTE — « 07 pièces » sous le titre d'une
+ * collection dit ce qu'on trouvera derrière sans rien déflorer.
+ */
+export const shopCollectionsQuery = /* GraphQL */ `
+  query ShopCollections($first: Int = 20, $products: Int = 100) {
+    collections(first: $first) {
+      nodes {
+        id
+        handle
+        title
+        description
+        image {
+          url
+          altText
+          width
+          height
+        }
+        products(first: $products) {
+          nodes {
+            id
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
  * Politiques de boutique.
  *
  * Les six emplacements de l'admin Shopify sont exposés ici, mais on n'en lit

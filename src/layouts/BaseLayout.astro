@@ -10,6 +10,7 @@ import CustomCursor from '~/components/CustomCursor.astro';
 import PageFade from '~/components/PageFade.astro';
 import ServicesRail from '~/components/ServicesRail.astro';
 import TextReveal from '~/components/TextReveal.astro';
+import AnchorLanding from '~/components/AnchorLanding.astro';
 
 import { defaultLocale, getLocaleMeta, type Locale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
@@ -166,6 +167,7 @@ const defaultAlternate = alternates[defaultLocale];
     <slot name="head" />
 
     <TextReveal />
+    <AnchorLanding />
   </head>
 
   <body class={resolvedBodyClass}>

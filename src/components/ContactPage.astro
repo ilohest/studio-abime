@@ -1,13 +1,14 @@
 ---
 import { Image } from 'astro:assets';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import Stamp from '~/components/brand/Stamp.astro';
+import ContactIndex from '~/components/ContactIndex.astro';
 
 import atelier from '~/assets/sections/atelier-bandes.webp';
 import lune from '~/assets/sections/etude-lune.webp';
 import labo from '~/assets/sections/labo-de-com.webp';
 import papier from '~/assets/sections/papier-lumiere.webp';
 import planche from '~/assets/sections/planche-main.webp';
-import binderClip from '~/assets/contact/binder-clip.webp';
 
 import { getSiteContext } from '~/lib/siteContext';
 import { useTranslations } from '~/i18n/ui';
@@ -36,12 +37,173 @@ const instagram = site.settings?.socialLinks?.find(
 );
 
 const photographs = [
-  { src: atelier, alt: 'Bandes de papier suspendues dans l’atelier' },
-  { src: lune, alt: 'Étude graphique de la lune sur papier' },
-  { src: labo, alt: 'Composition imprimée du Labo de Com' },
-  { src: papier, alt: 'Papier translucide traversé par la lumière' },
-  { src: planche, alt: 'Planche botanique issue des archives du studio' },
+  { src: atelier, alt: 'Bandes de papier suspendues dans l’atelier', caption: 'Bandes suspendues' },
+  { src: lune, alt: 'Étude graphique de la lune sur papier', caption: 'Étude de la lune' },
+  { src: labo, alt: 'Composition imprimée du Labo de Com', caption: 'Composition du Labo' },
+  { src: papier, alt: 'Papier translucide traversé par la lumière', caption: 'Papier traversé' },
+  { src: planche, alt: 'Planche botanique issue des archives du studio', caption: 'Planche botanique' },
 ];
+
+/*
+  LE PLATEAU.
+
+  « STUDIO » à l'horizontale, « ABIME » à la verticale, croisés sur leur I
+  commun — et le texte d'accueil posé dans le damier, sur un bloc de cases
+  fusionnées. Le plateau occupe toute la page : c'est lui la section.
+
+  Rien n'est placé à la main. Les coordonnées se déduisent de la position du I
+  dans chaque mot, de sorte que la grille reste juste si les mots changent.
+
+  Sans accent circonflexe, comme le logotype du site : une case ne porte qu'une
+  lettre, et c'est celle que les deux mots partagent.
+*/
+const GRID_COLS = 12;
+const GRID_ROWS = 7;
+
+/*
+  PLATEAU ÉTROIT.
+
+  Un damier de douze colonnes ne se resserre pas : à 375 px, une case ferait
+  trente pixels et les fragments y seraient illisibles. Le petit écran a donc
+  son PROPRE plan — six colonnes, treize rangées, les mots recroisés au même
+  endroit et les phrases reparties sur des bandes plus larges.
+
+  Chaque case porte donc deux jeux de coordonnées, et la feuille de style
+  choisit lequel s'applique. Une seule grille remise à l'échelle aurait mélangé
+  les cases : les repères sont écrits pour douze colonnes, pas pour six.
+*/
+const NARROW_COLS = 6;
+const NARROW_ROWS = 13;
+const NARROW_ACROSS_X = 0;
+const NARROW_ACROSS_Y = 6;
+
+const WORDMARK_ACROSS = 'STUDIO';
+const WORDMARK_DOWN = 'ABIME';
+
+const ACROSS_X = 1;
+const ACROSS_Y = 3;
+const CROSS_X = ACROSS_X + WORDMARK_ACROSS.indexOf('I');
+const DOWN_Y = ACROSS_Y - WORDMARK_DOWN.indexOf('I');
+
+const NARROW_CROSS_X = NARROW_ACROSS_X + WORDMARK_ACROSS.indexOf('I');
+const NARROW_DOWN_Y = NARROW_ACROSS_Y - WORDMARK_DOWN.indexOf('I');
+
+const wordmarkLetters = new Map<string, string>();
+WORDMARK_ACROSS.split('').forEach((letter, index) =>
+  wordmarkLetters.set(`${ACROSS_X + index}:${ACROSS_Y}`, letter),
+);
+WORDMARK_DOWN.split('').forEach((letter, index) =>
+  wordmarkLetters.set(`${CROSS_X}:${DOWN_Y + index}`, letter),
+);
+
+/* Valeurs du Scrabble français, pour les seules lettres du nom. */
+const LETTER_VALUES: Record<string, number> = {
+  A: 1, B: 3, D: 2, E: 1, I: 1, M: 2, O: 1, S: 1, T: 1, U: 1,
+};
+
+/*
+  LE TEXTE D'ACCUEIL, RANGÉ DANS LES CASES.
+
+  Là où un plateau annonce « Triple Letter Score », celui-ci porte ce qu'on est
+  venu lire. Pas de bloc fusionné qui trouerait le damier : chaque phrase est
+  découpée en fragments courts, un par case, posés à la suite sur une rangée —
+  « ON VOUS LIT · ET ON RÉPOND · EN QUELQUES JOURS ». Une phrase brève tient
+  dans une seule case et n'est pas coupée.
+
+  Écrits ici et non dans le Studio : ce ne sont plus des paragraphes mais une
+  COMPOSITION — la coupe, la longueur de chaque fragment et sa case sont des
+  décisions de mise en page, que le CMS ne saurait pas prendre. Les champs
+  éditoriaux de la page restent en place pour le reste du site.
+
+  L'ordre du tableau EST l'ordre de lecture : c'est lui que les lecteurs
+  d'écran entendent, quelle que soit la dispersion des cases sur le plateau.
+*/
+type WordmarkNote = {
+  x: number;
+  y: number;
+  span?: number;
+  /* Coordonnées du plateau étroit — voir NARROW_COLS. */
+  nx: number;
+  ny: number;
+  nspan?: number;
+  text: string;
+  mail?: string;
+};
+
+const wordmarkNotes: WordmarkNote[] = [
+  /* Le retour à la ligne est composé : « Bienvenue » tient sa ligne. */
+  { x: 1, y: 0, text: 'Bienvenue\ndans le Studio,', nx: 0, ny: 0, nspan: 3 },
+
+  { x: 8, y: 1, text: 'Écrire ici,', nx: 0, ny: 1, nspan: 2 },
+  { x: 9, y: 1, text: 'c’est déjà commencer.', nx: 2, ny: 1, nspan: 3 },
+
+  { x: 8, y: 2, text: 'On vous lit', nx: 0, ny: 2, nspan: 2 },
+  { x: 9, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 2 },
+  { x: 10, y: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 2 },
+
+  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 9, nspan: 3 },
+  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 9, nspan: 3 },
+  { x: 2, y: 5, text: 'on vous le dit,', nx: 0, ny: 10, nspan: 2 },
+  { x: 3, y: 5, text: 'et on vous oriente.', nx: 2, ny: 10, nspan: 3 },
+
+  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 11, nspan: 3 },
+  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 11, nspan: 2 },
+  /* Deux cases : une adresse ne se coupe pas, et le bouton doit tenir à côté. */
+  ...(email
+    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 0, ny: 12, nspan: 4 }]
+    : []),
+];
+
+const occupied = new Set<string>([
+  ...wordmarkLetters.keys(),
+  ...wordmarkNotes.flatMap((note) =>
+    Array.from({ length: note.span ?? 1 }, (_, i) => `${note.x + i}:${note.y}`),
+  ),
+]);
+
+/* Les cases prises sur le plateau étroit : lettres et phrases y sont ailleurs. */
+const narrowOccupied = new Set<string>([
+  ...WORDMARK_ACROSS.split('').map((_, i) => `${NARROW_ACROSS_X + i}:${NARROW_ACROSS_Y}`),
+  ...WORDMARK_DOWN.split('').map((_, i) => `${NARROW_CROSS_X}:${NARROW_DOWN_Y + i}`),
+  ...wordmarkNotes.flatMap((note) =>
+    Array.from({ length: note.nspan ?? 1 }, (_, i) => `${note.nx + i}:${note.ny}`),
+  ),
+]);
+
+/*
+  Les cases vides du plateau étroit. Elles n'ont pas de correspondance sur le
+  grand plateau : chaque plan a les siennes, et la feuille de style n'affiche
+  que celles de sa largeur.
+*/
+const narrowFillers = Array.from({ length: NARROW_ROWS }, (_, y) =>
+  Array.from({ length: NARROW_COLS }, (_, x) => ({ key: `n${x}:${y}`, x, y })),
+)
+  .flat()
+  .filter((cell) => !narrowOccupied.has(`${cell.x}:${cell.y}`));
+
+/* Toutes les cases du damier, sauf celles que les phrases occupent. */
+const wordmarkGrid = Array.from({ length: GRID_ROWS }, (_, y) =>
+  Array.from({ length: GRID_COLS }, (_, x) => {
+    const letter = wordmarkLetters.get(`${x}:${y}`) ?? null;
+    const isAcross = y === ACROSS_Y;
+    const order = isAcross ? x - ACROSS_X : (y > ACROSS_Y ? y - DOWN_Y - 1 : y - DOWN_Y);
+
+    return {
+      key: `${x}:${y}`,
+      x,
+      y,
+      letter,
+      value: letter ? LETTER_VALUES[letter] : null,
+      axis: letter ? (isAcross ? 'across' : 'down') : null,
+      order,
+      /* Position sur le plateau étroit ; sans objet pour une case vide. */
+      nx: isAcross ? NARROW_ACROSS_X + order : NARROW_CROSS_X,
+      ny: isAcross ? NARROW_ACROSS_Y : NARROW_DOWN_Y + (y > ACROSS_Y ? order + 1 : order),
+    };
+  }),
+)
+  .flat()
+  .filter((cell) => cell.letter !== null || !occupied.has(cell.key));
 
 const phases = [
   { value: 'idee', label: 'L’idée' },
@@ -58,40 +220,166 @@ const phases = [
     </header>
 
     <section id="informations" class="contact-information-section" aria-labelledby="contact-information-title">
-      <span class="contact-information-index type-note">[01 — Informations]</span>
-      <div class="contact-information-copy">
-        <h2 id="contact-information-title" class="sr-only">Informations</h2>
-        {page.opening && (
-          <p class="contact-information-copy__opening">{page.opening}</p>
-        )}
+      {/*
+        LE PLATEAU.
 
-        {page.paragraphs.map((paragraph) => (
-          <p>{paragraph}</p>
-        ))}
+        La section entière est une grille de Scrabble : « STUDIO » posé à
+        l'horizontale, « ABIME » à la verticale sur leur I commun, le texte
+        d'accueil dans un bloc de cases fusionnées, et des mentions de contact
+        là où un vrai plateau annonce ses bonus.
+
+        Elle occupe toute la fenêtre et s'y colle pendant que le défilement
+        fait arriver les jetons : le damier ne bouge pas, seules les pièces
+        entrent en scène.
+      */}
+      {/*
+        Le repère reste HORS de la scène épinglée : dans le flux, il rognait la
+        hauteur du plateau et coupait sa dernière rangée. Il annonce la section
+        puis s'en va — ce qui compte pendant l'effet, c'est que les cases
+        tiennent entières dans l'écran.
+      */}
+      <div class="contact-spread">
 
         {/*
-          L'invitation ne s'affiche que si l'adresse existe : une phrase qui
-          annonce un e-mail sans l'écrire ne veut rien dire.
+          Le nom du studio en grille, à la place du grand titre. Décoratif pour
+          les lecteurs d'écran — trente cases annoncées lettre à lettre ne
+          diraient rien — avec le nom en clair juste à côté.
         */}
-        {page.mailInvitation && email && (
-          <p class="contact-information-copy__mail">
-            {page.mailInvitation}&nbsp;<a
-              class="contact-social-link contact-email-link"
-              href={`mailto:${email}`}
-            ><span class="contact-social-link__label">{email}</span></a>
-          </p>
-        )}
+        <div class="contact-wordmark">
+          <p class="sr-only">Studio Abîme</p>
+          <div class="contact-wordmark__grid" aria-hidden="true">
+            {/*
+              Le repère est une case du plateau — première rangée, première
+              colonne — soulevée au-dessus de lui. Ailleurs, il flottait à la
+              distance que le centrage laissait entre le haut de la scène et le
+              plateau : deux cents pixels sur un écran large, rien du tout sur
+              un écran étroit. Attaché ici, l'écart ne dépend plus du format.
+              Muet pour les lecteurs d'écran, comme le reste du plateau : le
+              titre de section leur est déjà donné en clair plus bas.
+            */}
+            <span class="contact-information-index type-note">[01 — Informations]</span>
 
-        {instagram?.url && (
-          <p class="contact-information-copy__social type-note">
-            <a class="contact-social-link" href={instagram.url} target="_blank" rel="noopener noreferrer">
-              <span class="contact-social-link__label">{instagram.platform}</span>
-              <span aria-hidden="true">↗</span>
-            </a>
-          </p>
-        )}
+            {wordmarkGrid.map((cell) => (
+              <span
+                class:list={['contact-wordmark__cell', { 'is-empty': !cell.letter }]}
+                style={`--x: ${cell.x}; --y: ${cell.y}; --nx: ${cell.nx}; --ny: ${cell.ny}`}
+              >
+                {cell.letter && (
+                  <span
+                    class={`contact-wordmark__letter contact-wordmark__letter--${cell.axis}`}
+                    style={`--order: ${cell.order}`}
+                  >
+                    {cell.letter}
+                    <span class="contact-wordmark__value">{cell.value}</span>
+                  </span>
+                )}
+              </span>
+            ))}
+
+            {/*
+              Les cases vides du plateau étroit : elles ne paraissent que sous
+              900 px, où le plan des coordonnées change entièrement.
+            */}
+            {narrowFillers.map((cell) => (
+              <span
+                class="contact-wordmark__cell contact-wordmark__cell--narrow"
+                style={`--nx: ${cell.x}; --ny: ${cell.y}`}
+              />
+            ))}
+
+            {/*
+              LES PHRASES, RANGÉES DANS LES CASES.
+
+              Elles se suivent ici dans l'ordre de lecture — c'est cet ordre que
+              les lecteurs d'écran entendent, quelle que soit leur dispersion sur
+              le plateau.
+            */}
+            {wordmarkNotes.map((note) => (
+              <p
+                class:list={['contact-wordmark__note', { 'is-mail': note.mail }]}
+                style={`--x: ${note.x}; --y: ${note.y}; --span: ${note.span ?? 1}; --nx: ${note.nx}; --ny: ${note.ny}; --nspan: ${note.nspan ?? 1}`}
+              >
+                {note.text}
+                {note.mail && (
+                  <>
+                    <a class="contact-wordmark__mail" href={`mailto:${note.mail}`}>
+                      {note.mail}
+                    </a>
+                    {/*
+                      Copier plutôt qu'écrire : on lit souvent ses courriels
+                      ailleurs que dans le client par défaut du navigateur. Le
+                      lien reste, le bouton s'ajoute.
+                    */}
+                    <button
+                      class="contact-wordmark__copy"
+                      type="button"
+                      data-copy-address={note.mail}
+                      aria-label={`Copier l’adresse ${note.mail}`}
+                      data-cursor-interactive
+                    >
+                      {/* Le glyphe bascule en coche une fois la copie faite. */}
+                      <span class="contact-wordmark__copy-icon" aria-hidden="true">⧉</span>
+                      <span class="contact-wordmark__copy-done" aria-hidden="true">✓</span>
+                      <span class="sr-only" data-copy-status role="status"></span>
+                    </button>
+                  </>
+                )}
+              </p>
+            ))}
+            {instagram?.url && (
+              <p class="contact-wordmark__note contact-wordmark__note--social">
+                <a class="contact-social-link" href={instagram.url} target="_blank" rel="noopener noreferrer">
+                  <span class="contact-social-link__label">{instagram.platform}</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              </p>
+            )}
+
+            <h2 id="contact-information-title" class="sr-only">Informations</h2>
+          </div>
+        </div>
       </div>
     </section>
+  </div>
+
+  {/*
+    La pile d'épreuves, en attente d'affectation : elle a quitté l'ouverture de
+    la page, où les planches en quinconce tiennent désormais le regard, et
+    patiente ici — son geste est conservé intact, sa place reste à décider.
+  */}
+  <div class="contact-stack-slot">
+        <figure class="contact-archive" aria-labelledby="archive-caption">
+          <button
+            class="photo-stack"
+            type="button"
+            data-photo-stack
+            aria-describedby="archive-caption"
+            aria-pressed="false"
+            data-cursor-interactive
+          >
+            <span class="sr-only">Feuilleter rapidement les images du studio</span>
+            {
+              photographs.map((photograph, index) => (
+                <Image
+                  class="photo-stack__image"
+                  style={`--photo-index: ${index}`}
+                  src={photograph.src}
+                  alt={photograph.alt}
+                  widths={[360, 560, 760]}
+                  sizes="(max-width: 767px) 82vw, (max-width: 1199px) 58vw, 34vw"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchpriority={index === 0 ? 'high' : 'auto'}
+                />
+              ))
+            }
+          </button>
+
+          <FigureCaption
+            id="archive-caption"
+            value="Fig. 01 — Fragments de recherche"
+            class="contact-archive__caption"
+          />
+        </figure>
   </div>
 
   <section id="enquete" class="contact-enquiry-section" aria-labelledby="form-title">
@@ -101,63 +389,25 @@ const phases = [
     </header>
 
     <div class="contact-enquiry-layout">
-      <figure class="contact-archive" aria-labelledby="archive-caption">
-        <button
-          class="photo-stack"
-          type="button"
-          data-photo-stack
-          aria-describedby="archive-caption"
-          aria-pressed="false"
-          data-cursor-interactive
-        >
-          <span class="sr-only">Feuilleter rapidement les images du studio</span>
-          {
-            photographs.map((photograph, index) => (
-              <Image
-                class="photo-stack__image"
-                style={`--photo-index: ${index}`}
-                src={photograph.src}
-                alt={photograph.alt}
-                widths={[360, 560, 760]}
-                sizes="(max-width: 767px) 82vw, (max-width: 1199px) 58vw, 34vw"
-                loading={index === 0 ? 'eager' : 'lazy'}
-                fetchpriority={index === 0 ? 'high' : 'auto'}
-              />
-            ))
-          }
-          <svg
-            class="photo-stack__clip"
-            viewBox="0 0 760 816"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <filter id="remove-clip-background" color-interpolation-filters="sRGB">
-              <feColorMatrix
-                type="matrix"
-                values="1 0 0 0 0
-                        0 1 0 0 0
-                        0 0 1 0 0
-                        -0.333 -0.333 -0.333 0 0.98"
-              />
-            </filter>
-            <image
-              href={binderClip.src}
-              width="760"
-              height="816"
-              filter="url(#remove-clip-background)"
-              preserveAspectRatio="xMidYMid meet"
-            />
-          </svg>
-        </button>
-
-        <FigureCaption
-          id="archive-caption"
-          value="Fig. 01 — Fragments de recherche"
-          class="contact-archive__caption"
-        />
-      </figure>
-
       <div class="contact-form-panel">
+        {/*
+          EN-TÊTE DE FICHE.
+
+          Un formulaire de site commence par son premier champ ; une fiche
+          d'enquête commence par son identification — numéro, date d'ouverture,
+          observateur, état. C'est ce cartouche, et non la mise en page des
+          champs, qui fait basculer la page du côté du document administratif.
+
+          Le numéro et l'heure sont écrits par le script au chargement : ils
+          disent le moment réel du visiteur, pas la date du build. Ils partent
+          ensuite avec la fiche (`reference`), se retrouvent dans l'objet du
+          courriel reçu au studio et dans l'accusé de réception — c'est ce qui
+          les empêche d'être un décor : on peut citer ce numéro en répondant.
+
+          Sans JavaScript, les valeurs restent en attente et le serveur attribue
+          lui-même un numéro à la réception. Le formulaire, lui, fonctionne.
+        */}
+
         {/*
           `data-contact-email` : le script du formulaire ne voit pas le
           frontmatter, l'adresse de secours lui est donc passée par le DOM.
@@ -169,143 +419,249 @@ const phases = [
           data-contact-form
           data-contact-email={email}
         >
-      <div class="contact-field">
-        <label for="contact-name">{t('contact.fieldName')}</label>
-        <input
-          id="contact-name"
-          name="fullName"
-          type="text"
-          autocomplete="name"
-          placeholder="Nom, prénom"
-          maxlength="120"
-          required
-        />
-      </div>
+          <input type="hidden" name="reference" value="" data-fiche-reference-field />
 
-      <div class="contact-field">
-        <div class="contact-label-group">
-          <label for="contact-method">Comment vous contacter</label>
-          <p id="contact-method-note" class="contact-field__note">{t('contact.methodNote')}</p>
-        </div>
-        <input
-          id="contact-method"
-          name="contact"
-          type="text"
-          autocomplete="email"
-          placeholder="Mail ou téléphone"
-          maxlength="180"
-          aria-describedby="contact-method-note"
-          required
-        />
-      </div>
+        <header class="fiche-head">
+          <dl class="fiche-head__rows">
+            <div class="fiche-head__row">
+              <dt>Enquête n°</dt>
+              <dd data-fiche-reference>en attente</dd>
+            </div>
+            <div class="fiche-head__row">
+              <dt>Ouverte le</dt>
+              <dd data-fiche-opened>—</dd>
+            </div>
+            <div class="fiche-head__row">
+              <dt>Observateur</dt>
+              <dd>Studio Abîme</dd>
+            </div>
+            <div class="fiche-head__row">
+              <dt>État</dt>
+              <dd data-fiche-state>en cours</dd>
+            </div>
+          </dl>
 
-      <div class="contact-field">
-        <label for="contact-project">Votre projet, en une phrase</label>
-        <input
-          id="contact-project"
-          name="project"
-          type="text"
-          placeholder="Quelques mots suffisent"
-          maxlength="280"
-          required
-        />
-      </div>
+          {/*
+            Le tampon tombe sur le cartouche, qui survit à l'envoi — le
+            formulaire, lui, s'en va. C'est le « REÇUE » posé en travers d'une
+            fiche traitée.
+          */}
+          <div class="fiche-head__stamp" data-fiche-stamp hidden>
+            <Stamp variant="plongee-cercle" class="fiche-head__mark" rotate={-13} />
+            <p class="fiche-head__stamp-caption" data-fiche-stamp-caption></p>
+          </div>
+        </header>
 
-      <div
-        class="contact-field contact-field--choices"
-        role="radiogroup"
-        aria-labelledby="contact-phase-label"
-      >
-        <p id="contact-phase-label" class="contact-field__label">
-          {t('contact.phaseQuestion')}
-        </p>
-        <div class="contact-options">
-          {
-            phases.map((phase) => (
-              <label class="contact-option">
-                <input type="radio" name="phase" value={phase.value} required />
-                <span aria-hidden="true"></span>
-                {phase.label}
+        <section class="contact-part" aria-labelledby="contact-part-i">
+          <h3 class="contact-part__title" id="contact-part-i">
+            <span class="contact-part__numeral">I</span> Identification
+          </h3>
+
+          <div class="contact-field">
+            <div class="contact-label-group">
+              <label for="contact-name">{t('contact.fieldName')}</label>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <input
+                id="contact-name"
+                name="fullName"
+                type="text"
+                autocomplete="name"
+                placeholder="Nom, prénom"
+                maxlength="120"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="contact-field">
+            <div class="contact-label-group">
+              <label for="contact-method">Comment vous contacter</label>
+              <p id="contact-method-note" class="contact-field__note">{t('contact.methodNote')}</p>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <input
+                id="contact-method"
+                name="contact"
+                type="text"
+                autocomplete="email"
+                placeholder="Mail ou téléphone"
+                maxlength="180"
+                aria-describedby="contact-method-note"
+                required
+              />
+            </div>
+          </div>
+        </section>
+
+        <section class="contact-part" aria-labelledby="contact-part-ii">
+          <h3 class="contact-part__title" id="contact-part-ii">
+            <span class="contact-part__numeral">II</span> Objet
+          </h3>
+
+          <div class="contact-field">
+            <div class="contact-label-group">
+              <label for="contact-project">Votre projet, en une phrase</label>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <input
+                id="contact-project"
+                name="project"
+                type="text"
+                placeholder="Quelques mots suffisent"
+                maxlength="280"
+                required
+              />
+            </div>
+          </div>
+
+          <div
+            class="contact-field contact-field--choices"
+            role="radiogroup"
+            aria-labelledby="contact-phase-label"
+          >
+            <div class="contact-label-group">
+              <p id="contact-phase-label" class="contact-field__label">
+                {t('contact.phaseQuestion')}
+              </p>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <div class="contact-options">
+                {
+                  phases.map((phase) => (
+                    <label class="contact-option">
+                      <input type="radio" name="phase" value={phase.value} required />
+                      <span class="contact-option__box" aria-hidden="true"></span>
+                      {phase.label}
+                    </label>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="contact-part" aria-labelledby="contact-part-iii">
+          <h3 class="contact-part__title" id="contact-part-iii">
+            <span class="contact-part__numeral">III</span> Observations
+          </h3>
+
+          <div class="contact-field contact-field--textarea contact-field--observation">
+            <div class="contact-label-group">
+              <label for="contact-unsaid">Qu’est-ce qui ne se dit pas encore&nbsp;?</label>
+              <p id="contact-unsaid-note" class="contact-field__note">
+                La chose que vous savez de votre projet et que vous avez l’impression qu’on ne voit pas.
+              </p>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <textarea
+                id="contact-unsaid"
+                name="unsaid"
+                rows="5"
+                maxlength="2400"
+                aria-describedby="contact-unsaid-note"
+                placeholder="Écrivez librement…"
+                required
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="contact-field contact-field--textarea contact-field--observation">
+            <div class="contact-label-group">
+              <label for="contact-resources">De quoi disposez-vous comme ressources&nbsp;?</label>
+              <p id="contact-resources-note" class="contact-field__note">
+                {t('contact.resourcesHint')}
+              </p>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <textarea
+                id="contact-resources"
+                name="resources"
+                rows="4"
+                maxlength="1600"
+                aria-describedby="contact-resources-note"
+                placeholder="Ce qui est déjà là…"
+                required
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="contact-part" aria-labelledby="contact-part-iv">
+          <h3 class="contact-part__title" id="contact-part-iv">
+            <span class="contact-part__numeral">IV</span> Calendrier
+          </h3>
+
+          <div class="contact-field">
+            <div class="contact-label-group">
+              <label for="contact-start">Quand aimeriez-vous commencer&nbsp;?</label>
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <input
+                id="contact-start"
+                name="start"
+                type="text"
+                placeholder="Une date, une période"
+                maxlength="180"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="contact-field contact-field--textarea contact-field--last">
+            <div class="contact-label-group">
+              <label for="contact-availability">
+                {t('contact.availabilityQuestion')}
               </label>
-            ))
-          }
+              <span class="contact-field__log" data-field-log aria-hidden="true"></span>
+            </div>
+            <div class="contact-control">
+              <textarea
+                id="contact-availability"
+                name="availability"
+                rows="3"
+                maxlength="1000"
+                placeholder="Votre rythme, vos disponibilités…"
+                required
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <div class="sr-only" aria-hidden="true">
+          <label for="contact-company">Ne pas remplir ce champ</label>
+          <input id="contact-company" name="company" type="text" tabindex="-1" autocomplete="off" />
         </div>
-      </div>
 
-      <div class="contact-field contact-field--textarea">
-        <div class="contact-label-group">
-          <label for="contact-unsaid">Qu’est-ce qui ne se dit pas encore&nbsp;?</label>
-          <p id="contact-unsaid-note" class="contact-field__note">
-            La chose que vous savez de votre projet et que vous avez l’impression qu’on ne voit pas.
-          </p>
-        </div>
-        <textarea
-          id="contact-unsaid"
-          name="unsaid"
-          rows="5"
-          maxlength="2400"
-          aria-describedby="contact-unsaid-note"
-          placeholder="Écrivez librement…"
-          required
-        ></textarea>
-      </div>
+        {/*
+          Le cadre réservé est vide, et le restera : c'est la signature des
+          fiches administratives — la colonne où l'on n'écrit pas. Purement
+          décoratif, donc masqué aux lecteurs d'écran, qui n'ont rien à y lire.
+        */}
+        <div class="fiche-reserved" aria-hidden="true">
+          <p class="fiche-reserved__title">Cadre réservé au studio</p>
+          <p class="fiche-reserved__note">Ne rien inscrire dans ce cadre.</p>
+          <div class="fiche-reserved__rules">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          </div>
 
-      <div class="contact-field contact-field--textarea">
-        <div class="contact-label-group">
-          <label for="contact-resources">De quoi disposez-vous comme ressources&nbsp;?</label>
-          <p id="contact-resources-note" class="contact-field__note">
-            {t('contact.resourcesHint')}
-          </p>
-        </div>
-        <textarea
-          id="contact-resources"
-          name="resources"
-          rows="4"
-          maxlength="1600"
-          aria-describedby="contact-resources-note"
-          placeholder="Ce qui est déjà là…"
-          required
-        ></textarea>
-      </div>
-
-      <div class="contact-field">
-        <label for="contact-start">Quand aimeriez-vous commencer&nbsp;?</label>
-        <input
-          id="contact-start"
-          name="start"
-          type="text"
-          placeholder="Une date, une période"
-          maxlength="180"
-          required
-        />
-      </div>
-
-      <div class="contact-field contact-field--textarea contact-field--last">
-        <label for="contact-availability">
-          {t('contact.availabilityQuestion')}
-        </label>
-        <textarea
-          id="contact-availability"
-          name="availability"
-          rows="3"
-          maxlength="1000"
-          placeholder="Votre rythme, vos disponibilités…"
-          required
-        ></textarea>
-      </div>
-
-      <div class="sr-only" aria-hidden="true">
-        <label for="contact-company">Ne pas remplir ce champ</label>
-        <input id="contact-company" name="company" type="text" tabindex="-1" autocomplete="off" />
-      </div>
-
-      <footer class="contact-form-footer">
-        <p class="contact-form-status type-note" role="status" aria-live="polite" data-form-status></p>
-        <button class="button-minimal contact-submit" type="submit" data-cursor-interactive>
-          <span class="button-minimal__label">Envoyer</span>
-          <span class="button-minimal__arrow" aria-hidden="true">↳</span>
-        </button>
-      </footer>
+          <footer class="contact-form-footer">
+            <p class="contact-form-status type-note" role="status" aria-live="polite" data-form-status></p>
+            <button class="button-minimal contact-submit" type="submit" data-cursor-interactive>
+              <span class="button-minimal__label">Déposer la fiche</span>
+              <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+            </button>
+          </footer>
         </form>
 
         <div class="contact-confirmation" data-contact-confirmation hidden tabindex="-1">
@@ -317,9 +673,24 @@ const phases = [
             hésiter.&nbsp;»
           </p>
         </div>
+
+        {/*
+          Mention de bas de fiche. La fiche médicale de 1915 se termine par son
+          « N. B. » ; la nôtre y loge ce que devient le document — c'est-à-dire
+          l'information légale due au visiteur. L'obligation et le détail
+          d'époque sont le même objet, plutôt qu'une ligne de plus.
+
+          Elle vit hors du formulaire : elle doit rester lisible après l'envoi,
+          quand le formulaire s'est effacé.
+        */}
+        {page.enquiryNotice && (
+          <p class="fiche-nb type-note">{page.enquiryNotice}</p>
+        )}
       </div>
     </div>
   </section>
+
+  <ContactIndex entries={page.index ?? []} locale={locale} />
 
 </article>
 
@@ -337,6 +708,119 @@ const phases = [
     qui se relance à chaque passage cesse d'être une invitation pour devenir
     un tic. L'observateur se débranche donc au premier déclenchement.
   */
+  /*
+    L'ARRIVÉE DE LA GRILLE, AU DÉFILEMENT.
+
+    Une seule progression de 0 à 1, lue sur la position de la section, et
+    découpée en fenêtres : STUDIO entre par la droite lettre après lettre,
+    ABIME monte ensuite du bas dans la colonne du I, le texte suit. Chaque
+    lettre a sa propre fenêtre, décalée d'un cran — d'où l'effet d'escalier.
+
+    Rien n'est écrit tant que le script ne tourne pas : les valeurs de repli du
+    style laissent la grille composée si le JavaScript ne s'exécute pas.
+  */
+  document.querySelectorAll<HTMLElement>('.contact-spread').forEach((spread) => {
+    const letters = Array.from(
+      spread.querySelectorAll<HTMLElement>('.contact-wordmark__letter'),
+    );
+    const runway = spread.closest<HTMLElement>('.contact-information-section');
+    if (letters.length === 0 || !runway) return;
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const clamp = (value: number) => Math.min(1, Math.max(0, value));
+    // Décélération : la lettre arrive vite et se pose doucement.
+    const ease = (value: number) => 1 - (1 - value) ** 3;
+
+    /* Fenêtre d'arrivée d'une lettre, selon son mot et son rang. */
+    const windowFor = (element: HTMLElement) => {
+      const order = Number(element.style.getPropertyValue('--order') || 0);
+      const isDown = element.classList.contains('contact-wordmark__letter--down');
+      const from = (isDown ? 0.42 : 0) + order * 0.055;
+
+      return { from, span: 0.3 };
+    };
+
+    let frame = 0;
+
+    /*
+      Le côté d'une case : le plus petit de ce que la largeur et la hauteur
+      autorisent. Mesuré ici plutôt qu'en CSS — voir le commentaire de
+      `.contact-wordmark__grid`.
+    */
+    const grid = spread.querySelector<HTMLElement>('.contact-wordmark__grid');
+
+    const sizeBoard = () => {
+      if (!grid) return;
+
+      const styles = getComputedStyle(grid);
+      const cols = Number(styles.getPropertyValue('--cols')) || 12;
+      const rows = Number(styles.getPropertyValue('--rows')) || 7;
+      const gap = parseFloat(styles.columnGap) || 0;
+
+      /*
+        Le côté est libéré avant la mesure : sans cela, on mesurerait la place
+        que le plateau occupe DÉJÀ, et il ne pourrait plus que rétrécir.
+      */
+      grid.style.removeProperty('--cell');
+      const box = grid.getBoundingClientRect();
+      const side = Math.floor(
+        Math.min(
+          (box.width - (cols - 1) * gap) / cols,
+          (box.height - (rows - 1) * gap) / rows,
+        ),
+      );
+
+      if (side > 0) grid.style.setProperty('--cell', `${side}px`);
+    };
+
+    const render = () => {
+      frame = 0;
+      sizeBoard();
+
+      /*
+        La progression se lit sur la PISTE — la section, plus haute que l'écran
+        — et non sur la double page, qui y reste collée. Zéro quand la piste
+        touche le haut de la fenêtre, un quand son pied l'atteint.
+      */
+      const rect = runway.getBoundingClientRect();
+      const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
+      const progress = reducedMotion.matches ? 1 : clamp(-rect.top / distance);
+
+      /* Depuis le bord du cadre : les jetons viennent de hors-champ. */
+      const travelX = window.innerWidth * 0.9;
+      const travelY = window.innerHeight * 0.9;
+
+      for (const letter of letters) {
+        const { from, span } = windowFor(letter);
+        letter.style.setProperty('--reveal', String(ease(clamp((progress - from) / span))));
+        letter.style.setProperty('--travel-x', `${travelX}px`);
+        letter.style.setProperty('--travel-y', `${travelY}px`);
+      }
+
+    };
+
+    const request = () => {
+      if (!frame) frame = requestAnimationFrame(render);
+    };
+
+    render();
+    window.addEventListener('scroll', request, { passive: true });
+    window.addEventListener('resize', request, { passive: true });
+    reducedMotion.addEventListener('change', request);
+
+    /*
+      L'évènement `resize` arrive AVANT que la fenêtre n'ait fini de se poser :
+      la mesure suivante rendait alors le côté d'avant, et le plateau gardait
+      des cases d'un autre format jusqu'au prochain défilement. L'observateur,
+      lui, se déclenche sur la boîte réellement obtenue — celle de la scène,
+      dont la taille ne dépend pas du côté qu'on va calculer, donc sans boucle.
+    */
+    const board = grid?.parentElement;
+    if (board && 'ResizeObserver' in window) {
+      new ResizeObserver(request).observe(board);
+    }
+  });
+
   const PREVIEW_DELAY = 450;
   const PREVIEW_DURATION = 2400;
 
@@ -374,13 +858,163 @@ const phases = [
     observer.observe(stack);
   });
 
+  /*
+    LA FICHE PORTE UN NUMÉRO.
+
+    Un formulaire de site n'a pas d'identité ; une fiche d'enquête en a une, et
+    c'est par là qu'elle commence. Le numéro et l'heure d'ouverture sont écrits
+    ici plutôt que dans le gabarit : la page est pré-rendue, un horodatage
+    calculé au build afficherait le jour de la mise en ligne à tous les
+    visiteurs, ce qui serait faux tous les jours sauf un.
+
+    Le numéro part ensuite avec la fiche : il devient l'objet du courriel reçu
+    au studio et la référence citée dans l'accusé de réception. Sans lui — sans
+    JavaScript — le serveur en attribue un à la réception, et rien n'est perdu.
+  */
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  const ficheDay = (date: Date) =>
+    `${String(date.getFullYear()).slice(2)}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+
+  /*
+    Les lettres de la référence sont les INITIALES du nom déclaré.
+
+    Une cote d'archive porte la marque de qui a déposé la pièce ; quatre
+    caractères tirés au sort n'auraient rien dit de personne. Elles se
+    complètent donc à mesure qu'on écrit son nom, sous les yeux du visiteur :
+    la fiche prend son identité pendant qu'il la remplit.
+
+    Accents retirés — une cote se dicte au téléphone — et quatre lettres au
+    plus : un nom composé n'allonge pas indéfiniment la référence.
+  */
+  const initialsFrom = (value: string) =>
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .split(/[^A-Za-z]+/)
+      .filter(Boolean)
+      .slice(0, 4)
+      .map((word) => word[0].toUpperCase())
+      .join('');
+
+  /* Tant qu'aucun nom n'est écrit, la cote reste ouverte. */
+  const REFERENCE_PENDING = '··';
+
+  const frenchDate = (date: Date) =>
+    `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
+
+  const frenchTime = (date: Date) => `${pad(date.getHours())}h${pad(date.getMinutes())}`;
+
+  document.querySelectorAll<HTMLElement>('.fiche-head').forEach((head) => {
+    const openedAt = new Date();
+    const day = ficheDay(openedAt);
+    /* `closest` et non `parentElement` : le cartouche vit dans la pile. */
+    const panel = head.closest<HTMLElement>('.contact-form-panel');
+
+    const shown = head.querySelector<HTMLElement>('[data-fiche-reference]');
+    const opened = head.querySelector<HTMLElement>('[data-fiche-opened]');
+    const field = panel?.querySelector<HTMLInputElement>('[data-fiche-reference-field]');
+    const name = panel?.querySelector<HTMLInputElement>('#contact-name');
+
+    if (opened) opened.textContent = `${frenchDate(openedAt)} — ${frenchTime(openedAt)}`;
+
+    const inscribeReference = () => {
+      const initials = initialsFrom(name?.value ?? '');
+      if (shown) shown.textContent = `${day}-${initials || REFERENCE_PENDING}`;
+      /*
+        Le champ envoyé ne porte QUE la cote complète : sans initiales, il part
+        vide et c'est le serveur qui en attribue une à partir du nom reçu.
+      */
+      if (field) field.value = initials ? `${day}-${initials}` : '';
+    };
+
+    inscribeReference();
+    name?.addEventListener('input', inscribeReference);
+  });
+
+  /*
+    HORODATAGE DE MARGE.
+
+    Chaque champ complété inscrit son heure sous son libellé : la fiche
+    enregistre l'acte de son propre remplissage. C'est le geste qui la sépare
+    d'un formulaire — un document d'enquête consigne quand il a été renseigné.
+
+    Ces heures ne quittent JAMAIS le navigateur. Elles ne sont pas des champs du
+    formulaire, rien ne les envoie, et la mention de bas de fiche le dit : sans
+    cette limite, une trouvaille d'archiviste deviendrait une surveillance.
+  */
+  document.querySelectorAll<HTMLElement>('.contact-field').forEach((field) => {
+    const log = field.querySelector<HTMLElement>('[data-field-log]');
+    if (!log) return;
+
+    const controls = field.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input:not([type="hidden"]), textarea',
+    );
+    if (controls.length === 0) return;
+
+    const inscribe = () => {
+      const filled = Array.from(controls).some((control) =>
+        control instanceof HTMLInputElement && control.type === 'radio'
+          ? control.checked
+          : control.value.trim().length > 0,
+      );
+
+      // Un champ vidé perd son heure : la fiche dit l'état, pas l'historique.
+      log.textContent = filled ? `${frenchTime(new Date())} — renseigné` : '';
+    };
+
+    controls.forEach((control) => {
+      control.addEventListener('change', inscribe);
+      control.addEventListener('blur', inscribe);
+    });
+  });
+
+  /*
+    COPIER L'ADRESSE.
+
+    `navigator.clipboard` n'existe pas partout — contexte non sécurisé, vieux
+    navigateur — et peut être refusé par l'utilisateur. Le bouton ne s'affiche
+    donc que si l'API répond : sans elle, il disparaît et le lien `mailto`
+    reste, qui a toujours marché.
+  */
+  document.querySelectorAll<HTMLButtonElement>('[data-copy-address]').forEach((button) => {
+    if (!navigator.clipboard) {
+      button.hidden = true;
+      return;
+    }
+
+    const status = button.querySelector<HTMLElement>('[data-copy-status]');
+    let timer = 0;
+
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copyAddress ?? '');
+      } catch {
+        // Refusé ou indisponible : on ne prétend pas avoir copié.
+        if (status) status.textContent = 'La copie a échoué.';
+        return;
+      }
+
+      button.classList.add('is-copied');
+      if (status) status.textContent = 'Adresse copiée.';
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        button.classList.remove('is-copied');
+        if (status) status.textContent = '';
+      }, 2000);
+    });
+  });
+
   document.querySelectorAll<HTMLFormElement>('[data-contact-form]').forEach((form) => {
     const status = form.querySelector<HTMLElement>('[data-form-status]');
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]');
     const confirmation = form.parentElement?.querySelector<HTMLElement>('[data-contact-confirmation]');
     const panel = form.closest<HTMLElement>('.contact-form-panel');
     const transitionItems = Array.from(
-      form.querySelectorAll<HTMLElement>('.contact-field, .contact-form-footer'),
+      form.querySelectorAll<HTMLElement>(
+        '.contact-part__title, .contact-field, .fiche-reserved, .contact-form-footer',
+      ),
     );
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -395,6 +1029,13 @@ const phases = [
       submit.disabled = true;
       submit.setAttribute('aria-busy', 'true');
       status.textContent = 'Envoi en cours…';
+
+      /*
+        Relevés AVANT l'envoi : le formulaire est remis à zéro dès qu'il part,
+        et c'est de ces deux valeurs que l'index tire sa dernière ligne.
+      */
+      const signature = new FormData(form).get('fullName')?.toString().trim() ?? '';
+      const reference = form.querySelector<HTMLInputElement>('[data-fiche-reference-field]')?.value;
 
       try {
         const response = await fetch(form.action, {
@@ -419,6 +1060,34 @@ const phases = [
         form.hidden = true;
         form.classList.remove('is-leaving');
         panel?.setAttribute('data-confirmed', '');
+
+        /*
+          La fiche change d'état et reçoit son tampon. Le cartouche, lui, ne
+          part pas avec le formulaire : c'est sur lui que le tampon tombe, comme
+          sur toute fiche traitée — et il porte le numéro que le visiteur peut
+          désormais citer.
+        */
+        const state = panel?.querySelector<HTMLElement>('[data-fiche-state]');
+        if (state) state.textContent = 'déposée';
+
+        /*
+          Le visiteur entre dans l'index, en dernière ligne et sans folio :
+          l'entrée d'un livre qui n'a pas encore de page, parce que cette page
+          reste à écrire. Elle ne vit que dans ce navigateur.
+        */
+        const pending = document.querySelector<HTMLElement>('[data-index-pending]');
+        if (pending && signature) {
+          pending.textContent = reference
+            ? `Vous, ${signature}, enquête n° ${reference} — à paraître`
+            : `Vous, ${signature} — à paraître`;
+          pending.hidden = false;
+        }
+
+        const stamp = panel?.querySelector<HTMLElement>('[data-fiche-stamp]');
+        const stampCaption = panel?.querySelector<HTMLElement>('[data-fiche-stamp-caption]');
+        if (stampCaption) stampCaption.textContent = `Reçue — ${frenchDate(new Date())}`;
+        if (stamp) stamp.hidden = false;
+
         confirmation.hidden = false;
         if (!reducedMotion.matches) confirmation.classList.add('is-entering');
         confirmation.focus({ preventScroll: true });
@@ -462,7 +1131,12 @@ const phases = [
   }
 
   .contact-heading {
-    margin-bottom: clamp(5rem, 10vw, 10rem);
+    /*
+      Écart resserré : la double page doit tenir sous ce titre dans un seul
+      écran, et chaque centimètre pris ici est un centimètre de moins pour les
+      planches.
+    */
+    margin-bottom: clamp(2.5rem, 5vw, 5rem);
   }
 
   .contact-page-title {
@@ -470,33 +1144,387 @@ const phases = [
     text-align: center;
   }
 
+  /*
+    LA PISTE.
+
+    La section est plus haute que l'écran, et la double page s'y colle : le
+    défilement fait donc avancer l'arrivée des lettres SANS que la composition
+    bouge. C'est la piste du tableau périodique de la page Expériences, à
+    l'échelle d'une grille.
+
+    Sa hauteur EST la durée de l'effet : la course au-delà d'un écran est le
+    temps qu'il faut pour poser les onze arrivées.
+  */
   .contact-information-section {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: auto 1fr;
-    min-height: clamp(22rem, 36vw, 32rem);
+    display: block;
+    height: calc(100svh + 90svh);
+    /*
+      PAS de `overflow` ici, si tentant soit-il pour retenir les jetons en vol :
+      un ancêtre au débordement non visible devient le scrollport de l'élément
+      collant, qui cesse alors de se coller. C'est `.contact-page` qui découpe
+      la course horizontale, et la course verticale reste dans la page.
+    */
+  }
+
+  /*
+    La scène épinglée : elle tient toute la fenêtre pendant que le défilement
+    fait avancer l'arrivée des jetons. Le plateau, lui, ne bouge pas d'un pixel.
+  */
+  .contact-spread {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100svh;
+    flex-direction: column;
+    justify-content: center;
+    /*
+      Un filet d'air en haut et en bas : les cases ne touchent pas les bords de
+      la fenêtre. La hauteur reste celle de l'écran — c'est le plateau qui se
+      resserre d'autant, pas la scène qui déborde.
+    */
+    --scene-pad: clamp(0.75rem, 1.6vw, 1.5rem);
+    /*
+      Hauteur utile de la scène, en clair : le plateau en a besoin pour calculer
+      des cases CARRÉES, et une hauteur en pourcentage serait résolue sur la
+      largeur dans le calcul des colonnes.
+    */
+    /*
+      La bande réservée au repère, en haut de la scène. Sans elle, le plateau
+      d'un écran étroit — où la hauteur commande — montait jusqu'au bord et le
+      repère venait s'y coller.
+    */
+    --marker-band: clamp(3rem, 4.5vw, 4rem);
+    padding-block: calc(var(--scene-pad) + var(--marker-band)) var(--scene-pad);
+    /*
+      Le plateau va chercher de la largeur dans les marges de la page. Entre
+      1100 et 1440 px, le rail mange 16 rem sur une fenêtre déjà courte : les
+      douze colonnes s'y réduisent à des cases de soixante pixels, où les
+      fragments tombent sous le seuil de lisibilité. Nul, sinon.
+    */
+    --board-bleed: 0px;
+    margin-inline: calc(-1 * var(--board-bleed));
+  }
+
+  /*
+    La reprise est CONTINUE, pas un palier : elle croît à mesure que la fenêtre
+    se resserre et s'annule à 1440 px, sinon le plateau sauterait d'un cran au
+    passage de la borne. Elle ne dépasse jamais la marge de page moins un filet
+    d'air, pour que les cases ne touchent pas le bord.
+  */
+  @media (min-width: 1101px) {
+    .contact-spread {
+      --board-bleed: clamp(
+        0px,
+        calc((1440px - 100vw) * 0.4),
+        calc(clamp(1.25rem, 4vw, 4.5rem) - 0.5rem)
+      );
+    }
+  }
+
+  /*
+    LA GRILLE. Un damier de six cases sur cinq : les lettres y sont posées, les
+    cases vides restent dessinées d'un filet plus clair — c'est le plateau qui
+    fait lire les deux mots comme croisés, pas les lettres seules.
+  */
+  .contact-wordmark {
+    display: flex;
+    min-height: 0;
     flex: 1;
-    column-gap: clamp(2rem, 3.5vw, 4rem);
+    flex-direction: column;
   }
 
-  .contact-information-section,
-  .contact-enquiry-section {
-    scroll-margin-top: 2rem;
+  /*
+    LE PLATEAU occupe toute la largeur et toute la hauteur disponibles : douze
+    cases sur sept, qui s'étirent avec la page. Les cases ne sont donc pas
+    carrées — c'est la scène qui commande, pas le jeton.
+  */
+  .contact-wordmark__grid {
+    --cols: 12;
+    --rows: 7;
+    --gap: 0.25rem;
+    /*
+      DES CASES CARRÉES. Le côté est mesuré par le script (`--cell`) : le plus
+      petit de ce que la largeur autorise et de ce que la hauteur autorise. Le
+      plateau ne remplit donc plus forcément la scène — il s'y centre — mais une
+      case reste une case, et non un rectangle étiré par le format de la fenêtre.
+
+      Pourquoi pas en CSS : un `100%` glissé dans une variable est résolu sur la
+      LARGEUR quand il sert aux colonnes et sur la HAUTEUR quand il sert aux
+      rangées. Le même `min()` donnait donc deux côtés différents.
+
+      Repli sans script : des pistes égales, comme avant — le plateau remplit la
+      scène, les cases s'allongent un peu, rien ne casse.
+    */
+    display: grid;
+    min-height: 0;
+    flex: 1;
+    grid-template-columns: repeat(var(--cols), var(--cell, minmax(0, 1fr)));
+    grid-template-rows: repeat(var(--rows), var(--cell, minmax(0, 1fr)));
+    justify-content: center;
+    align-content: center;
+    gap: var(--gap);
   }
 
-  .contact-information-index {
-    grid-column: 3;
-    justify-self: end;
-  }
+  /*
+    UNE PHRASE DANS SES CASES. Elle occupe une à trois cases d'une même rangée,
+    sans filet propre : c'est le damier qui la cadre. Elle arrive en dernier,
+    une fois les deux mots posés.
+  */
+  /*
+    UN FRAGMENT DANS SA CASE. Petit corps, capitales, centré : c'est la
+    typographie des mentions d'un plateau, celle qui se lit sans disputer la
+    place aux jetons.
 
-  .contact-information-copy {
-    grid-column: 3;
-    align-self: center;
-    max-width: 32rem;
+    Aucun retard à l'affichage : tout le plateau est là dès l'arrivée sur la
+    page, seuls les deux mots entrent en scène.
+  */
+  .contact-wordmark__note {
+    grid-column: calc(var(--x) + 1) / span var(--span, 1);
+    grid-row: calc(var(--y) + 1);
+    display: grid;
+    align-content: center;
+    /* Même filet que les cases vides : un fragment EST une case du plateau. */
+    border: 1px solid color-mix(in oklab, var(--color-line) 45%, transparent);
+    padding: 0.3rem;
+    color: var(--color-muted);
     font-family: var(--font-titre);
-    font-size: var(--text-copy);
-    line-height: 1.42;
+    /*
+      Le corps se règle sur LA CASE, pas sur la fenêtre : à largeur égale, une
+      case de soixante pixels et une de quatre-vingts n'appellent pas la même
+      composition, et un `vw` ignorait le rail qui rétrécit le plateau.
+      `--cell` est posé par le script ; le repli vaut la case du plan large.
+    */
+    font-size: clamp(0.52rem, calc(var(--cell, 3.75rem) * 0.125), 0.62rem);
+    line-height: 1.35;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    text-wrap: balance;
+    /* Les retours à la ligne du texte sont respectés, les espaces non. */
+    white-space: pre-line;
+  }
+
+  /*
+    La case de l'adresse. Le courriel est composé plus grand que les autres
+    fragments : c'est la seule information de la grille qu'on vient chercher
+    pour l'emporter, elle doit se lire sans effort.
+  */
+  .contact-wordmark__note.is-mail {
+    position: relative;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    padding: 0.5rem 1.4rem 0.5rem 0.5rem;
+    font-size: clamp(0.66rem, calc(var(--cell, 3.75rem) * 0.16), 0.9rem);
     letter-spacing: var(--tracking-copy);
+    text-transform: none;
+  }
+
+  .contact-wordmark__mail {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    word-break: break-word;
+  }
+
+  /*
+    Le bouton se pose dans le coin de la case, sans cadre : la case EST son
+    cadre. Sa zone active atteint le seuil des cibles de pointage bien qu'il
+    n'occupe visuellement qu'un glyphe.
+  */
+  .contact-wordmark__copy {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: color 0.2s ease-out;
+  }
+
+  .contact-wordmark__copy:hover,
+  .contact-wordmark__copy:focus-visible {
+    color: var(--color-ink);
+  }
+
+  /* Copié : le glyphe cède la place à une coche, deux secondes durant. */
+  .contact-wordmark__copy-done {
+    display: none;
+  }
+
+  .contact-wordmark__copy.is-copied {
+    color: var(--color-ink);
+  }
+
+  .contact-wordmark__copy.is-copied .contact-wordmark__copy-icon {
+    display: none;
+  }
+
+  .contact-wordmark__copy.is-copied .contact-wordmark__copy-done {
+    display: block;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .contact-wordmark__copy {
+      transition: none;
+    }
+  }
+
+  .contact-wordmark__note--social {
+    grid-column: -3 / -1;
+    grid-row: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /*
+    LA CASE DU PLATEAU. Toutes identiques et toujours vides : c'est le damier,
+    il ne bouge pas. Ce sont les JETONS qui arrivent se poser dessus.
+  */
+  .contact-wordmark__cell {
+    position: relative;
+    display: grid;
+    grid-column: calc(var(--x) + 1);
+    grid-row: calc(var(--y) + 1);
+    min-width: 0;
+    place-items: center;
+    border: 1px solid color-mix(in oklab, var(--color-line) 45%, transparent);
+    font-family: var(--font-titre);
+    font-size: clamp(0.95rem, 2vw, 1.75rem);
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  /*
+    Les cases du plateau étroit ne paraissent que là où il s'applique. Règle
+    posée APRÈS celle des cases : à spécificité égale, c'est la dernière qui
+    l'emporte — placée avant, elle était sans effet et ces cases se rangeaient
+    d'elles-mêmes en fin de grille, ajoutant des rangées fantômes.
+  */
+  .contact-wordmark__cell--narrow {
+    display: none;
+  }
+
+  /*
+    La valeur du jeton, en indice au pied de la lettre : c'est ce petit chiffre
+    qui fait reconnaître un plateau de Scrabble avant même qu'on lise les mots.
+  */
+  /*
+    Décalages en POURCENTAGE de la case, non en cadratins : exprimés en `em`,
+    ils se mesuraient sur le corps du chiffre lui-même — minuscule — et le
+    jeton venait donc se poser sur la lettre au lieu d'en occuper le coin.
+  */
+  .contact-wordmark__value {
+    position: absolute;
+    right: 9%;
+    bottom: 7%;
+    font-size: 0.3em;
+    line-height: 1;
+  }
+
+  /*
+    La mention d'une case vide, en trois lignes centrées — la place qu'occupe
+    « Triple Letter Score » sur un vrai plateau, tenue ici par la langue du
+    studio.
+  */
+  .contact-wordmark__mark {
+    display: grid;
+    padding: 0.2em;
+    color: var(--color-muted);
+    font-size: 0.3em;
+    line-height: 1.25;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+
+
+  /*
+    LE JETON. Il porte son filet plein, son fond et son chiffre : c'est une
+    pièce posée sur le plateau, pas une lettre imprimée dessus. C'est lui qui
+    voyage — le damier, lui, ne bouge pas.
+
+    L'arrivée est PILOTÉE PAR LE DÉFILEMENT : le script écrit `--reveal` sur
+    chaque jeton, de 0 à 1, selon la position de la piste dans la fenêtre — le
+    modèle du tableau périodique de la page Expériences. On peut donc remonter,
+    et les jetons repartent d'où ils viennent.
+
+    Aucune opacité : ils entrent en pleine encre depuis le bord de l'écran. Un
+    jeton qui se fond en arrivant n'est plus un jeton qu'on pose.
+
+    Les valeurs de repli valent 1 : sans JavaScript, la grille est composée.
+  */
+  .contact-wordmark__letter {
+    position: absolute;
+    z-index: 1;
+    display: grid;
+    inset: 0;
+    place-items: center;
+    border: 1px solid var(--color-line);
+    background: var(--color-surface);
+  }
+
+  .contact-wordmark__letter--across {
+    transform: translateX(calc((1 - var(--reveal, 1)) * var(--travel-x, 0px)));
+  }
+
+  .contact-wordmark__letter--down {
+    transform: translateY(calc((1 - var(--reveal, 1)) * var(--travel-y, 0px)));
+  }
+
+
+
+  /*
+    LE REPÈRE. Il occupe la première case du plateau, puis se hisse de sa
+    PROPRE hauteur — d'où le `-100%` d'une translation, qui se résout sur la
+    hauteur de l'élément là où celui d'une marge se résout sur la largeur du
+    conteneur. Il se pose ainsi à un filet d'air constant au-dessus de la
+    première rangée, sur n'importe quel format, sans peser sur les pistes.
+  */
+  .contact-information-index {
+    z-index: 1;
+    grid-row: 1;
+    grid-column: 1 / -1;
+    align-self: start;
+    justify-self: start;
+    transform: translateY(calc(-100% - clamp(1rem, 1.6vw, 1.5rem)));
+    color: var(--color-muted);
+  }
+
+  /*
+    Pavé justifié, césures autorisées : les deux bords sont nets, comme le bloc
+    de texte d'une page composée. C'est le fer à droite — et non la fonte, déjà
+    la bonne — qui fait basculer la lecture du côté de l'imprimé.
+  */
+  /*
+    Petit corps : sur une double page, le texte courant accompagne les planches,
+    il ne leur dispute pas la place. Justifié et coupé, comme un bloc composé.
+  */
+  .contact-information-copy {
+    max-width: none;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1.65;
+    letter-spacing: var(--tracking-copy);
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  /*
+    `:where()` : l'espacement courant entre paragraphes ne doit pas l'emporter
+    sur les écarts propres du courriel et du réseau social, définis plus bas.
+  */
+  .contact-information-copy :where(p + p) {
+    margin-top: 1.2em;
   }
 
   .contact-information-copy__mail {
@@ -553,22 +1581,32 @@ const phases = [
   }
 
   .contact-enquiry-heading {
+    width: min(100%, 68rem);
+    margin-inline: auto;
     margin-bottom: clamp(3rem, 6vw, 6rem);
   }
 
+  /*
+    Une seule colonne, centrée dans la page : la fiche n'est plus flanquée
+    d'une image, elle est posée au milieu de la table.
+  */
   .contact-enquiry-layout {
     display: grid;
-    grid-template-columns: minmax(15rem, 0.5fr) minmax(38rem, 1.5fr);
-    gap: clamp(2rem, 3vw, 4rem);
-    align-items: start;
+    /* Élargie de la marge gagnée à l'intérieur de la feuille. */
+    grid-template-columns: minmax(0, 68rem);
+    justify-content: center;
   }
 
   .contact-archive {
-    position: sticky;
-    top: max(2rem, calc(50svh - 17rem));
     margin: 0;
   }
 
+  /*
+    La pile d'épreuves : des photographies posées en tas, bordées de blanc et
+    légèrement de travers. Les décalages au repos et le battement du survol
+    sont solidaires — les images-clés reprennent ces mêmes translations, on ne
+    touche donc pas à l'un sans l'autre.
+  */
   .photo-stack {
     position: relative;
     display: block;
@@ -608,45 +1646,464 @@ const phases = [
   .photo-stack__image:nth-of-type(4) { --rest-x: 2%; --rest-y: 2%; --rest-rotation: 1.1deg; }
   .photo-stack__image:nth-of-type(5) { --rest-x: 0%; --rest-y: 0%; --rest-rotation: 0deg; }
 
-  .photo-stack__clip {
-    position: absolute;
-    z-index: 30;
-    top: -7%;
-    left: 50%;
-    width: 39%;
-    height: auto;
-    pointer-events: none;
-    transform: translateX(-50%);
-  }
-
   .contact-archive__caption {
     width: 69%;
-    margin: 1.25rem auto 0;
+    /*
+      La légende ferme la figure, et il faut du blanc après elle : collée à la
+      section suivante, elle se lisait comme son titre.
+    */
+    margin: 1.25rem auto clamp(3rem, 6vw, 5rem);
     font-size: var(--text-note);
     line-height: 1.25;
     text-align: center;
   }
 
+  /*
+    LA FEUILLE À BANDES PERFORÉES.
+
+    La fiche est posée sur du papier listing : deux bandes d'entraînement
+    percées de trous réguliers, séparées du corps de la feuille par une ligne
+    de détachement pointillée. C'est le papier des imprimantes à picots — celui
+    sur lequel s'imprimaient les états, les relevés et les formulaires que la
+    fiche imite.
+
+    Tout est dessiné en CSS : un dégradé radial répété verticalement pour les
+    trous, un filet pointillé pour la découpe. Aucune image, aucun poids, et
+    l'espacement des trous suit le corps du texte plutôt qu'une trame figée.
+  */
   .contact-form-panel {
+    --sheet-margin: clamp(1.5rem, 2.6vw, 2.5rem);
+    --sheet-hole: 0.3rem;
+    --sheet-pitch: 1.5rem;
+    /*
+      Marge entre la ligne de perforation et les cadres des parties. Sans elle,
+      le filet d'une partie venait buter sur les pointillés : deux traits qui se
+      touchent sans se rejoindre, et la bande cessait de se lire comme une marge
+      pour devenir un bord de tableau. La feuille s'élargit d'autant.
+    */
+    --sheet-gutter: clamp(1rem, 2vw, 1.75rem);
+    /*
+      Les deux encres de la bande, dérivées de celle du texte : les trous
+      soutenus, la perforation deux fois plus claire. Des piqûres d'un pixel ne
+      se voyaient pas — c'est un tiret court qui se lit comme une ligne de
+      découpe à cette échelle.
+    */
+    --sheet-hole-ink: color-mix(in oklab, var(--color-ink) 74%, transparent);
+    --sheet-perforation: color-mix(in oklab, var(--color-ink) 38%, transparent);
+    position: relative;
     min-width: 0;
-    padding: clamp(1.25rem, 2vw, 2rem) 0;
-    background: transparent;
+    padding: clamp(2rem, 3.5vw, 3rem) calc(var(--sheet-margin) + var(--sheet-gutter));
+    border: 1px solid var(--color-line);
+    /*
+      Même grain que les fiches de la boutique (voir `global.css`), multiplié
+      dans le fond de la feuille : elle est opaque, la trame n'a rien à blender
+      avec ce qui se trouve derrière. Les bandes perforées sont peintes
+      par-dessus, et leurs trous laissent voir cette même surface grenue.
+    */
+    background-color: var(--color-surface);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    background-blend-mode: multiply;
   }
 
+  .contact-form-panel::before,
+  .contact-form-panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--sheet-margin);
+    /*
+      Deux couches, une seule encre — celle du texte.
+
+      1. LA PERFORATION : une ligne de points très fins, et non un filet
+         `dashed`. Le tiret du navigateur est long et dur ; posé à côté des
+         filets pleins des parties, il faisait un troisième langage de trait
+         sur la même feuille. Une vraie perforation est une suite de piqûres :
+         des points de moins d'un pixel, serrés, qui se lisent comme une ligne
+         de moins loin et comme des trous de près.
+
+         Et de la COULEUR DES FILETS, non de celle de l'encre : c'est une
+         découpe imprimée sur la feuille, au même titre que les cadres.
+
+      2. LES TROUS d'entraînement, un par pas vertical, centrés dans la bande.
+         Percés dans le papier, ils ont la couleur de ce qu'on voit à travers :
+         l'encre, adoucie d'un quart pour ne pas creuser des trous d'un noir
+         qu'aucune autre marque de la page ne porte.
+    */
+    background-image:
+      linear-gradient(to bottom, var(--sheet-perforation) 0 55%, transparent 55%),
+      radial-gradient(
+        circle at center,
+        var(--sheet-hole-ink) 0 var(--sheet-hole),
+        transparent calc(var(--sheet-hole) + 0.5px)
+      );
+    background-size:
+      1px 0.5rem,
+      100% var(--sheet-pitch);
+    background-repeat: repeat-y, repeat-y;
+    pointer-events: none;
+  }
+
+  /* La ligne de perforation borde le CORPS de la feuille, pas l'extérieur. */
+  .contact-form-panel::before {
+    left: 0;
+    background-position:
+      right center,
+      center calc(var(--sheet-pitch) / 2);
+  }
+
+  .contact-form-panel::after {
+    right: 0;
+    background-position:
+      left center,
+      center calc(var(--sheet-pitch) / 2);
+  }
+
+  /*
+    Plus de filet en tête du formulaire : le cadre du cartouche ferme désormais
+    cette zone, et un second trait juste dessous ferait doublon.
+  */
   .contact-form {
+    border-top: 0;
+    /* L'espace sous le bouton est celui de la feuille, comme au-dessus. */
+    padding-bottom: 0;
+  }
+
+  /* ── Le cartouche de la fiche ─────────────────────────────────────────── */
+
+  /*
+    Le cartouche est encadré sur toute la largeur du formulaire, comme le cadre
+    réservé au studio qui le referme en bas : la fiche s'ouvre et se termine sur
+    la même figure.
+  */
+  .fiche-head {
+    position: relative;
+    margin-bottom: 1.75rem;
+    padding: 0.95rem 1.1rem 1.1rem;
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    background-blend-mode: multiply;
+  }
+
+  .fiche-head__rows {
+    display: grid;
+    gap: 0.2rem;
+    /* Le cartouche ne passe pas sous le tampon. */
+    max-width: min(100%, 26rem);
+    margin: 0;
+  }
+
+  .fiche-head__row {
+    display: grid;
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .fiche-head__row dt,
+  .fiche-head__row dd {
+    margin: 0;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+  }
+
+  .fiche-head__row dt {
+    color: var(--color-muted);
+    text-transform: uppercase;
+  }
+
+  /*
+    Les valeurs du cartouche restent en linéale mécanique, quand les réponses
+    du visiteur sont en italique : ce qui est attribué par la machine et ce qui
+    est écrit à la main ne s'écrivent pas de la même façon.
+  */
+  .fiche-head__row dd {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fiche-head__stamp {
+    position: absolute;
+    top: -0.75rem;
+    right: 1.1rem;
+    width: clamp(5rem, 8vw, 6.75rem);
+    text-align: center;
+    pointer-events: none;
+  }
+
+  .fiche-head__stamp-caption {
+    margin-top: 0.35rem;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Le tampon tombe : il ne se fond pas, il est posé d'un coup. */
+  .fiche-head__stamp:not([hidden]) {
+    animation: fiche-stamp-land 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+  }
+
+  @keyframes fiche-stamp-land {
+    from {
+      opacity: 0;
+      transform: scale(1.35);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* ── Les parties de l'enquête ─────────────────────────────────────────── */
+
+  /*
+    Les parties ne sont plus encadrées : elles se suivent, séparées par un filet
+    d'un pixel porté par leur titre. Quatre cases empilées entre le cartouche et
+    le cadre réservé faisaient six rectangles emboîtés ; la fiche s'ouvre et se
+    ferme maintenant sur un cadre, et respire entre les deux.
+
+    `display: contents` : la partie n'est plus une boîte, ses enfants remontent
+    dans le formulaire. Ce sont donc le titre et les champs qui portent la
+    garniture latérale alignant leur texte sur celui des deux blocs encadrés.
+
+    L'élément reste dans le document : le groupement des questions et son
+    `aria-labelledby` continuent d'être annoncés.
+  */
+  .contact-part {
+    display: contents;
+  }
+
+  .contact-part__title {
+    position: relative;
+    width: 100%;
+    /*
+      La garniture latérale passe de la partie au titre : la boîte de la partie
+      n'existe plus. Elle aligne le texte sur celui des deux blocs encadrés.
+    */
+    padding: 1.5rem 1.1rem 0.75rem;
+    color: var(--color-muted);
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /*
+    La césure entre deux parties est portée par le titre : elle s'empile avec
+    lui au lieu de rester en arrière.
+
+    TOUS les titres la portent, le premier compris. Deux raisons : elle ferme le
+    cartouche aussi bien qu'elle sépare deux parties, et surtout un titre plus
+    court d'un pixel que les autres décalerait toute la pile — un cran doit
+    valoir exactement la hauteur d'un titre, sans quoi un filet de fond
+    apparaît entre deux bandes collées.
+
+    Un pixel, comme tous les filets de la fiche : l'épaisseur ne distingue plus
+    la césure, c'est l'empilement qui s'en charge.
+  */
+  .contact-part__title {
     border-top: 1px solid var(--color-line);
+  }
+
+  /*
+    Sauf au-dessus de la première : le cartouche ferme déjà cette zone, un
+    second trait juste dessous ferait doublon. Le filet est rendu TRANSPARENT
+    et non supprimé — un titre plus court d'un pixel que les autres décalerait
+    toute la pile et ouvrirait une fente entre deux bandes collées.
+  */
+  .contact-part:first-of-type .contact-part__title {
+    border-top-color: transparent;
+  }
+
+  .contact-part__numeral {
+    margin-right: 0.7rem;
+  }
+
+  /* ── Cadre réservé et mention de bas de fiche ─────────────────────────── */
+
+  /*
+    Vide, et il le restera. C'est la signature des documents administratifs :
+    la case où l'on n'écrit pas, celle qui appartient au service.
+  */
+  .fiche-reserved {
+    margin-top: 2.75rem;
+    padding: 0.95rem 1.1rem 1.3rem;
+    border: 1px solid var(--color-line);
+    color: var(--color-muted);
+  }
+
+  .fiche-reserved__title {
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .fiche-reserved__note {
+    margin-top: 0.15rem;
+    font-family: var(--font-annotation);
+    font-size: var(--text-note);
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+  }
+
+  .fiche-reserved__rules {
+    display: grid;
+    gap: 1.4rem;
+    margin-top: 1.6rem;
+  }
+
+  .fiche-reserved__rules span {
+    display: block;
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .fiche-nb {
+    max-width: 46rem;
+    margin-top: 2.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-line);
+    color: var(--color-muted);
   }
 
   .contact-field {
     display: grid;
     grid-template-columns: minmax(14.5rem, 0.8fr) minmax(0, 1.2fr);
     gap: clamp(1.25rem, 1.8vw, 2.25rem);
-    align-items: start;
+    /*
+      Le libellé et la réponse partagent le trait du bas plutôt que de flotter
+      au-dessus : sur une fiche imprimée, on n'écrit pas près d'une réglure,
+      on écrit DESSUS. C'est ce seul réglage qui fait la différence entre un
+      champ de formulaire et une ligne de registre.
+    */
+    align-items: end;
     min-width: 0;
-    margin: 0;
-    padding: 1.05rem 0;
+    /*
+      La garniture latérale est constante et compensée par une marge négative :
+      le surlignage de la ligne active déborde du texte sans rien déplacer au
+      moment où il s'allume.
+    */
+    /*
+      0,5 rem de marge et 0,6 rem de garniture : le texte démarre à 1,1 rem du
+      bord de la feuille, comme dans les deux blocs encadrés. C'est la partie
+      qui portait cet alignement avant qu'elle ne cesse d'être une boîte.
+    */
+    margin: 0 0.5rem;
+    /* La garniture basse loge l'horodatage, posé hors du flux sous le libellé. */
+    padding: 1.15rem 0.6rem 1.5rem;
     border: 0;
-    border-bottom: 1px solid var(--color-line);
+    transition: background-color 0.2s ease-out;
+  }
+
+
+  .contact-field--textarea,
+  .contact-field--choices {
+    align-items: start;
+  }
+
+
+  /*
+    OBSERVATIONS — la question passe au-dessus, les réglures dessous.
+
+    Les deux questions ouvertes de la partie III n'appellent pas une réponse
+    d'une ligne à côté de leur libellé, mais un paragraphe. La colonne se
+    défait donc : le libellé occupe sa ligne, et le papier réglé court sous lui
+    sur TOUTE la largeur de la fiche — c'est la disposition des cases de
+    commentaire d'un formulaire imprimé, où l'on écrit sous la question et non
+    en face d'elle.
+  */
+  .contact-field--observation {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.9rem;
+  }
+
+  .contact-field--observation textarea {
+    min-height: 7.5rem;
+  }
+
+  /*
+    La ligne en cours de saisie s'éclaire. C'est le champ actif d'un registre,
+    et c'est surtout l'indicateur de focus : sous un trait, un soulignement de
+    plus ne se distinguerait pas de la réglure du champ.
+  */
+  .contact-field:focus-within {
+    /*
+      Lumière pleine, et non diluée : le surlignage est désormais le SEUL
+      indicateur de focus du formulaire, il ne peut pas être une nuance.
+    */
+    background-color: var(--color-lumiere);
+    /*
+      Et la réglure passe au bleu. Le filet ordinaire est un gris d'encre très
+      dilué : posé sur le jaune, il disparaît — la ligne sur laquelle on écrit
+      s'effaçait au moment précis où l'on venait y écrire. Le Ciel, second
+      accent de la palette, est assombri juste ce qu'il faut pour tenir sur la
+      Lumière.
+    */
+    --contact-rule: color-mix(in oklab, var(--color-ciel) 55%, var(--color-abime));
+  }
+
+  .contact-field:focus-within input[type='text'] {
+    border-bottom-color: var(--contact-rule);
+  }
+
+  /*
+    La sélection passe au Ciel dans les champs.
+
+    Le surlignage de sélection du site est la Lumière — or c'est précisément la
+    couleur dont s'éclaire la ligne en cours de saisie : sélectionner son texte
+    dans un champ actif ne montrait rien, jaune sur jaune. Le second accent de
+    la palette prend le relais, exactement comme sur la page Expériences, dont
+    le fond est déjà Lumière.
+  */
+  .contact-field input::selection,
+  .contact-field textarea::selection {
+    background-color: var(--color-accent-alt);
+    color: var(--color-ink);
+  }
+
+  .contact-field:focus-within textarea {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(1.5rem - 1px),
+      var(--contact-rule) calc(1.5rem - 1px),
+      var(--contact-rule) 1.5rem
+    );
+  }
+
+  /*
+    Horodatage de marge. Chaque champ complété inscrit son heure sous son
+    libellé — la fiche enregistre l'acte de son propre remplissage, comme les
+    « 07:18 / 11:16 » d'une feuille d'observation.
+
+    La ligne est réservée dès le départ, vide : elle se remplit sans pousser
+    quoi que ce soit. Et elle ne part PAS avec le formulaire (voir le script) :
+    ce que le studio reçoit, ce sont les réponses, pas le rythme de saisie.
+  */
+  .contact-field__log {
+    /*
+      HORS DU FLUX. Réservée dans le flux, la ligne d'horodatage poussait le
+      libellé d'un cran vers le haut : il ne partageait plus la ligne de sa
+      réponse, alors que c'est exactement ce qu'on attend d'une fiche —
+      « Nom  LAGAFFE » sur la même réglure. Elle est donc posée sous le
+      libellé, dans la garniture basse du champ, où elle ne déplace rien et
+      n'a rien à réserver.
+    */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 0.3rem;
+    color: var(--color-muted);
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
   }
 
   .contact-field > label,
@@ -668,6 +2125,11 @@ const phases = [
     min-width: 0;
   }
 
+  /* Repère de l'horodatage, qui se pose sous le libellé sans peser dessus. */
+  .contact-label-group {
+    position: relative;
+  }
+
   .contact-field input[type='text'],
   .contact-field textarea {
     width: 100%;
@@ -686,13 +2148,43 @@ const phases = [
     text-align: right;
   }
 
+  /*
+    La réglure appartient au CHAMP, pas à la rangée : elle court sous le texte
+    écrit — « Nom ____ » de la fiche d'identité — et s'arrête où la réponse
+    s'arrête. Rien ne sépare donc deux questions : ce sont des lignes de
+    papier, pas des cloisons de tableau.
+
+    Les zones de texte, elles, portent déjà leur papier réglé à l'intérieur.
+  */
   .contact-field input[type='text'] {
     min-height: 1.75rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--color-line);
   }
 
   .contact-field textarea {
     min-height: 6rem;
     resize: vertical;
+    /*
+      Papier réglé : le texte se pose sur des lignes imprimées au lieu de
+      flotter dans une zone vide. La hauteur de ligne est donnée en rem pile
+      pour que la réglure tombe juste, et `local` fait défiler les lignes avec
+      le texte quand la zone déborde.
+
+      Alignement à gauche, contrairement aux réponses courtes : dans les trois
+      fiches de référence, une réponse d'une ligne se cale à droite de son
+      libellé, un paragraphe manuscrit part toujours de la marge.
+    */
+    line-height: 1.5rem;
+    text-align: left;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(1.5rem - 1px),
+      var(--color-line) calc(1.5rem - 1px),
+      var(--color-line) 1.5rem
+    );
+    background-attachment: local;
   }
 
   .contact-field input::placeholder,
@@ -701,10 +2193,15 @@ const phases = [
     opacity: 0.62;
   }
 
+  /*
+    Aucun trait sous le champ actif : c'est la LIGNE ENTIÈRE qui s'éclaire
+    (voir `.contact-field:focus-within`), comme la rubrique qu'on surligne sur
+    une fiche. Le soulignement d'encre faisait un second filet juste au-dessus
+    de la réglure du champ — deux traits pour une seule ligne.
+  */
   .contact-field input:focus-visible,
   .contact-field textarea:focus-visible {
     outline: 0;
-    box-shadow: 0 2px 0 var(--color-ink);
   }
 
   .contact-field__note {
@@ -760,20 +2257,39 @@ const phases = [
     opacity: 0;
   }
 
-  .contact-option > span {
+  /*
+    Case carrée cochée d'une croix, et non pastille : c'est le vocabulaire des
+    formulaires imprimés, jusqu'au trait qui dépasse un peu du cadre — une
+    croix tracée à la main ne s'arrête jamais pile sur le bord.
+  */
+  .contact-option__box {
+    position: relative;
     width: 0.85rem;
     height: 0.85rem;
     flex: none;
     border: 1px solid currentColor;
-    border-radius: 50%;
   }
 
-  .contact-option input:checked + span {
+  .contact-option input:checked + .contact-option__box::before,
+  .contact-option input:checked + .contact-option__box::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -2px;
+    left: -2px;
+    height: 1px;
     background: currentColor;
-    box-shadow: inset 0 0 0 2px var(--color-surface);
   }
 
-  .contact-option input:focus-visible + span {
+  .contact-option input:checked + .contact-option__box::before {
+    transform: rotate(45deg);
+  }
+
+  .contact-option input:checked + .contact-option__box::after {
+    transform: rotate(-45deg);
+  }
+
+  .contact-option input:focus-visible + .contact-option__box {
     outline: 2px solid currentColor;
     outline-offset: 3px;
   }
@@ -790,7 +2306,9 @@ const phases = [
     pointer-events: none;
   }
 
-  .contact-form.is-leaving > .contact-field,
+  .contact-form.is-leaving .contact-part__title,
+  .contact-form.is-leaving .contact-field,
+  .contact-form.is-leaving .fiche-reserved,
   .contact-form.is-leaving > .contact-form-footer {
     animation: contact-field-exit 0.46s cubic-bezier(0.55, 0, 0.35, 1) both;
     animation-delay: calc(var(--contact-exit-index, 0) * 70ms);
@@ -883,34 +2401,26 @@ const phases = [
     }
   }
 
+  /*
+    La question des phases tient sur UNE ligne au bureau : c'est la plus longue
+    du formulaire, et elle laissait tomber son point d'interrogation seul à la
+    ligne suivante. Sa colonne de libellé prend donc la largeur qu'il lui faut —
+    les réponses étant alignées à droite, déplacer la limite entre les deux
+    colonnes ne décale rien de visible.
+  */
+  @media (min-width: 900px) {
+    .contact-field--choices {
+      grid-template-columns: max-content minmax(0, 1fr);
+    }
+
+    .contact-field--choices .contact-field__label {
+      white-space: nowrap;
+    }
+  }
+
   @media (max-width: 1199px) {
-    .contact-information-section {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      min-height: clamp(22rem, 40vw, 30rem);
-    }
-
-    .contact-information-index,
-    .contact-information-copy {
-      grid-column: 2;
-    }
-
     .contact-enquiry-layout {
       grid-template-columns: 1fr;
-      gap: clamp(5rem, 10vw, 8rem);
-    }
-
-    /*
-      L'animation vient illustrer l'enquête une fois qu'on l'a remplie, pas
-      avant : sur petit écran, le formulaire ouvre donc la section et l'archive
-      photographique le referme.
-    */
-    .contact-archive {
-      position: static;
-      order: 2;
-    }
-
-    .contact-form-panel {
-      order: 1;
     }
 
     .photo-stack {
@@ -918,26 +2428,39 @@ const phases = [
     }
   }
 
-  @media (max-width: 900px) {
-    .contact-information-section {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto auto;
-      /*
-        Un conteneur grille étire ses pistes « auto » par défaut
-        (`align-content: normal` s'y comporte comme `stretch`) : sans cette
-        ligne, l'espace laissé par le passage à une hauteur libre se répartit
-        entre le repère et le texte plutôt que de rester sous le texte.
-      */
-      align-content: start;
-      min-height: auto;
-      gap: 4rem;
-      margin-bottom: clamp(4rem, 10vw, 6rem);
+  @media (max-width: 1100px) {
+    /*
+      LE PLATEAU ÉTROIT. Six colonnes, treize rangées, et un plan de
+      coordonnées entièrement distinct : `--nx` / `--ny` remplacent `--x` /
+      `--y`. Une simple remise à l'échelle aurait mélangé les cases, les
+      repères étant écrits pour douze colonnes.
+    */
+    .contact-wordmark__grid {
+      --cols: 6;
+      --rows: 13;
     }
 
-    .contact-information-index,
-    .contact-information-copy {
-      grid-column: 1;
-      justify-self: start;
+    .contact-wordmark__cell,
+    .contact-wordmark__note {
+      grid-column: calc(var(--nx) + 1) / span var(--nspan, 1);
+      grid-row: calc(var(--ny) + 1);
+    }
+
+    /* Les cases vides du grand plateau s'effacent, celles du petit paraissent. */
+    .contact-wordmark__cell.is-empty:not(.contact-wordmark__cell--narrow) {
+      display: none;
+    }
+
+    .contact-wordmark__cell--narrow {
+      display: grid;
+    }
+
+    .contact-wordmark__note {
+      font-size: 0.55rem;
+    }
+
+    .contact-wordmark__note.is-mail {
+      font-size: 0.72rem;
     }
 
     .contact-information-copy {
@@ -968,6 +2491,35 @@ const phases = [
       --contact-page-top: 7rem;
     }
 
+    /*
+      La scène se pose SOUS la barre de marque, fixée en haut de l'écran sur
+      petit écran : collée à zéro, la première rangée passait derrière le
+      logotype. Elle perd d'autant en hauteur pour rester dans la fenêtre.
+    */
+    .contact-spread {
+      top: var(--mobile-brand-clearance);
+      height: calc(100svh - var(--mobile-brand-clearance));
+    }
+
+    /*
+      Bandes resserrées : à 375 px, deux marges d'entraînement à pleine largeur
+      mangeraient le tiers de la mesure du texte.
+    */
+    .contact-form-panel {
+      --sheet-margin: 1.1rem;
+      --sheet-hole: 0.22rem;
+      --sheet-pitch: 1.25rem;
+    }
+
+    /*
+      Plus de justification sous 768 px : la colonne n'y fait qu'une trentaine
+      de signes, et le fer à droite ouvre alors des lézardes entre les mots —
+      un défaut de composition, pas un effet d'imprimé. Les césures restent.
+    */
+    .contact-information-copy {
+      text-align: left;
+    }
+
     .photo-stack {
       width: min(100%, 30rem);
     }
@@ -992,8 +2544,11 @@ const phases = [
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .contact-form.is-leaving > .contact-field,
+    .contact-form.is-leaving .contact-part__title,
+    .contact-form.is-leaving .contact-field,
+    .contact-form.is-leaving .fiche-reserved,
     .contact-form.is-leaving > .contact-form-footer,
+    .fiche-head__stamp:not([hidden]),
     .contact-confirmation.is-entering,
     .photo-stack__image,
     .photo-stack:hover .photo-stack__image,

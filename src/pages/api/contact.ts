@@ -14,6 +14,47 @@ const allowedPhases = new Set(['idee', 'germe', 'evoluer', 'muter']);
 const asText = (form: FormData, key: string, limit: number) =>
   String(form.get(key) ?? '').trim().slice(0, limit);
 
+/**
+ * Numéro de fiche : « 260908-GL » — la date d'ouverture, puis les INITIALES du
+ * nom déclaré. Il est composé par le navigateur pendant que le visiteur écrit
+ * son nom, pour qu'il le voie se former.
+ *
+ * Le serveur ne lui fait pas confiance pour autant — c'est une valeur de
+ * formulaire comme une autre : il vérifie la forme et en attribue une lui-même
+ * si elle ne tient pas, ou si la page a été remplie sans JavaScript. Il la
+ * reconstruit alors À PARTIR DU NOM REÇU, et non au hasard : la cote doit dire
+ * la même chose quel que soit le chemin par lequel la fiche est arrivée.
+ */
+const REFERENCE_PATTERN = /^\d{6}-[A-Z]{1,4}$/;
+
+const initialsFrom = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^A-Za-z]+/)
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((word) => word[0]!.toUpperCase())
+    .join('');
+
+const issueReference = (fullName: string) => {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const day = `${String(now.getFullYear()).slice(2)}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+
+  /*
+    Un nom sans une seule lettre latine — écriture non latine, saisie
+    fantaisiste — ne donne pas d'initiales : deux lettres tirées au sort
+    valent mieux qu'une cote tronquée à sa date.
+  */
+  const initials = initialsFrom(fullName);
+  if (initials) return `${day}-${initials}`;
+
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const draw = crypto.getRandomValues(new Uint8Array(2));
+  return `${day}-${Array.from(draw, (value) => alphabet[value % alphabet.length]).join('')}`;
+};
+
 const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -48,8 +89,14 @@ export const POST: APIRoute = async ({ request }) => {
   const form = await request.formData();
   if (asText(form, 'company', 200)) return json({ ok: true });
 
+  const claimedReference = asText(form, 'reference', 11);
+  const fullName = asText(form, 'fullName', 120);
+
   const submission: ContactSubmission = {
-    fullName: asText(form, 'fullName', 120),
+    reference: REFERENCE_PATTERN.test(claimedReference)
+      ? claimedReference
+      : issueReference(fullName),
+    fullName,
     contact: asText(form, 'contact', 180),
     project: asText(form, 'project', 280),
     phase: asText(form, 'phase', 40),

@@ -1,6 +1,8 @@
 import wordmarkDataUrl from '~/assets/email/wordmark.png?inline';
 
 export interface ContactSubmission {
+  /** Numéro de la fiche : « 260908-F7A3 ». */
+  reference: string;
   fullName: string;
   contact: string;
   project: string;
@@ -97,6 +99,7 @@ const emailShell = (
 };
 
 const submissionEntries = (submission: ContactSubmission) => [
+  ['Enquête n°', submission.reference],
   ['Nom & prénom', submission.fullName],
   ['Contact', submission.contact],
   ['Projet, en une phrase', submission.project],
@@ -110,7 +113,7 @@ const submissionEntries = (submission: ContactSubmission) => [
 export const contactNotificationEmail = (submission: ContactSubmission): ContactEmail => {
   const entries = submissionEntries(submission);
   const text = [
-    `Nouvelle enquête de ${submission.fullName}`,
+    `Enquête n° ${submission.reference} — ${submission.fullName}`,
     ...entries.map(([label, value]) => `${label}\n${value}`),
   ].join('\n\n');
 
@@ -129,10 +132,10 @@ export const contactNotificationEmail = (submission: ContactSubmission): Contact
     .join('');
 
   return {
-    subject: `Nouvelle enquête — ${submission.fullName}`,
+    subject: `Enquête n° ${submission.reference} — ${submission.fullName}`,
     text,
     html: emailShell(
-      `Nouvelle enquête de ${submission.fullName}`,
+      `Enquête n° ${submission.reference} — ${submission.fullName}`,
       `<p style="margin:0 0 26px;font-family:'Courier New',monospace;font-size:22px;line-height:1.25;">Nouvelle enquête</p>
        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">${rows}</table>`,
     ),
@@ -142,7 +145,7 @@ export const contactNotificationEmail = (submission: ContactSubmission): Contact
 export const contactConfirmationEmail = (submission: ContactSubmission): ContactEmail => {
   const text = `Bonjour ${submission.fullName},
 
-Nous avons bien reçu votre message, merci.
+Nous avons bien reçu votre message, merci. Votre fiche porte le numéro ${submission.reference} : citez-le si vous nous réécrivez, nous la retrouverons.
 
 Parfois quelques jours, parfois un peu plus quand un projet en cours demande toute notre attention. Si vous êtes sans nouvelles au bout de deux semaines, votre message s’est perdu quelque part : réécrivez-nous sans hésiter.
 
@@ -150,12 +153,12 @@ Studio Abîme
 elodie@studioabime.com`;
 
   return {
-    subject: 'Nous avons bien reçu votre message — Studio Abîme',
+    subject: `Nous avons bien reçu votre message — enquête n° ${submission.reference}`,
     text,
     html: emailShell(
       'Votre message est bien arrivé au Studio.',
       `<p style="margin:0 0 20px;">Bonjour ${escapeHtml(submission.fullName)},</p>
-       <p style="margin:0 0 20px;">Nous avons bien reçu votre message, merci.</p>
+       <p style="margin:0 0 20px;">Nous avons bien reçu votre message, merci. Votre fiche porte le numéro <span style="font-family:'Courier New',monospace;">${escapeHtml(submission.reference)}</span>&nbsp;: citez-le si vous nous réécrivez, nous la retrouverons.</p>
        <p style="margin:0;">Parfois quelques jours, parfois un peu plus quand un projet en cours demande toute notre attention. Si vous êtes sans nouvelles au bout de deux semaines, votre message s’est perdu quelque part&nbsp;: réécrivez-nous sans hésiter.</p>`,
       { confirmation: true },
     ),

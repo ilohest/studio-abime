@@ -144,6 +144,21 @@ export interface Collection {
   products: ProductCard[];
 }
 
+/**
+ * Une collection telle que l'index de la boutique la présente : son titre, ce
+ * qu'elle annonce, et le nombre de pièces qu'elle contient — jamais les pièces
+ * elles-mêmes, qui ne se découvrent qu'en entrant.
+ */
+export interface CollectionCard {
+  id: string;
+  handle: string;
+  title: string;
+  description: string;
+  image: ShopImage | null;
+  /** Nombre de tirages, plafonné par la requête. */
+  count: number;
+}
+
 /** Retour du test de connexion — sert uniquement au diagnostic. */
 export interface ShopInfo {
   name: string;

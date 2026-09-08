@@ -26,6 +26,7 @@ import { stegaClean } from '@sanity/client/stega';
 
 import { getLocaleMeta, type Locale } from '~/i18n/config';
 import {
+  collectionPath,
   journalIndexPath,
   localizedPath,
   projectsIndexPath,
@@ -48,6 +49,7 @@ import type {
 import type {
   Collection as ShopCollection,
   Product as ShopProduct,
+  CollectionCard as ShopCollectionCard,
   ProductCard as ShopProductCard,
 } from '~/lib/shopify/types';
 import type { RouteEntry } from '~/lib/sanity/types';
@@ -623,6 +625,8 @@ export interface PageGraphInput {
   projects?: ProjectCard[];
   posts?: PostCard[];
   products?: ShopProductCard[];
+  /** Collections annoncées par l'index de la boutique. */
+  collections?: ShopCollectionCard[];
   policy?: PolicyRouteKey;
 }
 
@@ -718,15 +722,24 @@ export function buildPageGraph(input: PageGraphInput): JsonLdGraph {
   }
 
   if (route.kind === 'shop' || route.kind === 'collection') {
-    const items = route.kind === 'collection' ? (input.collection?.products ?? []) : (input.products ?? []);
-    const node = itemListNode(
-      items.map((product) => ({
-        name: product.title,
-        path: `${shopIndexPath(locale)}/${product.handle}`,
-      })),
-      origin,
-      canonical,
-    );
+    /*
+      L'index de la boutique ANNONCE des collections, il ne montre plus de
+      tirages : sa liste structurée énumère donc ce que la page énumère
+      réellement. Déclarer des produits qu'on n'affiche pas serait décrire une
+      autre page que celle qui est servie.
+    */
+    const items =
+      route.kind === 'shop'
+        ? (input.collections ?? []).map((collection) => ({
+            name: collection.title,
+            path: collectionPath(locale, collection.handle),
+          }))
+        : (input.collection?.products ?? []).map((product) => ({
+            name: product.title,
+            path: `${shopIndexPath(locale)}/${product.handle}`,
+          }));
+
+    const node = itemListNode(items, origin, canonical);
     if (node) {
       entityId = node['@id'] as string;
       nodes.push(node);

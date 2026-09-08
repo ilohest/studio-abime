@@ -2,7 +2,7 @@ import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField } from '../../lib/i18n';
 
 /**
- * Contenu éditorial de la page Contact — section « Informations » seulement.
+ * Contenu éditorial de la page Contact.
  *
  * ── Ce que ce singleton ne porte PAS, et pourquoi ───────────────────────────
  * L'adresse e-mail et le lien Instagram s'affichent dans cette section, mais ne
@@ -26,33 +26,39 @@ export const contactPage = defineType({
   type: 'document',
   groups: [
     { name: 'content', title: 'Informations', default: true },
+    { name: 'enquiry', title: 'Enquête' },
+    { name: 'index', title: 'Index' },
     { name: 'seo', title: 'SEO' },
   ],
   fields: [
     languageField,
+    /*
+      Mention de bas de fiche. Le formulaire lui-même n'est pas éditorial — ses
+      questions sont la structure d'un traitement de données — mais ce qui
+      advient de la fiche l'est, et c'est l'information légale due au visiteur.
+      Elle s'affiche sous le formulaire et reste lisible après l'envoi.
+    */
     defineField({
-      name: 'opening',
-      title: 'Salutation',
-      type: 'string',
-      group: 'content',
-      description: 'Première ligne, composée plus grand. Exemple : « Bienvenue dans le Studio, ».',
+      name: 'enquiryNotice',
+      title: 'Mention de bas de fiche',
+      type: 'text',
+      rows: 4,
+      group: 'enquiry',
+      description:
+        'Ce que devient la fiche : qui la lit, combien de temps elle est conservée, comment la faire effacer. Composée en petit corps, sous un filet.',
     }),
+    /*
+      L'index qui referme le site. Curaté à la main : un index est un acte
+      éditorial, pas une table générée — c'est ce qui fait qu'on le lit.
+    */
     defineField({
-      name: 'paragraphs',
-      title: 'Paragraphes',
+      name: 'index',
+      title: 'Entrées de l’index',
       type: 'array',
-      group: 'content',
-      of: [defineArrayMember({ type: 'text', rows: 3 })],
+      group: 'index',
+      of: [defineArrayMember({ type: 'indexEntry' })],
       description:
-        'Ce qu’on dit avant que la personne écrive : ce qui se passe après l’envoi, le délai de réponse, ce qu’on fait d’une demande hors sujet.',
-    }),
-    defineField({
-      name: 'mailInvitation',
-      title: 'Invitation à écrire directement',
-      type: 'string',
-      group: 'content',
-      description:
-        'Phrase précédant l’adresse e-mail, pour qui préfère le courrier au formulaire. L’adresse elle-même vient des réglages du site et s’ajoute à la suite.',
+        'Le vocabulaire du studio et ses renvois. Classées automatiquement par ordre alphabétique au rendu : l’ordre de saisie n’a pas d’importance. En dessous d’une quarantaine d’entrées, l’index se lit comme un encart et non comme un appareil.',
     }),
     defineField({
       name: 'seo',

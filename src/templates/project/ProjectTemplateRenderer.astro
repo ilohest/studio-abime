@@ -54,7 +54,12 @@ const Template = (() => {
 
 ---
 
-<div class="project-page-shell" data-project-shell data-template={template}>
+{/*
+  `type-dactylo` : tout le cas d'étude se compose en GT Canon Mono (voir la
+  portée dans `src/styles/global.css`). Posé sur la coque et non sur chaque
+  gabarit — les trois modèles en héritent, et un quatrième en hériterait aussi.
+*/}
+<div class="project-page-shell type-dactylo" data-project-shell data-template={template}>
   {/*
     Copie mobile du lien de retour — même parti que le relevé du gabarit
     « Colonne fixe », qui rend le sien deux fois : le lien vit DANS le gabarit,

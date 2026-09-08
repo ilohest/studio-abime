@@ -1,31 +1,49 @@
 ---
-import ShopProductGrid from '~/components/ShopProductGrid.astro';
-
+import { collectionPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
+import { shopifyImageSrcSet, shopifyImageUrl } from '~/lib/shopify/catalogue';
 import type { Locale } from '~/i18n/config';
-import type { ProductCard } from '~/lib/shopify/types';
+import type { CollectionCard } from '~/lib/shopify/types';
 
 /**
- * Index de la boutique.
+ * Index de la boutique — un jeu d'intercalaires.
  *
- * Une seule grille, tout le catalogue : la répartition par collection a été
- * essayée puis écartée — le studio a préféré tout montrer ensemble plutôt que
- * fragmenter le parcours. Les collections restent utiles ailleurs (le menu
- * latéral les liste réellement), mais n'imposent aucune structure ici.
+ * ── Ce qui a changé, et pourquoi ────────────────────────────────────────────
+ * La page montrait tout le catalogue d'un seul tenant, collections confondues.
+ * On y voyait des objets ; on n'y lisait pas de propos. Or « ce qui se
+ * contemple », « ce qui s'utilise » et « ce qui se transmet » sont trois
+ * manières de tenir un objet — c'est ce classement qui dit quelque chose du
+ * studio, et le mélange l'effaçait.
  *
- * La prise de position du studio ne vit pas dans les cartes — elle tient dans
- * le paragraphe d'intro, au-dessus, lu une fois et qui cadre tout ce qui suit.
+ * ── La forme ────────────────────────────────────────────────────────────────
+ * Des ONGLETS VERTICAUX en bord de fiche, comme les intercalaires d'un classeur,
+ * et derrière chacun une NOTICE D'ARCHIVE : en-tête chiffré, relevé, résumé,
+ * planche. Le classement n'est plus une liste : c'est le geste de feuilleter un
+ * dossier jusqu'à l'intercalaire qu'on cherche.
+ *
+ * ── Sans JavaScript ─────────────────────────────────────────────────────────
+ * Les onglets sont des boutons radio et leurs étiquettes. Le changement de
+ * notice est donc natif : il fonctionne sans script, se parcourt aux flèches du
+ * clavier, et l'état sélectionné est porté par le formulaire lui-même.
  */
 interface Props {
-  products: ProductCard[];
+  collections: CollectionCard[];
   locale: Locale;
   title: string;
   number: string;
   intro?: string;
 }
 
-const { products, locale, title, number, intro } = Astro.props;
+const { collections, locale, title, number, intro } = Astro.props;
 const t = useTranslations(locale);
+
+const entries = collections.map((collection, index) => ({
+  ...collection,
+  index,
+  folio: String(index + 1).padStart(2, '0'),
+  href: collectionPath(locale, collection.handle),
+  id: `shop-tab-${collection.handle}`,
+}));
 ---
 
 <div class="shop-index project-index container-wide py-(--spacing-section)">
@@ -37,10 +55,119 @@ const t = useTranslations(locale);
   </header>
 
   {
-    products.length === 0 ? (
+    entries.length === 0 ? (
       <p class="shop-index__empty type-copy">{t('shop.empty')}</p>
     ) : (
-      <ShopProductGrid products={products} locale={locale} eagerFirstRow />
+      <div class="shop-tabs" style={`--tab-count: ${entries.length}`}>
+        {entries.map((entry) => (
+          <Fragment>
+            <input
+              class="shop-tab__input sr-only"
+              type="radio"
+              name="shop-collection"
+              id={entry.id}
+              checked={entry.index === 0}
+            />
+
+            <label class="shop-tab" for={entry.id} style={`--tab-index: ${entry.index}`}>
+              {/*
+                L'onglet porte le NUMÉRO de la collection, celui-là même que la
+                notice affiche en tête : un repère de classement se retrouve
+                d'un endroit à l'autre du dossier, ou il ne sert à rien.
+              */}
+              <span class="shop-tab__numeral" aria-hidden="true">N° {entry.folio}</span>
+              {/*
+                Le nom reste lisible aux lecteurs d'écran : « II » seul ne dit
+                pas où l'on va, et un onglet doit s'annoncer par ce qu'il ouvre.
+              */}
+              <span class="sr-only">{entry.title}</span>
+            </label>
+
+            <section
+              class="shop-record"
+              aria-label={entry.title}
+              style={`--tab-index: ${entry.index}`}
+            >
+              <header class="shop-record__head">
+                <p class="shop-record__case type-note">
+                  Collection n° {entry.folio}
+                </p>
+
+                <dl class="shop-record__meta type-note">
+                  <div>
+                    <dt>Classement</dt>
+                    <dd>{entry.title}</dd>
+                  </div>
+                  <div>
+                    <dt>Pièces</dt>
+                    <dd>{entry.count > 0 ? String(entry.count).padStart(2, '0') : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt>Référence</dt>
+                    <dd>{entry.handle}</dd>
+                  </div>
+                </dl>
+              </header>
+
+              <div class="shop-record__body">
+                {/*
+                  La planche mène elle aussi à la collection : sur une fiche, on
+                  ouvre le dossier en posant le doigt sur la photographie autant
+                  qu'en lisant la mention du bas.
+
+                  Un vrai lien, et non un gestionnaire de clic : il se partage,
+                  s'ouvre dans un onglet, fonctionne sans script. Son nom
+                  accessible est le texte alternatif de l'image, qui décrit la
+                  collection — le second lien de la fiche, lui, annonce l'action.
+                */}
+                <div class="shop-record__plate">
+                  {entry.image ? (
+                    <a class="shop-record__plate-link" href={entry.href} data-cursor-interactive>
+                      <img
+                        class="shop-record__image"
+                        src={shopifyImageUrl(entry.image.url, 800)}
+                        srcset={shopifyImageSrcSet(entry.image.url, [400, 600, 800, 1200])}
+                        sizes="(max-width: 899px) 82vw, 26vw"
+                        alt={entry.image.altText ?? entry.title}
+                        width={entry.image.width ?? undefined}
+                        height={entry.image.height ?? undefined}
+                        loading={entry.index === 0 ? 'eager' : 'lazy'}
+                      />
+                    </a>
+                  ) : (
+                    <p class="shop-record__noplate type-note">Planche non versée</p>
+                  )}
+                </div>
+
+                <div class="shop-record__text">
+                  <p class="shop-record__label type-note">Résumé</p>
+                  {entry.description ? (
+                    <p class="shop-record__summary">{entry.description}</p>
+                  ) : (
+                    <p class="shop-record__summary shop-record__summary--empty">
+                      Notice à rédiger.
+                    </p>
+                  )}
+
+                  {/*
+                    Le bouton commun du site (`button-minimal`), au même corps
+                    qu'ailleurs : « Déposer la fiche » sur l'enquête, « Retour »
+                    sur une fiche produit. Un lien d'action n'a pas à changer de
+                    taille d'une page à l'autre.
+
+                    « Consulter les pièces » : dans un dossier, on ne visite
+                    pas, on consulte — et ce qu'il contient, ce sont des pièces.
+                  */}
+                  <a class="button-minimal shop-record__enter" href={entry.href} data-cursor-interactive>
+                    <span class="button-minimal__label">Consulter les pièces</span>
+                    <span class="button-minimal__arrow" aria-hidden="true">↳</span>
+                  </a>
+                </div>
+              </div>
+            </section>
+          </Fragment>
+        ))}
+      </div>
     )
   }
 </div>
@@ -67,6 +194,384 @@ const t = useTranslations(locale);
     color: var(--color-muted);
   }
 
+  /* ── LA FICHE ET SES INTERCALAIRES ───────────────────────────────────── */
+
+  .shop-tabs {
+    /* Trame partagée avec la feuille de l'enquête (voir `global.css`). */
+    --grain: var(--texture-grain);
+    --grain-size: var(--texture-grain-size);
+    --tab-width: clamp(2.25rem, 3.5vw, 3rem);
+    --tab-height: clamp(9rem, 16vw, 13rem);
+    position: relative;
+    max-width: 66rem;
+    margin-inline: auto;
+    /* La place des onglets, prise en bordure droite de la fiche. */
+    padding-right: var(--tab-width);
+  }
+
+  /*
+    L'onglet : une languette qui dépasse du bord droit, décalée d'un cran par
+    rapport à la précédente — c'est ce décalage qui rend un jeu d'intercalaires
+    lisible d'un seul regard, chaque titre restant visible sous celui d'avant.
+  */
+  .shop-tab {
+    position: absolute;
+    right: 0;
+    top: calc(var(--tab-index) * var(--tab-height));
+    display: flex;
+    width: var(--tab-width);
+    height: var(--tab-height);
+    align-items: center;
+    justify-content: center;
+    gap: 0.9em;
+    padding: 0.75rem 0;
+    border: 0;
+    /*
+      LA FORME DE LA LANGUETTE : un trapèze. Le bord extérieur est plus court
+      que le bord intérieur, les deux arêtes s'inclinant légèrement — c'est la
+      découpe d'un intercalaire de classeur, taillée pour que la languette ne
+      s'accroche pas en tournant les pages.
+
+      Le contour ne peut pas être un `border` : `clip-path` couperait le filet
+      en même temps que la forme et laisserait les obliques à nu. Le trait est
+      donc peint en FOND, et le remplissage posé par-dessus en retrait d'un
+      pixel sur trois côtés seulement — le bord intérieur reste sans trait, la
+      languette étant solidaire de sa page.
+    */
+    --tab-chamfer: 1rem;
+    /*
+      Les deux angles extérieurs sont abattus d'une petite facette plutôt que
+      laissés vifs : à cette échelle, l'œil la lit comme un arrondi, et une
+      languette de classeur n'a jamais d'angle coupant. `clip-path` ne connaît
+      pas le rayon — on le dessine donc, en deux points au lieu d'un.
+
+      La forme est rangée dans une variable : le trait et le remplissage sont
+      deux couches superposées, elles doivent être découpées à l'identique.
+    */
+    --tab-round-x: 0.55rem;
+    --tab-round-y: 0.35rem;
+    --tab-shape: polygon(
+      0 0,
+      calc(100% - var(--tab-round-x)) calc(var(--tab-chamfer) - var(--tab-round-y)),
+      100% calc(var(--tab-chamfer) + var(--tab-round-y)),
+      100% calc(100% - var(--tab-chamfer) - var(--tab-round-y)),
+      calc(100% - var(--tab-round-x)) calc(100% - var(--tab-chamfer) + var(--tab-round-y)),
+      0 100%
+    );
+    clip-path: var(--tab-shape);
+    background: var(--color-line);
+    color: var(--color-muted);
+    cursor: pointer;
+    /* Le texte monte le long de la languette, comme sur un intercalaire. */
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transition:
+      background-color 0.25s ease-out,
+      color 0.25s ease-out;
+  }
+
+  /*
+    Le remplissage : la même découpe, en retrait du trait. Les intercalaires
+    fermés sont dans l'ombre du dossier — plein Sable ; seul celui qu'on a
+    ouvert prend la couleur du papier, et l'écart doit se voir d'un coup d'œil.
+  */
+  .shop-tab::after {
+    content: '';
+    position: absolute;
+    inset: 1px 1px 1px 0;
+    background-color: var(--color-sable);
+    background-image: var(--grain);
+    background-size: var(--grain-size);
+    /*
+      `background-blend-mode` et non `mix-blend-mode` : la trame doit se
+      multiplier dans le fond de la languette elle-même, pas avec ce qui se
+      trouve derrière — elle est opaque.
+    */
+    background-blend-mode: multiply;
+    clip-path: var(--tab-shape);
+    transition: background-color 0.25s ease-out;
+  }
+
+  .shop-tab__numeral {
+    position: relative;
+    /* Au-dessus du remplissage, posé après lui dans l'ordre du flux. */
+    z-index: 1;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shop-tab:hover {
+    color: var(--color-ink);
+  }
+
+  /*
+    L'onglet ouvert avance d'un cran : il prend la couleur de la fiche et perd
+    son filet de gauche, de sorte qu'il n'y a plus de bord entre lui et elle.
+    C'est ce qui fait lire « cette page est celle-ci » sans un mot de plus.
+  */
+  .shop-tab__input:checked + .shop-tab {
+    color: var(--color-ink);
+  }
+
+  .shop-tab__input:checked + .shop-tab::after {
+    background-color: var(--color-surface);
+  }
+
+  .shop-tab__input:focus-visible + .shop-tab {
+    outline: 1px solid var(--color-ink);
+    outline-offset: 0.25rem;
+  }
+
+  /* ── LA NOTICE ───────────────────────────────────────────────────────── */
+
+  .shop-record {
+    position: relative;
+    display: none;
+    isolation: isolate;
+    min-height: calc(var(--tab-count) * var(--tab-height));
+    padding: clamp(1.25rem, 2.5vw, 2rem);
+    border: 1px solid var(--color-line);
+  }
+
+  .shop-tab__input:checked + .shop-tab + .shop-record {
+    display: block;
+  }
+
+  /*
+    LE PASSAGE D'UN INTERCALAIRE À L'AUTRE.
+
+    Une ANIMATION et non une transition : la notice passe de `display: none` à
+    `display: block`, un état qui ne se transitionne pas. L'animation, elle, se
+    rejoue à chaque fois que l'élément réapparaît — c'est-à-dire à chaque
+    changement d'onglet.
+
+    Ce sont les CONTENUS qui montent, pas le cadre : la fiche est un support,
+    elle reste en place pendant que ce qu'elle porte se substitue. Un léger
+    décalage entre le relevé, la planche et le texte donne le sens de la
+    lecture sans que rien n'attende.
+  */
+  .shop-tab__input:checked + .shop-tab + .shop-record .shop-record__head,
+  .shop-tab__input:checked + .shop-tab + .shop-record .shop-record__plate,
+  .shop-tab__input:checked + .shop-tab + .shop-record .shop-record__text {
+    animation: shop-record-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .shop-tab__input:checked + .shop-tab + .shop-record .shop-record__plate {
+    animation-delay: 60ms;
+  }
+
+  .shop-tab__input:checked + .shop-tab + .shop-record .shop-record__text {
+    animation-delay: 110ms;
+  }
+
+  @keyframes shop-record-enter {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /*
+    Le bord droit de la fiche s'interrompt derrière la languette ouverte : une
+    bande de papier large d'un pixel, à sa hauteur. Il n'y a plus de trait entre
+    l'onglet et sa page — elles ne font plus qu'une feuille.
+
+    Portée par la NOTICE et non par la languette : celle-ci est découpée au
+    `clip-path`, qui rogne toute décoration débordant de sa forme.
+  */
+  .shop-record::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: calc(var(--tab-index) * var(--tab-height));
+    right: -1px;
+    width: 1px;
+    height: var(--tab-height);
+    background: var(--color-surface);
+  }
+
+  /*
+    GRAIN DE PELLICULE.
+
+    Un bruit fractal calculé par le navigateur, et non la texture de papier
+    froissé du site : celle-ci est une photographie, elle porte des plis à son
+    échelle et se répéterait visiblement sur une fiche de cette taille. Ce bruit
+    se raccorde (`stitchTiles`), pèse deux cents octets et ne réclame aucune
+    requête.
+
+    En `multiply` et à faible opacité : il assombrit la fibre sans laver la
+    teinte du papier, comme le grain du site sur le hero d'accueil.
+
+    Posé SOUS le contenu (`z-index: 0`, contenu à 1) : c'est le fond des fiches
+    qui vieillit, pas les planches photographiques qu'elles présentent.
+  */
+  .shop-record::after {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    /*
+      Le grain déborde d'un pixel pour couvrir le filet ET le masque posé
+      dessous : sans cela, la bande qui interrompt le bord droit restait un
+      papier lisse au milieu d'une surface grenue — un trait clair, exactement
+      ce qu'elle devait effacer. Posé APRÈS le masque dans l'ordre des
+      pseudo-éléments, il passe par-dessus lui et la texture redevient continue.
+    */
+    inset: -1px;
+    background-image: var(--grain);
+    background-size: var(--grain-size);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  .shop-record > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .shop-record__case {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-line);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .shop-record__meta {
+    display: grid;
+    margin: 0;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--color-line);
+    gap: 0.2rem;
+  }
+
+  .shop-record__meta > div {
+    display: grid;
+    grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .shop-record__meta dt {
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .shop-record__meta dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shop-record__body {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    margin-top: clamp(1.25rem, 2.5vw, 2rem);
+    gap: clamp(1.25rem, 3vw, 2.5rem);
+    /*
+      Les deux colonnes prennent la même hauteur : c'est ce qui permet au bouton
+      de descendre se poser sur la ligne de pied de la planche.
+    */
+    align-items: stretch;
+  }
+
+  .shop-record__text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Ni cadre ni fond : la planche est posée à même la fiche. */
+  .shop-record__plate {
+    min-width: 0;
+  }
+
+  /* La planche s'éclaircit sous le pointeur : elle se signale comme atteignable. */
+  .shop-record__plate-link {
+    display: block;
+    transition: opacity 0.25s ease-out;
+  }
+
+  .shop-record__plate-link:hover,
+  .shop-record__plate-link:focus-visible {
+    opacity: 0.82;
+  }
+
+  .shop-record__plate-link:focus-visible {
+    outline: 1px solid var(--color-ink);
+    outline-offset: 0.35rem;
+  }
+
+  .shop-record__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
+  .shop-record__noplate {
+    padding: 3rem 1rem;
+    color: var(--color-muted);
+    text-align: center;
+  }
+
+  .shop-record__label {
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .shop-record__summary {
+    margin-top: 1rem;
+    font-family: var(--font-copy);
+    font-size: var(--text-copy);
+    line-height: var(--text-copy--line-height);
+    letter-spacing: var(--tracking-copy);
+  }
+
+  .shop-record__summary--empty {
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /*
+    En bas de la fiche et au fer à droite : le bouton se cale sur le pied de la
+    planche, de sorte que la notice se ferme sur une seule ligne d'horizon.
+  */
+  .shop-record__enter {
+    margin-top: auto;
+    padding-top: clamp(1.5rem, 3vw, 2.25rem);
+    align-self: flex-end;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shop-tab,
+    .shop-record__plate-link {
+      transition: none;
+    }
+
+    /* Le contenu est là d'emblée : le changement d'onglet reste instantané. */
+    .shop-record__head,
+    .shop-record__plate,
+    .shop-record__text {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .shop-record__body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (max-width: 767px) {
     .project-index__header {
       margin-bottom: 3rem;
@@ -75,6 +580,11 @@ const t = useTranslations(locale);
     .project-index__intro {
       margin-top: 4rem;
       text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
+
+    .shop-tabs {
+      --tab-width: 2rem;
+      --tab-height: 8rem;
     }
   }
 </style>

@@ -93,10 +93,27 @@
     await document.fonts.ready;
 
     for (const element of elements) {
-      // Les métadonnées stega peuvent traverser plusieurs nœuds de texte :
-      // nettoyer le contenu complet avant le découpage évite de créer des
-      // centaines de faux « mots » invisibles.
-      element.textContent = stegaClean(element.textContent ?? '');
+      /*
+        Les métadonnées stega peuvent traverser plusieurs nœuds de texte :
+        nettoyer le contenu complet avant le découpage évite de créer des
+        centaines de faux « mots » invisibles. C'est le cas courant, et il
+        reste traité en un seul bloc — seule la chaîne entière retire à coup
+        sûr une traîne étalée sur plusieurs nœuds voisins.
+
+        Mais réécrire `textContent` REMPLACE tout le contenu par du texte : un
+        enfant balisé n'y survivrait pas — l'appel de note de la page Labo, par
+        exemple, disparaissait du paragraphe qui le porte. Quand l'élément en
+        a un, on nettoie donc chaque nœud de texte à sa place. SplitText sait
+        découper un texte qui traverse des éléments, et les conserve.
+      */
+      if (element.children.length === 0) {
+        element.textContent = stegaClean(element.textContent ?? '');
+      } else {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          node.nodeValue = stegaClean(node.nodeValue ?? '');
+        }
+      }
 
       SplitText.create(element, {
         /*

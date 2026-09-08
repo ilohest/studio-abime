@@ -1,0 +1,127 @@
+---
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * L'ATTERRISSAGE DES ANCRES — rattraper ce que le défilement doux manque
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * ── Le défaut ──────────────────────────────────────────────────────────────
+ * La page défile en douceur (`scroll-behavior: smooth`), et le navigateur
+ * calcule la distance à parcourir UNE SEULE FOIS, au départ. Or les entrées
+ * animées de ce site — les blocs qui montent, les titres découpés mot à mot,
+ * les scènes collées du menu et du manifeste — se déclenchent PENDANT le
+ * trajet, et changent la hauteur de tout ce qui les suit.
+ *
+ * La cible s'éloigne donc en cours de route, et le défilement s'arrête là où
+ * elle se trouvait au départ : à mi-chemin. Cela touchait toutes les ancres
+ * longues du site — l'index des Archives comme l'appel de note du Labo — et
+ * d'autant plus que le trajet est long.
+ *
+ * ── La parade ──────────────────────────────────────────────────────────────
+ * On ne renonce pas au défilement doux : on VÉRIFIE l'arrivée. Une fois la
+ * page immobile, on mesure l'écart entre la cible et le haut de l'écran, et on
+ * le rattrape d'un coup sec — imperceptible, puisque le geste doux a déjà
+ * parcouru les neuf dixièmes du chemin.
+ *
+ * La boucle recommence tant qu'il reste un écart, parce qu'un rattrapage peut
+ * lui-même déclencher une entrée animée de plus. Elle s'arrête sur un nombre
+ * de passes borné : mieux vaut atterrir à quelques pixels près que boucler
+ * sur une page qui n'arrive jamais à se stabiliser.
+ *
+ * ── Ce qu'on ne fait pas ───────────────────────────────────────────────────
+ * Aucun `preventDefault` sur les liens. La navigation reste NATIVE : le hash
+ * s'écrit dans l'URL, `:target` s'applique, le bouton Précédent fonctionne, et
+ * un lien vers une autre page continue de quitter la page. On se contente
+ * d'écouter l'arrivée.
+ */
+---
+
+<script>
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /* Passes de rattrapage. Au-delà, la page ne se stabilise pas : on s'arrête. */
+  const MAX_PASSES = 8;
+  /* En deçà, l'écart ne se voit pas — et le corriger ferait sautiller la page. */
+  const TOLERANCE = 2;
+
+  /** Appelle `then` dès que la page a cessé de défiler. */
+  const whenScrollSettles = (then: () => void) => {
+    let previous = window.scrollY;
+    let stillFrames = 0;
+    let frames = 0;
+
+    const tick = () => {
+      const current = window.scrollY;
+      stillFrames = current === previous ? stillFrames + 1 : 0;
+      previous = current;
+      frames += 1;
+
+      // Trois images sans bouger : le geste est fini.
+      if (stillFrames >= 3) {
+        then();
+        return;
+      }
+
+      /*
+        Garde-fou : une page qui défile en continu — un effet parallaxe, une
+        animation qui ne s'arrête pas — n'immobiliserait jamais le compteur.
+        Au bout de deux secondes environ, on corrige quand même.
+      */
+      if (frames > 120) {
+        then();
+        return;
+      }
+
+      requestAnimationFrame(tick);
+    };
+
+    requestAnimationFrame(tick);
+  };
+
+  const land = (pass = 0) => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+
+    /*
+      `getElementById` seul : un hash est saisi par l'éditrice comme par un
+      visiteur, et peut ne pas former un sélecteur CSS valide — un identifiant
+      commençant par un chiffre ferait lever `querySelector`.
+    */
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    whenScrollSettles(() => {
+      // La garde que l'ancre s'est réservée : on atterrit dessus, pas dessus le bord.
+      const guard = Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      const gap = target.getBoundingClientRect().top - guard;
+
+      if (Math.abs(gap) <= TOLERANCE || pass >= MAX_PASSES) return;
+
+      /*
+        Rattrapage SEC, même quand la page défile en douceur : le trajet a déjà
+        eu lieu: ce qui reste est une correction, et l'animer la donnerait à
+        voir comme un second mouvement.
+      */
+      window.scrollBy({ top: gap, behavior: 'auto' });
+      land(pass + 1);
+    });
+  };
+
+  /*
+    Sans défilement doux, le navigateur atterrit juste du premier coup : il
+    n'y a rien à rattraper, et la surveillance n'a pas lieu d'être.
+  */
+  if (!reducedMotion.matches) {
+    // Clic sur une ancre depuis la page.
+    window.addEventListener('hashchange', () => land());
+
+    /*
+      Arrivée directe sur une adresse ancrée. Le navigateur y saute avant que
+      les fontes soient chargées et que les entrées se soient jouées — c'est le
+      cas où l'écart est le plus grand.
+    */
+    if (window.location.hash) {
+      window.addEventListener('load', () => land());
+      document.fonts?.ready.then(() => land());
+    }
+  }
+</script>

@@ -2,7 +2,8 @@
 import Wordmark from '~/components/brand/Wordmark.astro';
 import CartDrawer from '~/components/vue/CartDrawer.vue';
 import { getCollections } from '~/lib/shopify/catalogue';
-import { collectionPath, contactPath, getCollectionsSegment, journalIndexPath, laboPath, projectsIndexPath, shopIndexPath } from '~/i18n/routes';
+import { collectionPath, getCollectionsSegment, shopIndexPath } from '~/i18n/routes';
+import { getSiteSections } from '~/lib/siteIndex';
 import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
@@ -14,11 +15,7 @@ interface Props {
 }
 
 const { locale, mode = 'page', homeHref = '/', class: className } = Astro.props;
-const laboHref = laboPath(locale);
-const experiencesHref = projectsIndexPath(locale);
-const journalHref = journalIndexPath(locale);
 const shopHref = shopIndexPath(locale);
-const contactHref = contactPath(locale);
 const t = useTranslations(locale);
 
 /*
@@ -56,59 +53,34 @@ const cartLabels = {
   calculatedAtCheckout: t('cart.calculatedAtCheckout'),
   error: t('shop.error'),
 };
-const groups = [
-  {
-    _key: 'labo',
-    title: 'Le Labo',
-    href: laboHref,
-    items: [
-      { label: 'Services', href: `${laboHref}#services` },
-      { label: 'Philosophie', href: `${laboHref}#philosophie` },
-      { label: 'L’équipe', href: `${laboHref}#equipe` },
-      { label: 'Archives', href: `${laboHref}#archives` },
-    ],
-  },
-  {
-    _key: 'experiences',
-    title: 'Expériences',
-    href: experiencesHref,
-    items: [
-      { label: 'Cas d’étude', href: `${experiencesHref}#cas-etude` },
-      { label: 'Références', href: `${experiencesHref}#references` },
-    ],
-  },
-  {
-    _key: 'journal',
-    title: 'Journal',
-    href: journalHref,
-    items: [
-      { label: 'Cahier de recherche', href: `${journalHref}#cahier-de-recherche`, filterKey: 'cahier-de-recherche' },
-      { label: 'Actualités', href: `${journalHref}#actualites`, filterKey: 'actualites' },
-    ],
-  },
-  {
-    _key: 'shop',
-    title: 'Shop',
-    href: shopHref,
-    items: shopItems,
-  },
-  {
-    _key: 'contact',
-    title: 'Contact',
-    href: contactHref,
-    items: [
-      { label: 'Informations', href: `${contactHref}#informations` },
-      { label: 'Enquête', href: `${contactHref}#enquete` },
-    ],
-  },
-];
+/*
+  Les sections et leur numérotation viennent de `src/lib/siteIndex.ts`, que lit
+  aussi l'index de la page Contact : deux dispositifs affichent les mêmes
+  folios, ils ne peuvent pas les tenir chacun de leur côté.
+
+  Seul le Shop complète la table au rendu, ses sous-entrées étant les
+  collections Shopify.
+*/
+const groups = getSiteSections(locale).map((section) => ({
+  _key: section.key,
+  number: section.folio,
+  title: section.title,
+  href: section.href,
+  items:
+    section.key === 'shop'
+      ? shopItems
+      : section.items.map((item) => ({
+          label: item.label,
+          href: item.href,
+          filterKey: item.filterKey,
+        })),
+}));
 const currentPath = Astro.url.pathname;
 // Une page de collection a sa propre sous-entrée à allumer : le groupe
 // « Shop » ne doit pas s'allumer en plus, sous peine de deux points à la fois.
 const collectionsPrefix = `${shopHref}/${getCollectionsSegment(locale)}/`;
-const numbered = groups.map((group, index) => ({
+const numbered = groups.map((group) => ({
   ...group,
-  number: String(index + 1).padStart(2, '0'),
   isCurrent:
     currentPath === group.href ||
     (currentPath.startsWith(`${group.href}/`) &&
@@ -351,6 +323,19 @@ const panelId = `services-menu-${mode}`;
   }
 
   .services-rail__group.is-current .services-rail__label > span::before {
+    opacity: 1;
+  }
+
+  /*
+    `is-echo` : le point allumé depuis AILLEURS que le rail — aujourd'hui par le
+    survol d'un folio dans l'index de la page Contact, qui renvoie ici.
+
+    Classe distincte de `is-current` à dessein : le rail pose et retire
+    lui-même `is-current` au fil du défilement, et un dispositif extérieur qui
+    écrirait dans la même classe lui effacerait sa lecture en cours.
+  */
+  .services-rail__group.is-echo .services-rail__label > span::before,
+  .services-rail__items li.is-echo::before {
     opacity: 1;
   }
 
@@ -739,7 +724,7 @@ const panelId = `services-menu-${mode}`;
     LA SECTION LUE — le point suit le défilement.
 
     Les sous-entrées du Labo, des Expériences et du Contact désignent des
-    ANCRES de la page courante : `/labo#philosophie`. Le serveur, lui, compare
+    ANCRES de la page courante : `/labo#vision`. Le serveur, lui, compare
     `Astro.url.pathname` à un href qui porte son hash — une égalité qui ne peut
     jamais être vraie. Ces points ne s'allumaient donc jamais. Le hash ne se lit
     qu'ici, côté navigateur.

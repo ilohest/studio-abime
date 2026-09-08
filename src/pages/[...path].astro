@@ -21,7 +21,8 @@ import { resolveShareImage } from '~/lib/seo/shareImage';
 import {
   getCollectionByHandle,
   getProductByHandle,
-  getProducts,
+  getCollectionFolio,
+  getShopCollections,
   shopifyImageUrl,
 } from '~/lib/shopify/catalogue';
 import { getShopPolicy } from '~/lib/shopify/policies';
@@ -50,7 +51,7 @@ import { getShopIntro } from '~/content/shopFallback';
 import { getLaboFallback } from '~/content/laboFallback';
 import { getContactFallback } from '~/content/contactFallback';
 import { useTranslations } from '~/i18n/ui';
-import type { Collection as ShopCollection, Product as ShopProduct, ProductCard as ShopProductCard, ShopPolicy } from '~/lib/shopify/types';
+import type { Collection as ShopCollection, CollectionCard as ShopCollectionCard, Product as ShopProduct, ProductCard as ShopProductCard, ShopPolicy } from '~/lib/shopify/types';
 import type {
   Client,
   ContactPage as ContactPageContent,
@@ -114,23 +115,30 @@ let journalPage: JournalPage | null = null;
 let posts: PostCard[] = [];
 let post: Post | null = null;
 let shopProducts: ShopProductCard[] = [];
+let shopCollections: ShopCollectionCard[] = [];
 let shopPage: ShopPage | null = null;
 let shopProduct: ShopProduct | null = null;
 let shopCollection: ShopCollection | null = null;
+let shopCollectionFolio: string | null = null;
 let shopRelated: ShopProductCard[] = [];
 let shopPolicy: ShopPolicy | null = null;
 
 if (route.kind === 'shop') {
   /*
-    Deux sources en parallèle : Shopify pour le catalogue, Sanity pour le texte
-    d'ouverture. Aucune des deux ne bloque l'autre — une boutique vide reste une
-    page lisible, et un singleton non créé retombe sur le texte du dépôt.
+    Deux sources en parallèle : Shopify pour les collections, Sanity pour le
+    texte d'ouverture. Aucune des deux ne bloque l'autre — une boutique vide
+    reste une page lisible, et un singleton non créé retombe sur le texte du
+    dépôt.
+
+    Les COLLECTIONS et non les tirages : l'index annonce les trois entrées de la
+    boutique, les pièces ne se voient qu'en entrant dans l'une d'elles (voir
+    `getShopCollections`).
   */
-  const [products, pageContent] = await Promise.all([
-    getProducts(),
+  const [collections, pageContent] = await Promise.all([
+    getShopCollections(),
     loadQuery<ShopPage | null>({ query: shopPageQuery, locale, fallback: null }),
   ]);
-  shopProducts = products;
+  shopCollections = collections;
   shopPage = pageContent;
 }
 
@@ -154,7 +162,12 @@ if (route.kind === 'policy') {
 }
 
 if (route.kind === 'collection') {
-  shopCollection = await getCollectionByHandle(route.handle);
+  const [collection, folio] = await Promise.all([
+    getCollectionByHandle(route.handle),
+    getCollectionFolio(route.handle),
+  ]);
+  shopCollection = collection;
+  shopCollectionFolio = folio;
   // Collection dépubliée ou renommée depuis la génération du manifeste.
   if (!shopCollection) return Astro.rewrite('/404');
 }
@@ -441,6 +454,7 @@ const jsonLd = buildPageGraph({
   projects,
   posts,
   products: shopProducts,
+  collections: shopCollections,
 });
 ---
 
@@ -499,12 +513,12 @@ const jsonLd = buildPageGraph({
 
   {shopPolicy && <PolicyPage policy={shopPolicy} locale={locale} />}
 
-  {shopCollection && <CollectionPage collection={shopCollection} locale={locale} />}
+  {shopCollection && <CollectionPage collection={shopCollection} folio={shopCollectionFolio} locale={locale} />}
 
   {
     route.kind === 'shop' && (
       <ShopIndex
-        products={shopProducts}
+        collections={shopCollections}
         locale={locale}
         title={shopTitle}
         number="04."

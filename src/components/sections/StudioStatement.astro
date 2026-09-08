@@ -232,7 +232,7 @@ const figures = (section.figures ?? []).map((figure) => ({
   }
 
   /*
-    …sauf dans le Presentation Tool, où c'est l'inverse qui compte.
+    …sauf dans le Presentation Tool, une fois la scène ARRIVÉE.
 
     Cette transparence au pointeur rendait la scène entière inéditable : ni le
     texte de la note, ni les légendes des figures ne pouvaient être survolés, et
@@ -240,11 +240,20 @@ const figures = (section.figures ?? []).map((figure) => ({
     remédier élément par élément — un texte éditable par sa traîne stega ne
     porte aucun attribut sur lequel s'accrocher.
 
-    On rend donc la scène sensible au pointeur pendant l'édition. Le menu placé
-    derrière y perd ses clics ; c'est sans importance dans un aperçu dont
-    l'objet est de modifier la page, pas de la parcourir.
+    On rend donc la scène sensible au pointeur pendant l'édition — mais
+    seulement une fois son entrée horizontale terminée, ce que dit
+    `statement-vertical`. Pendant tout le trajet, la scène couvre l'écran de la
+    largeur du rail jusqu'au bord droit : sensible au pointeur d'un bout à
+    l'autre, elle prenait les clics du menu de l'accueil, qui traverse la même
+    distance en sens inverse. Les entrées n'étaient donc atteignables qu'une
+    fois ancrées à gauche, hors de la boîte de la scène.
+
+    Les deux états s'excluent par construction : le menu s'ancre exactement
+    quand la scène a fini d'entrer. À l'arrivée, la scène est éditable et le
+    rail est en dehors d'elle ; avant, le rail se clique et la scène, en plein
+    vol, n'avait de toute façon rien d'éditable.
   */
-  :global(html[data-visual-editing]) .statement__intro-stage {
+  :global(html[data-visual-editing].statement-vertical) .statement__intro-stage {
     pointer-events: auto;
   }
 

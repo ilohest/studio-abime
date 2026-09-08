@@ -29,8 +29,14 @@ const { locale, site, alternates } = Astro.props;
 const DEFAULT_BASELINE =
   'Créer depuis le fond. Donner forme avec justesse. À la frontière du sensible, du social et du créatif.';
 
-/** Crédit de réalisation — hors CMS, il ne relève pas du contenu éditorial. */
-const CREDIT = { label: 'Website by Isaure', href: 'https://isaure-lohest.com/' };
+/*
+  Crédits de réalisation — hors CMS, ils ne relèvent pas du contenu éditorial.
+
+  Deux mains, deux mentions : la direction artistique appartient au studio, le
+  design et le développement à qui les a faits. Seule la seconde porte un lien,
+  la première renvoyant au site sur lequel on se trouve déjà.
+*/
+const CREDIT = { name: 'Isaure', href: 'https://isaure-lohest.com/' };
 
 const t = useTranslations(locale);
 const nav = site.localized?.footerNav ?? [];
@@ -88,10 +94,34 @@ const baseline = site.localized?.footerText?.trim() || DEFAULT_BASELINE;
           )
         }
 
-        <a href={CREDIT.href} target="_blank" rel="noopener noreferrer" class="footer-external">
-          <span class="footer-external__label">{CREDIT.label}</span>
-          <span aria-hidden="true">↗</span>
-        </a>
+        <div class="footer-credit">
+          {/*
+            La direction artistique renvoie à l'accueil : c'est le site du
+            studio, il se cite en pointant chez lui. Pas de flèche — on ne
+            quitte pas le site.
+          */}
+          <p>
+            <a href={homeHref} class="footer-external">
+              <span class="footer-external__label">
+                Direction artistique &amp; conception&nbsp;: Studio Abîme
+              </span>
+            </a>
+          </p>
+          {/*
+            Le lien porte la mention ENTIÈRE, mention de rôle comprise : c'est
+            la ligne qui renvoie au portfolio, pas le seul prénom. La flèche
+            reste hors du libellé souligné, comme partout ailleurs — c'est un
+            signe, pas un mot.
+          */}
+          <p>
+            <a href={CREDIT.href} target="_blank" rel="noopener noreferrer" class="footer-external">
+              <span class="footer-external__label">
+                Design &amp; développement&nbsp;: {CREDIT.name}
+              </span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </p>
+        </div>
 
         <LocaleSwitcher locale={locale} alternates={alternates} />
       </div>
@@ -143,6 +173,29 @@ const baseline = site.localized?.footerText?.trim() || DEFAULT_BASELINE;
 
   .footer-external__label {
     text-underline-offset: 2px;
+  }
+
+  /*
+    Deux mentions, deux lignes : la direction artistique et la réalisation ne
+    se lisent pas d'une traite. L'écart reprend celui des colonnes de liens
+    voisines, pour que les trois blocs battent au même rythme.
+  */
+  .footer-credit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /*
+    Chaque mention tient sur UNE ligne : coupée en deux, « Direction artistique
+    & conception : Studio Abîme » se lit comme deux crédits au lieu d'un. En
+    dessous de 768 px la place manque vraiment — le retour à la ligne y
+    redevient préférable au débordement.
+  */
+  @media (min-width: 768px) {
+    .footer-credit p {
+      white-space: nowrap;
+    }
   }
 
   /*

@@ -416,19 +416,9 @@ export interface LaboService {
   tools?: string[];
 }
 
-/**
- * Composition d'un paragraphe du manifeste.
- *
- * `pleine` occupe la page entière ; `colonne` est retraité sur une colonne
- * étroite alignée à droite, comme une note portée en marge ; `declaration`
- * tient la pleine largeur dans le grand corps de la citation d'ouverture.
- */
-export type LaboParagraphLayout = 'pleine' | 'colonne' | 'declaration';
-
 export interface LaboParagraph {
   _key: string;
   text: string;
-  layout?: LaboParagraphLayout;
 }
 
 /** Page éditoriale Labo, structurée comme une seule expérience narrative. */
@@ -437,11 +427,31 @@ export interface ContactPage {
   _id: string;
   _type: 'contactPage';
   language: Locale;
-  opening?: string;
-  paragraphs: string[];
-  /** Phrase précédant l'adresse e-mail, tirée elle des réglages du site. */
-  mailInvitation?: string;
+  /** Mention de bas de fiche : ce que devient l'enquête déposée. */
+  enquiryNotice?: string;
+  /** Index qui referme la page — et le site. */
+  index?: IndexEntry[];
   seo?: Seo;
+}
+
+/** Sous-entrée en italique d'une entrée d'index : un projet, un article. */
+export interface IndexWork {
+  _key: string;
+  type: 'project' | 'post';
+  slug: string;
+  title: string;
+  year?: string;
+}
+
+/** Entrée d'index : un terme, sa catégorie, ses renvois, ses œuvres. */
+export interface IndexEntry {
+  _key: string;
+  term: string;
+  category?: string;
+  definition?: string;
+  works: IndexWork[];
+  /** Renvoi libre facultatif, affiché en dernière sous-entrée. */
+  link?: SanityLink;
 }
 
 export interface LaboPage {
@@ -449,6 +459,8 @@ export interface LaboPage {
   _type: 'laboPage';
   language: Locale;
   title: string;
+  /** Texte d'ouverture, au-dessus de l'animation. */
+  intro?: string;
   /*
     Le champ a d'abord été un tableau de chaînes, avant que chaque paragraphe
     porte sa largeur de composition. Les deux formes restent lisibles : une
@@ -456,11 +468,9 @@ export interface LaboPage {
   */
   philosophy: Array<string | LaboParagraph>;
   services: LaboService[];
-  note?: string;
   teamLead?: string;
   teamBody?: string;
   foundationTitle?: string;
-  foundationImage?: SanityImage;
   foundationParagraphs: string[];
   foundationSignature?: string;
   archiveProjects: ProjectCard[];

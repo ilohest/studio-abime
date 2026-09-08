@@ -1,0 +1,406 @@
+---
+/**
+ * L'index qui referme la page Contact — et le site.
+ *
+ * ── L'intention ────────────────────────────────────────────────────────────
+ * À la fin d'un livre, l'index n'est pas une sortie : c'est l'appareil qui
+ * permet d'y rentrer à nouveau. Posé après le formulaire, il retourne la page
+ * de contact — d'ordinaire un cul-de-sac — en table de tout ce qui a été lu.
+ *
+ * ── Les folios sont vrais ──────────────────────────────────────────────────
+ * « 01.2 » désigne réellement Le Labo → Philosophie, et le renvoi y mène. Les
+ * numéros ne se saisissent pas dans le CMS : ils sont calculés depuis
+ * `src/lib/siteIndex.ts`, la même table que lit le rail de navigation. C'est
+ * ce qui empêche l'index d'être un décor — il est aussi le plan du site.
+ *
+ * Une œuvre dont la cible a disparu est écartée plutôt qu'affichée sans
+ * destination : mieux vaut une sous-entrée en moins qu'un folio qui ment.
+ */
+import { resolveWorkFolio, type ResolvedFolio } from '~/lib/siteIndex';
+import { resolveLink } from '~/lib/routing';
+import type { IndexEntry } from '~/lib/sanity/types';
+import type { Locale } from '~/i18n/config';
+
+interface Props {
+  entries: IndexEntry[];
+  locale: Locale;
+}
+
+const { entries, locale } = Astro.props;
+
+const collator = new Intl.Collator('fr', { sensitivity: 'base' });
+
+/*
+  La lettre de classement ignore les accents : « Épreuve » se range sous E,
+  comme dans n'importe quel index imprimé. Ce qui ne commence pas par une
+  lettre est regroupé sous un tiret, en fin d'index.
+*/
+const initial = (term: string) => {
+  const letter = term
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .charAt(0)
+    .toUpperCase();
+
+  return /[A-Z]/.test(letter) ? letter : '—';
+};
+
+interface PreparedWork extends ResolvedFolio {
+  key: string;
+  title: string;
+  year?: string;
+}
+
+const prepared = entries
+  .filter((entry) => entry.term?.trim())
+  .map((entry) => {
+    const works = (entry.works ?? [])
+      .map((work): PreparedWork | null => {
+        const folio = resolveWorkFolio(locale, work.type, work.slug);
+        if (!folio || !work.title) return null;
+
+        return { ...folio, key: work._key, title: work.title, year: work.year?.trim() };
+      })
+      .filter((work): work is PreparedWork => work !== null);
+
+    /*
+      Le lien du terme : une page quelconque du site, que ni les sections ni
+      les œuvres ne savent désigner. C'est le mot lui-même qui devient
+      cliquable — il n'y a donc pas de libellé à saisir, et pas de libellé à
+      vérifier ici : seule l'adresse compte.
+    */
+    const extra = resolveLink(entry.link, locale);
+
+    return {
+      key: entry._key,
+      term: entry.term.trim(),
+      category: entry.category?.trim(),
+      definition: entry.definition?.trim(),
+      works,
+      extra: extra?.href ? extra : null,
+    };
+  })
+  // Un terme sans renvoi, sans œuvre et sans définition n'est pas une entrée.
+  .filter(
+    (entry) =>
+      entry.works.length > 0 || entry.definition || entry.extra,
+  )
+  .sort((a, b) => collator.compare(a.term, b.term));
+
+const letters = prepared.reduce<Array<{ letter: string; entries: typeof prepared }>>(
+  (groups, entry) => {
+    const letter = initial(entry.term);
+    const last = groups.at(-1);
+
+    if (last && last.letter === letter) last.entries.push(entry);
+    else groups.push({ letter, entries: [entry] });
+
+    return groups;
+  },
+  [],
+);
+
+const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCase());
+---
+
+{
+  letters.length > 0 && (
+    <section id="index" class="contact-index" aria-labelledby="contact-index-title">
+      <header class="contact-index__head">
+        <span class="type-note">[03 — Index]</span>
+        <h2 id="contact-index-title" class="sr-only">Index</h2>
+      </header>
+
+      <nav class="contact-index__columns" aria-label="Index du site">
+        {letters.map((group) => (
+          <section class="index-letter" aria-labelledby={`index-letter-${slug(group.letter)}`}>
+            <h3 class="index-letter__mark" id={`index-letter-${slug(group.letter)}`}>
+              {group.letter}
+            </h3>
+
+            <dl class="index-letter__entries">
+              {group.entries.map((entry) => (
+                <div class="index-entry">
+                  <dt class="index-entry__term">
+                    {entry.extra ? (
+                      <a
+                        class="index-entry__link"
+                        href={entry.extra.href}
+                        target={entry.extra.openInNewTab ? '_blank' : undefined}
+                        rel={entry.extra.openInNewTab ? 'noopener noreferrer' : undefined}
+                        data-cursor-interactive
+                      >
+                        {entry.term}
+                      </a>
+                    ) : (
+                      entry.term
+                    )}
+                    {entry.category && <span class="index-entry__category">, {entry.category}</span>}
+                  </dt>
+
+                  {entry.definition && (
+                    <dd class="index-entry__definition">{entry.definition}</dd>
+                  )}
+
+                  {entry.works.map((work) => (
+                    <dd class="index-entry__work">
+                      <a href={work.href} title={work.label} data-folio data-cursor-interactive>
+                        <i>{work.title}</i>
+                        {work.year && <span class="index-entry__year"> ({work.year})</span>}
+                        <span class="index-entry__folio">{work.folio}</span>
+                      </a>
+                    </dd>
+                  ))}
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </nav>
+
+      {/*
+        La dernière ligne de l'index, et du site. Elle reste vide jusqu'à ce
+        qu'une fiche parte : le visiteur y entre alors sous son propre nom, avec
+        le numéro de son enquête et sans folio — une entrée d'index qui n'a pas
+        encore de page, parce que cette page reste à écrire.
+
+        Rien n'en sort du navigateur : c'est la fiche envoyée qui est reçue au
+        studio, pas cette ligne.
+      */}
+      <p class="contact-index__pending" data-index-pending hidden></p>
+    </section>
+  )
+}
+
+<style>
+  .contact-index {
+    /* Pas de filet d'ouverture : les grandes lettres annoncent l'index seules. */
+    margin-top: clamp(6rem, 12vw, 11rem);
+    scroll-margin-top: 2rem;
+  }
+
+  .contact-index__head {
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  /*
+    Trois colonnes serrées, sans filet : la mise en page d'un index de livre.
+    Les lettres traversent les colonnes au fil du texte plutôt que d'ouvrir
+    chacune une nouvelle colonne — c'est ce qui donne à un index sa densité.
+  */
+  .contact-index__columns {
+    columns: 3;
+    column-gap: clamp(2rem, 3vw, 3.5rem);
+  }
+
+  .index-letter__entries {
+    margin: 0;
+  }
+
+  /*
+    Les filets courent SOUS les lignes, et non entre les colonnes : ce sont des
+    lignes de registre, celles d'un index composé au plomb. Sous la lettre, elles
+    ouvrent la section ; sous chaque entrée, elles tiennent la colonne en rythme
+    et empêchent l'œil de glisser d'une définition à la suivante.
+  */
+  .index-letter__mark {
+    margin: 1.6rem 0 0.9rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-line);
+    font-family: var(--font-titre);
+    /*
+      Un cran au-dessus du corps des titres : dans un index composé, la lettre
+      de classement se voit de loin — c'est elle qu'on cherche en parcourant la
+      colonne du pouce, pas les entrées.
+    */
+    font-size: calc(var(--text-titre) * 1.25);
+    line-height: 1;
+    letter-spacing: var(--tracking-titre);
+    /* Une lettre ne doit pas rester seule en pied de colonne. */
+    break-after: avoid;
+  }
+
+  .index-letter:first-of-type .index-letter__mark {
+    margin-top: 0;
+  }
+
+  /* Une entrée et ses sous-entrées ne se coupent jamais entre deux colonnes. */
+  .index-entry {
+    margin-bottom: 0.55rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid var(--color-line);
+    break-inside: avoid;
+  }
+
+  /*
+    Rentrée pendante : la deuxième ligne d'une entrée longue s'indente sous la
+    première, comme dans tout index composé.
+  */
+  .index-entry__term {
+    padding-left: 1em;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1.5;
+    letter-spacing: var(--tracking-copy);
+    text-indent: -1em;
+  }
+
+  .index-entry__category {
+    color: var(--color-muted);
+  }
+
+  /* Le terme cliquable : souligné au survol seulement, comme les folios. */
+  .index-entry__link {
+    color: inherit;
+    text-decoration: none;
+    text-underline-offset: 0.18em;
+  }
+
+  .index-entry__link:hover,
+  .index-entry__link:focus-visible {
+    text-decoration: underline;
+  }
+
+  /*
+    Les folios suivent le terme, séparés par des virgules — pas de points de
+    conduite : l'index de référence n'en a pas, et ils encombreraient des
+    colonnes déjà étroites.
+  */
+  .index-entry__folio {
+    margin-left: 0.5em;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    text-underline-offset: 0.18em;
+  }
+
+  .index-entry__term .index-entry__folio + .index-entry__folio {
+    margin-left: 0;
+  }
+
+  .index-entry__term .index-entry__folio + .index-entry__folio::before {
+    content: ', ';
+    /* La virgule appartient à la liste, pas au lien : elle ne se souligne pas. */
+    display: inline-block;
+    text-decoration: none;
+  }
+
+  .index-entry__folio:hover,
+  .index-entry__folio:focus-visible {
+    text-decoration: underline;
+  }
+
+  .index-entry__definition,
+  .index-entry__work {
+    margin: 0;
+    padding-left: 1.9em;
+    font-family: var(--font-annotation);
+    /*
+      Un cheveu au-dessus du corps des notes : l'italique de la Narrow S a un
+      œil plus petit que le mono des termes, et à taille égale elle paraissait
+      en retrait d'un cran de trop.
+    */
+    font-size: calc(var(--text-note) * 1.12);
+    line-height: 1.5;
+    letter-spacing: var(--tracking-annotation);
+    text-indent: -0.8em;
+  }
+
+  .index-entry__definition {
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  /* Les œuvres citées, en italique et datées : « Le Parnasse (1508-1511) ». */
+  .index-entry__work a {
+    text-decoration: none;
+  }
+
+  .index-entry__work a:hover,
+  .index-entry__work a:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .index-entry__year {
+    font-style: normal;
+  }
+
+  .contact-index__pending {
+    margin-top: clamp(3rem, 6vw, 5rem);
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-line);
+    font-family: var(--font-annotation);
+    font-size: var(--text-note);
+    font-style: italic;
+    letter-spacing: var(--tracking-annotation);
+  }
+
+  @media (max-width: 1199px) {
+    .contact-index__columns {
+      columns: 2;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .contact-index__columns {
+      columns: 1;
+    }
+
+    .index-letter__mark {
+      font-size: var(--text-declaration);
+    }
+  }
+</style>
+
+<script>
+  /*
+    LE RENVOI ALLUME LE RAIL.
+
+    Survoler un folio de l'index allume le point de la section correspondante
+    dans le rail de navigation — le même point qui dit « c'est ici » pour la
+    page courante et la section lue. L'index et la colonne vertébrale du site
+    se répondent donc physiquement, avec le signe que le menu emploie déjà
+    plutôt qu'avec un vocabulaire de plus.
+
+    Réservé aux pointeurs : au doigt, un survol reste collé après le geste et
+    laisserait un point allumé au hasard. Et la classe est distincte de celle du
+    rail (`is-echo`, pas `is-current`) pour ne pas entrer en conflit avec son
+    propre suivi de lecture, qui pose et retire `is-current` au défilement.
+  */
+  const rail = document.querySelector<HTMLElement>('[data-page-rail]');
+  const folios = document.querySelectorAll<HTMLAnchorElement>('.contact-index [data-folio]');
+
+  if (rail && folios.length > 0 && window.matchMedia('(hover: hover)').matches) {
+    const targets = new Map<string, HTMLElement>();
+
+    rail.querySelectorAll<HTMLElement>('.services-rail__group').forEach((group) => {
+      const href = group.dataset.href;
+      if (href) targets.set(href, group);
+
+      group.querySelectorAll<HTMLLIElement>('.services-rail__items li').forEach((item) => {
+        const itemHref = item.querySelector('a')?.getAttribute('href');
+        if (itemHref) targets.set(itemHref, item);
+      });
+    });
+
+    let lit: HTMLElement | null = null;
+
+    const light = (element: HTMLElement | null) => {
+      if (lit === element) return;
+      lit?.classList.remove('is-echo');
+      lit = element;
+      lit?.classList.add('is-echo');
+    };
+
+    folios.forEach((folio) => {
+      const target = targets.get(folio.getAttribute('href') ?? '') ?? null;
+      if (!target) return;
+
+      folio.addEventListener('pointerenter', () => light(target));
+      folio.addEventListener('focus', () => light(target));
+      folio.addEventListener('pointerleave', () => light(null));
+      folio.addEventListener('blur', () => light(null));
+    });
+  }
+</script>

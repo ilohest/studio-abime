@@ -17,12 +17,31 @@ import type { Collection } from '~/lib/shopify/types';
  */
 interface Props {
   collection: Collection;
+  /**
+   * Numéro de classement — « 01 », « 02 »… Le même que sur l'index de la
+   * boutique : un repère ne vaut que s'il désigne la même chose partout.
+   * `null` quand il n'a pas pu être établi ; le titre paraît alors seul, ce
+   * qui vaut mieux qu'un numéro faux.
+   */
+  folio: string | null;
   locale: Locale;
 }
 
-const { collection, locale } = Astro.props;
+const { collection, folio, locale } = Astro.props;
 const t = useTranslations(locale);
 const shopHref = shopIndexPath(locale);
+
+/*
+  Le numéro est composé DANS la chaîne du titre, et non dans une balise à part.
+
+  Le titre porte `data-text-reveal`, dont le script le découpe mot à mot et
+  reconstruit son contenu : toute balise interne y disparaît, avec la marge
+  qu'elle portait — « N° 03 » se retrouvait collé au premier mot. Une espace
+  ordinaire, elle, est un point de coupe que le script respecte.
+
+  Espace insécable entre « N° » et le chiffre : la cote ne se coupe pas en deux.
+*/
+const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection.title;
 ---
 
 <div class="collection-page container-wide py-(--spacing-section)">
@@ -47,7 +66,7 @@ const shopHref = shopIndexPath(locale);
   */}
   <header class="collection-page__header">
     <h1 class="collection-page__title type-titre text-balance" data-text-reveal>
-      {collection.title}
+      {heading}
     </h1>
 
     {
@@ -70,6 +89,7 @@ const shopHref = shopIndexPath(locale);
 </div>
 
 <style>
+
   /* Flux normal sur mobile — voir le commentaire dans le balisage. */
   .collection-page__all {
     display: inline-block;

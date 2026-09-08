@@ -1,17 +1,23 @@
 ---
 import { Image } from 'astro:assets';
 import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
-import SanityImage from '~/components/primitives/SanityImage.astro';
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { useTranslations } from '~/i18n/ui';
+import { documentFieldAttribute } from '~/lib/visualEditing';
 import type { Locale } from '~/i18n/config';
 import type { LaboPage } from '~/lib/sanity/types';
 
-import flashSymbol from '~/assets/labo-symbols/flash.png';
-import libraSymbol from '~/assets/labo-symbols/libra.png';
-import moonSymbol from '~/assets/labo-symbols/moon.png';
-import scorpioSymbol from '~/assets/labo-symbols/scorpio.png';
-import springSymbol from '~/assets/labo-symbols/spring.png';
-import foundationPhoto from '~/assets/sections/note-fondation.webp';
+/*
+  Les cinq lunes du studio remplacent les pictogrammes d'origine. Recadrées au
+  carré sur le disque et réduites à 400 px : elles s'affichent à moins de deux
+  rem, une planche A4 à 300 dpi n'avait rien à faire dans le dépôt.
+*/
+import luneBlancheSymbol from '~/assets/labo-symbols/lune-blanche.png';
+import luneBlanche2Symbol from '~/assets/labo-symbols/lune-blanche-2.png';
+import luneFumeeSymbol from '~/assets/labo-symbols/lune-fumee.png';
+import luneGriseSymbol from '~/assets/labo-symbols/lune-grise.png';
+import lunePayneSymbol from '~/assets/labo-symbols/lune-payne.png';
+import lunePayne2Symbol from '~/assets/labo-symbols/lune-payne-2.png';
 
 interface Props {
   page: LaboPage;
@@ -26,13 +32,57 @@ const t = useTranslations(locale);
   couvrent une sixième étape ajoutée depuis le Studio sans retoucher le code.
 */
 const services = (page.services ?? []).slice(0, 6);
+
+/*
+  Les étapes se numérotent en chiffres romains — la numérotation d'un sommaire,
+  pas d'une liste. Les IDENTIFIANTS d'ancre, eux, restent en chiffres arabes
+  (« labo-service-001 ») : ce sont des adresses, elles ne changent pas parce que
+  l'affichage change.
+*/
+const ROMAN: Array<[number, string]> = [
+  [10, 'X'],
+  [9, 'IX'],
+  [5, 'V'],
+  [4, 'IV'],
+  [1, 'I'],
+];
+
+const toRoman = (value: number) => {
+  let rest = value;
+  let out = '';
+
+  for (const [weight, sign] of ROMAN) {
+    while (rest >= weight) {
+      out += sign;
+      rest -= weight;
+    }
+  }
+
+  return out;
+};
 const orbitPhases = [198, 315, 64, 142, 252];
 // Vitesse angulaire décroissante du centre vers l'extérieur : chaque unité
 // conserve son propre rythme, même lorsque le scroll module l'ensemble.
 const orbitDurations = [22, 34, 49, 68, 92];
 const orbitDirections = [1, -1, 1, -1, 1];
-const spinDurations = [86, 118, 157, 204, 276];
-const spinDirections = [-1, 1, -1, 1, -1];
+/*
+  ROTATION PROPRE DES LUNES — la même partout.
+
+  Chaque lune tourne sur elle-même en 90 secondes, dans le même sens, sur
+  l'orbite comme dans l'index des services plus bas (`labo-service-moon-spin`).
+  Elles avaient ici cinq régimes différents et des sens alternés, hérités des
+  pictogrammes qu'elles remplacent : deux fois le même disque tournant à deux
+  vitesses se lisait comme deux objets, alors que c'est le même repère aux deux
+  endroits de la page.
+
+  Leur ANGLE DE DÉPART reste propre à chacune (voir `spinPhase`) : elles tournent
+  ensemble sans jamais montrer la même face au même moment. Et le scroll module
+  toujours l'ensemble — c'est le régime de croisière qui est commun, pas la
+  vitesse instantanée.
+*/
+const MOON_SPIN_DURATION = 90;
+const spinDurations = Array(5).fill(MOON_SPIN_DURATION);
+const spinDirections = [1, 1, 1, 1, 1];
 /*
   Le grain de la trajectoire s'affine vers l'extérieur : pointillés au centre,
   règle graduée puis micro-graduations sur les deux anneaux les plus longs, où
@@ -53,17 +103,29 @@ const orbitDegreeMarks = [
   { value: '90°', angle: 180 },
   { value: '0°', angle: 270 },
 ];
-const orbitSymbols = [flashSymbol, libraSymbol, springSymbol, moonSymbol, scorpioSymbol];
+/*
+  Une lune par étape, dans l'ordre du parcours. Le même repère sert à l'orbite
+  et au paragraphe qu'elle désigne : changer l'un change l'autre, c'est
+  volontaire — c'est ce qui relie le système en mouvement à sa description.
+*/
+const orbitSymbols = [
+  lunePayneSymbol,
+  luneGriseSymbol,
+  luneFumeeSymbol,
+  lunePayne2Symbol,
+  luneBlanche2Symbol,
+];
 const orbitSystem = services.map((service, index) => ({
   service,
-  index: String(index + 1).padStart(3, '0'),
-  symbol: orbitSymbols[index] ?? moonSymbol,
+  index: toRoman(index + 1),
+  anchor: String(index + 1).padStart(3, '0'),
+  symbol: orbitSymbols[index] ?? luneGriseSymbol,
   size: `${38 + index * 10}%`,
   phase: orbitPhases[index] ?? index * 60,
   duration: orbitDurations[index] ?? 60 + index * 12,
   direction: orbitDirections[index] ?? 1,
-  spinDuration: spinDurations[index] ?? 180 + index * 30,
-  spinDirection: spinDirections[index] ?? -1,
+  spinDuration: spinDurations[index] ?? MOON_SPIN_DURATION,
+  spinDirection: spinDirections[index] ?? 1,
   motif: orbitMotifs[index] ?? 'dots',
 }));
 const archiveCount = page.archiveProjects.length;
@@ -73,19 +135,45 @@ const archiveTitle = t('labo.archive');
   donc encore acceptée et prend la colonne étroite, sa composition d'origine.
 */
 const philosophyEntries = page.philosophy.map((entry, index) =>
-  typeof entry === 'string'
-    ? { _key: `philosophy-${index}`, text: entry, layout: 'colonne' as const }
-    : { ...entry, layout: entry.layout ?? 'colonne' },
+  typeof entry === 'string' ? { _key: `philosophy-${index}`, text: entry } : entry,
 );
 const [philosophyLead, ...philosophyNotes] = philosophyEntries;
 const philosophyKeywords = ['INTENTION', 'POSTURE', 'REGARD', 'RÉCIT'];
 const foundationParagraphs = page.foundationParagraphs ?? [];
+const hasFoundationNote = foundationParagraphs.length > 0;
+
 /*
-  La photographie de la note est fournie par le dépôt : elle appartient à la
-  composition, pas au contenu courant. Le champ Sanity la remplace lorsqu'il
-  est rempli, sans qu'il faille repasser par le code.
+  ── L'APPEL DE NOTE ────────────────────────────────────────────────────────
+  La note de fondation n'est plus un feuillet posé dans la page : c'est une
+  NOTE DE BAS DE PAGE, appelée depuis le nom du studio comme dans un livre.
+
+  Le texte d'ouverture de la section est donc coupé juste après « Abîme » pour
+  y glisser l'appel. La coupe est faite sur la première occurrence seulement —
+  le nom revient plus loin dans d'autres champs, un appel par mention ferait
+  une page criblée de renvois.
+
+  Si le mot ne s'y trouve pas — texte réécrit depuis le Studio, version
+  anglaise — `after` reste vide : le paragraphe se rend d'une pièce, sans
+  appel, et la note reste atteignable par le menu. Rien ne casse.
 */
-const hasFoundationImage = Boolean(page.foundationImage?.asset);
+const NOTE_CALL_WORD = 'Abîme';
+const teamLeadText = page.teamLead ?? '';
+const noteCallAt = teamLeadText.indexOf(NOTE_CALL_WORD);
+const teamLead =
+  noteCallAt === -1
+    ? { before: teamLeadText, after: '' }
+    : {
+        before: teamLeadText.slice(0, noteCallAt + NOTE_CALL_WORD.length),
+        after: teamLeadText.slice(noteCallAt + NOTE_CALL_WORD.length),
+      };
+const showNoteCall = hasFoundationNote && teamLead.after !== '';
+
+/*
+  Le champ est DÉCOUPÉ : sa traîne d'édition visuelle ne décrit plus le texte
+  qui la précède, et le champ cesserait d'être cliquable dans le Presentation
+  Tool. On le désigne donc explicitement (voir `src/lib/visualEditing.ts`).
+*/
+const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead');
 ---
 
 <script is:inline>
@@ -102,8 +190,36 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 </script>
 
 <article class="labo">
-  <header class="labo-hero container-wide" id="vision">
+  {/*
+    Sans `id`. L'en-tête en portait un — « vision » —, hérité et que rien ne
+    visait : le menu renvoyait alors la section du manifeste à « philosophie ».
+    En la renommant, les deux se sont retrouvés à porter le MÊME identifiant,
+    et c'est le premier du document qui l'emporte : « /labo#vision » déposait
+    donc en haut de page au lieu du manifeste. Un doublon d'identifiant ne
+    lève aucune erreur — il choisit silencieusement.
+  */}
+  <header class="labo-hero container-wide">
     <h1 class="labo-hero__title type-titre" data-text-reveal>01. {page.title}</h1>
+
+    {/*
+      Texte d'ouverture, entre le titre et l'animation — même place et même
+      composition que sur les index Expériences et Journal, pour que les trois
+      sections s'ouvrent de la même manière.
+    */}
+    {page.intro && <p class="labo-hero__intro type-copy text-pretty">{page.intro}</p>}
+
+    {/*
+      Le repère de section ouvre la page, au-dessus de l'animation — comme
+      « [01 — Informations] » sur la page Contact. Il annonce ce qu'on va lire ;
+      il n'a pas à attendre la fin de la figure pour le dire.
+    */}
+    {/*
+      L'ancre « Services » du menu tombe ICI, sur le repère, et non plus sur la
+      grille : c'est là que la section commence à se lire, au-dessus de la
+      figure qui l'annonce. Le suivi de lecture du rail n'observe que le HAUT de
+      la cible, la hauteur du repère n'a donc aucune importance pour lui.
+    */}
+    <span class="labo-hero__index type-note" id="services">[01 — Services]</span>
 
     <div class="labo-orbits" aria-label="Les champs de recherche du laboratoire" data-labo-orbits>
       <div class="labo-orbits__axis" aria-hidden="true"></div>
@@ -115,6 +231,20 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
         ))}
       </div>
       <div class="labo-orbits__core">
+        {/*
+          La lune est une IMAGE et non un fond : elle a disparu avec l'aplat
+          qu'on a retiré. Posée sous la phrase, sans cadre ni grain — c'est le
+          disque qu'on voit, pas la pastille qui le portait.
+
+          Décorative : la phrase qu'elle accompagne dit déjà tout.
+        */}
+        <Image
+          src={luneBlancheSymbol}
+          width={480}
+          height={480}
+          alt=""
+          class="labo-orbits__moon"
+        />
         <span class="type-note">Le fond</span>
         <strong>{t('labo.emphasisPrecedes')}</strong>
         <span class="type-note">la forme</span>
@@ -171,17 +301,22 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
           >
             <a
               class="labo-orbit__node"
-              href={`#labo-service-${orbit.index}`}
+              href={`#labo-service-${orbit.anchor}`}
               data-index={orbit.index}
               data-cursor-interactive
               aria-label={`Découvrir : ${orbit.service.title}`}
             >
               <span class="labo-orbit__orientation" data-orbit-orientation>
                 <span class="labo-orbit__spinner" data-orbit-spinner>
+                  {/*
+                    Rendu à deux fois la taille d'affichage : les lunes sont des
+                    dégradés, un rendu à 32 px les ferait baver sur un écran à
+                    haute densité.
+                  */}
                   <Image
                     src={orbit.symbol}
-                    width={32}
-                    height={32}
+                    width={64}
+                    height={64}
                     alt=""
                     class="labo-orbit__symbol"
                   />
@@ -200,21 +335,41 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
   </header>
 
-  <section class="labo-services container-wide" id="services" aria-labelledby="labo-services-title">
+  <section class="labo-services container-wide" aria-labelledby="labo-services-title">
     <h2 id="labo-services-title" class="sr-only">{t('labo.sectionServices')}</h2>
+    {/*
+      Sous la figure, sa légende : le système d'orbites est une planche du site
+      comme une autre, elle porte donc son numéro et son nom, dans la même
+      composition que les figures des projets et du Journal.
+    */}
     <div class="labo-services__heading">
-      <span class="type-note">[01 — Index orbital - Services]</span>
+      <FigureCaption as="p" value="fig. 01 — Index orbital" />
     </div>
 
     <ol class="labo-services__grid">
       {services.map((service, index) => (
         <li class="labo-service" id={`labo-service-${String(index + 1).padStart(3, '0')}`} data-rise>
-          <span class="labo-service__number">{String(index + 1).padStart(3, '0')}</span>
-          <div>
-            <h3>{service.title}</h3>
-            <p>{service.description}</p>
+          {/*
+            La lune se place devant le chiffre et son intitulé, exactement comme
+            sur l'orbite : le repère précède l'étape des deux côtés de la page,
+            et c'est lui qui relie le système en mouvement à sa description.
+
+            Décorative (`alt` vide) : le symbole ne dit rien que le titre juste
+            en dessous ne dise déjà, et l'annoncer deux fois n'apprendrait rien.
+          */}
+          <Image
+            src={orbitSymbols[index] ?? luneGriseSymbol}
+            width={48}
+            height={48}
+            alt=""
+            class="labo-service__symbol"
+          />
+          <span class="labo-service__number">{toRoman(index + 1)}</span>
+          <h3>{service.title}</h3>
+          <div class="labo-service__body">
+            <p class="labo-service__description">{service.description}</p>
             {service.tools && service.tools.length > 0 && (
-              <ul class="labo-service__tools type-note">
+              <ul class="labo-service__tools">
                 {service.tools.map((tool) => <li>{tool}</li>)}
               </ul>
             )}
@@ -222,8 +377,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
         </li>
       ))}
     </ol>
-
-    {page.note && <p class="labo-services__note type-annotation">({page.note})</p>}
   </section>
 
   <script>
@@ -278,12 +431,11 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     }
   </script>
 
-  <section class="labo-philosophy container-wide surface-paper" id="philosophie" aria-labelledby="labo-philosophy-title">
-    <div class="labo-philosophy__grain surface-paper-grain" aria-hidden="true"></div>
-    <h2 id="labo-philosophy-title" class="sr-only">{t('labo.sectionPhilosophy')}</h2>
+  <section class="labo-philosophy container-wide" id="vision" aria-labelledby="labo-philosophy-title">
+    <h2 id="labo-philosophy-title" class="sr-only">{t('labo.sectionVision')}</h2>
 
     <aside class="labo-philosophy__margin" aria-hidden="true">
-      <div class="labo-philosophy__index type-note">[02 — Manifeste - Philosophie]</div>
+      <div class="labo-philosophy__index type-note">[02 — Manifeste - Vision]</div>
       <div class="labo-philosophy__scale">
         <span>{t('labo.studyOfSubstance')}</span>
       </div>
@@ -307,15 +459,22 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
         </p>
       )}
 
-      <div class="labo-philosophy__notes">
+      {/*
+        ── LE CORPS DU MANIFESTE, EN DEUX COLONNES ────────────────────────
+        Les paragraphes se composaient chacun à sa largeur — pleine page,
+        colonne à droite, grande déclaration — et changeaient de corps d'un
+        bloc à l'autre. Chaque changement demandait à l'œil de retrouver où
+        reprendre : c'est ce qui rendait la section fatigante à lire, pour un
+        texte qui, lui, se suit d'un bout à l'autre.
+
+        Un seul corps, une seule mesure, deux colonnes : le texte redevient un
+        document de recherche, et les « morceaux » cessent de disputer au fond
+        l'attention qu'il demande. Le champ « Largeur » qui les pilotait a été
+        retiré du modèle.
+      */}
+      <div class="labo-philosophy__notes" data-rise>
         {philosophyNotes.map((paragraph) => (
-          <p
-            class:list={['labo-philosophy__note', 'type-copy', `labo-philosophy__note--${paragraph.layout}`]}
-            data-text-reveal={paragraph.layout === 'declaration' ? '' : undefined}
-            data-rise={paragraph.layout === 'declaration' ? undefined : ''}
-          >
-            {paragraph.text}
-          </p>
+          <p class="labo-philosophy__note">{paragraph.text}</p>
         ))}
       </div>
 
@@ -336,48 +495,149 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     </div>
   </section>
 
-  <section class="labo-team container-wide" id="equipe" aria-labelledby="labo-team-title">
-    <h2 id="labo-team-title" class="sr-only">{t('labo.sectionTeam')}</h2>
-    <div class="labo-team__heading">
-      <span class="type-note">[03 — {t('labo.collective')}]</span>
+  {/*
+    ┌─ VARIANTE À COMPARER — À NE GARDER QU'UNE ────────────────────────────┐
+    │ Deuxième composition de la MÊME section, posée sous la première pour  │
+    │ qu'on puisse les regarder l'une après l'autre et trancher.            │
+    │                                                                       │
+    │  · au-dessus  : chapeau court, puis le manifeste en DEUX colonnes ;   │
+    │  · ici        : le manifeste en UNE colonne à gauche, et le chapeau   │
+    │                 en grand à droite, qui reste en place pendant qu'on   │
+    │                 lit la colonne.                                       │
+    │                                                                       │
+    │ ➜ UNE FOIS LE CHOIX FAIT : supprimer la section perdante, ses styles  │
+    │   (`.labo-vision-b*` ou `.labo-philosophy*`) et le repère « A / B ».  │
+    │   Ce n'est pas un état à publier — deux fois le même texte à la       │
+    │   suite, c'est un doublon pour les moteurs comme pour le lecteur.     │
+    └───────────────────────────────────────────────────────────────────────┘
+  */}
+  <section class="labo-vision-b container-wide" id="vision-b" aria-labelledby="labo-vision-b-title">
+    <h2 id="labo-vision-b-title" class="sr-only">{t('labo.sectionVision')}</h2>
+
+    <div class="labo-vision-b__head">
+      <span class="labo-philosophy__index type-note">[02 — Manifeste - Vision]</span>
     </div>
 
-    {page.teamLead && <p class="labo-team__lead" data-text-reveal>{page.teamLead}</p>}
-    {page.teamBody && <p class="labo-team__body type-copy" data-rise>{page.teamBody}</p>}
+    <div class="labo-vision-b__layout">
+      {/*
+        La colonne de lecture vient EN PREMIER dans le document : c'est le
+        texte suivi. Le chapeau est repoussé à droite par la grille, mais au
+        clavier comme au lecteur d'écran on lit le manifeste d'abord — comme
+        dans la première composition.
+      */}
+      <div class="labo-vision-b__notes" data-rise>
+        {philosophyNotes.map((paragraph) => (
+          <p class="labo-vision-b__note">{paragraph.text}</p>
+        ))}
+      </div>
 
-    {foundationParagraphs.length > 0 && (
-      <div class="labo-foundation" data-rise>
-        <figure class="labo-foundation__figure">
-          {hasFoundationImage ? (
-            <SanityImage
-              image={page.foundationImage}
-              width={720}
-              sizes="(max-width: 767px) 62vw, 24vw"
-              class="labo-foundation__image"
-            />
-          ) : (
-            <Image
-              src={foundationPhoto}
-              widths={[380, 560, 772]}
-              sizes="(max-width: 767px) 62vw, 24vw"
-              alt="Deux avant-bras noués, l’un soutenant l’autre."
-              class="labo-foundation__image"
-              loading="lazy"
-            />
-          )}
-        </figure>
+      {philosophyLead && (
+        <aside class="labo-vision-b__aside">
+          <p class="labo-vision-b__lead">
+            <span class="labo-vision-b__quote" aria-hidden="true">“</span>
+            {philosophyLead.text}
+            <span aria-hidden="true">”</span>
+          </p>
 
-        <div class="labo-foundation__note">
-          <h3 class="labo-foundation__title type-note">{page.foundationTitle}</h3>
-          {foundationParagraphs.map((paragraph) => (
-            <p class="labo-foundation__paragraph type-copy">{paragraph}</p>
-          ))}
+          {/*
+            Les quatre notions, sous le chapeau plutôt qu'au pied de la
+            section : elles sont DANS le bloc qui tient en place, donc sous les
+            yeux pendant toute la lecture de la colonne. C'est ce qui rend
+            l'effet atteignable — au pied d'une section, il faut déjà avoir
+            fini de lire pour le rencontrer.
+
+            Décoratif, donc masqué aux lecteurs d'écran en un seul point : les
+            notions sont déjà dites par le manifeste lui-même. Chaque lettre
+            est doublée dans une piste haute de deux lettres, dont on ne montre
+            qu'une : le survol fait rouler la piste d'une demi-hauteur, avec un
+            retard par lettre qui donne le déroulé de gauche à droite.
+          */}
+          <p class="labo-vision-b__keywords" aria-hidden="true">
+            {philosophyKeywords.map((word) => (
+              <span class="labo-vision-b__keyword">
+                {Array.from(word).map((letter, index) => (
+                  <span class="labo-vision-b__letter" style={`--letter-index:${index};`}>
+                    <span class="labo-vision-b__letter-track">
+                      <span>{letter}</span>
+                      <span>{letter}</span>
+                    </span>
+                  </span>
+                ))}
+              </span>
+            ))}
+          </p>
+        </aside>
+      )}
+    </div>
+  </section>
+
+  <section class="labo-team container-wide" id="equipe" aria-labelledby="labo-team-title">
+    <h2 id="labo-team-title" class="sr-only">{t('labo.sectionTeam')}</h2>
+
+    {page.teamLead && (
+      <p class="labo-team__lead" data-text-reveal data-sanity={teamLeadEditable}>
+        {teamLead.before}{showNoteCall && (
+          <a
+            class="labo-note__call"
+            id="appel-note-fondation"
+            href="#note-fondation"
+            aria-label="Note 1 — note de fondation"
+            data-cursor-interactive
+          >[1]</a>
+        )}{teamLead.after}
+      </p>
+    )}
+    {page.teamBody && <p class="labo-team__body" data-rise>{page.teamBody}</p>}
+
+    {hasFoundationNote && (
+      <aside class="labo-note" id="note-fondation" aria-labelledby="labo-note-title" data-rise>
+        {/*
+          Le numéro renvoie à l'appel, comme le fait le rappel de note d'un
+          livre : on repart d'où l'on venait sans avoir à chercher la ligne.
+          Sans appel dans le texte, il n'a nulle part où revenir — il redevient
+          alors le simple chiffre de la note.
+        */}
+        {showNoteCall ? (
+          <a class="labo-note__number" href="#appel-note-fondation" aria-label="Revenir au texte" data-cursor-interactive>[1]</a>
+        ) : (
+          <span class="labo-note__number" aria-hidden="true">[1]</span>
+        )}
+
+        <div class="labo-note__body">
+          <h3 id="labo-note-title" class="labo-note__title type-note">{page.foundationTitle}</h3>
+
+          {/*
+            Les paragraphes sont dans leur propre boîte : ce sont EUX qui se
+            composent en deux colonnes, pas le titre ni la signature, qui
+            tiennent la mesure entière au-dessus et en dessous.
+          */}
+          <div class="labo-note__columns">
+            {foundationParagraphs.map((paragraph) => (
+              <p class="labo-note__paragraph">{paragraph}</p>
+            ))}
+          </div>
+
           {page.foundationSignature && (
-            <p class="labo-foundation__signature">{page.foundationSignature}</p>
+            <p class="labo-note__signature">{page.foundationSignature}</p>
           )}
         </div>
-      </div>
+      </aside>
     )}
+  </section>
+
+  {/*
+    [03 — LA MÉTHODE]. Le repère seul, la section reste à écrire.
+
+    Il est posé maintenant parce que la numérotation ne lui appartient pas :
+    le rail de navigation et l'index de la page Contact la lisent depuis
+    `siteIndex`, et une section annoncée sans repère se lit comme un défaut de
+    composition, pas comme un chantier. Composé en clair, comme
+    « [01 — Services] » et « [02 — Manifeste - Vision] » : ce sont des mentions
+    de composition, pas du contenu piloté depuis le Studio.
+  */}
+  <section class="labo-method container-wide" id="methode" aria-labelledby="labo-method-title">
+    <h2 id="labo-method-title" class="sr-only">La méthode</h2>
+    <span class="type-note">[03 — La méthode]</span>
   </section>
 
   <section class="labo-archive project-index" id="archives" aria-labelledby="labo-archive-title">
@@ -409,6 +669,21 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     min-height: 100svh;
     padding-top: clamp(2rem, 5vw, 5rem);
     padding-bottom: clamp(2rem, 4vw, 4rem);
+  }
+
+  /* Mêmes réglages que l'intro des index Expériences et Journal. */
+  .labo-hero__intro {
+    max-width: 76rem;
+    margin-top: clamp(5.5rem, 12vw, 12rem);
+    margin-inline: auto;
+    text-indent: clamp(7rem, 20vw, 22rem);
+  }
+
+  @media (max-width: 767px) {
+    .labo-hero__intro {
+      margin-top: 4rem;
+      text-indent: clamp(2.5rem, 20vw, 5rem);
+    }
   }
 
   .labo-hero__title {
@@ -483,35 +758,28 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
   }
 
   .labo-orbits__core {
+    /*
+      Le noyau n'est plus un disque : ni fond, ni filet, ni grain. Il ne reste
+      que la phrase, posée au centre du système — c'est elle le foyer, et non
+      la pastille qui la portait.
+    */
     position: absolute;
     z-index: 5;
-    isolation: isolate;
     top: 50%;
     left: 50%;
     display: grid;
     width: clamp(8.5rem, 14vw, 11.5rem);
     aspect-ratio: 1;
     place-content: center;
-    border: 1px solid var(--color-ink);
-    border-radius: 50%;
-    background: var(--color-accent);
-    overflow: hidden;
     text-align: center;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 0 0.75rem color-mix(in srgb, var(--color-surface) 82%, transparent);
-  }
-
-  .labo-orbits__core::before {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    inset: -36%;
-    background: url('/textures/grain-fin.svg') 0 0 / 12.5rem 12.5rem repeat;
-    mix-blend-mode: multiply;
-    opacity: 0.31;
-    pointer-events: none;
-    animation: labo-core-grain 1.15s steps(8, end) infinite;
-    will-change: transform, opacity;
+    /*
+      Aucun halo autour du noyau. Il en portait un — un anneau de papier posé
+      par-dessus la scène — pour dégager la phrase du fond. Mais le noyau passe
+      AU-DESSUS des orbites : cet anneau effaçait les trajectoires qui le
+      traversaient et tronquait les étiquettes qui passaient devant. Le système
+      se lit maintenant d'un trait, sans zone morte.
+    */
   }
 
   .labo-orbits__core > * {
@@ -519,15 +787,20 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     z-index: 1;
   }
 
-  @keyframes labo-core-grain {
-    0% { transform: translate3d(-4%, -3%, 0); opacity: 0.28; }
-    14% { transform: translate3d(3%, -5%, 0); opacity: 0.34; }
-    29% { transform: translate3d(-5%, 2%, 0); opacity: 0.3; }
-    43% { transform: translate3d(4%, 4%, 0); opacity: 0.35; }
-    57% { transform: translate3d(-2%, -4%, 0); opacity: 0.31; }
-    71% { transform: translate3d(5%, 1%, 0); opacity: 0.34; }
-    86% { transform: translate3d(-3%, 5%, 0); opacity: 0.29; }
-    100% { transform: translate3d(-4%, -3%, 0); opacity: 0.28; }
+  /*
+    Débordante du cadre du noyau : le disque doit envelopper la phrase, pas s'y
+    inscrire. Sélecteur plus précis que la règle ci-dessus, dont elle annule le
+    positionnement relatif.
+  */
+  .labo-orbits__core > .labo-orbits__moon {
+    position: absolute;
+    z-index: 0;
+    top: 50%;
+    left: 50%;
+    width: 132%;
+    height: auto;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
   .labo-orbits__core strong {
@@ -802,24 +1075,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     overflow: hidden;
   }
 
-  .labo-philosophy::before {
-    content: '';
-    position: absolute;
-    z-index: 0;
-    inset: 7% 2% 5% 22%;
-    background:
-      linear-gradient(90deg, transparent 0 17%, color-mix(in srgb, var(--color-ciel) 18%, transparent) 17% 42%, transparent 42% 66%, color-mix(in srgb, var(--color-sable) 26%, transparent) 66% 88%, transparent 88%),
-      radial-gradient(circle at 70% 38%, color-mix(in srgb, var(--color-ciel) 22%, transparent), transparent 42%);
-    filter: blur(0.2px);
-    opacity: 0.62;
-    pointer-events: none;
-  }
-
-  .labo-philosophy__grain {
-    z-index: 0;
-    opacity: 0.28;
-  }
-
   .labo-philosophy__margin,
   .labo-philosophy__page {
     position: relative;
@@ -911,21 +1166,30 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     white-space: nowrap;
   }
 
+  /*
+    Le chapeau. Il était composé au corps des TITRES — près de trois fois le
+    texte qui le suit : une accroche d'affiche, pas l'ouverture d'un document
+    de recherche. Il descend au rapport d'un chapeau de revue, à peine plus
+    d'une fois et demie le texte courant.
+
+    Fer à gauche et sur une mesure COURTE : c'est ce qui le détache des deux
+    colonnes en dessous, sans avoir à changer de fonte ni de couleur.
+  */
   .labo-philosophy__lead {
     position: relative;
-    inline-size: 100%;
+    inline-size: min(100%, 38rem);
     max-inline-size: 100%;
     min-inline-size: 0;
     margin: 0;
     font-family: var(--font-copy);
-    font-size: clamp(2.5rem, 5.7vw, var(--text-titre));
-    line-height: var(--text-titre--line-height);
-    letter-spacing: var(--tracking-titre);
+    font-size: clamp(1.35rem, 2.1vw, 1.75rem);
+    line-height: 1.3;
+    letter-spacing: var(--tracking-copy);
     hyphens: none;
     overflow-wrap: normal;
     word-break: normal;
     text-align: left;
-    text-wrap: wrap;
+    text-wrap: pretty;
   }
 
   .labo-philosophy__quote {
@@ -941,31 +1205,53 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     margin-left: 0.04em;
   }
 
+  /*
+    ┌─ POURQUOI DEUX COLONNES TIENNENT ICI ─────────────────────────────────┐
+    │ Composer un texte en colonnes est d'ordinaire déconseillé à l'écran : │
+    │ l'écran ne pagine pas. Arrivé au bas de la première colonne, il faut  │
+    │ REMONTER chercher le haut de la seconde — un geste que le papier ne   │
+    │ demande jamais.                                                       │
+    │                                                                       │
+    │ L'objection tombe à une condition, et une seule : que le bloc tienne  │
+    │ dans la hauteur d'un écran. Le manifeste fait environ deux mille      │
+    │ signes — à cette mesure et à ce corps, les deux colonnes tiennent     │
+    │ ensemble sous les yeux, et se lisent alors exactement comme la page   │
+    │ imprimée dont elles viennent.                                         │
+    │                                                                       │
+    │ ➜ Si le texte s'allonge nettement depuis le Studio, cette condition   │
+    │   cesse d'être vraie : revenir à une seule colonne plutôt que de      │
+    │   laisser le lecteur remonter.                                        │
+    └───────────────────────────────────────────────────────────────────────┘
+  */
   .labo-philosophy__notes {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(1.35rem, 2.25vw, 2.25rem);
-    justify-self: end;
-    inline-size: min(100%, 38rem);
+    columns: 2;
+    column-gap: clamp(2rem, 4vw, 3.5rem);
+    inline-size: min(100%, 52rem);
     max-inline-size: 100%;
     min-inline-size: 0;
-    margin-top: clamp(4rem, 8vw, 7rem);
+    margin-top: clamp(3rem, 6vw, 5rem);
   }
 
   .labo-philosophy__note {
-    inline-size: 100%;
-    max-inline-size: 100%;
-    min-inline-size: 0;
     margin: 0;
-    font-size: var(--text-copy);
-    line-height: 1.48;
-    text-align: left;
+    font-family: var(--font-copy);
+    /* Sous le corps courant : c'est l'appareil du document, pas sa voix. */
+    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-copy);
+    /*
+      Fer à fer et césure : les deux vont ensemble. Justifier une colonne
+      étroite sans couper les mots ouvre des blancs irréguliers d'une ligne à
+      l'autre — le défaut même que la composition en colonnes doit éviter.
+    */
+    text-align: justify;
+    hyphens: auto;
+    orphans: 2;
+    widows: 2;
   }
 
-  @media (min-width: 1024px) {
-    .labo-philosophy__notes {
-      width: min(100%, 31rem);
-    }
+  .labo-philosophy__note + .labo-philosophy__note {
+    margin-top: 0.85em;
   }
 
   @media (min-width: 1280px) {
@@ -993,13 +1279,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       padding-inline-end: 0;
     }
 
-    .labo-philosophy__lead {
-      font-size: clamp(2.7rem, 5.2vw, var(--text-titre));
-    }
-
-    .labo-philosophy__notes {
-      inline-size: min(100%, 27rem);
-    }
   }
 
   .labo-philosophy__keywords {
@@ -1064,16 +1343,19 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     le cahier.
   */
   /*
-    Le manifeste se termine sur ses mots-clés, déjà largement dégagés : la
-    cote de section n'a pas besoin d'une seconde respiration au-dessus d'elle,
-    seulement en dessous, avant la section suivante.
+    La section s'ouvre DIRECTEMENT sur sa déclaration : le repère « [03 — … »
+    a été retiré. La garde du haut reprend donc à son compte ce que le repère
+    et sa marge occupaient — sans elle, la déclaration remontait se coller aux
+    mots-clés qui ferment la section précédente.
   */
   .labo-team {
-    padding-block: clamp(2rem, 3.5vw, 3.5rem) clamp(6rem, 11vw, 12rem);
-  }
-
-  .labo-team__heading {
-    margin-bottom: clamp(3.5rem, 6vw, 6rem);
+    /*
+      Le blanc au-dessus du repère vaut celui qui, dans la section Vision,
+      sépare le repère « [02 — … » de sa colonne. La section précédente en
+      apporte déjà une part par sa propre garde basse : celle-ci ne pose que
+      le complément.
+    */
+    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(2.5rem, 4.5vw, 4.5rem);
   }
 
   .labo-team__lead {
@@ -1093,94 +1375,233 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
   }
 
   /*
-    Même traitement que les notes de marge du manifeste : une colonne étroite
-    poussée contre le bord droit, en retrait, sous la déclaration pleine page.
-    Fer à gauche — sur 29rem, le fer à fer creuserait des rivières.
+    ┌─ LA MÊME COLONNE, RENVOYÉE À DROITE ──────────────────────────────────┐
+    │ Ce paragraphe reprend EXACTEMENT la colonne de lecture de la section  │
+    │ Vision — largeur, corps, justification, césure, alinéa — mais poussée │
+    │ contre le bord droit de la page. Les deux blocs se répondent alors    │
+    │ d'une section à l'autre, en miroir.                                   │
+    │                                                                       │
+    │ La largeur n'est pas recopiée en dur : c'est la MÊME opération que    │
+    │ celle de la grille d'en face. Là-bas, les colonnes valent 0,8fr et    │
+    │ 1,2fr de ce qui reste une fois la gouttière prise — la première fait  │
+    │ donc 0,8 / 2 = 0,4 du reste. Écrite ainsi, elle suit toute retouche   │
+    │ de la grille sans qu'on ait à y repenser.                            │
+    │                                                                       │
+    │ ➜ LIÉ À LA VARIANTE B : si c'est la variante A qui l'emporte, cette   │
+    │   largeur n'a plus de colonne à laquelle correspondre. La rapporter   │
+    │   alors sur la composition retenue.                                   │
+    └───────────────────────────────────────────────────────────────────────┘
   */
   .labo-team__body {
-    width: min(100%, 29rem);
+    width: calc((100% - clamp(2.5rem, 6vw, 6rem)) * 0.4);
     max-width: 100%;
+    /* `auto` à gauche : c'est lui qui renvoie le bloc contre le bord droit. */
     margin: clamp(2.5rem, 5vw, 4rem) 0 0 auto;
-    text-indent: clamp(3rem, 8vw, 8rem);
-    hyphens: none;
+    font-family: var(--font-copy);
+    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-copy);
+    text-align: justify;
+    hyphens: auto;
+    text-indent: 2em;
+    orphans: 2;
+    widows: 2;
   }
 
   /*
-    La feuille est plus haute que large — un feuillet, pas un encart —, et la
-    photographie se cale sur son milieu plutôt que sur son bord haut.
+    ┌─ LA NOTE DE FONDATION, EN BAS DE PAGE ────────────────────────────────┐
+    │ Ce n'était pas une note mais un feuillet : un pavé de texte au corps  │
+    │ courant, sur son propre papier, posé au milieu de la page. Il se      │
+    │ lisait comme une section de plus.                                    │
+    │                                                                       │
+    │ C'en est une maintenant, au sens du livre : appelée depuis le mot     │
+    │ qu'elle éclaire, rejetée au pied de la section, en petit corps, sans  │
+    │ fond propre. Ce qui la désigne n'est plus un cadre mais le FILET      │
+    │ COURT au-dessus d'elle et le blanc qui l'en sépare — la convention    │
+    │ typographique exacte, qui ne coûte pas une couleur de plus.           │
+    └───────────────────────────────────────────────────────────────────────┘
   */
-  .labo-foundation {
+  .labo-note {
     /*
-      Le blanc qui détache la note de fondation de ce qui la précède. Nommé
-      parce qu'en colonne il sert deux fois : au-dessus de la photographie, et
-      entre elle et la feuille (voir le bloc mobile).
+      Le corps de la note. Nettement sous le texte courant — c'est le petit
+      corps qui dit « note », avant même le filet — mais au-dessus du seuil de
+      lisibilité d'un texte suivi de quatre paragraphes.
     */
-    --foundation-blank: clamp(5rem, 9vw, 9rem);
+    --note-size: clamp(0.8125rem, 0.55vw + 0.7rem, 0.9375rem);
     display: grid;
-    grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
-    align-items: center;
-    gap: clamp(1.5rem, 4vw, 4rem);
-    margin-top: var(--foundation-blank);
-  }
-
-  .labo-foundation__figure {
-    width: min(100%, 17rem);
-    margin: 0 auto;
-  }
-
-  .labo-foundation__image {
-    display: block;
-    width: 100%;
-    height: auto;
+    /*
+      Le numéro PEND dans la marge, le texte s'aligne sur lui-même : c'est ce
+      décrochement qui fait lire un appel de note plutôt qu'une liste. La
+      colonne est en `ch` de la note elle-même — elle tient « 1. » et son
+      espace, quelle que soit la taille rendue.
+    */
+    grid-template-columns: 3ch minmax(0, 1fr);
+    column-gap: 0.75rem;
+    /*
+      La note appartient encore à la section, mais elle est au PIED : le blanc
+      au-dessus doit être franchement plus large que celui qui sépare deux
+      paragraphes, sinon elle se lit comme la suite du texte.
+    */
+    margin-top: clamp(5rem, 9vw, 9rem);
+    /* Mesure courte, comme en bas de page : la note ne file pas sur la laize. */
+    max-width: 44rem;
+    /*
+      Même garde que les autres ancres de la page : arrivé par l'appel, on
+      atterrit sur le filet et non le nez collé au bord haut de l'écran.
+    */
+    scroll-margin-top: clamp(1.5rem, 3vw, 3rem);
   }
 
   /*
-    Un vergé clair posé sur le papier d'archive de la page : c'est l'écart de
-    ton entre les deux qui donne la feuille. Pas de voile teinté par-dessus —
-    il rabattrait la note sur le fond et il n'y aurait plus de feuillet.
+    Le filet de note. Court et calé à gauche, comme l'imprimeur le pose : un
+    trait sur toute la mesure ferait une séparation de section, pas une note.
   */
-  .labo-foundation__note {
-    box-sizing: border-box;
-    padding: clamp(2rem, 4vw, 3.5rem);
-    background-color: var(--color-surface);
-    background-image: url('/textures/papier-note-fondation.jpg');
-    background-position: center;
-    background-size: cover;
+  .labo-note::before {
+    content: '';
+    grid-column: 1 / -1;
+    width: 6rem;
+    height: 1px;
+    margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+    background-color: var(--color-line);
   }
 
-  .labo-foundation__title {
-    margin: 0 0 clamp(1.5rem, 3vw, 2.5rem);
+  /*
+    Le numéro est composé EXACTEMENT comme le titre qu'il précède — même fonte,
+    même corps, même interligne, même approche. C'est la seule façon de les
+    poser sur une même ligne de base : deux corps différents, et le chiffre
+    flotte au-dessus ou sous le titre, quel que soit l'alignement demandé à la
+    grille.
+  */
+  .labo-note__number,
+  .labo-note__title {
     font-family: var(--font-titre);
-    font-weight: 400;
+    font-size: var(--text-note);
+    line-height: var(--text-note--line-height);
     letter-spacing: var(--tracking-sous-titre);
+    font-weight: 400;
+  }
+
+  .labo-note__number {
+    /*
+      Sans cela, la case de grille s'étire sur toute la hauteur de la note :
+      le renvoi devient un lien de trois signes de large sur trois cents de
+      haut, qui s'allume quand on passe à côté du texte.
+    */
+    align-self: start;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .labo-note__title {
+    margin: 0 0 clamp(0.75rem, 1.5vw, 1.25rem);
     text-transform: uppercase;
   }
 
   /*
-    Aucun plafond de mesure : le texte doit occuper la feuille jusqu'à son
-    bord, sinon la texture se lit comme un fond vide à droite du bloc.
+    Deux colonnes, comme le bas d'une page de livre. Le texte est court : les
+    deux colonnes tiennent ensemble dans un écran, on ne remonte donc jamais
+    chercher le haut de la seconde — c'est la seule condition qui rend la
+    composition en colonnes lisible à l'écran.
   */
-  .labo-foundation__paragraph {
+  .labo-note__columns {
+    columns: 2;
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  /*
+    Le texte de la note est dans la fonte de labeur, au petit corps : c'est un
+    texte suivi, pas une mention machine. L'interligne reste ouvert — un petit
+    corps serré sur quatre paragraphes ne se lit plus.
+  */
+  .labo-note__paragraph {
     margin: 0;
+    font-family: var(--font-copy);
+    font-size: var(--note-size);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-copy);
+    /*
+      Fer à fer, et l'alinéa remplacé par un blanc entre les paragraphes : sur
+      une colonne étroite, l'un ET l'autre feraient deux marques pour un seul
+      changement de paragraphe.
+    */
+    text-align: justify;
+    /*
+      La césure est ce qui REND la justification tenable ici : sur une colonne
+      de moins de cinquante signes, sans elle, les blancs entre mots s'ouvrent
+      d'une ligne à l'autre et creusent des rivières. C'est le réglage inverse
+      des grands textes de la page, où un mot coupé se verrait de loin.
+    */
+    hyphens: auto;
+    /* Jamais une ligne seule au pied ou en tête d'une colonne. */
+    orphans: 2;
+    widows: 2;
   }
 
-
-  /* Alinéa à chaque reprise : la note se lit comme une lettre manuscrite. */
-  .labo-foundation__paragraph {
-    text-indent: 2.5em;
+  .labo-note__paragraph + .labo-note__paragraph {
+    margin-top: 0.7em;
   }
 
-  .labo-foundation__paragraph + .labo-foundation__paragraph {
-    margin-top: clamp(1rem, 1.8vw, 1.5rem);
-  }
-
-  .labo-foundation__signature {
-    margin: clamp(2rem, 4vw, 3rem) 0 0;
+  .labo-note__signature {
+    margin: clamp(1.25rem, 2.5vw, 2rem) 0 0;
     font-family: var(--font-annotation);
-    font-size: var(--text-annotation);
+    font-size: var(--note-size);
     font-style: italic;
     letter-spacing: var(--tracking-annotation);
     text-align: right;
+  }
+
+  /*
+    L'APPEL, dans le texte. Exposant : la convention du livre, et le seul moyen
+    de poser un renvoi dans une phrase sans en casser la ligne.
+
+    `position: relative` plutôt que `<sup>` : l'élément exposant natif modifie
+    la hauteur de ligne du paragraphe qui le porte, et la déclaration de la
+    section est composée au fer à fer sur quatre lignes — un interlignage qui
+    bouge sur une seule d'entre elles se voit immédiatement.
+  */
+  .labo-note__call {
+    position: relative;
+    top: -0.45em;
+    margin-left: 0.12em;
+    /*
+      Le rapport de l'appel à son texte, et non une taille fixe : la
+      déclaration passe de 2 à 4 rem selon la largeur, l'appel la suit.
+    */
+    font-size: 0.42em;
+    letter-spacing: 0;
+    text-decoration: none;
+    /* Le chiffre ne se justifie pas avec le reste de la ligne. */
+    white-space: nowrap;
+    /* Cible tactile élargie sans toucher à la ligne : la garniture ne pousse rien. */
+    padding-inline: 0.3em;
+    margin-inline: -0.18em;
+  }
+
+  .labo-note__call:hover,
+  .labo-note__call:focus-visible,
+  .labo-note__number:hover,
+  .labo-note__number:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+  }
+
+  /*
+    À l'arrivée par l'ancre, la note se signale une fois — sinon on atterrit au
+    pied d'une section sans savoir ce qu'on est venu y lire. Le filet suffit :
+    il s'épaissit le temps qu'on le remarque, et rien ne bouge dans la page.
+  */
+  .labo-note:target::before {
+    width: 12rem;
+    height: 2px;
+    transition:
+      width 0.5s ease-out,
+      height 0.5s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .labo-note:target::before {
+      transition: none;
+    }
   }
 
   .labo-services {
@@ -1200,8 +1621,28 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
   }
 
+  /*
+    Écart resserré : la légende appartient à la figure au-dessus d'elle, pas à
+    la grille en dessous. Une marge de fin de section l'aurait détachée des deux.
+  */
   .labo-services__heading {
-    margin-bottom: clamp(4.5rem, 7vw, 7rem);
+    margin-bottom: clamp(2rem, 3.5vw, 3.5rem);
+    font-size: var(--text-note);
+    line-height: 1.25;
+  }
+
+  /* Même place et même corps que le repère de la page Contact. */
+  .labo-hero__index {
+    display: block;
+    margin-top: clamp(3rem, 6vw, 5rem);
+    color: var(--color-muted);
+    /*
+      Réserve courte au-dessus de l'ancre : elle doit rester inférieure à la
+      marge propre du repère (3 à 5 rem), sans quoi le défilement s'arrête assez
+      haut pour laisser dépasser la dernière ligne du texte précédent — et la
+      section s'ouvre sur la fin de la précédente.
+    */
+    scroll-margin-top: clamp(1.5rem, 3vw, 2.5rem);
   }
 
   .labo-services__grid {
@@ -1227,8 +1668,25 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     En dessous de 768 px, le script ne pose rien : c'est le repli qui s'applique,
     et le clic mène à la fiche elle-même (voir le script de la section).
   */
+  /*
+    Deux colonnes : la lune à gauche, le chiffre et l'intitulé empilés à droite
+    — la disposition exacte du nœud sur l'orbite. Le corps de la fiche reprend
+    ensuite toute la largeur : c'est le COUPLE chiffre-titre que la lune
+    désigne, pas le paragraphe.
+  */
   .labo-service {
-    display: block;
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 0.6em;
+    align-items: center;
+    /*
+      `start` et non l'étirement par défaut : une fiche plus courte que sa
+      voisine est tirée à la hauteur de la rangée, et ses lignes — chiffre,
+      intitulé, corps — se répartissaient l'excédent. L'écart entre le chiffre
+      et son titre passait alors de 9 à 26 px d'une colonne à l'autre. Les
+      rangées gardent désormais leur hauteur propre, identique partout.
+    */
+    align-content: start;
     min-height: 0;
     scroll-margin-top: var(--service-anchor-offset, clamp(5rem, 10vw, 9rem));
     transition: color 320ms ease;
@@ -1254,6 +1712,37 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
   .labo-service__number,
   .labo-service h3 {
     font-family: var(--font-titre);
+  }
+
+  /*
+    La lune précède le chiffre sur la même ligne, comme la pastille précède
+    l'étiquette sur l'orbite. Calée sous la ligne de base pour se centrer sur la
+    hauteur d'œil du chiffre plutôt que de flotter au-dessus.
+  */
+  /*
+    Les lunes de l'index tournent lentement sur elles-mêmes, autour de leur
+    propre centre : le même mouvement que sur l'orbite, à mi-voix. Une révolution
+    par minute et demie — assez lent pour qu'on ne le surprenne qu'en s'arrêtant.
+  */
+  .labo-service__symbol {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: clamp(1.4rem, 1.9vw, 1.8rem);
+    height: auto;
+    transform-origin: 50% 50%;
+    animation: labo-service-moon-spin 90s linear infinite;
+  }
+
+  @keyframes labo-service-moon-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .labo-service__body {
+    /* Le texte repart du bord de la fiche, sous le couple qu'il développe. */
+    grid-column: 1 / -1;
   }
 
   /*
@@ -1310,8 +1799,15 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     margin-top: clamp(0.55rem, 0.8vw, 0.8rem);
     padding: 0;
     font-family: var(--font-annotation);
+    /*
+      Corps du texte courant, et non celui des notes : ce sont les outils du
+      studio, pas une mention de bas de fiche. L'italique et l'opacité suffisent
+      à les tenir au second plan.
+    */
+    font-size: var(--text-copy);
+    line-height: 1.4;
     font-style: italic;
-    letter-spacing: var(--tracking-copy);
+    letter-spacing: var(--tracking-annotation);
     list-style: none;
     opacity: 0.68;
   }
@@ -1323,6 +1819,7 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
   }
 
   .labo-service__number {
+    grid-column: 2;
     display: block;
     width: fit-content;
     transition: background-color 320ms ease, color 320ms ease;
@@ -1337,10 +1834,14 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     opacity: 0.68;
   }
 
-  .labo-services__note {
-    max-width: 42ch;
-    margin: clamp(5rem, 8vw, 8rem) 0 0 auto;
-    text-align: right;
+  /*
+    La garde HAUTE vaut celle qu'avait le repère en tête de la section Équipe —
+    le rythme des repères est le même d'une section à l'autre. Rien en dessous :
+    la section n'a pas de contenu, et les archives apportent déjà leur propre
+    garde. Le jour où le texte arrive, c'est ici que se pose son blanc.
+  */
+  .labo-method {
+    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) 0;
   }
 
   .labo-archive {
@@ -1387,7 +1888,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
     .labo-orbits__core {
       width: clamp(5.4rem, 17vw, 7.5rem);
-      box-shadow: 0 0 0 0.45rem color-mix(in srgb, var(--color-surface) 84%, transparent);
     }
 
     .labo-orbits__core strong {
@@ -1426,19 +1926,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       gap: clamp(1.75rem, 3vw, 2.5rem);
     }
 
-    .labo-philosophy::before {
-      inset-inline: 18% 0;
-    }
-
-    .labo-philosophy__lead {
-      max-width: none;
-      font-size: clamp(2.7rem, 5.2vw, var(--text-titre));
-    }
-
-    .labo-philosophy__notes {
-      grid-template-columns: 1fr;
-    }
-
     .labo-philosophy__keywords {
       flex-wrap: wrap;
       justify-content: flex-start;
@@ -1464,16 +1951,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       font-size: var(--text-note);
     }
 
-    /*
-      Le noyau tombe ici sous les 6.5 rem : à cette taille, le grain ne se lit
-      plus — il ne reste qu'une animation qui repeint le disque huit fois par
-      seconde, sur les appareils qui ont le moins à y consacrer. On la retire
-      plutôt que de la laisser tourner pour rien.
-    */
-    .labo-orbits__core::before {
-      display: none;
-    }
-
     .labo-philosophy,
     .labo-section-heading,
     .labo-archive__layout {
@@ -1485,10 +1962,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     .labo-philosophy {
       min-height: auto;
       padding-top: 5rem;
-    }
-
-    .labo-philosophy::before {
-      inset: 11rem -15% 4rem 16%;
     }
 
     .labo-philosophy__margin {
@@ -1545,19 +2018,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       padding-inline-end: 0;
     }
 
-    .labo-philosophy__lead {
-      max-width: none;
-      margin: 0;
-      font-size: clamp(2.25rem, 11.5vw, var(--text-titre));
-      hyphens: none;
-      text-align: left;
-    }
-
-    .labo-philosophy__notes {
-      gap: 1.35rem;
-      margin-top: 3.5rem;
-    }
-
     .labo-philosophy__keywords {
       flex-wrap: wrap;
       justify-content: flex-start;
@@ -1570,10 +2030,6 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
 
     .labo-archive__rail {
       grid-column: 1;
-    }
-
-    .labo-philosophy__lead {
-      font-size: clamp(1.45rem, 7vw, var(--text-titre));
     }
 
     .labo-services__grid {
@@ -1619,59 +2075,85 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     .labo-team__body {
       width: 100%;
       margin-left: 0;
+      /* Trop étroit pour couper les mots — même arbitrage que les colonnes. */
+      hyphens: none;
     }
 
-    .labo-foundation {
-      grid-template-columns: 1fr;
-      /*
-        En colonne, la photographie n'est plus à côté de la feuille mais
-        au-dessus : la gouttière devient un blanc vertical, de même nature que
-        celui qui sépare la figure du texte qui la précède. Les deux valent donc
-        la même chose — sinon l'image paraît tomber sur la note.
-      */
-      gap: var(--foundation-blank);
+    /*
+      En colonne, le numéro ne pend plus dans une marge qu'il n'y a pas : il
+      passe au-dessus du texte, sur sa propre ligne. Le décrochement aurait
+      mangé un dixième de la mesure pour trois caractères.
+    */
+    .labo-note {
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 0.35rem;
     }
 
-    .labo-foundation__figure {
-      width: min(62%, 14rem);
+    /*
+      Une seule colonne : à cette largeur, deux ne feraient plus que trente
+      signes par ligne — la justification y creuserait des trous quoi qu'on
+      fasse, et la césure couperait un mot sur deux.
+    */
+    .labo-note__columns {
+      columns: 1;
     }
 
   }
 
-  /* Composition éditoriale de la séquence Philosophie, d'après la maquette. */
+  /*
+    Composition éditoriale de la séquence Vision.
+
+    AUCUN FOND PROPRE : la section se pose à même le papier de la page. Elle
+    portait une texture, un lavis coloré et un grain par-dessus le fond du
+    site — trois épaisseurs sous un texte long, qui se lisait à travers elles.
+    Ce qui doit se voir ici, c'est le texte.
+  */
   .labo-philosophy {
     box-sizing: border-box;
     width: auto;
     max-width: var(--container-wide);
     margin-inline: auto;
-    background-color: var(--color-surface);
-    background-image:
-      linear-gradient(rgb(239 235 226 / 28%), rgb(239 235 226 / 28%)),
-      url('/textures/papier-froisse.jpg');
-    background-position: center;
-    background-size: cover;
   }
 
   .labo-philosophy {
     display: block;
     min-height: 0;
-    padding-block: clamp(5rem, 8vw, 8rem) clamp(1.5rem, 2.5vw, 2.5rem);
+    /*
+      Garde du haut RÉDUITE. Les Services se referment déjà sur une garde
+      généreuse : les deux s'additionnaient, et le repère « [02 — … » se
+      retrouvait à plus de 250 px du dernier contenu, contre environ 170 aux
+      autres charnières de la page. C'est ce blanc cumulé qu'on rabat, pas
+      celui de la section précédente — elle en a besoin pour ses fiches.
+    */
+    padding-block: clamp(2rem, 3vw, 3rem) clamp(1.5rem, 2.5vw, 2.5rem);
     overflow: clip;
   }
 
-  .labo-philosophy::before,
-  .labo-philosophy__grain,
   .labo-philosophy__scale,
   .labo-philosophy__marginalia,
   .labo-philosophy__folio {
     display: none;
   }
 
-  .labo-philosophy__margin,
   .labo-philosophy__page {
     width: min(100%, 66rem);
     max-width: 100%;
     margin-inline: auto;
+  }
+
+  /*
+    Le repère de section se cale sur la MARGE DE LA PAGE, pas sur la colonne de
+    lecture. Il partageait la boîte centrée de 66 rem : dès que la page est
+    plus large, le centrage l'écartait du bord et il ne tombait plus sur la
+    même verticale que « [01 — Services] » ou « [03 — L'équipe] ».
+
+    Le bloc de texte, lui, reste centré : c'est le folio qui rejoint la marge,
+    pas la colonne qui s'y déplace.
+  */
+  .labo-philosophy__margin {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
   }
 
   .labo-philosophy__margin {
@@ -1689,20 +2171,25 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     padding: 0;
   }
 
+  /*
+    Le chapeau. Il était composé à près de deux fois le plus grand corps de la
+    charte, sur dix-sept signes de large : quatre mots par ligne, une accroche
+    d'affiche. Ce que la section annonce, c'est un document de recherche — le
+    chapeau descend donc au rapport d'un chapeau de revue, à peine plus d'une
+    fois et demie le texte qui le suit.
+
+    Fer à gauche, sur une mesure COURTE qui ne prend pas toute la laize : c'est
+    ce qui le détache des deux colonnes en dessous, sans changer ni de fonte ni
+    de couleur.
+  */
   .labo-philosophy__lead {
-    width: min(100%, 17ch);
-    max-width: 17ch;
+    width: min(100%, 40rem);
+    max-width: 100%;
     margin: 0;
-    /*
-      Un cran au-dessus du plus grand corps de la charte : c'est la citation qui
-      ouvre le manifeste. Exprimée en multiple du token, elle suit l'échelle
-      typographique si celle-ci bouge. La colonne se mesure en ch, donc elle
-      s'élargit d'autant et le nombre de lignes ne change pas.
-    */
-    font-size: calc(var(--text-titre) * 1.75);
-    line-height: 0.92;
-    letter-spacing: var(--tracking-titre);
-    text-indent: clamp(3.5rem, 8vw, 8rem);
+    font-size: clamp(1.35rem, 2.1vw, 1.75rem);
+    line-height: 1.3;
+    letter-spacing: var(--tracking-copy);
+    text-indent: 0;
     text-align: left;
     text-wrap: pretty;
   }
@@ -1716,64 +2203,318 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     line-height: inherit;
   }
 
+  /*
+    ┌─ POURQUOI DEUX COLONNES TIENNENT ICI ─────────────────────────────────┐
+    │ Composer un texte en colonnes est d'ordinaire déconseillé à l'écran : │
+    │ l'écran ne pagine pas. Arrivé au bas de la première colonne, il faut  │
+    │ REMONTER chercher le haut de la seconde — un geste que le papier ne   │
+    │ demande jamais.                                                       │
+    │                                                                       │
+    │ L'objection tombe à une condition, et une seule : que le bloc tienne  │
+    │ dans la hauteur d'un écran. Le manifeste fait environ deux mille      │
+    │ signes ; à cette mesure et à ce corps, les deux colonnes tiennent     │
+    │ ensemble sous les yeux, et se lisent alors comme la page imprimée     │
+    │ dont elles viennent.                                                  │
+    │                                                                       │
+    │ ➜ Si le texte s'allonge nettement depuis le Studio, la condition      │
+    │   cesse d'être vraie : revenir à UNE colonne plutôt que de faire      │
+    │   remonter le lecteur.                                                │
+    └───────────────────────────────────────────────────────────────────────┘
+  */
   .labo-philosophy__notes {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: clamp(2.5rem, 5vw, 5rem) clamp(1.5rem, 3vw, 3rem);
-    width: 100%;
-    max-width: none;
+    display: block;
+    columns: 2;
+    column-gap: clamp(2rem, 4vw, 3.5rem);
+    width: min(100%, 54rem);
+    max-width: 100%;
     margin-top: clamp(3rem, 5vw, 5rem);
   }
 
+  /*
+    Un seul corps, une seule mesure, une seule fonte pour tout le manifeste.
+    Les paragraphes changeaient de largeur et de taille selon un réglage du
+    Studio : trois compositions dans un même texte, et l'œil devait retrouver
+    à chaque bloc où reprendre sa lecture.
+  */
   .labo-philosophy__note {
     width: 100%;
     max-width: none;
-    font-family: var(--font-titre);
-    font-size: var(--text-copy);
-    line-height: 1.28;
-    letter-spacing: var(--tracking-copy);
-    text-align: left;
-  }
-
-  /*
-    Deux largeurs de composition, décidées par le paragraphe lui-même et non
-    par son rang : la pleine page tient le propos, la colonne étroite poussée
-    contre le bord droit retraite ce qui se lit comme une note de marge. Un
-    calage au rang laissait les paragraphes suivants en placement automatique,
-    donc réduits à une colonne sur douze.
-  */
-  .labo-philosophy__note--pleine,
-  .labo-philosophy__note--declaration {
-    grid-column: 1 / -1;
-  }
-
-  /*
-    Le point culminant du manifeste : pleine largeur dans le corps et la
-    graisse de la citation d'ouverture, pour qu'une phrase du milieu de page
-    porte autant que celle qui l'a ouverte.
-  */
-  .labo-philosophy__note--declaration {
+    margin: 0;
     font-family: var(--font-copy);
-    font-size: clamp(1.6rem, 3.2vw, 2.6rem);
-    line-height: 1.06;
-    letter-spacing: var(--tracking-titre);
+    /* Sous le corps courant : c'est l'appareil du document, pas sa voix. */
+    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-copy);
+    text-indent: 0;
+    /*
+      Fer à fer ET césure : les deux vont ensemble. Justifier une colonne
+      étroite sans couper les mots ouvre des blancs irréguliers d'une ligne à
+      l'autre — le défaut même que la composition en colonnes doit éviter.
+    */
+    text-align: justify;
+    hyphens: auto;
+    /* Jamais une ligne seule au pied ou en tête d'une colonne. */
+    orphans: 2;
+    widows: 2;
+  }
+
+  .labo-philosophy__note + .labo-philosophy__note {
+    margin-top: 0.85em;
   }
 
   /*
-    L'alinéa ouvre le manifeste, puis marque chaque retour à la pleine page
-    après une note de marge — le lecteur retrouve ainsi le fil principal.
+    ┌─ VARIANTE B — colonne à gauche, chapeau tenu à droite ────────────────┐
+    │ Styles de la seconde composition proposée. À supprimer entièrement    │
+    │ avec sa section si c'est la première qui l'emporte.                   │
+    └───────────────────────────────────────────────────────────────────────┘
   */
-  .labo-philosophy__note:first-child,
-  .labo-philosophy__note--colonne + .labo-philosophy__note--pleine,
-  .labo-philosophy__note--colonne + .labo-philosophy__note--declaration {
-    text-indent: clamp(4rem, 11vw, 11rem);
+  .labo-vision-b {
+    box-sizing: border-box;
+    width: auto;
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding-block: clamp(5rem, 8vw, 8rem) clamp(1.5rem, 2.5vw, 2.5rem);
   }
 
-  .labo-philosophy__note--colonne {
-    grid-column: 7 / 13;
-    width: min(100%, 29rem);
-    justify-self: end;
-    text-indent: clamp(3rem, 8vw, 8rem);
+  /* Même marge que les autres repères de section — voir la variante A. */
+  .labo-vision-b__head {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 clamp(3rem, 5vw, 5rem);
+  }
+
+  .labo-vision-b__layout {
+    display: grid;
+    /*
+      La colonne de lecture est la plus étroite des deux : c'est un texte
+      suivi au petit corps, il ne doit pas dépasser la mesure confortable.
+      Le chapeau, lui, prend la place que sa taille demande.
+    */
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: clamp(2.5rem, 6vw, 6rem);
+    /*
+      INDISPENSABLE au maintien du chapeau : sans cela, chaque case de la
+      grille s'étire sur toute la hauteur de la rangée, et un élément collant
+      n'a plus un pixel de course à l'intérieur de sa case — il ne colle
+      jamais. Aligné en haut, il retrouve sa hauteur de contenu, et la
+      différence avec la colonne devient sa course.
+    */
+    align-items: start;
+    /*
+      TOUTE la largeur de la section, et non la boîte centrée de 66 rem :
+      celle-ci laissait une quarantaine de pixels morts de chaque côté, qui
+      rentraient la colonne de lecture et décollaient les notions du bord. Les
+      deux extrémités tombent maintenant sur la même verticale que le repère
+      « [02 — … » à gauche et que le bord de la section à droite.
+
+      C'est le VIDE ENTRE LES DEUX qui tient la composition, pas une marge
+      ajoutée autour d'elle : plus les deux blocs sont écartés, plus la colonne
+      fixe se lit comme une marge de page et non comme une seconde colonne.
+    */
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+  }
+
+  /* Une seule colonne, justifiée, exactement au corps de la variante A. */
+  .labo-vision-b__note {
+    margin: 0;
+    font-family: var(--font-copy);
+    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+    line-height: 1.6;
+    letter-spacing: var(--tracking-copy);
+    text-align: justify;
+    hyphens: auto;
+    /*
+      L'alinéa marque la reprise, comme dans un livre. Il remplace le blanc
+      entre paragraphes : les deux ensemble marqueraient DEUX fois le même
+      changement, et hacheraient une colonne qui doit se lire d'un trait.
+    */
+    text-indent: 2em;
+  }
+
+
+  .labo-vision-b__aside {
+    position: sticky;
+    /*
+      Un tiers d'écran plutôt que le bord haut : le chapeau se tient à hauteur
+      de lecture, là où l'œil revient, et non collé sous la barre du menu.
+    */
+    top: clamp(4rem, 22vh, 11rem);
+    grid-column: 2;
+    grid-row: 1;
+    /*
+      Le chapeau et les quatre notions côte à côte. La seconde colonne est en
+      `auto` : elle ne prend que la largeur du plus long des quatre mots, et
+      tout le reste va au chapeau.
+    */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: clamp(1.25rem, 2.5vw, 2.5rem);
+    /*
+      Alignés par le HAUT : les notions partent sur la même ligne que la
+      première du chapeau. Étirées, elles se centreraient sur sa hauteur et
+      flotteraient au milieu de la citation.
+    */
+    align-items: start;
+  }
+
+  .labo-vision-b__lead {
+    position: relative;
+    margin: 0;
+    font-family: var(--font-copy);
+    /*
+      La citation détachée d'une page de revue, et elle porte seule tout le
+      côté droit : elle est donc franchement au-dessus du texte courant. Le
+      plafond dépasse le corps des Titres — ici la phrase EST le repère visuel
+      de la section, il n'y a pas de titre au-dessus d'elle pour le tenir.
+    */
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.08;
+    letter-spacing: var(--tracking-titre);
+    hyphens: none;
+    text-wrap: pretty;
+  }
+
+  /*
+    Le guillemet ouvrant est sorti dans la marge : la première ligne du chapeau
+    s'aligne alors sur le haut de la colonne d'en face, et non en retrait de la
+    largeur du signe.
+  */
+  .labo-vision-b__quote {
+    position: absolute;
+    top: -0.04em;
+    left: -0.46em;
+  }
+
+  /*
+    Les notions, en pile alignée à droite sous le chapeau. Même dispositif que
+    dans la variante A, avec ses propres classes : les deux compositions sont
+    faites pour qu'on en supprime une — partager les classes ferait tomber
+    l'effet avec la section perdante.
+  */
+  .labo-vision-b__keywords {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+    margin: 0;
+    /*
+      La pile démarre au ras de la première ligne du chapeau. Le décalage rend
+      ce que la hauteur de ligne des notions prend au-dessus de leurs lettres —
+      sans lui, elles partent un cheveu plus bas que la capitale d'en face.
+    */
+    padding-top: 0.15em;
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1.3;
+    letter-spacing: var(--tracking-copy);
+    text-transform: lowercase;
+  }
+
+  .labo-vision-b__keyword {
+    display: inline-flex;
+    cursor: default;
+  }
+
+  /*
+    La fenêtre : haute d'UNE lettre, sur une piste qui en contient deux. Ce
+    qui dépasse est coupé — c'est ce rognage qui fait la mécanique.
+  */
+  .labo-vision-b__letter {
+    display: inline-block;
+    height: 1.3em;
+    overflow: hidden;
+  }
+
+  .labo-vision-b__letter-track {
+    display: flex;
+    flex-direction: column;
+    will-change: transform;
+    transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Le retard par rang : les lettres roulent l'une après l'autre. */
+    transition-delay: calc(var(--letter-index) * 34ms);
+  }
+
+  .labo-vision-b__letter-track > span {
+    display: block;
+    height: 1.3em;
+    line-height: 1.3;
+  }
+
+  /*
+    Au survol seulement, et seulement au pointeur fin : sur un écran tactile
+    le survol reste collé après le doigt, et le mot resterait à mi-course.
+  */
+  @media (hover: hover) and (pointer: fine) {
+    .labo-vision-b__keyword:hover .labo-vision-b__letter-track {
+      transform: translateY(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .labo-vision-b__letter-track {
+      transition: none;
+    }
+
+    .labo-vision-b__keyword:hover .labo-vision-b__letter-track {
+      transform: none;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    /*
+      Sous cette largeur, les deux colonnes se disputent la place : le chapeau
+      tombe à trois mots par ligne et la colonne de lecture sous quarante
+      signes. On empile — et le chapeau, redevenu un bloc dans le flux, cesse
+      de coller : il n'a plus rien à côté de quoi tenir.
+    */
+    .labo-vision-b__layout {
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(2rem, 5vw, 3rem);
+    }
+
+    .labo-vision-b__aside {
+      position: static;
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    /*
+      Empilé, le chapeau reprend toute la largeur : les notions ne peuvent plus
+      lui prendre une colonne sans le réduire à trois mots par ligne. Elles
+      repassent dessous, toujours calées à droite.
+    */
+    .labo-vision-b__aside {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .labo-vision-b__keywords {
+      margin-top: clamp(1.5rem, 3vw, 2.5rem);
+      padding-top: 0;
+    }
+
+    .labo-vision-b__notes {
+      grid-column: 1;
+      grid-row: 2;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .labo-vision-b {
+      padding-inline: var(--spacing-gutter);
+    }
+
+    .labo-vision-b__lead {
+      font-size: clamp(1.5rem, 7vw, 2rem);
+    }
+
+    /* Même raison qu'en variante A : trop étroit pour justifier et couper. */
+    .labo-vision-b__note {
+      text-align: left;
+      hyphens: none;
+      text-indent: 1.25em;
+    }
   }
 
   .labo-philosophy__keywords {
@@ -1813,27 +2554,26 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
     .labo-philosophy__lead {
       width: 100%;
       max-width: 100%;
-      font-size: clamp(2.5rem, 16vw, calc(var(--text-titre) * 1.75));
-      text-indent: 1.5rem;
+      font-size: clamp(1.25rem, 5.5vw, 1.6rem);
+      text-indent: 0;
     }
 
+    /*
+      Une seule colonne : à cette largeur, deux ne feraient plus que trente
+      signes par ligne — la justification y creuserait des trous quoi qu'on
+      fasse, et la césure couperait un mot sur deux.
+    */
     .labo-philosophy__notes {
-      grid-template-columns: minmax(0, 1fr);
+      columns: 1;
+      width: 100%;
     }
 
     .labo-philosophy__note {
-      grid-column: 1;
       width: 100%;
       max-width: 100%;
       margin-left: 0;
-    }
-
-    .labo-philosophy__note--colonne {
-      justify-self: stretch;
-    }
-
-    .labo-philosophy__note {
-      text-indent: 2rem;
+      text-align: left;
+      hyphens: none;
     }
 
     .labo-philosophy__keywords {
@@ -1849,9 +2589,8 @@ const hasFoundationImage = Boolean(page.foundationImage?.asset);
       transition: none;
     }
 
-    .labo-orbits__core::before {
+    .labo-service__symbol {
       animation: none;
-      transform: none;
     }
 
     .labo-philosophy__letter-track {

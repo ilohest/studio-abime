@@ -506,9 +506,25 @@ export const contactPageQuery = /* groq */ `
   _id,
   _type,
   language,
-  opening,
-  "paragraphs": coalesce(paragraphs, []),
-  mailInvitation,
+  enquiryNotice,
+  // L'index : le terme se saisit, les FOLIOS se calculent (src/lib/siteIndex.ts).
+  // Une œuvre citée n'est donc projetée qu'en type et en slug — de quoi
+  // reconstruire son numéro et son adresse au rendu.
+  // (Commentaires de ligne : GROQ ne connaît pas la forme /* … */.)
+  "index": coalesce(index[]{
+    _key,
+    term,
+    category,
+    definition,
+    link ${LINK},
+    "works": coalesce(works[defined(reference->slug.current)]{
+      _key,
+      year,
+      "type": reference->_type,
+      "slug": reference->slug.current,
+      "title": coalesce(label, reference->title)
+    }, [])
+  }, []),
   seo ${SEO}
 }`;
 
@@ -518,13 +534,12 @@ export const laboPageQuery = /* groq */ `
   _type,
   language,
   title,
+  intro,
   "philosophy": coalesce(philosophy, []),
   "services": coalesce(services[]{ _key, title, description, "tools": coalesce(tools, []) }, []),
-  note,
   teamLead,
   teamBody,
   foundationTitle,
-  foundationImage ${IMAGE},
   "foundationParagraphs": coalesce(foundationParagraphs, []),
   foundationSignature,
   "archiveProjects": select(

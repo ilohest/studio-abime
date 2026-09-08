@@ -79,6 +79,32 @@ export function sectionFieldAttribute(
 }
 
 /**
+ * Même chose, pour un champ posé À LA RACINE d'un document — les singletons
+ * (page Labo, page Contact…) n'ont pas de tableau `sections` où se repérer.
+ *
+ * @param documentId   `_id` du document
+ * @param documentType `_type` du document
+ * @param path         chemin du champ dans le document — `teamLead`
+ */
+export function documentFieldAttribute(
+  documentId: string | undefined,
+  documentType: string | undefined,
+  path: string,
+): string | undefined {
+  if (!visualEditingEnabled) return undefined;
+  if (!documentId || !documentType) return undefined;
+
+  return createDataAttribute({
+    projectId,
+    dataset,
+    baseUrl: studioUrl,
+    id: documentId,
+    type: documentType,
+    path,
+  }).toString();
+}
+
+/**
  * Les images ne portent JAMAIS de traîne d'édition visuelle : stega n'encode
  * que des chaînes de caractères, et une image est un objet — une référence
  * d'asset, un recadrage, un texte alternatif. Une planche d'images est donc
