@@ -62,7 +62,7 @@ const sections: SiteSectionDefinition[] = [
     items: [
       { key: 'services', label: 'Services', hash: '#services' },
       { key: 'vision', label: 'Vision', hash: '#vision' },
-      { key: 'equipe', label: 'La méthode', hash: '#equipe' },
+      { key: 'methode', label: 'La méthode', hash: '#methode' },
       { key: 'archives', label: 'Archives', hash: '#archives' },
     ],
   },

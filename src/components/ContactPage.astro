@@ -73,9 +73,17 @@ const GRID_ROWS = 7;
   les cases : les repères sont écrits pour douze colonnes, pas pour six.
 */
 const NARROW_COLS = 6;
-const NARROW_ROWS = 13;
+/*
+  DOUZE rangées, pas treize. Le plan étroit portait une rangée entièrement vide
+  entre le bloc de phrases du haut et le croisement ; sur un écran de poche,
+  c'est la HAUTEUR qui commande le côté des cases — une rangée de plus les
+  rétrécit toutes, et le plateau s'éloigne d'autant des bords. Douze est le
+  plancher : quatorze cases de phrases en haut, vingt en bas, cinq rangées de
+  croisement, à six cases par rangée.
+*/
+const NARROW_ROWS = 12;
 const NARROW_ACROSS_X = 0;
-const NARROW_ACROSS_Y = 6;
+const NARROW_ACROSS_Y = 5;
 
 const WORDMARK_ACROSS = 'STUDIO';
 const WORDMARK_DOWN = 'ABIME';
@@ -141,16 +149,16 @@ const wordmarkNotes: WordmarkNote[] = [
   { x: 9, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 2 },
   { x: 10, y: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 2 },
 
-  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 9, nspan: 3 },
-  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 9, nspan: 3 },
-  { x: 2, y: 5, text: 'on vous le dit,', nx: 0, ny: 10, nspan: 2 },
-  { x: 3, y: 5, text: 'et on vous oriente.', nx: 2, ny: 10, nspan: 3 },
+  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 8, nspan: 3 },
+  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 8, nspan: 3 },
+  { x: 2, y: 5, text: 'on vous le dit,', nx: 0, ny: 9, nspan: 2 },
+  { x: 3, y: 5, text: 'et on vous oriente.', nx: 2, ny: 9, nspan: 3 },
 
-  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 11, nspan: 3 },
-  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 11, nspan: 2 },
+  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 10, nspan: 3 },
+  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 10, nspan: 2 },
   /* Deux cases : une adresse ne se coupe pas, et le bouton doit tenir à côté. */
   ...(email
-    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 0, ny: 12, nspan: 4 }]
+    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 0, ny: 11, nspan: 4 }]
     : []),
 ];
 
@@ -2437,7 +2445,7 @@ const phases = [
     */
     .contact-wordmark__grid {
       --cols: 6;
-      --rows: 13;
+      --rows: 12;
     }
 
     .contact-wordmark__cell,

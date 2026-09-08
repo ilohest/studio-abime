@@ -1842,6 +1842,12 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   */
   .labo-method {
     padding-block: clamp(1.5rem, 2.5vw, 2.5rem) 0;
+    /*
+      Destination de l'entrée 01.3 du rail. Même garde que la section Services,
+      barre de marque comprise : sur écran étroit, celle-ci est fixe et
+      couvrirait le repère si l'ancre déposait la section au ras du bord.
+    */
+    scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
   }
 
   .labo-archive {
