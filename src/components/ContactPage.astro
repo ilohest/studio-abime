@@ -2185,19 +2185,6 @@ const phases = [
     text-align: right;
   }
 
-  @media (max-width: 639px) {
-    /*
-      Sous cette largeur l'intitulé passe sur deux lignes : la mention posée en
-      face chevaucherait sa seconde ligne. Elle repasse dessous, à gauche,
-      comme dans les réponses courtes.
-    */
-    .contact-field--observation .contact-field__log {
-      position: static;
-      margin-top: 0.45rem;
-      text-align: left;
-    }
-  }
-
   /*
     La ligne en cours de saisie s'éclaire. C'est le champ actif d'un registre,
     et c'est surtout l'indicateur de focus : sous un trait, un soulignement de
@@ -2673,10 +2660,60 @@ const phases = [
 
     .contact-field {
       grid-template-columns: 1fr;
+      gap: 1.2rem;
+      /*
+        LA FICHE RESPIRE. La garniture basse valait 2,15 rem parce qu'elle
+        logeait l'horodatage, posé hors du flux sous le libellé. Celui-ci passe
+        en marge droite (voir juste en dessous) : ce qui reste n'est plus une
+        réserve mais un BLANC, et il vaut autant en haut qu'en bas.
+      */
+      padding-block: 1.6rem;
     }
 
-    .contact-field {
-      gap: 1.2rem;
+    /*
+      ┌─ L'HORODATAGE PASSE EN MARGE DROITE ──────────────────────────────┐
+      │ En colonne unique, « 18h55 — renseigné » s'intercalait entre la    │
+      │ question et sa réponse : une ligne de plus entre deux lignes qui   │
+      │ vont ensemble, et trois hauteurs de texte empilées là où la fiche  │
+      │ n'en demandait que deux. Le formulaire se lisait dense, alors      │
+      │ qu'il ne pose que six questions.                                    │
+      │                                                                     │
+      │ La mention rejoint la LIGNE DE LA QUESTION, calée au bord droit :  │
+      │ la mention marginale d'un formulaire imprimé, en face de son       │
+      │ intitulé — exactement ce que fait déjà la fiche au large.          │
+      │                                                                     │
+      │ Une grille et non un `flex` : l'intitulé garde sa colonne, la      │
+      │ mention la sienne, et la précision — quand il y en a une — reprend │
+      │ la ligne suivante SOUS l'intitulé. Aucun des trois ne peut passer  │
+      │ sur un autre, quelle que soit la longueur de la question.          │
+      └─────────────────────────────────────────────────────────────────────┘
+    */
+    .contact-label-group {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      column-gap: 1rem;
+    }
+
+    .contact-label-group > label,
+    .contact-label-group > .contact-field__label,
+    .contact-label-group > .contact-field__note {
+      grid-column: 1;
+    }
+
+    /*
+      Les deux sélecteurs : les questions ouvertes posaient déjà leur mention
+      autrement, et leur règle l'emporterait sur celle-ci sans être nommée ici.
+    */
+    .contact-field__log,
+    .contact-field--observation .contact-field__log {
+      position: static;
+      grid-column: 2;
+      grid-row: 1;
+      margin-top: 0;
+      text-align: end;
+      /* La mention ne se coupe pas : c'est l'intitulé qui cède de la place. */
+      white-space: nowrap;
     }
 
     .contact-options {

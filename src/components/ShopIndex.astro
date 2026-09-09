@@ -61,11 +61,18 @@ const entries = collections.map((collection, index) => ({
       <div class="shop-tabs" style={`--tab-count: ${entries.length}`}>
         {entries.map((entry) => (
           <Fragment>
+            {/*
+              Le bouton radio est posé SOUS SA PROPRE LANGUETTE, aux mêmes
+              coordonnées qu'elle — voir la feuille de style. Il reste invisible
+              et parfaitement utilisable au clavier, mais il n'est plus ailleurs
+              dans la page que là où l'on a cliqué.
+            */}
             <input
-              class="shop-tab__input sr-only"
+              class="shop-tab__input"
               type="radio"
               name="shop-collection"
               id={entry.id}
+              style={`--tab-index: ${entry.index}`}
               checked={entry.index === 0}
             />
 
@@ -207,6 +214,36 @@ const entries = collections.map((collection, index) => ({
     margin-inline: auto;
     /* La place des onglets, prise en bordure droite de la fiche. */
     padding-right: var(--tab-width);
+  }
+
+  /*
+    ┌─ LE BOUTON RADIO SOUS SA LANGUETTE ───────────────────────────────────┐
+    │ Il était `sr-only` : un point d'un pixel, découpé, retombant en tête   │
+    │ de la fiche. Or cocher une case DONNE LE FOCUS au bouton, et un        │
+    │ navigateur amène toujours l'élément focalisé dans le champ de vision.  │
+    │ Toucher un intercalaire faisait donc remonter la page d'un coup vers   │
+    │ ce point invisible — un saut sans cause apparente, très net sur un     │
+    │ téléphone, où la fiche est haute et les onglets bas.                    │
+    │                                                                        │
+    │ Il occupe désormais EXACTEMENT le rectangle de sa languette. Le focus  │
+    │ tombe là où le doigt s'est posé : il n'y a plus rien à faire défiler.  │
+    │                                                                        │
+    │ Invisible par l'opacité et non par un découpage : il reste un vrai     │
+    │ bouton radio, parcourable aux flèches et annoncé par les lecteurs      │
+    │ d'écran. Transparent au pointeur, pour que ce soit toujours            │
+    │ l'étiquette — qui porte le dessin et l'état — qui reçoive le clic.     │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .shop-tab__input {
+    position: absolute;
+    right: 0;
+    top: calc(var(--tab-index) * var(--tab-height));
+    width: var(--tab-width);
+    height: var(--tab-height);
+    margin: 0;
+    appearance: none;
+    opacity: 0;
+    pointer-events: none;
   }
 
   /*
@@ -529,11 +566,21 @@ const entries = collections.map((collection, index) => ({
     letter-spacing: 0.12em;
   }
 
+  /*
+    Le résumé se compose dans la fonte des TITRES, en petit corps — la voix
+    dactylographiée du site, celle des fiches de services du Labo. Une notice
+    d'archive n'est pas un texte de lecture : c'est une entrée d'index, et elle
+    doit se lire comme telle, à la même voix et au même corps qu'ailleurs.
+
+    L'interligne est ouvert d'un cran : le mono a des fûts plus étroits et des
+    approches plus larges que la fonte de labeur, ses lignes se confondent plus
+    vite. C'est ce qui rend le petit corps tenable sur plusieurs lignes.
+  */
   .shop-record__summary {
     margin-top: 1rem;
-    font-family: var(--font-copy);
-    font-size: var(--text-copy);
-    line-height: var(--text-copy--line-height);
+    font-family: var(--font-titre);
+    font-size: 0.9375rem;
+    line-height: 1.55;
     letter-spacing: var(--tracking-copy);
   }
 
@@ -585,6 +632,16 @@ const entries = collections.map((collection, index) => ({
     .shop-tabs {
       --tab-width: 2rem;
       --tab-height: 8rem;
+    }
+
+    /*
+      Le résumé descend d'un cran de plus. La notice tient ici sur une seule
+      colonne étroite, sous la planche : au corps du large, le même texte
+      occupait le tiers de l'écran et reprenait le poids d'un paragraphe de
+      lecture, quand il ne fait que présenter la collection.
+    */
+    .shop-record__summary {
+      font-size: 0.875rem;
     }
   }
 </style>

@@ -622,6 +622,16 @@ const fieldSettings = JSON.stringify(settings);
       color: var(--color-muted);
       text-align: end;
     }
+
+    /*
+      La légende ne suit plus la planche mais le RELEVÉ, qui est une liste de
+      lignes filetées. Posée à l'écart d'usage, elle se lisait comme une
+      sixième ligne de cette liste — une entrée sans rôle. Le blanc la rend à
+      la figure : c'est elle qu'elle nomme, pas la liste qui la précède.
+    */
+    .constellation__caption {
+      margin-top: clamp(1.75rem, 7vw, 2.75rem);
+    }
   }
 
   /*
