@@ -757,6 +757,16 @@ const phases = [
     */
     const grid = spread.querySelector<HTMLElement>('.contact-wordmark__grid');
 
+    /*
+      L'ÉTIREMENT TOLÉRÉ. Le plan étroit est en portrait — six colonnes pour
+      douze rangées — et la place qui lui reste sous le rail, entre 800 et
+      1000 px, est presque carrée : la hauteur commande alors le côté, et le
+      plateau ne couvre plus que les deux tiers de la laize. Les colonnes
+      peuvent donc dépasser d'un cinquième la hauteur d'une rangée pour aller
+      chercher le bord. Au-delà, la case cesse de se lire comme une case.
+    */
+    const MAX_STRETCH = 1.2;
+
     const sizeBoard = () => {
       if (!grid) return;
 
@@ -766,19 +776,21 @@ const phases = [
       const gap = parseFloat(styles.columnGap) || 0;
 
       /*
-        Le côté est libéré avant la mesure : sans cela, on mesurerait la place
-        que le plateau occupe DÉJÀ, et il ne pourrait plus que rétrécir.
+        Les côtés sont libérés avant la mesure : sans cela, on mesurerait la
+        place que le plateau occupe DÉJÀ, et il ne pourrait plus que rétrécir.
       */
       grid.style.removeProperty('--cell');
+      grid.style.removeProperty('--cell-w');
       const box = grid.getBoundingClientRect();
-      const side = Math.floor(
-        Math.min(
-          (box.width - (cols - 1) * gap) / cols,
-          (box.height - (rows - 1) * gap) / rows,
-        ),
-      );
+      const byWidth = (box.width - (cols - 1) * gap) / cols;
+      const byHeight = (box.height - (rows - 1) * gap) / rows;
+      const side = Math.floor(Math.min(byWidth, byHeight));
+      const column = Math.floor(Math.min(byWidth, side * MAX_STRETCH));
 
-      if (side > 0) grid.style.setProperty('--cell', `${side}px`);
+      if (side > 0) {
+        grid.style.setProperty('--cell', `${side}px`);
+        grid.style.setProperty('--cell-w', `${column}px`);
+      }
     };
 
     const render = () => {
@@ -1219,7 +1231,7 @@ const phases = [
     passage de la borne. Elle ne dépasse jamais la marge de page moins un filet
     d'air, pour que les cases ne touchent pas le bord.
   */
-  @media (min-width: 1101px) {
+  @media (min-width: 1000px) {
     .contact-spread {
       --board-bleed: clamp(
         0px,
@@ -1266,7 +1278,7 @@ const phases = [
     display: grid;
     min-height: 0;
     flex: 1;
-    grid-template-columns: repeat(var(--cols), var(--cell, minmax(0, 1fr)));
+    grid-template-columns: repeat(var(--cols), var(--cell-w, var(--cell, minmax(0, 1fr))));
     grid-template-rows: repeat(var(--rows), var(--cell, minmax(0, 1fr)));
     justify-content: center;
     align-content: center;
@@ -2436,7 +2448,7 @@ const phases = [
     }
   }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 999px) {
     /*
       LE PLATEAU ÉTROIT. Six colonnes, treize rangées, et un plan de
       coordonnées entièrement distinct : `--nx` / `--ny` remplacent `--x` /
