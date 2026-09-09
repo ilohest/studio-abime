@@ -141,27 +141,34 @@ type WordmarkNote = {
 const wordmarkNotes: WordmarkNote[] = [
   /* Le retour à la ligne est composé : « Bienvenue » tient sa ligne. */
   /*
-    Sur le plan étroit, chaque fragment tient dans le MOINS de cases possible :
-    le texte se replie sur plusieurs lignes plutôt que de manger la rangée. Une
-    phrase étalée sur trois cases efface le damier — c'est un bandeau, plus un
-    plateau ; repliée dans une, elle redevient un jeton parmi les autres.
+    L'EMPRISE DE CHAQUE PHRASE, plan par plan.
+
+    Le principe est le moins de cases possible : le texte se replie sur
+    plusieurs lignes plutôt que de manger la rangée. Une phrase étalée sur trois
+    cases efface le damier — c'est un bandeau, plus un plateau.
+
+    Mais une case ne peut pas être plus étroite que le plus long MOT qu'elle
+    porte : dans une case de cinquante pixels, « COMMENCER. » et « SERVICES, »
+    débordent. Les phrases qui portent un mot long en prennent donc deux, sur
+    les deux plans — c'est ce qui permet au plan large de tenir jusqu'à des
+    cases d'une cinquantaine de pixels, et donc de servir bien plus bas qu'avant.
   */
-  { x: 1, y: 0, text: 'Bienvenue\ndans le Studio,', nx: 1, ny: 0, nspan: 2 },
+  { x: 1, y: 0, span: 2, text: 'Bienvenue\ndans le Studio,', nx: 1, ny: 0, nspan: 2 },
 
   { x: 8, y: 1, text: 'Écrire ici,', nx: 0, ny: 1, nspan: 1 },
-  { x: 9, y: 1, text: 'c’est déjà commencer.', nx: 2, ny: 1, nspan: 2 },
+  { x: 9, y: 1, span: 2, text: 'c’est déjà commencer.', nx: 2, ny: 1, nspan: 2 },
 
-  { x: 8, y: 2, text: 'On vous lit', nx: 1, ny: 2, nspan: 1 },
-  { x: 9, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 1 },
-  { x: 10, y: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 1 },
+  { x: 7, y: 2, text: 'On vous lit', nx: 1, ny: 2, nspan: 1 },
+  { x: 8, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 1 },
+  { x: 9, y: 2, span: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 2 },
 
-  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 8, nspan: 2 },
-  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 8, nspan: 2 },
-  { x: 2, y: 5, text: 'on vous le dit,', nx: 1, ny: 9, nspan: 1 },
-  { x: 3, y: 5, text: 'et on vous oriente.', nx: 3, ny: 9, nspan: 2 },
+  { x: 0, y: 5, span: 2, text: 'Si ce que vous décrivez', nx: 0, ny: 8, nspan: 2 },
+  { x: 2, y: 5, span: 2, text: 'ne relève pas de nos services,', nx: 3, ny: 8, nspan: 2 },
+  { x: 6, y: 5, text: 'on vous le dit,', nx: 1, ny: 9, nspan: 1 },
+  { x: 7, y: 5, span: 2, text: 'et on vous oriente.', nx: 3, ny: 9, nspan: 2 },
 
-  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 10, nspan: 2 },
-  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 10, nspan: 1 },
+  { x: 4, y: 6, span: 2, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 10, nspan: 2 },
+  { x: 6, y: 6, span: 2, text: 'Envoyez vos mots à', nx: 3, ny: 10, nspan: 2 },
   /*
     L'ADRESSE est l'exception à la règle du repli : elle ne se coupe pas en bout
     de ligne — une adresse brisée en deux ne se recopie plus — et le bouton doit
@@ -170,7 +177,7 @@ const wordmarkNotes: WordmarkNote[] = [
     quatre.
   */
   ...(email
-    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 1, ny: 11, nspan: 4 }]
+    ? [{ x: 8, y: 6, text: '', mail: email, span: 4, nx: 1, ny: 11, nspan: 4 }]
     : []),
 ];
 
@@ -791,24 +798,55 @@ const phases = [
       carrée. Le plan large est écarté sous un certain côté : ses phrases
       tiennent dans UNE case, et sous cette taille elles n'y tiennent plus.
     */
-    const NARROWEST_WIDE_CELL = 54;
+    const NARROWEST_WIDE_CELL = 46;
 
     const plans = grid
       ? [
           {
             narrow: false,
             cols: Number(grid.dataset.cols) || 12,
-            rows: Number(grid.dataset.rows) || 7,
+            rows0: Number(grid.dataset.rows) || 7,
             floor: NARROWEST_WIDE_CELL,
           },
           {
             narrow: true,
             cols: Number(grid.dataset.narrowCols) || 6,
-            rows: Number(grid.dataset.narrowRows) || 12,
+            rows0: Number(grid.dataset.narrowRows) || 12,
             floor: 0,
           },
         ]
       : [];
+
+    /*
+      LES RANGÉES DE GARDE. La composition ne fait que sept rangées sur le plan
+      large, et la scène en autorise souvent le double : le damier s'arrêtait
+      donc à mi-hauteur, une bande vide au-dessus et une en dessous. On le
+      complète par des cases vides, et la composition se centre au milieu.
+
+      Elles sont créées ici et non au rendu : leur nombre dépend de la fenêtre.
+    */
+    const padCells: HTMLElement[] = [];
+
+    const padBoard = (cols: number, rows: number, contentRows: number, offset: number) => {
+      if (!grid) return;
+      const needed = Math.max(0, (rows - contentRows) * cols);
+
+      while (padCells.length > needed) padCells.pop()?.remove();
+
+      while (padCells.length < needed) {
+        const cell = document.createElement('span');
+        cell.className = 'contact-wordmark__cell contact-wordmark__cell--pad';
+        padCells.push(cell);
+        grid.append(cell);
+      }
+
+      padCells.forEach((cell, index) => {
+        const band = Math.floor(index / cols);
+        /* Au-dessus de la composition tant qu'il reste de la garde, sous elle ensuite. */
+        const row = band < offset ? band : band + contentRows;
+        cell.style.gridArea = `${row + 1} / ${(index % cols) + 1}`;
+      });
+    };
 
     const sizeBoard = () => {
       if (!grid) return;
@@ -822,6 +860,7 @@ const phases = [
       */
       grid.style.removeProperty('--cell');
       const box = grid.getBoundingClientRect();
+      const extent = (count: number, side: number) => count * side + (count - 1) * gap;
 
       let best = null;
 
@@ -829,19 +868,34 @@ const phases = [
         const side = Math.floor(
           Math.min(
             (box.width - (plan.cols - 1) * gap) / plan.cols,
-            (box.height - (plan.rows - 1) * gap) / plan.rows,
+            (box.height - (plan.rows0 - 1) * gap) / plan.rows0,
           ),
         );
 
+        /* Sous ce côté, les phrases du plan ne tiennent plus dans leurs cases. */
         if (side < plan.floor) continue;
-        if (!best || side > best.side) best = { narrow: plan.narrow, side };
+
+        const rows = Math.max(plan.rows0, Math.floor((box.height + gap) / (side + gap)));
+        /*
+          On garde le plan qui COUVRE le mieux, non celui dont la case est la
+          plus grande : une case énorme sur six colonnes laisse la moitié de la
+          laize en blanc, là où une case plus petite sur douze la remplit.
+        */
+        const covered = extent(plan.cols, side) * Math.min(box.height, extent(rows, side));
+
+        if (!best || covered > best.covered) best = { ...plan, side, rows, covered };
       }
 
-      if (!best) return;
+      if (!best || best.side <= 0) return;
+
+      const offset = Math.floor((best.rows - best.rows0) / 2);
 
       grid.classList.toggle('is-narrow', best.narrow);
       grid.classList.toggle('is-wide', !best.narrow);
-      if (best.side > 0) grid.style.setProperty('--cell', `${best.side}px`);
+      grid.style.setProperty('--cell', `${best.side}px`);
+      grid.style.setProperty('--rows', String(best.rows));
+      grid.style.setProperty('--row-offset', String(offset));
+      padBoard(best.cols, best.rows, best.rows0, offset);
     };
 
     const render = () => {
@@ -1269,7 +1323,7 @@ const phases = [
       La bande réservée au repère, en haut de la scène. Sans elle, le plateau
       d'un écran étroit montait jusqu'au bord et le repère venait s'y coller.
     */
-    --marker-band: clamp(3rem, 4.5vw, 4rem);
+    --marker-band: clamp(3.75rem, 5.5vw, 5rem);
     padding-block: calc(var(--scene-pad) + var(--marker-band)) var(--scene-pad);
     /*
       LE PLATEAU MORD SUR LES MARGES DE LA PAGE. La composition de la page —
@@ -1341,7 +1395,7 @@ const phases = [
   */
   .contact-wordmark__note {
     grid-column: calc(var(--x) + 1) / span var(--span, 1);
-    grid-row: calc(var(--y) + 1);
+    grid-row: calc(var(--y) + 1 + var(--row-offset, 0));
     display: grid;
     align-content: center;
     /* Même filet que les cases vides : un fragment EST une case du plateau. */
@@ -1453,8 +1507,14 @@ const phases = [
   .contact-wordmark__cell {
     position: relative;
     display: grid;
-    grid-column: calc(var(--x) + 1);
-    grid-row: calc(var(--y) + 1);
+    grid-column: calc(var(--x) + 1) / span var(--span, 1);
+    /*
+      `--row-offset` : les rangées de garde. Le plateau ne compte que sept
+      rangées de composition, et la scène en autorise souvent le double — le
+      script complète alors le damier par des rangées vides et centre la
+      composition au milieu, d'où ce décalage.
+    */
+    grid-row: calc(var(--y) + 1 + var(--row-offset, 0));
     min-width: 0;
     place-items: center;
     border: 1px solid color-mix(in oklab, var(--color-line) 45%, transparent);
@@ -1472,6 +1532,15 @@ const phases = [
   */
   .contact-wordmark__cell--narrow {
     display: none;
+  }
+
+  /*
+    Les cases de garde, créées par le script pour combler la hauteur. Elles
+    portent leur position en style en ligne — c'est lui qui l'emporte sur les
+    règles de plan — et n'appartiennent à aucun des deux jeux de coordonnées.
+  */
+  .contact-wordmark__cell--pad {
+    display: grid;
   }
 
   /*
@@ -1557,7 +1626,7 @@ const phases = [
     grid-column: 1 / -1;
     align-self: start;
     justify-self: start;
-    transform: translateY(calc(-100% - clamp(1rem, 1.6vw, 1.5rem)));
+    transform: translateY(calc(-100% - clamp(1.5rem, 2.4vw, 2.25rem)));
     color: var(--color-muted);
   }
 
@@ -2511,7 +2580,7 @@ const phases = [
     .contact-wordmark__grid:not(.is-wide) .contact-wordmark__cell,
     .contact-wordmark__grid:not(.is-wide) .contact-wordmark__note {
       grid-column: calc(var(--nx) + 1) / span var(--nspan, 1);
-      grid-row: calc(var(--ny) + 1);
+      grid-row: calc(var(--ny) + 1 + var(--row-offset, 0));
     }
 
     /* Les cases vides du grand plateau s'effacent, celles du petit paraissent. */
@@ -2533,7 +2602,7 @@ const phases = [
   .contact-wordmark__grid.is-narrow .contact-wordmark__cell,
   .contact-wordmark__grid.is-narrow .contact-wordmark__note {
     grid-column: calc(var(--nx) + 1) / span var(--nspan, 1);
-    grid-row: calc(var(--ny) + 1);
+    grid-row: calc(var(--ny) + 1 + var(--row-offset, 0));
   }
 
   .contact-wordmark__grid.is-narrow
