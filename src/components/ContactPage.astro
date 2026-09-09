@@ -140,25 +140,37 @@ type WordmarkNote = {
 
 const wordmarkNotes: WordmarkNote[] = [
   /* Le retour à la ligne est composé : « Bienvenue » tient sa ligne. */
-  { x: 1, y: 0, text: 'Bienvenue\ndans le Studio,', nx: 0, ny: 0, nspan: 3 },
+  /*
+    Sur le plan étroit, chaque fragment tient dans le MOINS de cases possible :
+    le texte se replie sur plusieurs lignes plutôt que de manger la rangée. Une
+    phrase étalée sur trois cases efface le damier — c'est un bandeau, plus un
+    plateau ; repliée dans une, elle redevient un jeton parmi les autres.
+  */
+  { x: 1, y: 0, text: 'Bienvenue\ndans le Studio,', nx: 1, ny: 0, nspan: 2 },
 
-  { x: 8, y: 1, text: 'Écrire ici,', nx: 0, ny: 1, nspan: 2 },
-  { x: 9, y: 1, text: 'c’est déjà commencer.', nx: 2, ny: 1, nspan: 3 },
+  { x: 8, y: 1, text: 'Écrire ici,', nx: 0, ny: 1, nspan: 1 },
+  { x: 9, y: 1, text: 'c’est déjà commencer.', nx: 2, ny: 1, nspan: 2 },
 
-  { x: 8, y: 2, text: 'On vous lit', nx: 0, ny: 2, nspan: 2 },
-  { x: 9, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 2 },
-  { x: 10, y: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 2 },
+  { x: 8, y: 2, text: 'On vous lit', nx: 1, ny: 2, nspan: 1 },
+  { x: 9, y: 2, text: 'et on répond', nx: 2, ny: 2, nspan: 1 },
+  { x: 10, y: 2, text: 'en quelques jours.', nx: 4, ny: 2, nspan: 1 },
 
-  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 8, nspan: 3 },
-  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 8, nspan: 3 },
-  { x: 2, y: 5, text: 'on vous le dit,', nx: 0, ny: 9, nspan: 2 },
-  { x: 3, y: 5, text: 'et on vous oriente.', nx: 2, ny: 9, nspan: 3 },
+  { x: 0, y: 5, text: 'Si ce que vous décrivez', nx: 0, ny: 8, nspan: 2 },
+  { x: 1, y: 5, text: 'ne relève pas de nos services,', nx: 3, ny: 8, nspan: 2 },
+  { x: 2, y: 5, text: 'on vous le dit,', nx: 1, ny: 9, nspan: 1 },
+  { x: 3, y: 5, text: 'et on vous oriente.', nx: 3, ny: 9, nspan: 2 },
 
-  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 10, nspan: 3 },
-  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 10, nspan: 2 },
-  /* Deux cases : une adresse ne se coupe pas, et le bouton doit tenir à côté. */
+  { x: 7, y: 6, text: 'Le formulaire vous fait peur ?', nx: 0, ny: 10, nspan: 2 },
+  { x: 8, y: 6, text: 'Envoyez vos mots à', nx: 3, ny: 10, nspan: 1 },
+  /*
+    L'ADRESSE est l'exception à la règle du repli : elle ne se coupe pas en bout
+    de ligne — une adresse brisée en deux ne se recopie plus — et le bouton doit
+    tenir dans le coin sans mordre dessus. À trois cases, elle passait à cinq
+    pixels près et se coupait au premier écran plus étroit ; il lui en faut
+    quatre.
+  */
   ...(email
-    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 0, ny: 11, nspan: 4 }]
+    ? [{ x: 9, y: 6, text: '', mail: email, span: 2, nx: 1, ny: 11, nspan: 4 }]
     : []),
 ];
 
@@ -757,16 +769,6 @@ const phases = [
     */
     const grid = spread.querySelector<HTMLElement>('.contact-wordmark__grid');
 
-    /*
-      L'ÉTIREMENT TOLÉRÉ. Le plan étroit est en portrait — six colonnes pour
-      douze rangées — et la place qui lui reste sous le rail, entre 800 et
-      1000 px, est presque carrée : la hauteur commande alors le côté, et le
-      plateau ne couvre plus que les deux tiers de la laize. Les colonnes
-      peuvent donc dépasser d'un cinquième la hauteur d'une rangée pour aller
-      chercher le bord. Au-delà, la case cesse de se lire comme une case.
-    */
-    const MAX_STRETCH = 1.2;
-
     const sizeBoard = () => {
       if (!grid) return;
 
@@ -776,21 +778,22 @@ const phases = [
       const gap = parseFloat(styles.columnGap) || 0;
 
       /*
-        Les côtés sont libérés avant la mesure : sans cela, on mesurerait la
-        place que le plateau occupe DÉJÀ, et il ne pourrait plus que rétrécir.
-      */
-      grid.style.removeProperty('--cell');
-      grid.style.removeProperty('--cell-w');
-      const box = grid.getBoundingClientRect();
-      const byWidth = (box.width - (cols - 1) * gap) / cols;
-      const byHeight = (box.height - (rows - 1) * gap) / rows;
-      const side = Math.floor(Math.min(byWidth, byHeight));
-      const column = Math.floor(Math.min(byWidth, side * MAX_STRETCH));
+        Le plateau occupe toute la scène : ce sont les pistes en `1fr` qui le
+        font, pas ce calcul. On ne mesure plus ici que pour LA TYPOGRAPHIE — le
+        corps des fragments se règle sur la case et non sur la fenêtre, un `vw`
+        ignorant le rail qui rétrécit le plateau.
 
-      if (side > 0) {
-        grid.style.setProperty('--cell', `${side}px`);
-        grid.style.setProperty('--cell-w', `${column}px`);
-      }
+        Le plus PETIT des deux côtés : c'est lui qui décide si le texte tient.
+      */
+      const box = grid.getBoundingClientRect();
+      const side = Math.floor(
+        Math.min(
+          (box.width - (cols - 1) * gap) / cols,
+          (box.height - (rows - 1) * gap) / rows,
+        ),
+      );
+
+      if (side > 0) grid.style.setProperty('--cell', `${side}px`);
     };
 
     const render = () => {
@@ -806,9 +809,20 @@ const phases = [
       const distance = Math.max(1, runway.offsetHeight - window.innerHeight);
       const progress = reducedMotion.matches ? 1 : clamp(-rect.top / distance);
 
-      /* Depuis le bord du cadre : les jetons viennent de hors-champ. */
-      const travelX = window.innerWidth * 0.9;
-      const travelY = window.innerHeight * 0.9;
+      /*
+        HORS-CHAMP POUR TOUS. La course valait neuf dixièmes de l'écran : elle
+        suffisait aux jetons de droite, pas à ceux de gauche. Le S, en première
+        colonne, ne partait que de trois cents pixels — donc DÉJÀ visible au
+        bord droit avant le moindre défilement, alors que rien ne doit paraître
+        tant que le lecteur n'a pas commencé.
+
+        Une course d'un écran entier met n'importe quel jeton hors du cadre,
+        quelle que soit sa colonne : le plus à gauche part de zéro et arrive au
+        bord, celui de droite bien au-delà. Le supplément écarte le cas limite
+        du jeton posé exactement sur l'arête.
+      */
+      const travelX = window.innerWidth + 80;
+      const travelY = window.innerHeight + 80;
 
       for (const letter of letters) {
         const { from, span } = windowFor(letter);
@@ -1204,41 +1218,20 @@ const phases = [
     */
     --scene-pad: clamp(0.75rem, 1.6vw, 1.5rem);
     /*
-      Hauteur utile de la scène, en clair : le plateau en a besoin pour calculer
-      des cases CARRÉES, et une hauteur en pourcentage serait résolue sur la
-      largeur dans le calcul des colonnes.
-    */
-    /*
       La bande réservée au repère, en haut de la scène. Sans elle, le plateau
-      d'un écran étroit — où la hauteur commande — montait jusqu'au bord et le
-      repère venait s'y coller.
+      d'un écran étroit montait jusqu'au bord et le repère venait s'y coller.
     */
     --marker-band: clamp(3rem, 4.5vw, 4rem);
     padding-block: calc(var(--scene-pad) + var(--marker-band)) var(--scene-pad);
     /*
-      Le plateau va chercher de la largeur dans les marges de la page. Entre
-      1100 et 1440 px, le rail mange 16 rem sur une fenêtre déjà courte : les
-      douze colonnes s'y réduisent à des cases de soixante pixels, où les
-      fragments tombent sous le seuil de lisibilité. Nul, sinon.
+      LE PLATEAU MORD SUR LES MARGES DE LA PAGE. La composition de la page —
+      une garde de 4 vw — vaut pour du texte ; ici, elle ne fait que rétrécir un
+      damier qui doit tenir la laize. Il n'en reste qu'un filet d'air, pour que
+      les cases ne touchent pas le bord de l'écran. Le rail, lui, n'est pas
+      entamé : le plateau part de son arête.
     */
-    --board-bleed: 0px;
+    --board-bleed: max(0px, calc(clamp(1.25rem, 4vw, 4.5rem) - 0.5rem));
     margin-inline: calc(-1 * var(--board-bleed));
-  }
-
-  /*
-    La reprise est CONTINUE, pas un palier : elle croît à mesure que la fenêtre
-    se resserre et s'annule à 1440 px, sinon le plateau sauterait d'un cran au
-    passage de la borne. Elle ne dépasse jamais la marge de page moins un filet
-    d'air, pour que les cases ne touchent pas le bord.
-  */
-  @media (min-width: 1000px) {
-    .contact-spread {
-      --board-bleed: clamp(
-        0px,
-        calc((1440px - 100vw) * 0.4),
-        calc(clamp(1.25rem, 4vw, 4.5rem) - 0.5rem)
-      );
-    }
   }
 
   /*
@@ -1278,8 +1271,8 @@ const phases = [
     display: grid;
     min-height: 0;
     flex: 1;
-    grid-template-columns: repeat(var(--cols), var(--cell-w, var(--cell, minmax(0, 1fr))));
-    grid-template-rows: repeat(var(--rows), var(--cell, minmax(0, 1fr)));
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
     justify-content: center;
     align-content: center;
     gap: var(--gap);
@@ -2448,7 +2441,7 @@ const phases = [
     }
   }
 
-  @media (max-width: 999px) {
+  @media (max-width: 1100px) {
     /*
       LE PLATEAU ÉTROIT. Six colonnes, treize rangées, et un plan de
       coordonnées entièrement distinct : `--nx` / `--ny` remplacent `--x` /
