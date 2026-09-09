@@ -635,13 +635,18 @@ const entries = collections.map((collection, index) => ({
     }
 
     /*
-      Le résumé descend d'un cran de plus. La notice tient ici sur une seule
-      colonne étroite, sous la planche : au corps du large, le même texte
-      occupait le tiers de l'écran et reprenait le poids d'un paragraphe de
-      lecture, quand il ne fait que présenter la collection.
+      Le résumé descend au CORPS DES MENTIONS — celui du menu, des repères et
+      des légendes, partout ailleurs sur le site. La notice tient ici sur une
+      seule colonne étroite, sous la planche : à un corps plus grand, le même
+      texte occupait le tiers de l'écran et reprenait le poids d'un paragraphe
+      de lecture, quand il ne fait que présenter la collection.
+
+      L'interligne vient avec le corps, et non celui du large : à douze pixels,
+      un mono composé serré redevient illisible d'une ligne à l'autre.
     */
     .shop-record__summary {
-      font-size: 0.875rem;
+      font-size: var(--text-note);
+      line-height: var(--text-note--line-height);
     }
   }
 </style>
