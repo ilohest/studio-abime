@@ -1940,6 +1940,30 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     font-size: 0.875rem;
   }
 
+  /*
+    ┌─ SUR TÉLÉPHONE, LA FICHE DEVIENT UNE ENTRÉE D'INDEX ──────────────────┐
+    │ Douze pixels — le corps des mentions, celui du menu, des repères et    │
+    │ des légendes, employé partout où le site annonce plutôt qu'il ne       │
+    │ raconte. En colonne unique, les neuf fiches s'empilent : au corps du   │
+    │ large, chacune tenait un demi-écran et l'index cessait d'en être un.   │
+    │                                                                        │
+    │ Les prestations rejoignent la description au même corps : plus bas,    │
+    │ elles ne se liraient plus. Leur second plan est déjà dit par           │
+    │ l'italique et l'opacité — deux signes suffisent, le troisième coûtait  │
+    │ la lisibilité.                                                          │
+    │                                                                        │
+    │ L'interligne vient avec le corps : à cette taille, un mono composé     │
+    │ serré ne se lit plus d'une ligne à l'autre.                            │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  @media (max-width: 767px) {
+    .labo-service p,
+    .labo-service__tools {
+      font-size: var(--text-note);
+      line-height: var(--text-note--line-height);
+    }
+  }
+
   .labo-service__number {
     grid-column: 2;
     display: block;
