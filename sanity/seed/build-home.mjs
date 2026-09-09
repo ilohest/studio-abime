@@ -65,57 +65,37 @@ const home = {
       _key: 'services',
       _type: 'servicesMenu',
       image: asset('labo-de-com.webp'),
-      groups: [
-        { _key: 'g1', title: 'Labo de com', items: ['Recherche de Sens', 'Accompagnement', 'Audit'] },
-        { _key: 'g2', title: 'Définition', items: ['Direction artistique', 'Conception rédaction'] },
-        {
-          _key: 'g3',
-          title: 'Production',
-          items: ['Identité sensorielle', 'Graphisme', 'Visuels', 'Rédaction'],
-        },
-        {
-          _key: 'g4',
-          title: 'Expansion',
-          items: ['Déploiement', 'Ateliers & formations', 'Conférences', 'Outils de com'],
-        },
-      ],
     },
     {
       _key: 'statement',
       _type: 'studioStatement',
       statement:
         "Studio Abîme est un espace où on ne produit pas pour vous mais où on expérimente la communication ensemble. Un labo dans lequel on relie les outils et les langages qui font un projet. Son identité ne se regarde pas seulement. Elle se vit.",
-      noteNumber: 'fig.04',
-      note: "— On étudie la communication à l'échelle humaine : celle des sens, des émotions et des moyens réels dont un projet dispose.",
+      note: "fig.04 — On étudie la communication à l'échelle humaine : celle des sens, des émotions et des moyens réels dont un projet dispose.",
       marker: '94,65+50,65',
       figures: [
         {
           _key: 'f5',
-          number: 'fig.05',
           caption: 'Compréhension de la constitution',
           image: asset('etude-lune.webp'),
         },
         {
           _key: 'f6',
-          number: 'fig.06',
           caption: 'Compréhension de la constitution',
           image: asset('papier-lumiere.webp'),
         },
         {
           _key: 'f7',
-          number: 'fig.07',
           caption: 'Compréhension de la constitution',
           image: asset('atelier-bandes.webp'),
         },
         {
           _key: 'f8',
-          number: 'fig.08',
           caption: 'Compréhension de la constitution',
           image: asset('planche-main.webp'),
         },
         {
           _key: 'f9',
-          number: 'fig.09',
           caption: 'Compréhension de la constitution',
           image: asset('planche-cercle.webp'),
         },

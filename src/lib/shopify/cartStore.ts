@@ -90,10 +90,6 @@ export function closeCart(): void {
   state.open = false;
 }
 
-export function dismissError(): void {
-  state.error = null;
-}
-
 /**
  * À appeler sur la page de confirmation de commande.
  *

@@ -17,8 +17,10 @@
  * destination : mieux vaut une sous-entrée en moins qu'un folio qui ment.
  */
 import { resolveWorkFolio, type ResolvedFolio } from '~/lib/siteIndex';
+import { getLocaleMeta } from '~/i18n/config';
 import { resolveLink } from '~/lib/routing';
 import type { IndexEntry } from '~/lib/sanity/types';
+import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
 interface Props {
@@ -27,8 +29,15 @@ interface Props {
 }
 
 const { entries, locale } = Astro.props;
+const t = useTranslations(locale);
 
-const collator = new Intl.Collator('fr', { sensitivity: 'base' });
+/*
+  Le classement suit la LANGUE DE LA PAGE, et non le français en toutes
+  circonstances : un index dont l'ordre alphabétique est celui d'une autre
+  langue n'est plus un index. `sensitivity: 'base'` range « Épreuve » avec les
+  E, comme dans n'importe quel index imprimé.
+*/
+const collator = new Intl.Collator(getLocaleMeta(locale).htmlLang, { sensitivity: 'base' });
 
 /*
   La lettre de classement ignore les accents : « Épreuve » se range sous E,
@@ -112,7 +121,7 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
         <h2 id="contact-index-title" class="sr-only">Index</h2>
       </header>
 
-      <nav class="contact-index__columns" aria-label="Index du site">
+      <nav class="contact-index__columns" aria-label={t('a11y.siteIndex')}>
         {letters.map((group) => (
           <section class="index-letter" aria-labelledby={`index-letter-${slug(group.letter)}`}>
             <h3 class="index-letter__mark" id={`index-letter-${slug(group.letter)}`}>
@@ -347,8 +356,18 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
       columns: 1;
     }
 
+    /*
+      LA LETTRE RESTE UN REPÈRE DE CLASSEMENT. Ramenée au corps des
+      déclarations, elle tombait à vingt pixels sur un téléphone : à peine plus
+      qu'un intitulé d'entrée, et le classement cessait de se voir. Or c'est
+      elle qu'on cherche en faisant défiler du pouce, davantage encore qu'au
+      large où l'œil embrasse deux colonnes d'un coup.
+
+      Elle est donc rendue à sa taille de repère, mesurée sur la LARGEUR
+      D'ÉCRAN et non sur le corps du texte : c'est la colonne qu'elle jalonne.
+    */
     .index-letter__mark {
-      font-size: var(--text-declaration);
+      font-size: clamp(2.5rem, 13vw, 3.25rem);
     }
   }
 </style>

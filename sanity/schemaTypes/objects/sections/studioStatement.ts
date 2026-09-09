@@ -1,12 +1,16 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
 
+import { PLATE_FIGURES } from "../../../../src/lib/sections";
+
 /**
  * Manifeste illustré — déclaration en grand, note de bas de bloc et planche de
  * figures légendées.
  *
- * Les numéros de figure (fig.04, fig.05…) sont saisis à la main et non générés :
- * la numérotation court d'une section à l'autre sur toute la page, une
- * numérotation automatique par section la casserait au premier réagencement.
+ * Les numéros de figure (fig.05, fig.06…) NE SE SAISISSENT PLUS : ils se
+ * déduisent du rang, et la série continue celle de la note — la note porte
+ * « fig. 04 », la planche enchaîne à 05. Un repère encore écrit dans une
+ * légende ancienne est retiré au rendu, pour qu'une figure ne porte jamais
+ * deux numéros contradictoires (voir `src/lib/figureLabel.ts`).
  */
 export const studioStatement = defineType({
   name: "studioStatement",
@@ -45,31 +49,42 @@ export const studioStatement = defineType({
       type: "array",
       group: "figures",
       description:
-        "La planche compte cinq figures, à leur place fixe. On remplace leur visuel et leur légende ; on n’en ajoute pas, on n’en retire pas.",
+        "La planche compte cinq figures, à leur place fixe. On remplace leur visuel et leur légende ; l’ordre, lui, est celui de la mise en page.",
       /*
-        COMPOSITION FIGÉE, comme l'enchaînement des blocs de la page d'accueil.
-        Les cinq positions sont écrites en dur dans le composant : une sixième
-        figure n'aurait aucune place où aller, et une cinquième retirée
-        laisserait un trou dans le rythme de la planche.
+        COMPOSITION FIGÉE — mais pas VERROUILLÉE.
 
-        Couper les six actions retire le bouton d'ajout ET le menu « ⋮ » de
-        chaque figure — dupliquer, copier, insérer avant/après, supprimer. Il
-        reste l'ouverture de la figure et l'édition de ses champs.
+        Les cinq positions sont écrites en dur dans le composant : une sixième
+        figure n'aurait aucune place où aller. D'où le plafond, tenu par la
+        validation ci-dessous.
+
+        Toutes les actions étaient coupées, `add` et `remove` compris. C'était
+        une impasse : un bloc « Méthode » posé à neuf naît avec ZÉRO figure, et
+        sans bouton d'ajout personne ne pouvait plus lui en donner. La planche
+        disparaissait alors de la page sans que rien, ni au Studio ni à
+        l'écran, n'explique pourquoi. Le contenu de la page d'accueil ne le
+        montrait pas — il avait été semé avec ses cinq figures.
+
+        On garde donc ce qui relève de la MISE EN PAGE — l'ordre (`sortable`),
+        la duplication, le copier, l'insertion à un rang choisi — et on rend ce
+        qui relève du CONTENU : poser une figure, en retirer une.
 
         `disableActions` est marqué @beta par Sanity ; c'est malgré tout la
         bonne voie, pour les mêmes raisons que dans `definePageBuilder`.
       */
       options: {
         sortable: false,
-        disableActions: [
-          "add",
-          "addBefore",
-          "addAfter",
-          "remove",
-          "duplicate",
-          "copy",
-        ],
+        disableActions: ["addBefore", "addAfter", "duplicate", "copy"],
       },
+      /*
+        Le plafond est une ERREUR et non un avertissement : au-delà de cinq, la
+        figure n'est pas mal composée, elle n'est pas composée du tout — elle
+        tombe hors des positions de la planche. Mieux vaut retenir la
+        publication que livrer une rangée cassée.
+      */
+      validation: (rule) =>
+        rule.max(PLATE_FIGURES).error(
+          `La planche ne compte que ${PLATE_FIGURES} positions : une figure de plus n’aurait aucune place où aller.`,
+        ),
       of: [
         defineArrayMember({
           type: "object",

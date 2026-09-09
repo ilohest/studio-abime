@@ -15,7 +15,7 @@ import type { ContactPage } from '~/lib/sanity/types';
  */
 export function getContactFallback(locale: Locale): ContactPage {
   return {
-    _id: 'contactPage-fallback',
+    _id: `contactPage-fallback-${locale}`,
     _type: 'contactPage',
     language: locale,
   };

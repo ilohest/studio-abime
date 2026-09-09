@@ -5,6 +5,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { figureLabel } from '~/lib/figureLabel';
+import { PLATE_FIGURES } from '~/lib/sections';
 import { laboPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { figureAttribute, sectionFieldAttribute } from '~/lib/visualEditing';
@@ -51,10 +52,9 @@ const emphasizedStatementParts = new Set(['espace', 'les outils', 'les langages'
 
 /*
   Repère et texte sont saisis dans un seul champ ; `figureLabel()` en extrait le
-  repère de tête pour lui garder sa mise en forme. Les anciens champs séparés
-  sont recomposés au passage, sans migration de contenu.
+  repère de tête pour lui garder sa mise en forme.
 */
-const note = figureLabel(section.noteNumber, section.note);
+const note = figureLabel(section.note);
 
 /*
   ┌─ LA NUMÉROTATION NE SE SAISIT PLUS ───────────────────────────────────────┐
@@ -75,7 +75,21 @@ const note = figureLabel(section.noteNumber, section.note);
 const noteNumber = Number.parseInt((note.reference ?? '').replace(/\D+/g, ''), 10);
 const firstFigure = Number.isFinite(noteNumber) ? noteNumber + 1 : 1;
 
-const figures = (section.figures ?? []).map((figure, index) => ({
+/*
+  ┌─ LA PLANCHE NE PREND QUE SES CINQ FIGURES ────────────────────────────────┐
+  │ Les cinq positions sont dessinées dans la feuille de style, une par une   │
+  │ (`.statement__figure:nth-child(1…5)`). Une sixième figure n'a donc aucune │
+  │ place où aller : elle retombait en placement automatique et cassait la    │
+  │ rangée du bas, sans que rien ne l'annonce.                                │
+  │                                                                           │
+  │ Le schéma la refuse déjà à la saisie. La coupe est tenue ICI AUSSI parce  │
+  │ que la validation d'un tableau ne garde pas ce qui est arrivé avant elle  │
+  │ — un contenu migré, une reprise de données. Deux gardes valent mieux      │
+  │ qu'une planche cassée en production, et c'est le parti déjà pris par la   │
+  │ page Labo pour ses strates et ses services.                               │
+  └───────────────────────────────────────────────────────────────────────────┘
+*/
+const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, index) => ({
   ...figure,
   label: {
     reference: `fig. ${String(firstFigure + index).padStart(2, '0')}`,
@@ -84,7 +98,7 @@ const figures = (section.figures ?? []).map((figure, index) => ({
       encore écrit — dans une légende ancienne, ou saisi par habitude. Sans
       cela, la figure porterait deux numéros, et pas forcément le même.
     */
-    text: figureLabel(figure.number, figure.caption).text,
+    text: figureLabel(figure.caption).text,
   },
 }));
 ---

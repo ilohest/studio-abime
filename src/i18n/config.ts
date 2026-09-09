@@ -44,9 +44,3 @@ export function isLocale(value: unknown): value is Locale {
 export function getLocaleMeta(locale: Locale) {
   return localeMeta[locale] ?? localeMeta[defaultLocale]!;
 }
-
-/** Liste des langues pour le plugin @sanity/document-internationalization. */
-export const sanitySupportedLanguages = locales.map((id) => ({
-  id,
-  title: localeMeta[id]?.label ?? id,
-}));

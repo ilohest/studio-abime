@@ -267,7 +267,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
   id="cas-etude"
   class="motion-lab"
   data-experience-motion
-  aria-label="Table des éléments et grille d’expériences"
+  aria-label={t('a11y.elementTableAndGrid')}
 >
   <div class="motion-lab__runway" data-motion-runway>
     <div class="motion-lab__stage" data-motion-stage>
@@ -277,7 +277,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
       </div>
 
       <div class="motion-lab__table-layer" data-table-layer>
-        <div class="element-table" aria-label="Table des éléments du Studio Abîme">
+        <div class="element-table" aria-label={t('a11y.elementTable')}>
           {
             columns.map((column, columnIndex) => (
               <div

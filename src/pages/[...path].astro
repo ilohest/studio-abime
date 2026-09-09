@@ -334,28 +334,7 @@ const journalIntro = journalPage?.intro?.trim();
 
 const projectsIntro = projectsPage?.intro?.trim();
 
-// L'ancienne planche autonome fournissait les deux derniers médias de la
-// composition. Sur l'accueil, on les rattache au manifeste avant de retirer
-// seulement son enveloppe `plateSpread`. Un manifeste déjà complet n'est pas
-// dupliqué : on ne remplit que les emplacements manquants jusqu'à cinq.
-const pageSections = route.kind === 'home'
-  ? (() => {
-      const sections = page?.sections ?? [];
-      const legacyPlate = sections.find((section) => section._type === 'plateSpread');
-
-      return sections.flatMap((section) => {
-        if (section._type === 'plateSpread') return [];
-        if (section._type !== 'studioStatement' || !legacyPlate?.figures?.length) {
-          return [section];
-        }
-
-        const figures = section.figures ?? [];
-        const missingFigures = legacyPlate.figures.slice(0, Math.max(0, 5 - figures.length));
-
-        return [{ ...section, figures: [...figures, ...missingFigures] }];
-      });
-    })()
-  : page?.sections;
+const pageSections = page?.sections;
 
 /*
   Les pages d'informations légales partagent une présentation propre (colonne

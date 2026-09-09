@@ -10,9 +10,7 @@ import { defaultLocale, type Locale } from './config';
 const fr = {
   'nav.skipToContent': 'Aller au contenu',
   'nav.menu': 'Menu',
-  'nav.close': 'Fermer',
   'nav.projects': 'Expériences',
-  'nav.journal': 'Journal',
   'locale.switch': 'Changer de langue',
   'projects.empty': 'Aucun projet ne correspond à cette sélection.',
   'projects.viewProject': 'Voir le projet',
@@ -32,7 +30,6 @@ const fr = {
   'labo.sectionVision': 'Vision',
   'labo.sectionTeam': 'L’équipe',
   'labo.sectionConstellation': 'Le collectif',
-  'labo.cta': 'Donner forme',
   'labo.archive': 'Archives',
   'journal.title': 'Journal',
   'journal.all': 'Tout',
@@ -44,14 +41,10 @@ const fr = {
   'journal.read': 'Lire l’article',
   'journal.backToJournal': 'Retour au journal',
   'journal.next': 'Article suivant',
-  'error.notFound.title': 'Page introuvable',
-  'error.notFound.body': "La page demandée n'existe pas ou a été déplacée.",
-  'error.backHome': "Retour à l'accueil",
   'shop.title': 'Shop',
   'shop.empty': 'La boutique ouvre bientôt.',
   'shop.soldOut': 'Épuisé',
   'shop.from': 'À partir de',
-  'shop.view': 'Voir le tirage',
   'shop.video': 'Vidéo',
   'shop.noVisual': 'Visuel à venir',
   'shop.back': 'Retour au shop',
@@ -59,7 +52,6 @@ const fr = {
   'shop.adding': 'Ajout…',
   'shop.unavailable': 'Indisponible',
   'shop.error': 'L’opération a échoué. Réessayez dans un instant.',
-  'shop.details': 'Détails',
   'shop.where': 'Où',
   'shop.when': 'Quand',
   'shop.prerequisites': 'Prérequis',
@@ -122,6 +114,33 @@ const fr = {
   'home.projectSelection': 'Sélection de projets',
   'error.backToSurface': 'Remonter à la surface',
   'maintenance.inPreparation': 'Site en préparation',
+
+  /*
+    ── NOMS ACCESSIBLES ET LIBELLÉS DE REPLI ─────────────────────────────────
+    Ils étaient écrits en dur dans les composants. Invisibles à l'œil, ils sont
+    pourtant du texte : ce sont eux que lit une synthèse vocale, et ils
+    seraient restés en français le jour où une seconde langue arrive — la seule
+    partie du site à ne pas suivre. Ils vivent donc ici, avec le reste.
+  */
+  'a11y.mainNavigation': 'Navigation principale',
+  'a11y.openMenu': 'Ouvrir le menu',
+  'a11y.backHome': 'Retour à l’accueil de Studio Abîme',
+  'a11y.laboMethod': 'Le Labo — la méthode',
+  'a11y.elementTableAndGrid': 'Table des éléments et grille d’expériences',
+  'a11y.elementTable': 'Table des éléments du Studio Abîme',
+  'a11y.siteIndex': 'Index du site',
+  'a11y.laboOrbits': 'Les champs de recherche du laboratoire',
+  'a11y.foundationNote': 'Note 1 — note de fondation',
+  'a11y.backToText': 'Revenir au texte',
+  'a11y.showcaseGrid': 'Sélection de projets — variante en grille',
+  'a11y.brandCollage': 'Collage animé de l’univers visuel de Studio Abîme',
+
+  /*
+    Repli des intitulés du manifeste : le champ Sanity prime, mais un hero
+    encodé sans intitulé ne doit pas afficher un deux-points orphelin.
+  */
+  'manifesto.hypothesis': 'Hypothèse',
+  'manifesto.intention': 'Note d’intention',
 } as const;
 
 export type TranslationKey = keyof typeof fr;
@@ -129,9 +148,7 @@ export type TranslationKey = keyof typeof fr;
 const en: Partial<Record<TranslationKey, string>> = {
   'nav.skipToContent': 'Skip to content',
   'nav.menu': 'Menu',
-  'nav.close': 'Close',
   'nav.projects': 'Work',
-  'nav.journal': 'Journal',
   'locale.switch': 'Change language',
   'projects.empty': 'No project matches this selection.',
   'projects.viewProject': 'View project',
@@ -151,7 +168,6 @@ const en: Partial<Record<TranslationKey, string>> = {
   'labo.sectionVision': 'Vision',
   'labo.sectionTeam': 'The team',
   'labo.sectionConstellation': 'The collective',
-  'labo.cta': 'Give it form',
   'labo.archive': 'Archive',
   'journal.title': 'Journal',
   'journal.all': 'All',
@@ -163,14 +179,10 @@ const en: Partial<Record<TranslationKey, string>> = {
   'journal.read': 'Read the article',
   'journal.backToJournal': 'Back to the journal',
   'journal.next': 'Next article',
-  'error.notFound.title': 'Page not found',
-  'error.notFound.body': 'The requested page does not exist or has been moved.',
-  'error.backHome': 'Back to home',
   'shop.title': 'Shop',
   'shop.empty': 'The shop opens soon.',
   'shop.soldOut': 'Sold out',
   'shop.from': 'From',
-  'shop.view': 'View print',
   'shop.video': 'Video',
   'shop.noVisual': 'Image coming',
   'shop.back': 'Back to the shop',
@@ -178,7 +190,6 @@ const en: Partial<Record<TranslationKey, string>> = {
   'shop.adding': 'Adding…',
   'shop.unavailable': 'Unavailable',
   'shop.error': 'Something went wrong. Please try again.',
-  'shop.details': 'Details',
   'shop.where': 'Where',
   'shop.when': 'When',
   'shop.prerequisites': 'Prerequisites',
@@ -237,6 +248,22 @@ const en: Partial<Record<TranslationKey, string>> = {
   'home.projectSelection': 'Selected projects',
   'error.backToSurface': 'Back to the surface',
   'maintenance.inPreparation': 'Site in preparation',
+
+  'a11y.mainNavigation': 'Main navigation',
+  'a11y.openMenu': 'Open menu',
+  'a11y.backHome': 'Back to the Studio Abîme home page',
+  'a11y.laboMethod': 'The Lab — the method',
+  'a11y.elementTableAndGrid': 'Table of elements and grid of experiments',
+  'a11y.elementTable': 'Studio Abîme table of elements',
+  'a11y.siteIndex': 'Site index',
+  'a11y.laboOrbits': 'The laboratory’s fields of research',
+  'a11y.foundationNote': 'Note 1 — founding note',
+  'a11y.backToText': 'Back to the text',
+  'a11y.showcaseGrid': 'Selected projects — grid variant',
+  'a11y.brandCollage': 'Animated collage of the Studio Abîme visual world',
+
+  'manifesto.hypothesis': 'Hypothesis',
+  'manifesto.intention': 'Statement of intent',
 };
 
 const dictionaries: Record<string, Partial<Record<TranslationKey, string>>> = { fr, en };
@@ -246,10 +273,4 @@ export function useTranslations(locale: Locale) {
   return function t(key: TranslationKey): string {
     return dictionaries[locale]?.[key] ?? dictionaries[defaultLocale]?.[key] ?? key;
   };
-}
-
-/** Dictionnaire complet d'une langue — utile pour hydrater un composant Vue. */
-export function getDictionary(locale: Locale): Record<TranslationKey, string> {
-  const base = dictionaries[defaultLocale] ?? {};
-  return { ...base, ...(dictionaries[locale] ?? {}) } as Record<TranslationKey, string>;
 }

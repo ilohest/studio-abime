@@ -96,12 +96,12 @@ const panelId = `services-menu-${mode}`;
   class:list={['services-rail', `services-rail--${mode}`, className]}
   data-services-rail
   data-page-rail
-  aria-label="Navigation principale"
+  aria-label={t('a11y.mainNavigation')}
 >
   <button
     class="services-rail__mobile-toggle"
     type="button"
-    aria-label="Ouvrir le menu"
+    aria-label={t('a11y.openMenu')}
     aria-controls={panelId}
     aria-expanded="false"
     data-services-toggle
@@ -114,7 +114,7 @@ const panelId = `services-menu-${mode}`;
   <a
     class="services-rail__mobile-logo"
     href={homeHref}
-    aria-label="Retour à l'accueil de Studio Abîme"
+    aria-label={t('a11y.backHome')}
     data-cursor-interactive
   >
     <Wordmark title={null} />
@@ -186,7 +186,7 @@ const panelId = `services-menu-${mode}`;
     <a
       class="services-rail__logo"
       href={homeHref}
-      aria-label="Retour à l'accueil de Studio Abîme"
+      aria-label={t('a11y.backHome')}
       data-cursor-interactive
     >
       <Wordmark title={null} />
@@ -564,12 +564,15 @@ const panelId = `services-menu-${mode}`;
         commençait avant que l'enseigne ait fini.
       */
       padding: 7.75rem 1.5rem 2rem;
+      /*
+        UN FOND PLAT. Le panneau portait le papier froissé du site, éclairci
+        d'un voile : sous une liste de vingt lignes serrées, la matière se
+        lisait comme un bruit derrière le texte plutôt que comme une page.
+
+        Reste la couleur du papier, seule. Elle n'est pas décorative : le menu
+        recouvre la page, et sans fond opaque le contenu se lirait au travers.
+      */
       background-color: var(--color-papier);
-      background-image:
-        linear-gradient(rgb(239 235 226 / 72%), rgb(239 235 226 / 72%)),
-        url('/textures/papier-froisse.jpg');
-      background-position: center;
-      background-size: cover;
       color: var(--color-ink);
       opacity: 0;
       visibility: hidden;
@@ -802,6 +805,22 @@ const panelId = `services-menu-${mode}`;
       attendrait un demi-écran de trop.
     */
     const READING_LINE = 0.3;
+
+    /*
+      EN TÊTE DE PAGE, C'EST LA PAGE QU'ON LIT — pas encore l'une de ses
+      sections. Le point revient donc à son TITRE tant que rien n'a bougé.
+
+      Sans cette réserve, une page dont la première section commence haut —
+      Contact ouvre sur « Informations », Expériences sur ses cas d'étude —
+      allumait cette section dès l'arrivée : la ligne de lecture était déjà
+      franchie avant le premier geste. On atterrissait sur la page sans que le
+      menu dise laquelle, et son titre n'avait jamais son point.
+
+      Le seuil est de quelques pixels et non de zéro : le haut d'une page n'est
+      pas toujours exactement à zéro — restauration de position, élastique de
+      défilement. Au-delà, on a quitté le haut, et la lecture reprend ses droits.
+    */
+    const TOP_ZONE = 4;
     let frame = 0;
 
     const apply = () => {
@@ -809,8 +828,10 @@ const panelId = `services-menu-${mode}`;
       const line = window.innerHeight * READING_LINE;
       let active: HTMLElement | null = null;
       // La dernière section à avoir franchi la ligne est celle qu'on lit.
-      for (const { item, section } of watched) {
-        if (section.getBoundingClientRect().top <= line) active = item;
+      if (window.scrollY > TOP_ZONE) {
+        for (const { item, section } of watched) {
+          if (section.getBoundingClientRect().top <= line) active = item;
+        }
       }
       for (const { item } of watched) item.classList.toggle('is-current', item === active);
       for (const group of groups) group.classList.toggle('is-current', active === null);

@@ -159,13 +159,6 @@ export interface CollectionCard {
   count: number;
 }
 
-/** Retour du test de connexion — sert uniquement au diagnostic. */
-export interface ShopInfo {
-  name: string;
-  primaryDomain: { url: string };
-  paymentSettings: { currencyCode: string };
-}
-
 /**
  * Politiques de boutique rédigées dans l'admin Shopify.
  *

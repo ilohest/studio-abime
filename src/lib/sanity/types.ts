@@ -20,7 +20,6 @@ export interface SanityImage {
   _type: 'image';
   alt?: string;
   hotspot?: { x: number; y: number };
-  crop?: { top: number; bottom: number; left: number; right: number };
   asset?: {
     _id: string;
     url?: string;
@@ -37,7 +36,6 @@ export interface Seo {
   title?: string;
   description?: string;
   image?: SanityImage;
-  noIndex?: boolean;
 }
 
 /**
@@ -47,12 +45,17 @@ export interface Seo {
  */
 export interface SanityLink {
   label?: string;
-  kind: 'internal' | 'external';
+  /*
+    Conservé : `resolveLink()` s'en sert pour les liens externes hérités, que
+    le schéma n'expose plus à la saisie mais continue de résoudre au rendu.
+    (`kind`, lui, ne sert plus qu'à l'aperçu du Studio — il n'est donc pas
+    projeté.)
+  */
   externalUrl?: string;
   openInNewTab?: boolean;
   internal?: {
     _id?: string;
-    _type: 'page' | 'project' | 'post' | 'projectsPage' | 'laboPage' | 'journalPage' | 'shopPage';
+    _type: 'page' | 'project' | 'post' | 'projectsPage' | 'journalPage';
     title?: string;
     slug?: string;
     language?: Locale;
@@ -96,8 +99,6 @@ export interface ServicesMenu extends SectionBase {
 export interface StudioStatement extends SectionBase {
   _type: 'studioStatement';
   statement: string;
-  /** Ancien champ séparé, encore présent sur les documents antérieurs. */
-  noteNumber?: string;
   note?: string;
   marker?: string;
   figures?: Array<{
@@ -106,7 +107,6 @@ export interface StudioStatement extends SectionBase {
     image?: SanityImage;
     /** Vidéo courte et muette, tenant lieu de visuel pour cette figure. */
     video?: { url?: string; mimeType?: string };
-    number?: string;
     caption?: string;
     /**
      * Visuel groupé au site, utilisé UNIQUEMENT par le contenu d'amorçage
@@ -130,7 +130,6 @@ export interface PlateSpread extends SectionBase {
   figures?: Array<{
     _key: string;
     image?: SanityImage;
-    number?: string;
     caption?: string;
     fallbackImage?: ImageMetadata;
   }>;

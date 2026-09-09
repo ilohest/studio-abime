@@ -23,7 +23,7 @@ const { section } = Astro.props;
 /* Repère et légende tiennent dans un seul champ — voir `figureLabel()`. */
 const figures = (section.figures ?? []).map((figure) => ({
   ...figure,
-  label: figureLabel(figure.number, figure.caption),
+  label: figureLabel(figure.caption),
 }));
 const hasSanityBackground = Boolean(section.background?.asset);
 ---

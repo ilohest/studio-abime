@@ -5,8 +5,9 @@
  * se lire. Le repère de tête (fig.05, pl.2, n°3…) est isolé ici, au rendu, pour
  * garder sa mise en forme propre sans imposer un second champ à la saisie.
  *
- * Les documents antérieurs portaient deux champs séparés : leurs valeurs sont
- * recomposées avant analyse, ce qui rend la bascule invisible côté contenu.
+ * La fonction reste VARIADIQUE parce que les légendes n'arrivent pas toujours
+ * d'un seul tenant : `FigureCaption` reçoit parfois un repère et un texte par
+ * deux chemins distincts, et les recompose ici avant analyse.
  */
 /*
   Les parenthèses sont tolérées — « fig. (34) » se lit comme « fig. 34 ».
@@ -30,11 +31,7 @@ function normalizeReference(reference: string): string {
   return figure ? `fig. ${figure[1]}` : reference;
 }
 
-/**
- * Recompose puis découpe une étiquette. Les parties vides sont ignorées, ce qui
- * permet de passer directement `figureLabel(figure.number, figure.caption)` :
- * l'ancien champ « Numéro » disparaît de lui-même une fois le contenu migré.
- */
+/** Recompose puis découpe une étiquette. Les parties vides sont ignorées. */
 export function figureLabel(...parts: Array<string | undefined | null>): FigureLabel {
   const raw = parts
     .map((part) => part?.trim())

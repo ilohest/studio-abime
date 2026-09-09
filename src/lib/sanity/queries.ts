@@ -13,11 +13,13 @@
 /* Fragments                                                                   */
 /* -------------------------------------------------------------------------- */
 
+// `hotspot` et pas `crop` : le recadrage se calcule au point focal
+// (`src/lib/sanity/image.ts`), la boîte de rognage n'est jamais lue. Projetée,
+// elle voyageait sur CHAQUE image de CHAQUE requête pour rien.
 const IMAGE = /* groq */ `{
   _type,
   alt,
   hotspot,
-  crop,
   asset->{
     _id,
     url,
@@ -25,10 +27,32 @@ const IMAGE = /* groq */ `{
   }
 }`;
 
+// Pas de `kind` : `resolveLink()` tranche sur `internal`, puis sur
+// `externalUrl` pour les liens externes hérités. Le champ ne subsiste au schéma
+// que pour le sous-titre d'aperçu du Studio.
 const LINK = /* groq */ `{
   label,
-  kind,
   externalUrl,
+  openInNewTab,
+  internal->{
+    _id,
+    _type,
+    title,
+    "slug": slug.current,
+    language
+  }
+}`;
+
+/**
+ * Lien d'une entrée d'index — un type à part, et donc un fragment à part.
+ *
+ * `indexLink` ne porte QUE une destination et l'ouverture dans un onglet :
+ * c'est le TERME lui-même qui devient cliquable, il n'y a donc ni libellé ni
+ * URL externe à saisir. Le fragment commun leur en réclamait trois de plus,
+ * absents du schéma — GROQ renvoyait `null` sans rien dire, et la requête
+ * décrivait un objet qui n'existe pas.
+ */
+const INDEX_LINK = /* groq */ `{
   openInNewTab,
   internal->{
     _id,
@@ -177,8 +201,7 @@ const PORTABLE_TEXT = /* groq */ `[]{
 const SEO = /* groq */ `{
   title,
   description,
-  image ${IMAGE},
-  "noIndex": false
+  image ${IMAGE}
 }`;
 
 /**
@@ -195,7 +218,6 @@ const SECTIONS = /* groq */ `sections[]{
   _type == "studioStatement" => {
     figures[]{
       _key,
-      number,
       caption,
       image ${IMAGE},
       "video": video.asset->{ url, mimeType }
@@ -205,7 +227,6 @@ const SECTIONS = /* groq */ `sections[]{
     background ${IMAGE},
     figures[]{
       _key,
-      number,
       caption,
       image ${IMAGE}
     }
@@ -450,8 +471,7 @@ export const projectBySlugQuery = /* groq */ `
   "seo": {
     "title": seo.title,
     "description": seo.description,
-    "image": thumbnail ${IMAGE},
-    "noIndex": false
+    "image": thumbnail ${IMAGE}
   },
   // Projet suivant — un tour complet du catalogue.
   //
@@ -551,7 +571,7 @@ export const contactPageQuery = /* groq */ `
     term,
     category,
     definition,
-    link ${LINK},
+    link ${INDEX_LINK},
     "works": coalesce(works[defined(reference->slug.current)]{
       _key,
       year,
@@ -676,8 +696,7 @@ export const postBySlugQuery = /* groq */ `
   "seo": {
     "title": seo.title,
     "description": coalesce(seo.description, excerpt),
-    "image": coalesce(seo.image ${IMAGE}, coverImage ${IMAGE}),
-    "noIndex": false
+    "image": coalesce(seo.image ${IMAGE}, coverImage ${IMAGE})
   },
   "next": *[
     _type == "post" && language == $locale && defined(slug.current) && _id != ^._id &&

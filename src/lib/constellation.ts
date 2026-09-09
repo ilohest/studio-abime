@@ -142,9 +142,13 @@ export function buildConstellation(
   options: ConstellationOptions = {},
 ): Constellation {
   const list = stars.filter((star) => Boolean(star?.name));
-  const random = createRandom(
-    options.seed ?? list.map((star) => star._id).join('|') ?? 'constellation',
-  );
+  /*
+    Sans germe explicite, ce sont les étoiles elles-mêmes qui le donnent : la
+    même liste redonne la même figure, deux listes différentes en donnent deux.
+    (`join()` renvoie toujours une chaîne — une liste vide donne '', et le
+    générateur retombe sur son état de repli.)
+  */
+  const random = createRandom(options.seed ?? list.map((star) => star._id).join('|'));
 
   const spreadX = options.spreadX ?? DEFAULTS.spreadX;
   const spreadY = options.spreadY ?? DEFAULTS.spreadY;

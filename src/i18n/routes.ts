@@ -77,18 +77,6 @@ export function matchPolicySegment(segment: string, locale: Locale): PolicyRoute
 }
 
 /**
- * Tous les segments réservés d'une langue — sert à empêcher les collisions de slug.
- * Les politiques en font partie : « cgv » est une route de code, une page Sanity
- * portant ce slug ne serait jamais servie.
- */
-export function getReservedSegments(locale: Locale): string[] {
-  return [
-    ...(Object.keys(routeSegments) as RouteKey[]).map((key) => getSegment(key, locale)),
-    ...policyRouteKeys.map((key) => getPolicySegment(key, locale)),
-  ];
-}
-
-/**
  * Construit un chemin absolu localisé.
  * `localizedPath('fr', 'experiences', 'abime')` → `/experiences/abime`
  * `localizedPath('en', 'work', 'abime')`    → `/en/work/abime`
@@ -269,9 +257,4 @@ export function legalPageFromId(
 /** Retrouve la page légale servie par un segment d'URL, ou `null`. */
 export function matchLegalSegment(segment: string, locale: Locale): LegalPageKey | null {
   return legalPageKeys.find((key) => getLegalPageSlug(key, locale) === segment) ?? null;
-}
-
-/** Découpe un chemin d'URL en segments propres, sans le préfixe de langue. */
-export function splitPath(path: string | undefined): string[] {
-  return (path ?? '').split('/').filter(Boolean);
 }

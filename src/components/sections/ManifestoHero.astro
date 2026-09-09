@@ -2,6 +2,7 @@
 import Wordmark from '~/components/brand/Wordmark.astro';
 import Stamp from '~/components/brand/Stamp.astro';
 import { getLocaleMeta, type Locale } from '~/i18n/config';
+import { useTranslations } from '~/i18n/ui';
 import { laboPath } from '~/i18n/routes';
 import type { ManifestoHero } from '~/lib/sanity/types';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 const { section, locale } = Astro.props;
+const t = useTranslations(locale);
 
 // La date « (se modifie auto) » du document d'origine : recalculée à chaque rendu.
 const today = new Intl.DateTimeFormat(getLocaleMeta(locale).htmlLang, {
@@ -42,21 +44,57 @@ function hrefFor(value: string): string | null {
 }
 
 /*
-  Les paragraphes du verso. Le champ est une zone de texte : l'éditrice y va à
-  la ligne, et ces retours doivent se retrouver à l'écran.
+  Les paragraphes du verso — et les BLANCS que l'éditrice y a posés.
 
-  De VRAIS paragraphes, et non un `white-space: pre-line` : en deux colonnes,
-  la césure de colonne doit pouvoir tomber au milieu d'un paragraphe — c'est ce
-  que fait une page imprimée. Des retours simplement préservés forceraient une
-  rupture à chaque ligne et laisseraient les deux colonnes dépareillées.
+  Le champ est une zone de texte : elle y va à la ligne, et ces retours doivent
+  se retrouver à l'écran. De VRAIS paragraphes, et non un `white-space:
+  pre-line` : en deux colonnes, la césure de colonne doit pouvoir tomber au
+  milieu d'un paragraphe — c'est ce que fait une page imprimée. Des retours
+  simplement préservés forceraient une rupture à chaque ligne et laisseraient
+  les deux colonnes dépareillées.
 
-  Les lignes vides sont ignorées : deux retours de suite dans le Studio ne
-  doivent pas creuser un trou dans la composition.
+  Deux régimes de séparation, exactement ceux d'un texte composé :
+
+   · UN retour → un paragraphe de plus, marqué par un alinéa ;
+   · une LIGNE VIDE (ou plusieurs) → un blanc, d'autant de lignes qu'il y a de
+     lignes vides. Le blanc marque alors la reprise, et l'alinéa s'efface : les
+     deux ensemble feraient deux fois le même signe.
+
+  Les lignes vides étaient auparavant avalées avec les autres retours — le
+  Studio ne pouvait pas aérer la page. Elles comptent désormais, à la ligne
+  près, et c'est bien la colonne composée qui rend ce qui a été saisi.
 */
-const versoParagraphs = (section.verso ?? '')
-  .split(/\r?\n+/)
-  .map((paragraph) => paragraph.trim())
-  .filter(Boolean);
+/*
+  Un garde-fou, et un seul : la case est en `overflow: hidden`, une trentaine de
+  lignes vides pousserait tout le texte hors du cadre et le verso paraîtrait
+  vide sans qu'on comprenne pourquoi. Six lignes valent déjà un blanc franc.
+*/
+const VERSO_MAX_BLANKS = 6;
+
+const versoParagraphs = (() => {
+  const paragraphs: Array<{ text: string; blanks: number }> = [];
+  let blanks = 0;
+
+  for (const line of (section.verso ?? '').split(/\r?\n/)) {
+    const text = line.trim();
+
+    if (!text) {
+      blanks += 1;
+      continue;
+    }
+
+    paragraphs.push({ text, blanks: Math.min(blanks, VERSO_MAX_BLANKS) });
+    blanks = 0;
+  }
+
+  /*
+    Un blanc en TÊTE ne sépare rien : il descendrait le bloc entier sans qu'on
+    voie de quoi. La case commence donc toujours par du texte.
+  */
+  if (paragraphs.length > 0) paragraphs[0].blanks = 0;
+
+  return paragraphs;
+})();
 
 const metaLines = (section.metaLines ?? []).map((line) => {
   const value = line.autoDate ? today : (line.value ?? '');
@@ -98,8 +136,13 @@ const metaLines = (section.metaLines ?? []).map((line) => {
     */}
     {versoParagraphs.length > 0 && (
       <div class="manifesto-verso" aria-hidden="true">
-        {versoParagraphs.map((paragraph) => (
-          <p>{paragraph}</p>
+        {versoParagraphs.map(({ text, blanks }) => (
+          <p
+            class:list={[blanks > 0 && 'manifesto-verso__break']}
+            style={blanks > 0 ? `--blanks:${blanks}` : undefined}
+          >
+            {text}
+          </p>
         ))}
       </div>
     )}
@@ -141,20 +184,42 @@ const metaLines = (section.metaLines ?? []).map((line) => {
         {
           section.hypothesis && (
             <p class="type-note max-w-[34ch] md:ml-[16%]">
-              <span class="uppercase">{section.hypothesisLabel ?? 'Hypothèse'}</span> :{' '}
+              <span class="uppercase">{section.hypothesisLabel ?? t('manifesto.hypothesis')}</span> :{' '}
               {section.hypothesis}
             </p>
           )
         }
 
+        {/*
+          LE MÊME TAMPON QU'AU BUREAU, à sa place mobile.
+
+          Il portait encore l'ancien `variant="labo"` et n'était qu'un ornement,
+          quand celui de la page de gauche était devenu le submark « plongée »
+          ET une porte vers la méthode. Deux tampons différents pour un seul
+          geste, selon la largeur de l'écran : la marque changeait de visage
+          entre un téléphone et un écran.
+
+          Deux blocs et non un seul parce que la PLACE diffère — ici dans le
+          flux, entre l'hypothèse et la note d'intention ; au bureau, en pied de
+          la page de gauche. Un seul est rendu à la fois (`md:hidden` contre
+          `hidden md:block`), le second n'existe donc ni à l'écran ni pour un
+          lecteur d'écran.
+        */}
         <div class="manifesto-stamp-mobile ml-auto mr-2 md:hidden">
-          <Stamp variant="labo" class="w-24 text-ink" rotate={-8} />
+          <a
+            class="manifesto-submark"
+            href={`${laboPath(locale)}#methode`}
+            aria-label={t('a11y.laboMethod')}
+            data-cursor-interactive
+          >
+            <Stamp variant="plongee-cercle" class="w-24 text-ink" rotate={-8} />
+          </a>
         </div>
 
         {
           (section.intention?.length ?? 0) > 0 && (
             <div class="manifesto-intention md:mt-12 md:ml-[56%] md:max-w-[34ch]">
-              <p class="type-note uppercase">{section.intentionLabel ?? 'Note d’intention'} :</p>
+              <p class="type-note uppercase">{section.intentionLabel ?? t('manifesto.intention')} :</p>
 
               <div class="mt-2 flex flex-col gap-2 md:mt-6 md:gap-4">
                 {section.intention?.map((paragraph) => (
@@ -179,7 +244,7 @@ const metaLines = (section.metaLines ?? []).map((line) => {
         <a
           class="manifesto-submark"
           href={`${laboPath(locale)}#methode`}
-          aria-label="Le Labo — la méthode"
+          aria-label={t('a11y.laboMethod')}
           data-cursor-interactive
         >
           {/*
@@ -299,11 +364,21 @@ const metaLines = (section.metaLines ?? []).map((line) => {
       l'autre de la colonne — c'est une page imprimée vue par transparence, pas
       un bloc calé sur un texte du recto.
 
-      Les quatre bords viennent de la grille : le gauche et le haut sont ceux
-      des mentions, le droit celui de la colonne, juste avant la gouttière et
-      le pli. Aucune valeur à tenir à jour, et plus rien à mesurer.
+      Trois bords sur quatre viennent de la grille : le gauche et le haut sont
+      ceux des mentions, le bas celui de la rangée. Aucune valeur à tenir à
+      jour, et plus rien à mesurer.
+
+      LE QUATRIÈME EST RENTRÉ. Collée au bord de la colonne, la seconde colonne
+      du verso venait buter contre la gouttière et le pli : sur une page
+      imprimée, le texte s'arrête avant le bord, et c'est cette marge qui fait
+      lire une page plutôt qu'un fond rogné.
+
+      Le retrait est posé sur le BORD DU BLOC (`inset`) et non en garniture :
+      le verso est retourné (`scaleX(-1)`), et une garniture à droite se
+      retrouverait à gauche après le retournement. Le rectangle, lui, se réduit
+      avant d'être retourné — la marge tombe donc bien où on la voit.
     */
-    inset: 0;
+    inset: 0 clamp(1rem, 2.5vw, 2.5rem) 0 0;
     /*
       Sous les deux autres occupants de la case. Ils viennent après lui dans
       le document, ils se peignent donc par-dessus sans avoir à le déclarer.
@@ -346,7 +421,7 @@ const metaLines = (section.metaLines ?? []).map((line) => {
       Assez pour qu'on devine une page imprimée, pas assez pour qu'on essaie
       de la lire : au-delà, l'œil s'y accroche et le texte de devant recule.
     */
-    opacity: 0.16;
+    opacity: 0.12;
     /* Ni cliquable ni sélectionnable : ce n'est pas du contenu. */
     pointer-events: none;
     user-select: none;
@@ -365,6 +440,19 @@ const metaLines = (section.metaLines ?? []).map((line) => {
   */
   .manifesto-verso p + p {
     text-indent: 2em;
+  }
+
+  /*
+    LE BLANC SAISI. Chaque ligne laissée vide dans le Studio vaut une ligne de
+    la colonne — `lh`, et non une valeur en em : le blanc doit valoir une ligne
+    de CE texte, quel que soit l'interligne qu'on lui donnera plus tard.
+
+    L'alinéa s'efface : le blanc dit déjà la reprise, et la page composée ne
+    marque jamais une même rupture deux fois.
+  */
+  .manifesto-verso p.manifesto-verso__break {
+    margin-top: calc(var(--blanks, 1) * 1lh);
+    text-indent: 0;
   }
 
   @media (max-width: 767px) {

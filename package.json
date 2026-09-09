@@ -18,6 +18,7 @@
     "index:seed": "node --env-file=.env scripts/seed-contact-index.mjs",
     "projects:demo": "node --env-file=.env scripts/seed-project-templates.mjs",
     "labo:publish": "node --env-file=.env --experimental-strip-types scripts/publish-labo-page.mjs",
+    "home:seed": "node sanity/seed/build-home.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",
     "typecheck": "astro check",
     "home:testimonial": "node --env-file=.env scripts/swap-home-testimonial.mjs"

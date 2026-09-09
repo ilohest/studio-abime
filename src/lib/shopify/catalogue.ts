@@ -6,7 +6,6 @@ import {
   collectionsQuery,
   productByHandleQuery,
   productHandlesQuery,
-  productsQuery,
   shopCollectionsQuery,
 } from './queries';
 import type { FamilyFact, ProductFamily } from './families';
@@ -287,17 +286,6 @@ function toProductCard(raw: RawProductCard): ProductCard {
 
 /* ── Lecture ────────────────────────────────────────────────────────────── */
 
-/** Catalogue complet, du plus récent au plus ancien. */
-export async function getProducts(first = 50): Promise<ProductCard[]> {
-  const data = await shopifyFetch<{ products: { nodes: RawProductCard[] } }>({
-    query: productsQuery,
-    variables: { first },
-    fallback: { products: { nodes: [] } },
-  });
-
-  return data.products.nodes.map(toProductCard);
-}
-
 /** Fiche d'un tirage. `null` si le handle n'existe pas ou n'est plus publié. */
 export async function getProductByHandle(handle: string): Promise<Product | null> {
   const data = await shopifyFetch<{ product: RawProduct | null }>({
@@ -474,17 +462,6 @@ export function formatMoney(money: Money, locale = 'fr-BE'): string {
 /** `true` quand un tirage se vend à prix unique, sans fourchette de formats. */
 export function hasSinglePrice(product: ProductCard): boolean {
   return product.minPrice.amount === product.maxPrice.amount;
-}
-
-/**
- * Résumé des choix disponibles : « 4 formats », « 4 formats · 2 papiers ».
- * Chaîne vide pour un tirage sans option, qui ne doit alors rien afficher.
- */
-export function summarizeOptions(product: ProductCard): string {
-  return product.options
-    .filter((option) => option.values.length > 1)
-    .map((option) => `${option.values.length} ${option.name.toLowerCase()}s`)
-    .join(' · ');
 }
 
 /**

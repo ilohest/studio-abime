@@ -1,41 +1,30 @@
 import { stegaClean } from '@sanity/client/stega';
-import { resolveImage } from './sanity/image';
-import { projectPath } from '~/i18n/routes';
-import type { Locale } from '~/i18n/config';
-import type { ProjectCard } from './sanity/types';
 
 /**
- * Modèles de vue passés aux composants clients (Vue).
+ * Ce que la grille du portfolio compose AVANT de rendre.
  *
- * Les composants Vue ne reçoivent JAMAIS de documents Sanity bruts : les URLs
- * d'images et de pages sont calculées ici, côté serveur. Trois bénéfices :
- *  - le JSON hydraté reste minimal (pas d'assets, ni de champs inutilisés) ;
- *  - le client n'embarque ni la logique de routage ni le builder d'images ;
- *  - le composant Vue reste testable, sans dépendance à Sanity.
+ * Deux gestes seulement, mais tous deux partagés par plusieurs composants et
+ * tous deux porteurs d'une règle : le symbole d'une fiche, et l'insertion des
+ * cartes éditoriales dans la grille.
+ *
+ * Le pendant côté Journal est `src/lib/journal.ts`, qui construit en plus des
+ * modèles de vue pour son composant client — la grille du portfolio, elle, est
+ * rendue en HTML pur et n'a rien à hydrater.
  */
-export interface ProjectCardView {
-  id: string;
-  number: string;
-  title: string;
-  href: string;
-  client: string | null;
-  year: number | null;
-  excerpt: string | null;
-  facts: Array<{ key: string; label: string; value: string }>;
-  image: {
-    src: string;
-    srcset: string;
-    width: number;
-    height: number;
-    alt: string;
-    lqip: string | null;
-  } | null;
-}
 
-/** Initiales de chaque mot, utilisées comme symbole de la fiche-projet. */
+/**
+ * Initiales de chaque mot, utilisées comme symbole de la fiche-projet.
+ *
+ * `toUpperCase()` et non `toLocaleUpperCase('fr')` : un symbole est un SIGNE
+ * GRAPHIQUE — la marque d'une case, à la manière d'un symbole chimique — pas
+ * une phrase. Il ne doit dépendre ni de la langue de la page ni de celle de la
+ * machine qui construit le site, sous peine de changer d'un déploiement à
+ * l'autre. Sur les langues du site, les deux donnent d'ailleurs le même
+ * résultat ; seule l'intention diffère, et c'est elle qu'on écrit.
+ */
 export function projectInitials(title: string): string {
   const words = stegaClean(title).match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu) ?? [];
-  return words.map((word) => Array.from(word)[0]).join('').toLocaleUpperCase('fr');
+  return words.map((word) => Array.from(word)[0]).join('').toUpperCase();
 }
 
 /** Carte éditoriale insérée dans la grille des projets. */
@@ -87,35 +76,3 @@ export function insertProjectEditorialCards<T>(
 
   return entries;
 }
-
-/**
- * `elementNumber` — numéro de la case occupée dans la table des éléments, quand
- * le projet y figure. La carte porte alors le même chiffre que sa case : c'est
- * le même objet, vu deux fois. Sinon, son rang éditorial.
- */
-export function toProjectCardView(
-  card: ProjectCard,
-  locale: Locale,
-  index = 0,
-  elementNumber?: number,
-): ProjectCardView {
-  const image = resolveImage(card.thumbnail, { width: 900 });
-
-  return {
-    id: card._id,
-    number: `[${elementNumber ?? String(index + 1).padStart(2, '0')}]`,
-    title: card.title,
-    href: projectPath(locale, card.slug),
-    client: card.client ?? null,
-    year: card.year ?? null,
-    excerpt: card.excerpt ?? null,
-    facts: (card.listingFacts ?? [])
-      .filter((fact): fact is typeof fact & { label: string; value: string } =>
-        Boolean(fact.label?.trim() && fact.value?.trim()),
-      )
-      .slice(0, 5)
-      .map((fact) => ({ key: fact._key, label: fact.label.trim(), value: fact.value.trim() })),
-    image: image ? { ...image, alt: image.alt || card.title, lqip: image.lqip ?? null } : null,
-  };
-}
-

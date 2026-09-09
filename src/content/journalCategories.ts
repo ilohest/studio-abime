@@ -27,13 +27,7 @@ export const JOURNAL_CATEGORIES = [
 
 export type JournalCategory = (typeof JOURNAL_CATEGORIES)[number]['value'];
 
-export const JOURNAL_CATEGORY_VALUES = JOURNAL_CATEGORIES.map(({ value }) => value);
-
 export const defaultJournalCategory: JournalCategory = 'cahier-de-recherche';
-
-export function isJournalCategory(value: unknown): value is JournalCategory {
-  return typeof value === 'string' && (JOURNAL_CATEGORY_VALUES as string[]).includes(value);
-}
 
 export function getJournalCategory(value: unknown) {
   return JOURNAL_CATEGORIES.find((category) => category.value === value) ?? null;

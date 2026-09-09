@@ -35,11 +35,23 @@ export const link = defineType({
       title: 'Destination',
       type: 'reference',
       /*
-        La page Expériences n'a pas de slug — sa route est calculée par langue
-        (`/experiences`, `/en/work`). Elle est malgré tout référençable ici : c'est
-        `resolveLink()` qui traduit le document en URL.
+        Les pages Expériences et Journal n'ont pas de slug — leur route est
+        calculée par langue (`/experiences`, `/journal`, `/en/work`). Elles sont
+        malgré tout référençables ici : c'est `resolveLink()` qui traduit le
+        document en URL.
+
+        Le Journal et les articles manquaient à cette liste alors que le
+        résolveur savait déjà les traiter : le pied de page ne pouvait pas
+        pointer vers une rubrique qui figure pourtant au menu du site, et les
+        deux branches correspondantes de `resolveLink()` étaient inatteignables.
       */
-      to: [{ type: 'page' }, { type: 'project' }, { type: 'projectsPage' }],
+      to: [
+        { type: 'page' },
+        { type: 'project' },
+        { type: 'post' },
+        { type: 'projectsPage' },
+        { type: 'journalPage' },
+      ],
       // On ne propose que des documents de la même langue.
       options: { filter: sameLanguageFilter },
       /*

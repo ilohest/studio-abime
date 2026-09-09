@@ -6,6 +6,14 @@ import { defineField, defineType } from 'sanity';
  * Tous les champs sont optionnels : le rendu retombe sur le titre du document
  * et sur les réglages du site. On ne force donc jamais l'éditeur à dupliquer
  * une information déjà présente.
+ *
+ * PAS DE CASE « NE PAS INDEXER » ICI. Il y en avait une, masquée, et les
+ * requêtes projetaient `false` par-dessus : elle ne pouvait donc rien fermer,
+ * et un jour quelqu'un l'aurait dé-masquée en la croyant branchée. Ce qui
+ * ferme réellement l'indexation vit en code, là où c'est vérifiable —
+ * l'environnement de déploiement et le mode maintenance dans
+ * `src/lib/seo/indexing.ts`, la décision de la page (404, confirmation de
+ * commande) dans la route elle-même.
  */
 export const seo = defineType({
   name: 'seo',
@@ -36,13 +44,6 @@ export const seo = defineType({
       description: 'Affichée sur les réseaux sociaux. Format recommandé : 1200 × 630 px.',
       options: { hotspot: true },
       hidden: ({ document }) => document?._type === 'project',
-    }),
-    defineField({
-      name: 'noIndex',
-      title: 'Exclure des moteurs de recherche',
-      type: 'boolean',
-      initialValue: false,
-      hidden: true,
     }),
   ],
 });

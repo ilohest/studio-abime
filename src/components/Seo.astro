@@ -126,11 +126,11 @@ const ogImage = shareImage?.url ?? null;
 const ogImageAlt = text(shareImage?.alt) || title;
 
 /*
-  Trois verrous indépendants ferment l'indexation : la case du document, la
-  décision de la page (404, confirmation de commande) et l'environnement de
-  déploiement. Il suffit qu'un seul se ferme.
+  Deux verrous indépendants ferment l'indexation : la décision de la page (404,
+  confirmation de commande) et l'environnement de déploiement (preview,
+  maintenance). Il suffit qu'un seul se ferme.
 */
-const isIndexable = indexingAllowed && !noIndex && !seo?.noIndex;
+const isIndexable = indexingAllowed && !noIndex;
 
 const localeMeta = getLocaleMeta(locale);
 /** Open Graph attend `fr_FR`, pas `fr-FR`. */

@@ -16,6 +16,9 @@ node_modules/
 
 # sanity
 .sanity/
+# Artefact d'amorçage : régénéré par `npm run home:seed`, et porteur de chemins
+# absolus propres à la machine qui l'a produit.
+sanity/seed/home.ndjson
 
 # système
 .DS_Store

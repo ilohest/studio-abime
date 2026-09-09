@@ -36,7 +36,7 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
   hasItems && (
     <section
       class="showcase-grid project-index"
-      aria-label="Sélection de projets — variante en grille"
+      aria-label={t('a11y.showcaseGrid')}
       data-project-showcase-grid
     >
       {/* Marche intermédiaire entre le titre de la page et les fiches. */}
@@ -45,7 +45,7 @@ const itemCount = projects.length > 0 ? projects.length : previewItems.length;
       <ProjectCatalogRail
         projects={projects}
         locale={locale}
-        ariaLabel="Sélection de projets"
+        ariaLabel={t('home.projectSelection')}
         itemCount={itemCount}
         contained
         revealText

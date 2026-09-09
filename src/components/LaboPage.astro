@@ -250,7 +250,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     */}
     <span class="labo-hero__index type-note" id="services">[01 — Services]</span>
 
-    <div class="labo-orbits" aria-label="Les champs de recherche du laboratoire" data-labo-orbits>
+    <div class="labo-orbits" aria-label={t('a11y.laboOrbits')} data-labo-orbits>
       <div class="labo-orbits__axis" aria-hidden="true"></div>
       <div class="labo-orbits__degrees" aria-hidden="true">
         {orbitDegreeMarks.map((mark) => (
@@ -545,7 +545,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
             class="labo-note__call"
             id="appel-note-fondation"
             href="#note-fondation"
-            aria-label="Note 1 — note de fondation"
+            aria-label={t('a11y.foundationNote')}
             data-cursor-interactive
           >[1]</a>
         )}{teamLead.after}
@@ -562,7 +562,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
           alors le simple chiffre de la note.
         */}
         {showNoteCall ? (
-          <a class="labo-note__number" href="#appel-note-fondation" aria-label="Revenir au texte" data-cursor-interactive>[1]</a>
+          <a class="labo-note__number" href="#appel-note-fondation" aria-label={t('a11y.backToText')} data-cursor-interactive>[1]</a>
         ) : (
           <span class="labo-note__number" aria-hidden="true">[1]</span>
         )}
@@ -1914,31 +1914,30 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   }
 
   /*
-    ┌─ LES FICHES SE COMPOSENT PLUS PETIT AU LARGE ─────────────────────────┐
-    │ Neuf fiches sont montrées d'un coup sur la grille de bureau. Au corps │
-    │ du texte courant, l'ensemble se lisait comme neuf paragraphes mis     │
-    │ côte à côte ; plus petit, il redevient ce qu'il est — un index, qu'on │
-    │ parcourt avant d'y entrer.                                            │
+    ┌─ LES FICHES SE COMPOSENT PLUS PETIT QUE LE TEXTE COURANT ─────────────┐
+    │ Neuf fiches montrées d'un coup. Au corps du texte courant, l'ensemble │
+    │ se lisait comme neuf paragraphes mis bout à bout ; plus petit, il     │
+    │ redevient ce qu'il est — un index, qu'on parcourt avant d'y entrer.   │
     │                                                                        │
-    │ La réduction ne vaut qu'au-dessus de 768 px. En colonne unique, les   │
-    │ fiches se lisent une par une : elles gardent le corps courant, qui    │
-    │ est le bon pour un texte suivi sur un écran tenu à la main.           │
+    │ La réduction ne valait d'abord qu'au-dessus de 768 px, au motif qu'en │
+    │ colonne unique les fiches se lisent une par une. Sur un téléphone,    │
+    │ elles se lisent surtout LES UNES SOUS LES AUTRES, et le mono au corps │
+    │ courant y donnait un mur de dactylographie. Un seul corps, donc, quel │
+    │ que soit l'écran : l'index se lit petit partout.                       │
     └────────────────────────────────────────────────────────────────────────┘
   */
-  @media (min-width: 768px) {
-    .labo-service p {
-      font-size: 0.9375rem;
-    }
+  .labo-service p {
+    font-size: 0.9375rem;
+  }
 
-    /*
-      Les prestations descendent d'un cran de plus que la description : elles
-      restent au second plan, comme l'italique et l'opacité le disent déjà.
-      Les laisser au corps de la description les aurait fait remonter au même
-      rang qu'elle une fois celle-ci réduite.
-    */
-    .labo-service__tools {
-      font-size: 0.875rem;
-    }
+  /*
+    Les prestations descendent d'un cran de plus que la description : elles
+    restent au second plan, comme l'italique et l'opacité le disent déjà. Les
+    laisser au corps de la description les aurait fait remonter au même rang
+    qu'elle une fois celle-ci réduite.
+  */
+  .labo-service__tools {
+    font-size: 0.875rem;
   }
 
   .labo-service__number {
@@ -3121,7 +3120,15 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
 
       const media = gsap.matchMedia();
 
-      media.add('(prefers-reduced-motion: no-preference)', () => {
+      /*
+        ── AU LARGE : ON RANGE ────────────────────────────────────────────
+        Le geste du rangement suppose une ÉTAGÈRE : des tranches côte à côte,
+        qu'une main pose de la gauche vers la droite. Sous 768 px il n'y a plus
+        d'étagère — les cinq couches s'empilent à pleine largeur —, et le même
+        réglage y faisait traverser tout l'écran à chacune, au rythme du doigt
+        qui défile. Un geste conçu pour une rangée, rejoué sur une pile.
+      */
+      media.add('(min-width: 768px) and (prefers-reduced-motion: no-preference)', () => {
         /*
           Course d'une tranche : la distance qui amène son bord gauche au bord
           droit de la fenêtre, plus une garde pour qu'elle attende hors champ.
@@ -3162,6 +3169,43 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
 
         return () => {
           gsap.set(strates, { clearProps: 'transform' });
+        };
+      });
+
+      /*
+        ── EN COLONNE : ELLES SE DÉPOSENT ─────────────────────────────────
+        Empilées, les couches ne se rangent plus : elles se DÉPOSENT, l'une
+        après l'autre, de haut en bas — le sens même de la descente qu'elles
+        nomment. Chacune monte de quelques pixels en apparaissant, et c'est
+        tout.
+
+        Trois écarts avec le geste du large, et chacun règle une saccade :
+
+         · pas de `scrub`. Une animation attachée au défilement se rejoue à
+           chaque événement de scroll, et sur un écran tactile ces événements
+           arrivent par paquets, après coup : le mouvement y avance par à-coups
+           quoi qu'on fasse. Ici la séquence part une fois et se déroule seule,
+           à la fréquence de l'écran.
+         · une course de dix-huit pixels au lieu de la largeur de l'écran. Ce
+           qui bouge tient dans sa propre bande ; le navigateur n'a plus à
+           repeindre toute la page à chaque image.
+         · `once`. On ne range pas cinq fois la même méthode en remontant.
+      */
+      media.add('(max-width: 767px) and (prefers-reduced-motion: no-preference)', () => {
+        const entrance = gsap.from(strates, {
+          y: 18,
+          opacity: 0,
+          duration: 0.55,
+          ease: 'power2.out',
+          stagger: 0.09,
+          force3D: true,
+          scrollTrigger: { trigger: shelf, start: 'top 88%', once: true },
+        });
+
+        return () => {
+          entrance.scrollTrigger?.kill();
+          entrance.kill();
+          gsap.set(strates, { clearProps: 'transform,opacity' });
         };
       });
     });

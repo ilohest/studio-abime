@@ -72,39 +72,6 @@ export const productCardFragment = /* GraphQL */ `
 `;
 
 /**
- * Test de connexion.
- *
- * Volontairement minimal : ces trois champs existent dans toutes les versions de
- * l'API, ce qui permet de distinguer un problème d'identifiants d'un problème
- * de requête. Si celle-ci échoue, le souci est la configuration, pas le code.
- */
-export const shopInfoQuery = /* GraphQL */ `
-  query ShopInfo {
-    shop {
-      name
-      primaryDomain {
-        url
-      }
-      paymentSettings {
-        currencyCode
-      }
-    }
-  }
-`;
-
-/** Catalogue complet, trié du plus récent au plus ancien. */
-export const productsQuery = /* GraphQL */ `
-  ${productCardFragment}
-  query Products($first: Int = 50) {
-    products(first: $first, sortKey: CREATED_AT, reverse: true) {
-      nodes {
-        ...ProductCard
-      }
-    }
-  }
-`;
-
-/**
  * Identifiants d'URL seuls — alimente `getStaticPaths()`.
  * Aucun champ superflu : cette requête tourne à chaque build.
  */

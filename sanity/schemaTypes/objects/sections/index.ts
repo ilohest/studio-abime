@@ -1,6 +1,8 @@
 import { defineArrayMember, defineField } from 'sanity';
 import type { ConditionalProperty } from '@sanity/types';
 
+import { SECTION_TYPE_NAMES } from '../../../../src/lib/sections';
+
 import { manifestoHero } from './manifestoHero';
 import { servicesMenu } from './servicesMenu';
 import { studioStatement } from './studioStatement';
@@ -31,8 +33,36 @@ export const sectionTypes = [
   ctaSection,
 ];
 
-/** Noms des sections — miroir du registre de rendu `src/components/sections/`. */
-export const sectionTypeNames = sectionTypes.map((section) => section.name);
+/*
+  ┌─ UNE SEULE LISTE DE NOMS ─────────────────────────────────────────────────┐
+  │ Elle vit dans `src/lib/sections.ts`, hors du Studio, parce que le RENDU   │
+  │ en a besoin autant que les schémas — et qu'il ne peut pas importer ce     │
+  │ fichier-ci sans embarquer le paquet `sanity` dans le bundle du site.      │
+  │                                                                           │
+  │ Le registre de rendu la recopiait donc à la main. Les deux listes         │
+  │ pouvaient diverger en silence : une section déclarée ici et absente       │
+  │ là-bas se pose dans le back-office, se publie, et ne s'affiche jamais.    │
+  └───────────────────────────────────────────────────────────────────────────┘
+
+  La vérification ci-dessous referme le seul écart que le partage laisse
+  ouvert : un schéma ajouté à `sectionTypes` sans son nom dans la liste
+  partagée, ou l'inverse. Elle tombe au chargement du Studio — donc devant
+  la personne qui vient d'écrire le schéma, pas devant l'éditrice.
+*/
+const declaredNames = sectionTypes.map((section) => section.name);
+const missing = declaredNames.filter(
+  (name) => !(SECTION_TYPE_NAMES as readonly string[]).includes(name),
+);
+const orphaned = SECTION_TYPE_NAMES.filter((name) => !declaredNames.includes(name));
+
+if (missing.length > 0 || orphaned.length > 0) {
+  throw new Error(
+    `[sections] Les registres divergent. ` +
+      `Schémas absents de SECTION_TYPE_NAMES : ${missing.join(', ') || '—'}. ` +
+      `Noms sans schéma : ${orphaned.join(', ') || '—'}. ` +
+      `Voir src/lib/sections.ts.`,
+  );
+}
 
 /**
  * Champ « page builder » réutilisable.
@@ -79,7 +109,7 @@ export function definePageBuilder(
     hidden,
     locked = false,
   } = options;
-  const names = allowed ?? sectionTypeNames;
+  const names = allowed ?? [...SECTION_TYPE_NAMES];
 
   return defineField({
     name,

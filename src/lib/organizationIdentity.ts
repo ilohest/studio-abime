@@ -109,11 +109,6 @@ export function isIdentityFieldKey(value: unknown): value is IdentityFieldKey {
   return typeof value === 'string' && FIELD_BY_KEY.has(value as IdentityFieldKey);
 }
 
-/** Libellé de la référence — ce que l'éditrice lit dans son texte. */
-export function identityFieldTitle(key: IdentityFieldKey): string {
-  return FIELD_BY_KEY.get(key)?.title ?? key;
-}
-
 /** Ce qui s'affiche à la place d'une valeur non renseignée. */
 export function identityPlaceholder(key: IdentityFieldKey): string {
   const field = FIELD_BY_KEY.get(key);
