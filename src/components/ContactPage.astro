@@ -267,7 +267,14 @@ const phases = [
         */}
         <div class="contact-wordmark">
           <p class="sr-only">Studio Abîme</p>
-          <div class="contact-wordmark__grid" aria-hidden="true">
+          <div
+            class="contact-wordmark__grid"
+            aria-hidden="true"
+            data-cols={GRID_COLS}
+            data-rows={GRID_ROWS}
+            data-narrow-cols={NARROW_COLS}
+            data-narrow-rows={NARROW_ROWS}
+          >
             {/*
               Le repère est une case du plateau — première rangée, première
               colonne — soulevée au-dessus de lui. Ailleurs, il flottait à la
@@ -769,31 +776,72 @@ const phases = [
     */
     const grid = spread.querySelector<HTMLElement>('.contact-wordmark__grid');
 
+    /*
+      LES DEUX PLANS, mis en concurrence.
+
+      Une case doit rester CARRÉE : un damier dont les cases s'allongent cesse
+      d'être un damier. Mais un plan de six colonnes sur douze est en portrait,
+      un plan de douze sur sept en paysage, et la place laissée par le rail n'est
+      ni l'un ni l'autre selon la fenêtre. Un seuil de largeur ne peut pas en
+      décider : à 1000 px, une fenêtre courte appelle le plan large et une
+      fenêtre haute le plan étroit.
+
+      On calcule donc le côté que chaque plan obtiendrait et on garde le plus
+      grand — c'est-à-dire le plateau qui remplit le mieux la place, à case
+      carrée. Le plan large est écarté sous un certain côté : ses phrases
+      tiennent dans UNE case, et sous cette taille elles n'y tiennent plus.
+    */
+    const NARROWEST_WIDE_CELL = 54;
+
+    const plans = grid
+      ? [
+          {
+            narrow: false,
+            cols: Number(grid.dataset.cols) || 12,
+            rows: Number(grid.dataset.rows) || 7,
+            floor: NARROWEST_WIDE_CELL,
+          },
+          {
+            narrow: true,
+            cols: Number(grid.dataset.narrowCols) || 6,
+            rows: Number(grid.dataset.narrowRows) || 12,
+            floor: 0,
+          },
+        ]
+      : [];
+
     const sizeBoard = () => {
       if (!grid) return;
 
-      const styles = getComputedStyle(grid);
-      const cols = Number(styles.getPropertyValue('--cols')) || 12;
-      const rows = Number(styles.getPropertyValue('--rows')) || 7;
-      const gap = parseFloat(styles.columnGap) || 0;
+      const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
 
       /*
-        Le plateau occupe toute la scène : ce sont les pistes en `1fr` qui le
-        font, pas ce calcul. On ne mesure plus ici que pour LA TYPOGRAPHIE — le
-        corps des fragments se règle sur la case et non sur la fenêtre, un `vw`
-        ignorant le rail qui rétrécit le plateau.
-
-        Le plus PETIT des deux côtés : c'est lui qui décide si le texte tient.
+        Le côté est libéré avant la mesure : sans cela, on mesurerait la place
+        que le plateau occupe DÉJÀ, et il ne pourrait plus que rétrécir. La
+        boîte, elle, ne dépend pas du plan — la scène la fixe.
       */
+      grid.style.removeProperty('--cell');
       const box = grid.getBoundingClientRect();
-      const side = Math.floor(
-        Math.min(
-          (box.width - (cols - 1) * gap) / cols,
-          (box.height - (rows - 1) * gap) / rows,
-        ),
-      );
 
-      if (side > 0) grid.style.setProperty('--cell', `${side}px`);
+      let best = null;
+
+      for (const plan of plans) {
+        const side = Math.floor(
+          Math.min(
+            (box.width - (plan.cols - 1) * gap) / plan.cols,
+            (box.height - (plan.rows - 1) * gap) / plan.rows,
+          ),
+        );
+
+        if (side < plan.floor) continue;
+        if (!best || side > best.side) best = { narrow: plan.narrow, side };
+      }
+
+      if (!best) return;
+
+      grid.classList.toggle('is-narrow', best.narrow);
+      grid.classList.toggle('is-wide', !best.narrow);
+      if (best.side > 0) grid.style.setProperty('--cell', `${best.side}px`);
     };
 
     const render = () => {
@@ -1271,8 +1319,8 @@ const phases = [
     display: grid;
     min-height: 0;
     flex: 1;
-    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-    grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+    grid-template-columns: repeat(var(--cols), var(--cell, minmax(0, 1fr)));
+    grid-template-rows: repeat(var(--rows), var(--cell, minmax(0, 1fr)));
     justify-content: center;
     align-content: center;
     gap: var(--gap);
@@ -1307,7 +1355,7 @@ const phases = [
       composition, et un `vw` ignorait le rail qui rétrécit le plateau.
       `--cell` est posé par le script ; le repli vaut la case du plan large.
     */
-    font-size: clamp(0.52rem, calc(var(--cell, 3.75rem) * 0.125), 0.62rem);
+    font-size: clamp(0.55rem, calc(var(--cell, 3.75rem) * 0.125), 0.62rem);
     line-height: 1.35;
     letter-spacing: 0.06em;
     text-align: center;
@@ -1328,7 +1376,7 @@ const phases = [
     align-content: center;
     justify-items: center;
     padding: 0.5rem 1.4rem 0.5rem 0.5rem;
-    font-size: clamp(0.66rem, calc(var(--cell, 3.75rem) * 0.16), 0.9rem);
+    font-size: clamp(0.72rem, calc(var(--cell, 3.75rem) * 0.16), 0.9rem);
     letter-spacing: var(--tracking-copy);
     text-transform: none;
   }
@@ -2441,41 +2489,63 @@ const phases = [
     }
   }
 
+  /*
+    LE PLATEAU ÉTROIT. Six colonnes, douze rangées, et un plan de coordonnées
+    entièrement distinct : `--nx` / `--ny` remplacent `--x` / `--y`. Une simple
+    remise à l'échelle aurait mélangé les cases, les repères étant écrits pour
+    douze colonnes.
+
+    Deux entrées pour le même plan, et c'est voulu. SANS SCRIPT, la largeur
+    seule décide, à 1100 px — un choix grossier mais qui tient debout. AVEC, le
+    script compare les deux plans à la place réellement disponible et pose
+    `is-narrow` ou `is-wide` : c'est lui qui a raison, puisque la hauteur compte
+    autant que la largeur. La classe l'emporte alors sur la requête de largeur,
+    qui s'efface devant `is-wide`.
+  */
   @media (max-width: 1100px) {
-    /*
-      LE PLATEAU ÉTROIT. Six colonnes, treize rangées, et un plan de
-      coordonnées entièrement distinct : `--nx` / `--ny` remplacent `--x` /
-      `--y`. Une simple remise à l'échelle aurait mélangé les cases, les
-      repères étant écrits pour douze colonnes.
-    */
-    .contact-wordmark__grid {
+    .contact-wordmark__grid:not(.is-wide) {
       --cols: 6;
       --rows: 12;
     }
 
-    .contact-wordmark__cell,
-    .contact-wordmark__note {
+    .contact-wordmark__grid:not(.is-wide) .contact-wordmark__cell,
+    .contact-wordmark__grid:not(.is-wide) .contact-wordmark__note {
       grid-column: calc(var(--nx) + 1) / span var(--nspan, 1);
       grid-row: calc(var(--ny) + 1);
     }
 
     /* Les cases vides du grand plateau s'effacent, celles du petit paraissent. */
-    .contact-wordmark__cell.is-empty:not(.contact-wordmark__cell--narrow) {
+    .contact-wordmark__grid:not(.is-wide)
+      .contact-wordmark__cell.is-empty:not(.contact-wordmark__cell--narrow) {
       display: none;
     }
 
-    .contact-wordmark__cell--narrow {
+    .contact-wordmark__grid:not(.is-wide) .contact-wordmark__cell--narrow {
       display: grid;
     }
+  }
 
-    .contact-wordmark__note {
-      font-size: 0.55rem;
-    }
+  .contact-wordmark__grid.is-narrow {
+    --cols: 6;
+    --rows: 12;
+  }
 
-    .contact-wordmark__note.is-mail {
-      font-size: 0.72rem;
-    }
+  .contact-wordmark__grid.is-narrow .contact-wordmark__cell,
+  .contact-wordmark__grid.is-narrow .contact-wordmark__note {
+    grid-column: calc(var(--nx) + 1) / span var(--nspan, 1);
+    grid-row: calc(var(--ny) + 1);
+  }
 
+  .contact-wordmark__grid.is-narrow
+    .contact-wordmark__cell.is-empty:not(.contact-wordmark__cell--narrow) {
+    display: none;
+  }
+
+  .contact-wordmark__grid.is-narrow .contact-wordmark__cell--narrow {
+    display: grid;
+  }
+
+  @media (max-width: 1100px) {
     .contact-information-copy {
       max-width: 34rem;
     }
