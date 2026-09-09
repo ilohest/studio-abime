@@ -10,7 +10,7 @@ import { defineArrayMember, defineField, defineType } from "sanity";
  */
 export const studioStatement = defineType({
   name: "studioStatement",
-  title: "Manifeste illustré",
+  title: "Méthode",
   type: "object",
   groups: [
     { name: "text", title: "Textes", default: true },
@@ -44,6 +44,32 @@ export const studioStatement = defineType({
       title: "Figures",
       type: "array",
       group: "figures",
+      description:
+        "La planche compte cinq figures, à leur place fixe. On remplace leur visuel et leur légende ; on n’en ajoute pas, on n’en retire pas.",
+      /*
+        COMPOSITION FIGÉE, comme l'enchaînement des blocs de la page d'accueil.
+        Les cinq positions sont écrites en dur dans le composant : une sixième
+        figure n'aurait aucune place où aller, et une cinquième retirée
+        laisserait un trou dans le rythme de la planche.
+
+        Couper les six actions retire le bouton d'ajout ET le menu « ⋮ » de
+        chaque figure — dupliquer, copier, insérer avant/après, supprimer. Il
+        reste l'ouverture de la figure et l'édition de ses champs.
+
+        `disableActions` est marqué @beta par Sanity ; c'est malgré tout la
+        bonne voie, pour les mêmes raisons que dans `definePageBuilder`.
+      */
+      options: {
+        sortable: false,
+        disableActions: [
+          "add",
+          "addBefore",
+          "addAfter",
+          "remove",
+          "duplicate",
+          "copy",
+        ],
+      },
       of: [
         defineArrayMember({
           type: "object",
@@ -60,7 +86,20 @@ export const studioStatement = defineType({
                   type: "string",
                 }),
               ],
-              validation: (rule) => rule.required(),
+              /*
+                Plus obligatoire : une figure peut désormais être une vidéo.
+                L'exigence porte sur le COUPLE — voir la validation de l'objet,
+                plus bas — plutôt que sur ce champ seul, sinon on ne pourrait
+                jamais poser une vidéo sans poser aussi une image.
+              */
+            }),
+            defineField({
+              name: "video",
+              title: "Vidéo",
+              type: "file",
+              options: { accept: "video/mp4,video/webm" },
+              description:
+                "À la place de l’image. Court, muet, et fait pour tourner en boucle : la planche est une suite de tirages, pas un lecteur. MP4 ou WebM.",
             }),
             defineField({
               name: "caption",
@@ -69,41 +108,29 @@ export const studioStatement = defineType({
               description:
                 "Ex. « fig.05 — Compréhension de la constitution ». Le repère de tête est mis en forme automatiquement.",
             }),
-            defineField({
-              name: "span",
-              title: "Largeur",
-              type: "number",
-              initialValue: 3,
-              description: "Nombre de colonnes occupées, sur une grille de 12.",
-              validation: (rule) => rule.min(1).max(12).integer(),
-            }),
-            defineField({
-              name: "bleed",
-              title: "Débord",
-              type: "string",
-              initialValue: "none",
-              options: {
-                list: [
-                  { value: "none", title: "Aucun" },
-                  { value: "left", title: "Sort par la gauche" },
-                  { value: "right", title: "Sort par la droite" },
-                ],
-                layout: "radio",
-                direction: "horizontal",
-              },
-            }),
-            defineField({
-              name: "pushRight",
-              title: "Repousser à droite",
-              type: "boolean",
-              initialValue: false,
-              description: "Occupe l’espace libre restant avant cette figure.",
-            }),
           ],
+          /*
+            L'un OU l'autre, et pas les deux : renseigner les deux laisserait
+            l'éditrice croire que l'image sert d'affiche à la vidéo, alors que
+            le rendu ne montrerait que la vidéo. Mieux vaut le dire ici.
+          */
+          validation: (rule) =>
+            rule.custom((figure?: { image?: unknown; video?: unknown }) => {
+              if (!figure) return true;
+              const hasImage = Boolean((figure.image as { asset?: unknown })?.asset);
+              const hasVideo = Boolean((figure.video as { asset?: unknown })?.asset);
+
+              if (!hasImage && !hasVideo) return "Posez une image ou une vidéo.";
+              if (hasImage && hasVideo) {
+                return "Image ET vidéo : seule la vidéo sera affichée. Retirez l’une des deux.";
+              }
+              return true;
+            }),
           preview: {
-            select: { caption: "caption", media: "image" },
-            prepare: ({ caption, media }) => ({
+            select: { caption: "caption", media: "image", video: "video.asset" },
+            prepare: ({ caption, media, video }) => ({
               title: caption || "Figure",
+              subtitle: video ? "Vidéo" : undefined,
               media,
             }),
           },

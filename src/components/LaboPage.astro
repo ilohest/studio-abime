@@ -1,7 +1,9 @@
 ---
 import { Image } from 'astro:assets';
 import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
+import Constellation from '~/components/Constellation.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import SanityImage from '~/components/primitives/SanityImage.astro';
 import { useTranslations } from '~/i18n/ui';
 import { documentFieldAttribute } from '~/lib/visualEditing';
 import type { Locale } from '~/i18n/config';
@@ -128,6 +130,25 @@ const orbitSystem = services.map((service, index) => ({
   spinDirection: spinDirections[index] ?? 1,
   motif: orbitMotifs[index] ?? 'dots',
 }));
+/*
+  ── LA MÉTHODE ────────────────────────────────────────────────────────────
+  Mot, phrase et spécimen viennent tous du Studio. La coupe à CINQ est tenue
+  ici et pas seulement dans le modèle : au-delà, les tranches deviennent trop
+  étroites pour que le mot s'y compose à la verticale, et mieux vaut ne pas
+  ranger la sixième que la ranger illisible.
+*/
+const STRATE_LIMIT = 5;
+/*
+  Le nom de la méthode se compose DANS le repère de section, comme la Vision
+  compose le sien dans « [02 — Manifeste - Vision] ». Le numéro et l'intitulé
+  fixe restent du code — ce sont des mentions de composition ; seul le nom
+  vient du Studio. S'il est vide, le repère se referme sur l'intitulé seul
+  plutôt que sur un tiret orphelin.
+*/
+const methodTitle = page.methodTitle?.trim() ?? '';
+const methodIndex = methodTitle ? `[03 — La méthode - ${methodTitle}]` : '[03 — La méthode]';
+const strates = (page.method ?? []).slice(0, STRATE_LIMIT);
+
 const archiveCount = page.archiveProjects.length;
 const archiveTitle = t('labo.archive');
 /*
@@ -141,6 +162,14 @@ const [philosophyLead, ...philosophyNotes] = philosophyEntries;
 const philosophyKeywords = ['INTENTION', 'POSTURE', 'REGARD', 'RÉCIT'];
 const foundationParagraphs = page.foundationParagraphs ?? [];
 const hasFoundationNote = foundationParagraphs.length > 0;
+
+/*
+  ── LA CONSTELLATION ───────────────────────────────────────────────────────
+  Rien à saisir dans le singleton : la liste vient des fiches « Étoiles », que
+  la requête rassemble toutes seules. Une personne s'encode une fois et paraît
+  ici ; l'interrupteur de sa fiche l'en retire sans la supprimer.
+*/
+const stars = (page.stars ?? []).filter((star) => Boolean(star?.name?.trim()));
 
 /*
   ── L'APPEL DE NOTE ────────────────────────────────────────────────────────
@@ -496,82 +525,17 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   </section>
 
   {/*
-    ┌─ VARIANTE À COMPARER — À NE GARDER QU'UNE ────────────────────────────┐
-    │ Deuxième composition de la MÊME section, posée sous la première pour  │
-    │ qu'on puisse les regarder l'une après l'autre et trancher.            │
-    │                                                                       │
-    │  · au-dessus  : chapeau court, puis le manifeste en DEUX colonnes ;   │
-    │  · ici        : le manifeste en UNE colonne à gauche, et le chapeau   │
-    │                 en grand à droite, qui reste en place pendant qu'on   │
-    │                 lit la colonne.                                       │
-    │                                                                       │
-    │ ➜ UNE FOIS LE CHOIX FAIT : supprimer la section perdante, ses styles  │
-    │   (`.labo-vision-b*` ou `.labo-philosophy*`) et le repère « A / B ».  │
-    │   Ce n'est pas un état à publier — deux fois le même texte à la       │
-    │   suite, c'est un doublon pour les moteurs comme pour le lecteur.     │
-    └───────────────────────────────────────────────────────────────────────┘
+    Sans `id`. Cette section portait « equipe », renommé en « methode » quand
+    le menu a changé de libellé — avant que la VRAIE section Méthode n'existe.
+    Les deux se sont retrouvées à porter le même identifiant, et c'est la
+    première du document qui l'emporte : « /labo#methode » déposait donc ici,
+    au-dessus de la déclaration, au lieu du repère « [03 — La méthode — … ».
+
+    Un doublon d'identifiant ne lève aucune erreur. Il choisit silencieusement.
+    Plus rien ne vise cette section : elle se lit dans la foulée de ce qui la
+    précède, elle n'a pas besoin d'adresse.
   */}
-  <section class="labo-vision-b container-wide" id="vision-b" aria-labelledby="labo-vision-b-title">
-    <h2 id="labo-vision-b-title" class="sr-only">{t('labo.sectionVision')}</h2>
-
-    <div class="labo-vision-b__head">
-      <span class="labo-philosophy__index type-note">[02 — Manifeste - Vision]</span>
-    </div>
-
-    <div class="labo-vision-b__layout">
-      {/*
-        La colonne de lecture vient EN PREMIER dans le document : c'est le
-        texte suivi. Le chapeau est repoussé à droite par la grille, mais au
-        clavier comme au lecteur d'écran on lit le manifeste d'abord — comme
-        dans la première composition.
-      */}
-      <div class="labo-vision-b__notes" data-rise>
-        {philosophyNotes.map((paragraph) => (
-          <p class="labo-vision-b__note">{paragraph.text}</p>
-        ))}
-      </div>
-
-      {philosophyLead && (
-        <aside class="labo-vision-b__aside">
-          <p class="labo-vision-b__lead">
-            <span class="labo-vision-b__quote" aria-hidden="true">“</span>
-            {philosophyLead.text}
-            <span aria-hidden="true">”</span>
-          </p>
-
-          {/*
-            Les quatre notions, sous le chapeau plutôt qu'au pied de la
-            section : elles sont DANS le bloc qui tient en place, donc sous les
-            yeux pendant toute la lecture de la colonne. C'est ce qui rend
-            l'effet atteignable — au pied d'une section, il faut déjà avoir
-            fini de lire pour le rencontrer.
-
-            Décoratif, donc masqué aux lecteurs d'écran en un seul point : les
-            notions sont déjà dites par le manifeste lui-même. Chaque lettre
-            est doublée dans une piste haute de deux lettres, dont on ne montre
-            qu'une : le survol fait rouler la piste d'une demi-hauteur, avec un
-            retard par lettre qui donne le déroulé de gauche à droite.
-          */}
-          <p class="labo-vision-b__keywords" aria-hidden="true">
-            {philosophyKeywords.map((word) => (
-              <span class="labo-vision-b__keyword">
-                {Array.from(word).map((letter, index) => (
-                  <span class="labo-vision-b__letter" style={`--letter-index:${index};`}>
-                    <span class="labo-vision-b__letter-track">
-                      <span>{letter}</span>
-                      <span>{letter}</span>
-                    </span>
-                  </span>
-                ))}
-              </span>
-            ))}
-          </p>
-        </aside>
-      )}
-    </div>
-  </section>
-
-  <section class="labo-team container-wide" id="equipe" aria-labelledby="labo-team-title">
+  <section class="labo-team container-wide" aria-labelledby="labo-team-title">
     <h2 id="labo-team-title" class="sr-only">{t('labo.sectionTeam')}</h2>
 
     {page.teamLead && (
@@ -626,18 +590,141 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   </section>
 
   {/*
-    [03 — LA MÉTHODE]. Le repère seul, la section reste à écrire.
+    ┌─ LA CONSTELLATION ────────────────────────────────────────────────────┐
+    │ La note de fondation se referme sur « il ne m'appartient plus tout à  │
+    │ fait ». C'est exactement là que la constellation doit paraître : le   │
+    │ studio au centre, et autour de lui tous ceux qui y ont travaillé.     │
+    │ L'aveu appelle la preuve.                                             │
+    │                                                                       │
+    │ La figure se remplit SEULE — toute étoile encodée y est, sans qu'on   │
+    │ ait à l'ajouter à la page. C'est ce qui la distingue de la            │
+    │ constellation d'un projet, où l'on désigne une équipe précise.        │
+    │                                                                       │
+    │ Pas de repère numéroté : les trois de la page — Services, Manifeste,  │
+    │ Méthode — annoncent des sections qui se lisent. Celle-ci se regarde,  │
+    │ et sa légende suffit à la nommer, comme pour l'index orbital.         │
+    └───────────────────────────────────────────────────────────────────────┘
+  */}
+  {stars.length > 0 && (
+    <section class="labo-constellation container-wide" aria-labelledby="labo-constellation-title">
+      <h2 id="labo-constellation-title" class="sr-only">{t('labo.sectionConstellation')}</h2>
 
-    Il est posé maintenant parce que la numérotation ne lui appartient pas :
-    le rail de navigation et l'index de la page Contact la lisent depuis
-    `siteIndex`, et une section annoncée sans repère se lit comme un défaut de
-    composition, pas comme un chantier. Composé en clair, comme
-    « [01 — Services] » et « [02 — Manifeste - Vision] » : ce sont des mentions
-    de composition, pas du contenu piloté depuis le Studio.
+      <Constellation
+        stars={stars}
+        seed={`${page._id}-constellation`}
+        variant="labo"
+        caption="fig. 02 — Constellation — L’équipe"
+      />
+    </section>
+  )}
+
+  {/*
+    ┌─ [03 — LA MÉTHODE] ───────────────────────────────────────────────────┐
+    │ Cinq strates rangées comme des livres sur une étagère : on ne les lit │
+    │ pas de face, on lit leur TRANCHE. Chacune porte son spécimen en tête, │
+    │ son mot au pied, et la phrase qui l'explique juste au-dessus du mot.  │
+    │                                                                       │
+    │ Le geste : au défilement, elles arrivent une à une du bord droit de   │
+    │ l'écran et viennent se ranger de la gauche vers la droite — on RANGE  │
+    │ la méthode sous les yeux du lecteur, dans l'ordre de la descente.     │
+    │                                                                       │
+    │ Le repère « [03 — La méthode] » reste composé en clair, comme         │
+    │ « [01 — Services] » et « [02 — Manifeste - Vision] » : c'est une      │
+    │ mention de composition, pas du contenu piloté depuis le Studio.       │
+    └───────────────────────────────────────────────────────────────────────┘
   */}
   <section class="labo-method container-wide" id="methode" aria-labelledby="labo-method-title">
-    <h2 id="labo-method-title" class="sr-only">La méthode</h2>
-    <span class="type-note">[03 — La méthode]</span>
+    {/*
+      Le repère EST le titre. Il portait « [03 — La méthode] » seul, et la
+      méthode annonçait son nom en dessous, au corps des titres : deux
+      annonces pour une section, et la seconde volait à l'étagère l'entrée en
+      matière qui lui revient. Le nom rentre donc dans le repère, sur le
+      modèle de « [02 — Manifeste - Vision] ».
+
+      C'est donc lui qui est le `h2` de la section : un repère composé en clair
+      qui dit le titre n'a pas besoin qu'on lui en cache un second.
+    */}
+    <h2 id="labo-method-title" class="labo-method__index type-note">{methodIndex}</h2>
+
+    {strates.length > 0 && (
+      <div class="labo-method__stage">
+        {/*
+          Une liste ORDONNÉE : les cinq strates se suivent, et l'ordre est le
+          propos même de la section. Sans mouvement — JavaScript coupé, ou
+          mouvement réduit — elles sont simplement rangées, déjà lisibles.
+        */}
+        {/*
+          ── LA PLANCHE SOUS L'ÉTAGÈRE ──────────────────────────────────
+          Au survol d'une tranche, le spécimen reparaît en grand DERRIÈRE
+          l'étagère, à l'endroit, centré sur la tranche qu'on désigne.
+
+          Deux exemplaires de la même image, et c'est leur ordre qui fait
+          l'effet — un seul fichier est téléchargé, le navigateur le sert
+          deux fois :
+
+           · `__reveal` — net, sous tout le reste. On ne le voit donc que
+             LÀ OÙ IL DÉPASSE de l'étagère, en haut et en bas ;
+           · `__veil` — le même, flouté, mais découpé au rectangle exact de
+             l'étagère (`overflow: hidden`). Il recouvre le premier dans ce
+             rectangle, et lui seul.
+
+          Les tranches passent alors au papier translucide : le flou se lit
+          À TRAVERS elles, le texte reste au-dessus, net et lisible.
+
+          Décoratif de bout en bout — `aria-hidden`, et le spécimen est déjà
+          dans la tranche : rien ne dépend du survol.
+        */}
+        <div class="labo-method__reveal" aria-hidden="true" style={`--ghost-count:${strates.length}`}>
+          {strates.map((strate, index) => (
+            <span class="labo-method__ghost" style={`--ghost-index:${index}`}>
+              <SanityImage image={strate.image} width={720} sizes="42rem" alt="" loading="lazy" />
+            </span>
+          ))}
+        </div>
+
+        <div class="labo-method__veil" aria-hidden="true" style={`--ghost-count:${strates.length}`}>
+          {strates.map((strate, index) => (
+            <span class="labo-method__ghost" style={`--ghost-index:${index}`}>
+              <SanityImage image={strate.image} width={720} sizes="42rem" alt="" loading="lazy" />
+            </span>
+          ))}
+        </div>
+
+        <ol class="labo-method__shelf" data-method-shelf>
+          {strates.map((strate) => (
+            <li class="labo-strate" data-strate>
+              <div class="labo-strate__spine">
+                {/*
+                  Le spécimen. Décoratif au sens strict — il illustre le mot
+                  composé juste en dessous, il ne le complète pas — d'où
+                  l'`alt` vide : l'annoncer reviendrait à faire lire deux fois
+                  la même chose.
+                */}
+                {/*
+                  Le mot et sa phrase ne se suivent pas : ils sont CÔTE À CÔTE
+                  en travers de la tranche, et partent tous deux du même pied.
+                  C'est la composition d'une tranche de livre — le titre, et
+                  sous lui la mention en petit corps, alignés au même fer.
+                */}
+                <div class="labo-strate__label">
+                  <h3 class="labo-strate__word">{strate.word}</h3>
+                  <p class="labo-strate__note">{strate.note}</p>
+                </div>
+                {strate.image && (
+                  <span class="labo-strate__picto">
+                    <SanityImage image={strate.image} width={240} sizes="7rem" alt="" loading="lazy" />
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    )}
+
+    {strates.length > 0 && (
+      <FigureCaption as="p" class="labo-method__caption" value="fig. 03 — Les cinq strates" />
+    )}
   </section>
 
   <section class="labo-archive project-index" id="archives" aria-labelledby="labo-archive-title">
@@ -1381,15 +1468,11 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     │ contre le bord droit de la page. Les deux blocs se répondent alors    │
     │ d'une section à l'autre, en miroir.                                   │
     │                                                                       │
-    │ La largeur n'est pas recopiée en dur : c'est la MÊME opération que    │
-    │ celle de la grille d'en face. Là-bas, les colonnes valent 0,8fr et    │
-    │ 1,2fr de ce qui reste une fois la gouttière prise — la première fait  │
-    │ donc 0,8 / 2 = 0,4 du reste. Écrite ainsi, elle suit toute retouche   │
-    │ de la grille sans qu'on ait à y repenser.                            │
-    │                                                                       │
-    │ ➜ LIÉ À LA VARIANTE B : si c'est la variante A qui l'emporte, cette   │
-    │   largeur n'a plus de colonne à laquelle correspondre. La rapporter   │
-    │   alors sur la composition retenue.                                   │
+    │ La largeur — quatre dixièmes de ce qui reste une fois la gouttière    │
+    │ prise — vient d'une composition à deux colonnes qui a été écartée     │
+    │ depuis. Elle est conservée telle quelle : elle vaut désormais pour    │
+    │ elle-même, une colonne nettement plus étroite que la mesure de la     │
+    │ page, et c'est cet écart qui la détache du manifeste d'en face.       │
     └───────────────────────────────────────────────────────────────────────┘
   */
   .labo-team__body {
@@ -1773,12 +1856,23 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     text-transform: uppercase;
   }
 
+  /*
+    La description est composée dans la fonte des TITRES, en petit corps —
+    la voix dactylographiée du site, celle des mentions et des repères. Les
+    fiches se lisent alors comme les entrées d'un index technique, et non
+    comme des paragraphes de labeur posés dans une grille.
+  */
   .labo-service p {
     max-width: 40ch;
     margin-top: clamp(0.35rem, 0.5vw, 0.5rem);
-    font-family: var(--font-copy);
+    font-family: var(--font-titre);
     font-size: var(--text-copy);
-    line-height: 1.42;
+    /*
+      Interligne ouvert d'un cran : le mono a des fûts plus étroits et des
+      approches plus larges que la fonte de labeur, ses lignes se confondent
+      plus vite. C'est ce qui rend le petit corps tenable sur trois lignes.
+    */
+    line-height: 1.55;
     letter-spacing: var(--tracking-copy);
   }
 
@@ -1802,7 +1896,8 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     /*
       Corps du texte courant, et non celui des notes : ce sont les outils du
       studio, pas une mention de bas de fiche. L'italique et l'opacité suffisent
-      à les tenir au second plan.
+      à les tenir au second plan. Au-dessus de 768 px, ce corps est repris plus
+      bas avec celui de la description — voir le bloc qui suit la liste.
     */
     font-size: var(--text-copy);
     line-height: 1.4;
@@ -1816,6 +1911,34 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     content: '•';
     display: inline-block;
     margin-inline-end: 0.5em;
+  }
+
+  /*
+    ┌─ LES FICHES SE COMPOSENT PLUS PETIT AU LARGE ─────────────────────────┐
+    │ Neuf fiches sont montrées d'un coup sur la grille de bureau. Au corps │
+    │ du texte courant, l'ensemble se lisait comme neuf paragraphes mis     │
+    │ côte à côte ; plus petit, il redevient ce qu'il est — un index, qu'on │
+    │ parcourt avant d'y entrer.                                            │
+    │                                                                        │
+    │ La réduction ne vaut qu'au-dessus de 768 px. En colonne unique, les   │
+    │ fiches se lisent une par une : elles gardent le corps courant, qui    │
+    │ est le bon pour un texte suivi sur un écran tenu à la main.           │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  @media (min-width: 768px) {
+    .labo-service p {
+      font-size: 0.9375rem;
+    }
+
+    /*
+      Les prestations descendent d'un cran de plus que la description : elles
+      restent au second plan, comme l'italique et l'opacité le disent déjà.
+      Les laisser au corps de la description les aurait fait remonter au même
+      rang qu'elle une fois celle-ci réduite.
+    */
+    .labo-service__tools {
+      font-size: 0.875rem;
+    }
   }
 
   .labo-service__number {
@@ -1835,19 +1958,415 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   }
 
   /*
+    ── LA CONSTELLATION ─────────────────────────────────────────────────────
+    Une figure a besoin d'air : elle n'a ni titre visible ni filet, c'est le
+    BLANC qui la détache de la note de fondation au-dessus et du repère de la
+    méthode en dessous. Sa garde basse est donc plus généreuse que celle d'une
+    section de texte — on doit voir la constellation seule, un instant, avant
+    que la page ne reprenne la parole.
+  */
+  .labo-constellation {
+    padding-block: clamp(2rem, 5vw, 5rem) clamp(3rem, 7vw, 7rem);
+  }
+
+  /*
     La garde HAUTE vaut celle qu'avait le repère en tête de la section Équipe —
-    le rythme des repères est le même d'une section à l'autre. Rien en dessous :
-    la section n'a pas de contenu, et les archives apportent déjà leur propre
-    garde. Le jour où le texte arrive, c'est ici que se pose son blanc.
+    le rythme des repères est le même d'une section à l'autre.
   */
   .labo-method {
-    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) 0;
+    padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(5rem, 9vw, 9rem);
     /*
       Destination de l'entrée 01.3 du rail. Même garde que la section Services,
       barre de marque comprise : sur écran étroit, celle-ci est fixe et
       couvrirait le repère si l'ancre déposait la section au ras du bord.
     */
     scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
+  }
+
+
+  /*
+    ── L'ÉTAGÈRE ────────────────────────────────────────────────────────────
+    Cinq tranches côte à côte. Le meuble n'est pas dessiné : ce sont les
+    tranches elles-mêmes, rangées et alignées au pied, qui le donnent à voir.
+    Un filet sous elles avait été essayé — il fermait la composition d'un
+    trait noir plus fort que tout ce qu'il portait.
+
+    `position: relative` n'est pas décoratif : il fait de l'étagère le parent
+    de positionnement des tranches, et c'est sur cette base que le script
+    mesure la course de chacune (`offsetLeft`).
+  */
+  /*
+    La scène : l'étagère, et les deux couches de spécimen qui l'encadrent. Elle
+    porte la laize et le blanc de tête, l'étagère n'a plus qu'à la remplir —
+    les couches se calent ainsi sur le rectangle exact de l'étagère, sans que
+    la mesure soit écrite deux fois.
+  */
+  .labo-method__stage {
+    position: relative;
+    width: min(100%, 62rem);
+    margin: clamp(3.5rem, 6vw, 6rem) auto 0;
+  }
+
+  .labo-method__shelf {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: clamp(0.15rem, 0.3vw, 0.3rem);
+    align-items: flex-end;
+    width: 100%;
+    list-style: none;
+  }
+
+  /*
+    Les deux couches ne se distinguent que par leur RANG et leur découpe :
+    la nette dessous, débordante ; la floue par-dessus, arrêtée au rectangle
+    de l'étagère. Aucune des deux ne reçoit le pointeur — c'est la tranche qui
+    répond au survol, pas l'image qu'elle appelle.
+  */
+  .labo-method__reveal,
+  .labo-method__veil {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .labo-method__reveal {
+    z-index: 0;
+  }
+
+  /*
+    Le flou est posé sur l'IMAGE, la découpe sur la couche : dans l'autre sens,
+    le flou aurait adouci le bord de la découpe et l'étagère aurait perdu son
+    arête franche.
+  */
+  .labo-method__veil {
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  .labo-method__veil .labo-method__ghost {
+    filter: blur(14px);
+  }
+
+  /*
+    Chaque spécimen se centre sur SA tranche : la colonne se déduit du rang et
+    du nombre de strates, la mise en page n'a rien à déclarer de plus.
+
+    La hauteur déborde l'étagère d'environ un tiers — c'est ce débordement
+    qu'on voit net — mais reste sous la hauteur de la fenêtre : le spécimen ne
+    dépasse jamais la page.
+  */
+  .labo-method__ghost {
+    position: absolute;
+    top: 50%;
+    left: calc((var(--ghost-index) + 0.5) / var(--ghost-count) * 100%);
+    translate: -50% -50%;
+    opacity: 0;
+    transition: opacity 460ms ease;
+  }
+
+  /* Même raison qu'au picto : l'image vient d'un composant enfant. */
+  .labo-method__ghost :global(img) {
+    display: block;
+    width: auto;
+    max-width: none;
+    height: min(42rem, 74svh);
+  }
+
+  /*
+    Amélioration progressive, et rien d'autre : la planche ne se montre qu'aux
+    pointeurs capables de survoler, et qu'à partir de la composition debout —
+    couchées, les tranches n'ont plus de « derrière ». En dessous, les couches
+    ne sont pas rendues, donc jamais téléchargées.
+  */
+  @media (max-width: 767px), (hover: none), (pointer: coarse) {
+    .labo-method__reveal,
+    .labo-method__veil {
+      display: none;
+    }
+  }
+
+  @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+    .labo-method__stage:has(.labo-strate:nth-child(1):hover) :is(.labo-method__reveal, .labo-method__veil) > :nth-child(1),
+    .labo-method__stage:has(.labo-strate:nth-child(2):hover) :is(.labo-method__reveal, .labo-method__veil) > :nth-child(2),
+    .labo-method__stage:has(.labo-strate:nth-child(3):hover) :is(.labo-method__reveal, .labo-method__veil) > :nth-child(3),
+    .labo-method__stage:has(.labo-strate:nth-child(4):hover) :is(.labo-method__reveal, .labo-method__veil) > :nth-child(4),
+    .labo-method__stage:has(.labo-strate:nth-child(5):hover) :is(.labo-method__reveal, .labo-method__veil) > :nth-child(5) {
+      opacity: 1;
+    }
+
+    /*
+      LE PAPIER DEVIENT TRANSLUCIDE. Les cinq tranches, pas seulement celle
+      qu'on désigne : le spécimen est plus large qu'une tranche, et c'est de
+      passer derrière ses voisines qui fait l'effet.
+
+      Elles restent OPAQUES hors survol, et c'est nécessaire : au rangement,
+      une tranche en course passe devant les autres, et on ne doit pas les voir
+      au travers.
+    */
+    .labo-method__stage:has(.labo-strate:hover) .labo-strate {
+      background-color: color-mix(in oklab, var(--color-surface) 56%, transparent);
+    }
+
+    .labo-method__stage:has(.labo-strate:hover) .labo-strate__spine {
+      background-color: transparent;
+    }
+
+    /*
+      Le petit spécimen s'efface pendant que le grand paraît : c'est la même
+      image, la montrer deux fois à deux tailles la ferait bégayer. Son
+      mélange au papier n'a d'ailleurs plus de fond sur lequel se poser.
+    */
+    .labo-method__stage:has(.labo-strate:hover) .labo-strate__picto {
+      opacity: 0;
+    }
+
+    .labo-strate,
+    .labo-strate__spine,
+    .labo-strate__picto {
+      transition: background-color 460ms ease, opacity 460ms ease;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .labo-method__ghost,
+    .labo-strate,
+    .labo-strate__spine,
+    .labo-strate__picto {
+      transition: none;
+    }
+  }
+
+  /*
+    La tranche elle-même : un rectangle de papier, cerné d'un filet. Le fond est
+    OPAQUE et repris du papier de la page — c'est ce qui permet à une tranche en
+    cours de rangement de passer devant les autres sans les laisser transparaître.
+
+    Les cinq se partagent la largeur à parts égales (`flex: 1 1 0`) : sur une
+    étagère, ce sont les livres qui s'ajustent au meuble.
+  */
+  .labo-strate {
+    flex: 1 1 0;
+    min-width: 0;
+    height: clamp(20rem, 32vw, 28rem);
+    padding: clamp(0.7rem, 1vw, 1rem) clamp(0.45rem, 0.7vw, 0.7rem);
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+  }
+
+  /*
+    LE PIVOT. Le contenu de la tranche se compose à la verticale, et se lit de
+    bas en haut — le sens du dos d'un livre en France.
+
+    `writing-mode: vertical-rl` le compose de haut en bas ; la rotation d'un
+    demi-tour le retourne. On obtient ainsi la lecture ascendante sans
+    `sideways-lr`, que Safari ne connaît toujours pas.
+
+    Conséquence sur l'ORDRE : la rotation inverse l'axe. Le document se lit donc
+    mot, phrase, spécimen — et se rend spécimen en tête, phrase, puis mot au
+    pied. C'est l'ordre du dos de livre, et c'est aussi l'ordre juste pour un
+    lecteur d'écran, qui rencontre l'intitulé avant ce qui l'explique.
+  */
+  .labo-strate__spine {
+    display: flex;
+    writing-mode: vertical-rl;
+    /*
+      `sideways` et non l'orientation « mixte » par défaut : celle-ci REDRESSE
+      certains signes au lieu de les coucher avec le reste de la ligne, et
+      l'apostrophe courbe en fait partie — « L'enquête » se composait « L ~
+      enquête », signe debout au milieu de lettres couchées. Sideways couche
+      tout le monde du même quart de tour.
+    */
+    text-orientation: sideways;
+    transform: rotate(180deg);
+    /*
+      La rotation fait de cette boîte un contexte d'empilement, et c'est DANS
+      ce contexte que les spécimens se mélangent au fond. Sans fond ici, ils
+      se mélangeraient au vide : leur blanc resterait blanc. Le papier est
+      donc repris sur la boîte qui pivote, pas seulement sur la tranche.
+    */
+    background: var(--color-surface);
+    width: 100%;
+    height: 100%;
+  }
+
+  /*
+    Le couple mot + phrase. `flex-direction: column` suit ici l'axe de BLOC,
+    qui est horizontal en composition verticale : les deux se rangent donc en
+    travers de la tranche, l'un à côté de l'autre, et non l'un après l'autre.
+
+    C'est ce qui les fait partir du même pied — toutes leurs lignes commencent
+    au bas de la tranche. Empilés dans l'axe de lecture, la phrase démarrait
+    là où le mot s'arrêtait, et les deux blocs descendaient en escalier.
+  */
+  .labo-strate__label {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 0.8vw, 0.8rem);
+    min-inline-size: 0;
+  }
+
+  .labo-strate__word {
+    font-family: var(--font-copy);
+    font-size: clamp(1.05rem, 1.5vw, 1.5rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: var(--tracking-copy);
+    text-transform: none;
+  }
+
+  /*
+    La phrase, dans la voix d'annotation du système — l'italique dessiné de GT
+    Canon Narrow S, et non un romain penché. Deux crans sous le mot : elle le
+    commente, elle ne le double pas.
+  */
+  .labo-strate__note {
+    color: var(--color-muted);
+    font-family: var(--font-annotation);
+    font-size: clamp(0.7rem, 0.85vw, 0.85rem);
+    font-style: italic;
+    line-height: 1.35;
+    letter-spacing: var(--tracking-annotation);
+  }
+
+  /*
+    Le spécimen, renvoyé à l'autre bout de la tranche par une marge automatique
+    — le haut, une fois la rotation appliquée.
+
+    LE QUART DE TOUR. Le spécimen est composé DANS la tranche, comme le texte :
+    il suit donc le même sens de lecture. Sans lui, il restait dans le sens de
+    la page pendant que tout le reste avait pivoté — on le voyait couché dès
+    qu'on penchait la tête pour lire le mot. Le cadrage est carré, la rotation
+    ne change donc pas l'encombrement et rien ne se décale autour.
+
+    `multiply` pose les prises de vue sur le papier de la page : le blanc de
+    leur fond s'y fond, elles s'impriment plutôt qu'elles ne se collent. Une
+    image déjà détourée, elle, n'a rien à y perdre — le mélange n'agit que là
+    où il y a de la matière.
+  */
+  .labo-strate__picto {
+    margin-inline-start: auto;
+    align-self: center;
+    /*
+      EMPREINTE CARRÉE, CADRAGE LIBRE. Les cinq spécimens n'ont pas le même
+      format — deux dessins en hauteur, trois prises de vue au carré — et c'est
+      le CSS qui leur donne leur cadre commun, pas le fichier.
+
+      Rien n'est ajouté autour du sujet : une image mise au carré à la
+      fabrication, par des marges transparentes, ressort OPAQUE et blanche du
+      service d'images — deux bandes claires de part et d'autre du dessin, que
+      le `multiply` ne rattrape pas puisqu'il n'éclaircit jamais. Le cadre est
+      donc affaire de CSS, et le fichier garde son format propre.
+    */
+    display: block;
+    width: min(100%, 7rem);
+    aspect-ratio: 1;
+    transform: rotate(90deg);
+    mix-blend-mode: multiply;
+  }
+
+  /*
+    `:global` est ici une NÉCESSITÉ, pas un raccourci : l'image est rendue par
+    `SanityImage`, et la portée de style d'Astro s'arrête aux éléments écrits
+    dans ce fichier. Sans elle, la règle ne désignerait rien — et le spécimen
+    reprendrait sa taille naturelle, chacun la sienne. Le porteur, lui, nous
+    appartient : c'est lui qui tient la boîte, le quart de tour et le mélange.
+  */
+  .labo-strate__picto :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* La légende appartient à l'étagère : même mesure, même bord gauche. */
+  .labo-method__caption {
+    width: min(100%, 62rem);
+    margin: clamp(0.8rem, 1.2vw, 1.2rem) auto 0;
+    font-size: var(--text-note);
+    line-height: 1.25;
+  }
+
+  /*
+    ── L'ÉTAGÈRE COUCHÉE ────────────────────────────────────────────────────
+    Sous 768 px, cinq tranches côte à côte tomberaient à soixante pixels de
+    large : le mot y tiendrait encore, sa phrase non. On ne réduit donc pas la
+    composition, on la RETOURNE — les tranches se couchent et s'empilent, et
+    les cinq strates redeviennent ce qu'elles nomment : des couches.
+
+    Le pivot est annulé, le texte revient à l'horizontale, et le spécimen passe
+    en tête de ligne (`order`) puisque l'inversion de la rotation ne le porte
+    plus.
+  */
+  @media (max-width: 767px) {
+    .labo-method__shelf {
+      flex-direction: column;
+      /*
+        L'axe secondaire a basculé avec la direction : le `flex-end` de
+        l'étagère debout renverrait ici chaque couche contre le bord droit, à
+        la largeur de son seul contenu — la première strate y perdait trois
+        pixels sur les autres. Empilées, elles prennent toute la laize.
+      */
+      align-items: stretch;
+      gap: 0;
+      width: 100%;
+    }
+
+    .labo-strate {
+      flex: none;
+      height: auto;
+      padding: clamp(0.9rem, 3vw, 1.2rem) clamp(0.8rem, 3vw, 1.1rem);
+    }
+
+    /* Les filets mitoyens se superposent : une seule ligne entre deux couches. */
+    .labo-strate + .labo-strate {
+      border-top: 0;
+    }
+
+    .labo-strate__spine {
+      align-items: center;
+      gap: clamp(0.9rem, 4vw, 1.2rem);
+      writing-mode: horizontal-tb;
+      text-orientation: mixed;
+      transform: none;
+    }
+
+    /*
+      Couché, le couple redevient ce qu'il est à la lecture : le mot, et sa
+      phrase dessous. C'est la même relation qu'à la verticale — seul l'axe
+      qui la porte a tourné.
+    */
+    .labo-strate__label {
+      flex: 1 1 auto;
+      gap: 0.3rem;
+    }
+
+    .labo-strate__word {
+      font-size: clamp(1.05rem, 4.5vw, 1.35rem);
+    }
+
+    .labo-strate__note {
+      font-size: clamp(0.8rem, 3.4vw, 0.95rem);
+    }
+
+    /*
+      Le spécimen repasse en tête de ligne : la rotation ne l'y porte plus. Il
+      reprend aussi le sens de la page, puisque le texte à côté de lui l'a
+      repris.
+    */
+    .labo-strate__picto {
+      order: -1;
+      flex: none;
+      align-self: center;
+      width: clamp(3.5rem, 16vw, 4.5rem);
+      margin-inline-start: 0;
+      transform: none;
+    }
+
+    .labo-method__caption {
+      width: 100%;
+      margin-top: clamp(1rem, 4vw, 1.5rem);
+    }
   }
 
   .labo-archive {
@@ -2151,7 +2670,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     Le repère de section se cale sur la MARGE DE LA PAGE, pas sur la colonne de
     lecture. Il partageait la boîte centrée de 66 rem : dès que la page est
     plus large, le centrage l'écartait du bord et il ne tombait plus sur la
-    même verticale que « [01 — Services] » ou « [03 — L'équipe] ».
+    même verticale que « [01 — Services] » ou « [03 — La méthode] ».
 
     Le bloc de texte, lui, reste centré : c'est le folio qui rejoint la marge,
     pas la colonne qui s'y déplace.
@@ -2227,11 +2746,21 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     │   remonter le lecteur.                                                │
     └───────────────────────────────────────────────────────────────────────┘
   */
+  /*
+    Les deux colonnes prennent TOUTE la laize du bloc de texte.
+
+    Elles étaient tenues à 54 rem dans une boîte de 66 : le blanc restant se
+    posait tout entier à leur droite, et la section se lisait décalée — le
+    chapeau et le repère à gauche, les colonnes au milieu, les quatre notions
+    seules contre le bord droit. À pleine laize, le blanc qui les entoure est
+    celui de la page, donc le même des deux côtés, et leur bord droit retrouve
+    celui des notions.
+  */
   .labo-philosophy__notes {
     display: block;
     columns: 2;
     column-gap: clamp(2rem, 4vw, 3.5rem);
-    width: min(100%, 54rem);
+    width: 100%;
     max-width: 100%;
     margin-top: clamp(3rem, 5vw, 5rem);
   }
@@ -2266,261 +2795,6 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
 
   .labo-philosophy__note + .labo-philosophy__note {
     margin-top: 0.85em;
-  }
-
-  /*
-    ┌─ VARIANTE B — colonne à gauche, chapeau tenu à droite ────────────────┐
-    │ Styles de la seconde composition proposée. À supprimer entièrement    │
-    │ avec sa section si c'est la première qui l'emporte.                   │
-    └───────────────────────────────────────────────────────────────────────┘
-  */
-  .labo-vision-b {
-    box-sizing: border-box;
-    width: auto;
-    max-width: var(--container-wide);
-    margin-inline: auto;
-    padding-block: clamp(5rem, 8vw, 8rem) clamp(1.5rem, 2.5vw, 2.5rem);
-  }
-
-  /* Même marge que les autres repères de section — voir la variante A. */
-  .labo-vision-b__head {
-    width: 100%;
-    max-width: 100%;
-    margin: 0 0 clamp(3rem, 5vw, 5rem);
-  }
-
-  .labo-vision-b__layout {
-    display: grid;
-    /*
-      La colonne de lecture est la plus étroite des deux : c'est un texte
-      suivi au petit corps, il ne doit pas dépasser la mesure confortable.
-      Le chapeau, lui, prend la place que sa taille demande.
-    */
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-    gap: clamp(2.5rem, 6vw, 6rem);
-    /*
-      INDISPENSABLE au maintien du chapeau : sans cela, chaque case de la
-      grille s'étire sur toute la hauteur de la rangée, et un élément collant
-      n'a plus un pixel de course à l'intérieur de sa case — il ne colle
-      jamais. Aligné en haut, il retrouve sa hauteur de contenu, et la
-      différence avec la colonne devient sa course.
-    */
-    align-items: start;
-    /*
-      TOUTE la largeur de la section, et non la boîte centrée de 66 rem :
-      celle-ci laissait une quarantaine de pixels morts de chaque côté, qui
-      rentraient la colonne de lecture et décollaient les notions du bord. Les
-      deux extrémités tombent maintenant sur la même verticale que le repère
-      « [02 — … » à gauche et que le bord de la section à droite.
-
-      C'est le VIDE ENTRE LES DEUX qui tient la composition, pas une marge
-      ajoutée autour d'elle : plus les deux blocs sont écartés, plus la colonne
-      fixe se lit comme une marge de page et non comme une seconde colonne.
-    */
-    width: 100%;
-    max-width: 100%;
-    margin-inline: 0;
-  }
-
-  /* Une seule colonne, justifiée, exactement au corps de la variante A. */
-  .labo-vision-b__note {
-    margin: 0;
-    font-family: var(--font-copy);
-    font-size: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
-    line-height: 1.6;
-    letter-spacing: var(--tracking-copy);
-    text-align: justify;
-    hyphens: auto;
-    /*
-      L'alinéa marque la reprise, comme dans un livre. Il remplace le blanc
-      entre paragraphes : les deux ensemble marqueraient DEUX fois le même
-      changement, et hacheraient une colonne qui doit se lire d'un trait.
-    */
-    text-indent: 2em;
-  }
-
-
-  .labo-vision-b__aside {
-    position: sticky;
-    /*
-      Un tiers d'écran plutôt que le bord haut : le chapeau se tient à hauteur
-      de lecture, là où l'œil revient, et non collé sous la barre du menu.
-    */
-    top: clamp(4rem, 22vh, 11rem);
-    grid-column: 2;
-    grid-row: 1;
-    /*
-      Le chapeau et les quatre notions côte à côte. La seconde colonne est en
-      `auto` : elle ne prend que la largeur du plus long des quatre mots, et
-      tout le reste va au chapeau.
-    */
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: clamp(1.25rem, 2.5vw, 2.5rem);
-    /*
-      Alignés par le HAUT : les notions partent sur la même ligne que la
-      première du chapeau. Étirées, elles se centreraient sur sa hauteur et
-      flotteraient au milieu de la citation.
-    */
-    align-items: start;
-  }
-
-  .labo-vision-b__lead {
-    position: relative;
-    margin: 0;
-    font-family: var(--font-copy);
-    /*
-      La citation détachée d'une page de revue, et elle porte seule tout le
-      côté droit : elle est donc franchement au-dessus du texte courant. Le
-      plafond dépasse le corps des Titres — ici la phrase EST le repère visuel
-      de la section, il n'y a pas de titre au-dessus d'elle pour le tenir.
-    */
-    font-size: clamp(2rem, 4vw, 3.4rem);
-    line-height: 1.08;
-    letter-spacing: var(--tracking-titre);
-    hyphens: none;
-    text-wrap: pretty;
-  }
-
-  /*
-    Le guillemet ouvrant est sorti dans la marge : la première ligne du chapeau
-    s'aligne alors sur le haut de la colonne d'en face, et non en retrait de la
-    largeur du signe.
-  */
-  .labo-vision-b__quote {
-    position: absolute;
-    top: -0.04em;
-    left: -0.46em;
-  }
-
-  /*
-    Les notions, en pile alignée à droite sous le chapeau. Même dispositif que
-    dans la variante A, avec ses propres classes : les deux compositions sont
-    faites pour qu'on en supprime une — partager les classes ferait tomber
-    l'effet avec la section perdante.
-  */
-  .labo-vision-b__keywords {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.15rem;
-    margin: 0;
-    /*
-      La pile démarre au ras de la première ligne du chapeau. Le décalage rend
-      ce que la hauteur de ligne des notions prend au-dessus de leurs lettres —
-      sans lui, elles partent un cheveu plus bas que la capitale d'en face.
-    */
-    padding-top: 0.15em;
-    font-family: var(--font-titre);
-    font-size: var(--text-note);
-    line-height: 1.3;
-    letter-spacing: var(--tracking-copy);
-    text-transform: lowercase;
-  }
-
-  .labo-vision-b__keyword {
-    display: inline-flex;
-    cursor: default;
-  }
-
-  /*
-    La fenêtre : haute d'UNE lettre, sur une piste qui en contient deux. Ce
-    qui dépasse est coupé — c'est ce rognage qui fait la mécanique.
-  */
-  .labo-vision-b__letter {
-    display: inline-block;
-    height: 1.3em;
-    overflow: hidden;
-  }
-
-  .labo-vision-b__letter-track {
-    display: flex;
-    flex-direction: column;
-    will-change: transform;
-    transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
-    /* Le retard par rang : les lettres roulent l'une après l'autre. */
-    transition-delay: calc(var(--letter-index) * 34ms);
-  }
-
-  .labo-vision-b__letter-track > span {
-    display: block;
-    height: 1.3em;
-    line-height: 1.3;
-  }
-
-  /*
-    Au survol seulement, et seulement au pointeur fin : sur un écran tactile
-    le survol reste collé après le doigt, et le mot resterait à mi-course.
-  */
-  @media (hover: hover) and (pointer: fine) {
-    .labo-vision-b__keyword:hover .labo-vision-b__letter-track {
-      transform: translateY(-50%);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .labo-vision-b__letter-track {
-      transition: none;
-    }
-
-    .labo-vision-b__keyword:hover .labo-vision-b__letter-track {
-      transform: none;
-    }
-  }
-
-  @media (max-width: 1023px) {
-    /*
-      Sous cette largeur, les deux colonnes se disputent la place : le chapeau
-      tombe à trois mots par ligne et la colonne de lecture sous quarante
-      signes. On empile — et le chapeau, redevenu un bloc dans le flux, cesse
-      de coller : il n'a plus rien à côté de quoi tenir.
-    */
-    .labo-vision-b__layout {
-      grid-template-columns: minmax(0, 1fr);
-      gap: clamp(2rem, 5vw, 3rem);
-    }
-
-    .labo-vision-b__aside {
-      position: static;
-      grid-column: 1;
-      grid-row: 1;
-    }
-
-    /*
-      Empilé, le chapeau reprend toute la largeur : les notions ne peuvent plus
-      lui prendre une colonne sans le réduire à trois mots par ligne. Elles
-      repassent dessous, toujours calées à droite.
-    */
-    .labo-vision-b__aside {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .labo-vision-b__keywords {
-      margin-top: clamp(1.5rem, 3vw, 2.5rem);
-      padding-top: 0;
-    }
-
-    .labo-vision-b__notes {
-      grid-column: 1;
-      grid-row: 2;
-    }
-  }
-
-  @media (max-width: 767px) {
-    .labo-vision-b {
-      padding-inline: var(--spacing-gutter);
-    }
-
-    .labo-vision-b__lead {
-      font-size: clamp(1.5rem, 7vw, 2rem);
-    }
-
-    /* Même raison qu'en variante A : trop étroit pour justifier et couper. */
-    .labo-vision-b__note {
-      text-align: left;
-      hyphens: none;
-      text-indent: 1.25em;
-    }
   }
 
   .labo-philosophy__keywords {
@@ -2816,5 +3090,80 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
 
     gsap.ticker.add(updateMotion);
   });
+
+  /*
+    ── LE RANGEMENT DES STRATES ───────────────────────────────────────────────
+    Les cinq tranches entrent par le BORD DROIT DE L'ÉCRAN, une à une, et
+    viennent se ranger de la gauche vers la droite : la méthode se pose sous
+    les yeux du lecteur, dans l'ordre de la descente.
+
+    Elles partent toutes du même point — le bord de l'écran — et non chacune
+    d'un peu plus loin : c'est ce qui donne le geste de la main qui pose les
+    livres l'un après l'autre, plutôt qu'une rangée qui glisserait d'un bloc.
+    La course de chacune est donc mesurée à l'exécution.
+
+    `offsetLeft` et non `getBoundingClientRect()` : la mesure doit être celle de
+    la MISE EN PAGE, pas celle du rendu — les tranches sont déjà déplacées par
+    l'animation au moment où on recalcule, et un rectangle mesuré les prendrait
+    à leur position courante. `offsetLeft`, lui, ignore les transformations ;
+    l'étagère est son parent de positionnement (`position: relative`).
+
+    Sans JavaScript, sans GSAP, ou en mouvement réduit : rien ne s'exécute et
+    l'étagère est déjà rangée. Le contenu ne dépend jamais du geste.
+  */
+  document
+    .querySelectorAll<HTMLElement>('[data-method-shelf]:not([data-shelf-ready])')
+    .forEach((shelf) => {
+      shelf.dataset.shelfReady = '';
+
+      const strates = Array.from(shelf.querySelectorAll<HTMLElement>('[data-strate]'));
+      if (strates.length === 0) return;
+
+      const media = gsap.matchMedia();
+
+      media.add('(prefers-reduced-motion: no-preference)', () => {
+        /*
+          Course d'une tranche : la distance qui amène son bord gauche au bord
+          droit de la fenêtre, plus une garde pour qu'elle attende hors champ.
+          `.labo` étant en `overflow: clip`, cette attente ne crée aucune barre
+          de défilement horizontale.
+        */
+        const travel = (strate: HTMLElement) => () =>
+          window.innerWidth - shelf.getBoundingClientRect().left - strate.offsetLeft + 24;
+
+        const timeline = gsap.timeline({
+          scrollTrigger: {
+            trigger: shelf,
+            start: 'top 92%',
+            end: 'top 22%',
+            /*
+              `scrub` et non un déclenchement unique : c'est le lecteur qui
+              range, et le geste doit pouvoir se rejouer en remontant. Le léger
+              retard donne le poids de l'objet qu'on pose.
+            */
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        strates.forEach((strate, index) => {
+          timeline.fromTo(
+            strate,
+            { x: travel(strate) },
+            { x: 0, ease: 'power2.out', duration: 1, force3D: true },
+            /*
+              Un tiers de recouvrement entre deux rangements : la suivante
+              s'élance avant que la précédente ne soit tout à fait posée. Sans
+              ce recouvrement, la séquence se lit comme cinq gestes séparés.
+            */
+            index * 0.34,
+          );
+        });
+
+        return () => {
+          gsap.set(strates, { clearProps: 'transform' });
+        };
+      });
+    });
 
 </script>

@@ -2,6 +2,7 @@
 import Wordmark from '~/components/brand/Wordmark.astro';
 import Stamp from '~/components/brand/Stamp.astro';
 import { getLocaleMeta, type Locale } from '~/i18n/config';
+import { laboPath } from '~/i18n/routes';
 import type { ManifestoHero } from '~/lib/sanity/types';
 
 /**
@@ -40,28 +41,69 @@ function hrefFor(value: string): string | null {
   return null;
 }
 
+/*
+  Les paragraphes du verso. Le champ est une zone de texte : l'éditrice y va à
+  la ligne, et ces retours doivent se retrouver à l'écran.
+
+  De VRAIS paragraphes, et non un `white-space: pre-line` : en deux colonnes,
+  la césure de colonne doit pouvoir tomber au milieu d'un paragraphe — c'est ce
+  que fait une page imprimée. Des retours simplement préservés forceraient une
+  rupture à chaque ligne et laisseraient les deux colonnes dépareillées.
+
+  Les lignes vides sont ignorées : deux retours de suite dans le Studio ne
+  doivent pas creuser un trou dans la composition.
+*/
+const versoParagraphs = (section.verso ?? '')
+  .split(/\r?\n+/)
+  .map((paragraph) => paragraph.trim())
+  .filter(Boolean);
+
 const metaLines = (section.metaLines ?? []).map((line) => {
   const value = line.autoDate ? today : (line.value ?? '');
   return { label: line.label, value, href: hrefFor(value) };
 });
 ---
 
-<section class="manifesto surface-paper relative isolate flex min-h-[100svh] flex-col overflow-hidden">
-  <div class="surface-paper-grain"></div>
+<section class="manifesto relative isolate flex min-h-[100svh] flex-col overflow-hidden">
 
   {/*
-    Le pli : deux filets légèrement décalés, celui de droite très légèrement
-    incliné. Ils débordent en hauteur (top/bottom négatifs) — une ligne pivotée
-    ne toucherait plus les bords sinon.
+    Le pli : UN filet, sur la colonne centrale. Ils étaient deux — le second
+    décalé de trois pixels et incliné — pour faire lire un pli de papier ; sans
+    la texture qui les portait, ce doublon se lit comme un défaut de calage.
+
+    Il déborde en hauteur (top/bottom négatifs) pour rejoindre les deux bords.
   */}
   <div class="manifesto-fold" aria-hidden="true">
-    <span class="manifesto-fold-line manifesto-fold-line--a"></span>
-    <span class="manifesto-fold-line manifesto-fold-line--b"></span>
+    <span class="manifesto-fold-line"></span>
   </div>
 
   <div
     class="manifesto-layout relative z-10 grid flex-1 grid-cols-1 gap-x-12 gap-y-12 px-6 py-10 md:grid-cols-2 md:gap-y-16 md:px-10 md:py-16"
   >
+    {/*
+      ── LE VERSO ──────────────────────────────────────────────────────────
+      L'envers de la feuille, vu par transparence : le texte est RETOURNÉ et
+      presque effacé, derrière la page de gauche.
+
+      Il est posé DANS LA GRILLE, sur la même case que les mentions et le
+      manifeste — et non plus calé à la main sur la section. C'est ce qui lui
+      donne exactement leurs repères : même bord gauche que « Par : », même
+      ligne de départ, sans une seule valeur à tenir à jour si la mise en page
+      bouge.
+
+      `aria-hidden` et `user-select: none` vont ensemble : ce texte n'est pas
+      du contenu. Retourné, il serait lu à l'endroit par une synthèse vocale
+      et copié à l'endroit par un sélecteur — deux façons de faire passer pour
+      du texte ce qui n'est qu'une matière de papier.
+    */}
+    {versoParagraphs.length > 0 && (
+      <div class="manifesto-verso" aria-hidden="true">
+        {versoParagraphs.map((paragraph) => (
+          <p>{paragraph}</p>
+        ))}
+      </div>
+    )}
+
     {
       metaLines.length > 0 && (
         <dl class="manifesto-meta type-note text-ink">
@@ -124,8 +166,30 @@ const metaLines = (section.metaLines ?? []).map((line) => {
         }
       </div>
 
+      {/*
+        Le submark n'est plus un ornement mais une PORTE : il mène à la
+        méthode. Le lien ne porte pas de libellé visible — d'où le nom
+        accessible, sans lequel il ne s'annoncerait que par son adresse.
+
+        `variant="plongee-cercle"` est exactement le submark demandé, déjà dans
+        le dépôt en SVG et peint en `currentColor` : il suit donc l'encre de la
+        page, là où un PNG noir aurait figé sa couleur et son piqué.
+      */}
       <div class="mt-10 hidden md:mt-0 md:block">
-        <Stamp variant="labo" class="w-20 text-ink md:w-28" rotate={-8} />
+        <a
+          class="manifesto-submark"
+          href={`${laboPath(locale)}#methode`}
+          aria-label="Le Labo — la méthode"
+          data-cursor-interactive
+        >
+          {/*
+            Posé de travers, comme un tampon encreur. L'inclinaison est portée
+            par le tampon lui-même et le resserrement au survol par le lien qui
+            l'entoure : deux éléments, deux transformations, aucune des deux ne
+            chasse l'autre.
+          */}
+          <Stamp variant="plongee-cercle" class="w-20 text-ink md:w-28" rotate={-8} />
+        </a>
       </div>
     </div>
 
@@ -158,30 +222,192 @@ const metaLines = (section.metaLines ?? []).map((line) => {
     pointer-events: none;
   }
 
+  /*
+    Le filet, sur la colonne centrale. Il est peint dans la COULEUR DE FILET du
+    site — celle des bordures de la boutique et de l'enquête — et non dans
+    l'encre du texte : c'est une ligne de construction, elle ne doit pas peser
+    autant qu'un mot.
+  */
   .manifesto-fold-line {
     position: absolute;
-    /* Débordement vertical : une ligne inclinée ne rejoindrait pas les coins. */
+    left: 50%;
     top: -9%;
     height: 118%;
     width: 1px;
-    background: var(--color-ink);
-  }
-
-  /* Filet principal, parfaitement vertical, sur la colonne centrale. */
-  .manifesto-fold-line--a {
-    left: 50%;
+    background: var(--color-line);
   }
 
   /*
-    Second filet : décalé de 3px et incliné de 0.35°. L'inclinaison suffit à
-    faire lire un pli de papier plutôt qu'un trait vectoriel — l'écart entre
-    les deux lignes s'ouvre progressivement du haut vers le bas.
+    La croix qui marque le croisement n'est PAS ici : le hero recadre son
+    contenu (`overflow-hidden`), et la section suivante se peint par-dessus
+    lui. Une croix posée à cheval sur le bord y perdait sa moitié basse — deux
+    fois, quelle que soit la façon de la caler.
+
+    Elle appartient donc au SEUIL de la section des services, qui est en
+    dessous dans le document et peut donc déborder vers le haut sans être
+    couverte. Voir `ServicesMenu.astro`.
   */
-  .manifesto-fold-line--b {
-    left: calc(50% + 2px);
-    transform: rotate(0.35deg);
-    transform-origin: center;
-    background: var(--color-ink);
+
+  /*
+    ┌─ LE VERSO — L'ENVERS DE LA FEUILLE ───────────────────────────────────┐
+    │ Le texte est RETOURNÉ sur l'axe vertical et presque effacé : c'est    │
+    │ l'encre du dos de la page, vue par transparence.                      │
+    │                                                                        │
+    │ `scaleX(-1)` plutôt qu'une image ou une fonte inversée : le           │
+    │ retournement porte sur la boîte entière, donc sur les glyphes ET sur  │
+    │ l'ordre des lignes. Le texte reste du texte — il se recompose à       │
+    │ chaque largeur, et l'éditrice le change depuis le Studio sans avoir   │
+    │ à refabriquer quoi que ce soit.                                       │
+    │                                                                        │
+    │ Il est sous le contenu (`z-index: 0` contre le `z-10` de la mise en   │
+    │ page) et transparent au pointeur : rien de ce qui se lit ne doit lui  │
+    │ céder un clic.                                                        │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .manifesto-verso {
+    /*
+      ┌─ LES REPÈRES DU VERSO ────────────────────────────────────────────┐
+      │ Case 1 / rangée 1 : celle des mentions et du manifeste. Le bord    │
+      │ gauche est donc CELUI DE « Par : », et le haut celui de la même    │
+      │ ligne — non par une valeur recopiée, mais parce que c'est la même  │
+      │ case.                                                              │
+      │                                                                     │
+      │ `stretch` lui donne toute la hauteur de la rangée : une page, pas  │
+      │ un paragraphe.                                                      │
+      └─────────────────────────────────────────────────────────────────────┘
+    */
+    /*
+      HORS DU FLUX, mais placé PAR LA GRILLE. Un élément absolu enfant d'une
+      grille positionnée prend pour cadre la CASE qu'on lui désigne : il hérite
+      donc du bord gauche et de la ligne haute des mentions, sans rien peser
+      dans le calcul des rangées.
+
+      C'est ce qui garantit qu'un verso trop long ne déplace jamais le hero :
+      en flux, sa hauteur aurait fait grandir la rangée et tout le reste avec.
+    */
+    position: absolute;
+    /*
+      Les DEUX lignes, début ET fin. Avec « 1 » seul, la fin reste `auto` — et
+      pour un élément hors du flux, `auto` ne désigne pas la ligne suivante
+      mais le BORD DU CONTENEUR : la case s'étendait sur toute la grille, et le
+      verso débordait la page de droite jusqu'au bord de l'écran.
+    */
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+    /*
+      LA CASE ENTIÈRE. Le verso occupe toute la page de gauche, d'un bord à
+      l'autre de la colonne — c'est une page imprimée vue par transparence, pas
+      un bloc calé sur un texte du recto.
+
+      Les quatre bords viennent de la grille : le gauche et le haut sont ceux
+      des mentions, le droit celui de la colonne, juste avant la gouttière et
+      le pli. Aucune valeur à tenir à jour, et plus rien à mesurer.
+    */
+    inset: 0;
+    /*
+      Sous les deux autres occupants de la case. Ils viennent après lui dans
+      le document, ils se peignent donc par-dessus sans avoir à le déclarer.
+    */
+    z-index: 0;
+    margin: 0;
+    /*
+      Un texte plus long que la page est COUPÉ, comme il le serait par le bord
+      du papier — plutôt que d'ouvrir une troisième colonne.
+    */
+    overflow: hidden;
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    /*
+      Interligne large : une page vue par transparence laisse voir des lignes
+      espacées, pas un bloc compact. C'est ce qui la fait lire comme un fond
+      et non comme un second texte.
+    */
+    line-height: 2.1;
+    letter-spacing: var(--tracking-copy);
+    /*
+      DEUX COLONNES, comme la page imprimée dont c'est l'envers. Le
+      retournement s'applique à la boîte entière : l'ordre des colonnes
+      s'inverse avec elle, ce qui est exactement ce qu'on voit au dos d'une
+      feuille — la dernière colonne du recto se retrouve à gauche.
+    */
+    columns: 2;
+    column-gap: clamp(1rem, 2.5vw, 2rem);
+    /*
+      Fer à fer et césure : deux colonnes étroites au fer à gauche laisseraient
+      un bord droit irrégulier, et c'est précisément ce bord franc qui fait
+      lire une page composée plutôt qu'un texte posé là.
+    */
+    text-align: justify;
+    hyphens: auto;
+    /* Le retournement, autour de l'axe vertical du bloc. */
+    transform: scaleX(-1);
+    /*
+      Assez pour qu'on devine une page imprimée, pas assez pour qu'on essaie
+      de la lire : au-delà, l'œil s'y accroche et le texte de devant recule.
+    */
+    opacity: 0.16;
+    /* Ni cliquable ni sélectionnable : ce n'est pas du contenu. */
+    pointer-events: none;
+    user-select: none;
+    /* Les mots longs ne doivent pas déborder de la colonne. */
+    overflow-wrap: break-word;
+  }
+
+  .manifesto-verso p {
+    margin: 0;
+  }
+
+  /*
+    L'alinéa marque la reprise, et le blanc entre paragraphes est laissé de
+    côté : sur une page composée serré, l'un des deux suffit, et l'alinéa est
+    celui qui ne troue pas la colonne.
+  */
+  .manifesto-verso p + p {
+    text-indent: 2em;
+  }
+
+  @media (max-width: 767px) {
+    /*
+      En colonne unique il n'y a plus de page de gauche : le verso passerait
+      derrière le manifeste lui-même, et deux textes superposés sur une
+      largeur de téléphone ne se lisent ni l'un ni l'autre.
+    */
+    .manifesto-verso {
+      display: none;
+    }
+  }
+
+  /*
+    LE SUBMARK, devenu un renvoi. Il se resserre légèrement sous le pointeur —
+    le geste d'un tampon qu'on presse, pas d'un bouton qui s'allume.
+  */
+  .manifesto-submark {
+    display: inline-block;
+    color: var(--color-ink);
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .manifesto-submark:hover {
+      transform: scale(0.94);
+    }
+  }
+
+  /* Le clavier reçoit le même retour que le pointeur. */
+  .manifesto-submark:focus-visible {
+    transform: scale(0.94);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .manifesto-submark {
+      transition: none;
+    }
+
+    .manifesto-submark:hover,
+    .manifesto-submark:focus-visible {
+      transform: none;
+    }
   }
 
   /* En mobile, la double page devient une page unique : plus de pli. */

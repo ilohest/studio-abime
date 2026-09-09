@@ -1,0 +1,79 @@
+---
+import Constellation from '~/components/Constellation.astro';
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+import type { Project } from '~/lib/sanity/types';
+
+/**
+ * Le générique d'un projet — sa constellation.
+ *
+ * Posé en clôture des trois gabarits, après le texte et la planche d'images,
+ * juste avant le renvoi au projet suivant. C'est la dernière chose que dit la
+ * page, et c'est volontaire : on nomme les gens APRÈS avoir montré le travail.
+ *
+ * Un seul composant pour les trois modèles plutôt qu'un bloc recopié dans
+ * chacun : la place du générique ne dépend pas de la mise en page, et le jour
+ * où sa composition change, elle change partout.
+ *
+ * ── UNE FIGURE, PAS UNE SECTION ────────────────────────────────────────────
+ * La constellation portait un titre en tête — « [CONSTELLATION] ». Elle n'en a
+ * plus : elle se donne comme les autres planches de la page, sous une LÉGENDE,
+ * et son numéro se calcule tout seul. La règle de numérotation des pages projet
+ * (`src/styles/global.css`) compte les `figcaption` dans l'ordre de lecture ;
+ * placée en dernier, la constellation prend donc le dernier numéro de la série,
+ * après les visuels du projet. Rien à saisir, rien à tenir à jour.
+ *
+ * Le titre demeure, mais pour les seules technologies d'assistance : une
+ * section sans nom n'a pas de place dans le sommaire d'une page.
+ *
+ * Sans étoile désignée dans la fiche projet, rien ne se rend — pas de légende
+ * orpheline sous une planche vide, et pas de numéro consommé pour rien.
+ */
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+
+const { project, locale } = Astro.props;
+const t = useTranslations(locale);
+
+const stars = (project.stars ?? []).filter((star) => Boolean(star?.name?.trim()));
+const titleId = 'project-constellation-title';
+---
+
+{
+  stars.length > 0 && (
+    <section class="project-constellation container-wide" aria-labelledby={titleId}>
+      <h2 id={titleId} class="sr-only">
+        {t('project.constellation')}
+      </h2>
+
+      {/*
+        Le germe est l'identifiant du PROJET, et non la liste des étoiles : deux
+        projets menés par la même équipe doivent donner deux figures distinctes.
+        Une constellation est le relevé d'un moment, pas la carte d'une équipe.
+
+        La légende ne porte PAS son numéro : sur une page projet, il est produit
+        par le compteur de figures. L'écrire ici en donnerait deux.
+      */}
+      <Constellation
+        stars={stars}
+        seed={project._id}
+        variant="projet"
+        caption={t('project.constellationCaption')}
+      />
+    </section>
+  )
+}
+
+<style>
+  /*
+    Aucun filet, aucun titre : c'est le BLANC qui détache la constellation de ce
+    qui la précède, comme il détache les planches entre elles. Il est plus large
+    au-dessus qu'en dessous — la figure appartient à la page qu'elle ferme, elle
+    ne s'en détache pas pour autant.
+  */
+  .project-constellation {
+    padding-block: clamp(4rem, 10vw, 8rem) clamp(2rem, 5vw, 4rem);
+  }
+</style>

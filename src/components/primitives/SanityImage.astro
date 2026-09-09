@@ -17,6 +17,11 @@ interface Props {
   class?: string;
   /** Surcharge le texte alternatif du CMS (rare : visuel purement décoratif). */
   alt?: string;
+  /**
+   * Style en ligne, fusionné AVANT celui du placeholder — un appelant peut donc
+   * poser ses variables de mise en page sans avoir à l'emporter sur le LQIP.
+   */
+  style?: string;
 }
 
 const {
@@ -28,6 +33,7 @@ const {
   fetchpriority = 'auto',
   class: className,
   alt,
+  style,
 } = Astro.props;
 
 const resolved = resolveImage(image, { width, ratio });
@@ -47,9 +53,13 @@ const resolved = resolveImage(image, { width, ratio });
       decoding="async"
       class={className}
       style={
-        resolved.lqip
-          ? `background-image:url(${resolved.lqip});background-size:cover;background-position:center;`
-          : undefined
+        [
+          style,
+          resolved.lqip &&
+            `background-image:url(${resolved.lqip});background-size:cover;background-position:center;`,
+        ]
+          .filter(Boolean)
+          .join(';') || undefined
       }
     />
   )

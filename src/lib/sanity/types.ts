@@ -27,6 +27,8 @@ export interface SanityImage {
     metadata?: {
       lqip?: string;
       dimensions?: { width: number; height: number; aspectRatio: number };
+      /** `false` dès que l'asset porte de la transparence. Voir `resolveImage()`. */
+      isOpaque?: boolean;
     };
   };
 }
@@ -81,6 +83,8 @@ export interface ManifestoHero extends SectionBase {
   hypothesis?: string;
   intentionLabel?: string;
   intention?: string[];
+  /** Texte du verso, rendu retourné et en transparence. Décoratif. */
+  verso?: string;
   tagline?: string;
 }
 
@@ -98,13 +102,12 @@ export interface StudioStatement extends SectionBase {
   marker?: string;
   figures?: Array<{
     _key: string;
-    /** Requis côté CMS ; absent quand la figure vient du contenu d'amorçage. */
+    /** L'un des deux — voir la validation du schéma. */
     image?: SanityImage;
+    /** Vidéo courte et muette, tenant lieu de visuel pour cette figure. */
+    video?: { url?: string; mimeType?: string };
     number?: string;
     caption?: string;
-    span?: number;
-    bleed?: 'none' | 'left' | 'right';
-    pushRight?: boolean;
     /**
      * Visuel groupé au site, utilisé UNIQUEMENT par le contenu d'amorçage
      * (`src/content/homeFallback.ts`) tant que Sanity n'est pas alimenté.
@@ -196,6 +199,25 @@ export interface CtaSection extends SectionBase {
   cta?: SanityLink;
 }
 
+export interface Testimonial {
+  _key: string;
+  quote: string;
+  author?: string;
+  role?: string;
+  /** Coché dans le Studio : c'est celui-ci qui paraît. */
+  active?: boolean;
+}
+
+/**
+ * Section témoignage. Le tableau porte TOUTE la collection ; le rendu n'en
+ * montre qu'un — voir `src/components/sections/Testimonials.astro`.
+ */
+export interface Testimonials extends SectionBase {
+  _type: 'testimonials';
+  label?: string;
+  entries?: Testimonial[];
+}
+
 export type Section =
   | ManifestoHero
   | ServicesMenu
@@ -204,6 +226,7 @@ export type Section =
   | PlateSpread
   | ProjectShowcase
   | FullBleedImage
+  | Testimonials
   | HeroSection
   | RichTextSection
   | MediaSection
@@ -272,6 +295,8 @@ export interface Project {
   headline?: string;
   excerpt?: string;
   services?: string[];
+  /** Les collaborateurs du projet — leur constellation ferme la page. */
+  stars?: Star[];
   channels?: ProjectChannel[];
   listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   gallery?: ProjectGalleryItem[];
@@ -310,6 +335,19 @@ export interface Client {
   _id: string;
   name: string;
   sector?: string;
+}
+
+/**
+ * Étoile — une personne qui a travaillé avec le studio.
+ *
+ * Encodée une fois dans « Étoiles », elle sert aux constellations : celle d'un
+ * projet (les étoiles qu'il désigne) et celle du Labo (toutes, sauf les
+ * éteintes). Voir `src/lib/constellation.ts` pour le placement.
+ */
+export interface Star {
+  _id: string;
+  name: string;
+  role?: string;
 }
 
 export interface ProjectsPage {
@@ -421,6 +459,15 @@ export interface LaboParagraph {
   text: string;
 }
 
+/** Une strate de la méthode « Plongée sous le visible ». */
+export interface LaboStrate {
+  _key: string;
+  word: string;
+  note: string;
+  /** Le spécimen, détouré, composé en tête de tranche puis en grand au survol. */
+  image?: SanityImage;
+}
+
 /** Page éditoriale Labo, structurée comme une seule expérience narrative. */
 /** Page Contact — seule la section « Informations » est éditoriale. */
 export interface ContactPage {
@@ -473,6 +520,14 @@ export interface LaboPage {
   foundationTitle?: string;
   foundationParagraphs: string[];
   foundationSignature?: string;
+  /** Intitulé de la méthode, composé en tête de la section. */
+  methodTitle?: string;
+  method: LaboStrate[];
+  /**
+   * Toutes les étoiles de la langue, sauf celles retirées du Labo. La liste
+   * n'est pas saisie dans le singleton : elle est rassemblée par la requête.
+   */
+  stars: Star[];
   archiveProjects: ProjectCard[];
   seo?: Seo;
 }

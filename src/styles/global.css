@@ -135,6 +135,29 @@
   }
 
   body {
+    /*
+      ┌─ AUCUN DÉFILEMENT HORIZONTAL DE PAGE ─────────────────────────────┐
+      │ Le site n'en veut nulle part : les seuls parcours horizontaux     │
+      │ sont VOULUS et confinés à leur propre boîte — le rail de          │
+      │ l'archive, celui des suggestions. Une barre en bas de page ne     │
+      │ peut donc être qu'un accident de mise en page.                    │
+      │                                                                    │
+      │ Ces accidents sont faciles à produire ici : plusieurs scènes se   │
+      │ déplacent en `translate` sur toute une largeur d'écran avant de   │
+      │ revenir en place. Il suffit qu'une d'elles perde le recadrage de  │
+      │ son conteneur pour que la page se mette à défiler de côté.        │
+      │                                                                    │
+      │ `clip` et NON `hidden` : `hidden` ferait du corps un conteneur de │
+      │ défilement, et tous les `position: sticky` de la page — le menu   │
+      │ de l'accueil, le manifeste, les scènes du Labo — se cale­raient    │
+      │ alors sur lui au lieu de la fenêtre. `clip` recadre sans créer ce │
+      │ conteneur : le collant continue de fonctionner.                   │
+      │                                                                    │
+      │ Sur le seul axe horizontal : `overflow-y` reste `visible`, ce que │
+      │ `clip` autorise là où `hidden` forcerait l'autre axe en `auto`.   │
+      └────────────────────────────────────────────────────────────────────┘
+    */
+    overflow-x: clip;
     background-color: var(--color-surface);
     color: var(--color-ink);
     font-family: var(--font-copy);

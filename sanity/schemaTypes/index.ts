@@ -4,6 +4,7 @@ import type { SchemaTypeDefinition } from 'sanity';
 import { page } from './documents/page';
 import { project } from './documents/project';
 import { client } from './documents/client';
+import { star } from './documents/star';
 import { post } from './documents/post';
 
 // Singletons
@@ -34,6 +35,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   page,
   project,
   client,
+  star,
   post,
 
   // Singletons

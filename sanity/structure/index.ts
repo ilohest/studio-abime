@@ -19,6 +19,7 @@ const HANDLED_TYPES = [
   'page',
   'project',
   'client',
+  'star',
   'post',
   'projectsPage',
   'laboPage',
@@ -235,6 +236,14 @@ export const structure: StructureResolver = (S, context) =>
         // Ordre d'encodage : c'est lui qui remplit les cases de la table des
         // éléments de la page Expériences.
         .child(byLanguage(S, 'client', 'Clients', [{ field: '_createdAt', direction: 'asc' }])),
+
+      S.listItem()
+        .title('Étoiles')
+        .id('stars')
+        /* Rangées par nom : la liste sert à RETROUVER quelqu'un. L'ordre n'a
+           aucune conséquence sur les figures — la place d'une étoile dans une
+           constellation est calculée, jamais encodée. */
+        .child(byLanguage(S, 'star', 'Étoiles', [{ field: 'name', direction: 'asc' }])),
 
       S.listItem()
         .title('Journal')

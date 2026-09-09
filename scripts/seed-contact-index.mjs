@@ -71,7 +71,7 @@ const client = createClient({ projectId, dataset, apiVersion, token, useCdn: fal
 const NOTIONS = [
   { term: 'Abîme', category: 'n. m.', definition: 'Ce qui se tient sous la surface d’un projet, et qu’il faut aller chercher.', sections: ['labo', 'labo:vision'] },
   { term: 'Archive', category: 'n. f.', definition: 'Ce que le studio garde, classe et ressort — la matière d’avant le projet.', sections: ['labo:archives', 'experiences'] },
-  { term: 'Atelier', category: 'n. m.', definition: 'Le lieu où les choses sont encore en morceaux.', sections: ['labo', 'labo:equipe'] },
+  { term: 'Atelier', category: 'n. m.', definition: 'Le lieu où les choses sont encore en morceaux.', sections: ['labo', 'labo:methode'] },
   { term: 'Cahier de recherche', category: 'n. m.', definition: 'Le carnet public du studio : ce qui s’essaie avant de servir.', sections: ['journal:cahier-de-recherche'] },
   { term: 'Chapô', category: 'n. m.', definition: 'Les quelques lignes qui décident si le reste sera lu.', sections: ['journal'] },
   { term: 'Enquête', category: 'n. f.', definition: 'La fiche par laquelle un projet entre au studio.', sections: ['contact:enquete'] },

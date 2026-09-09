@@ -5,6 +5,7 @@ import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
+import ProjectConstellation from '~/components/project/ProjectConstellation.astro';
 
 import { projectGallery } from '~/lib/projectGallery';
 import type { Locale } from '~/i18n/config';
@@ -91,6 +92,13 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
       )
     }
   </div>
+
+  {/*
+    Le générique, en clôture : qui a travaillé sur ce projet. Il vient après le
+    contenu et avant le renvoi au projet suivant — on nomme les gens une fois le
+    travail montré. Rien ne se rend si la fiche ne désigne aucune étoile.
+  */}
+  <ProjectConstellation project={project} locale={locale} />
 
   <NextProject project={project.next} locale={locale} />
 </article>

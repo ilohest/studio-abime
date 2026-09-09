@@ -1,0 +1,177 @@
+---
+import type { Testimonials } from '~/lib/sanity/types';
+
+/**
+ * Témoignage — un seul, coupé en deux colonnes.
+ *
+ * ┌─ La composition ─────────────────────────────────────────────────────────┐
+ * │ Un document dactylographié : mesure courte, deux colonnes, petit corps    │
+ * │ dans la fonte machine. Le texte n'est PAS scindé à la saisie — il coule   │
+ * │ d'une colonne à l'autre tout seul, et la coupe se refait à chaque         │
+ * │ largeur. Découper à la main aurait figé un équilibre valable pour un      │
+ * │ seul écran, et obligé l'éditrice à rééquilibrer à chaque retouche.        │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Le choix du témoignage se fait dans le Studio, par une case. Ici on prend le
+ * PREMIER coché : voir `sanity/schemaTypes/objects/sections/testimonials.ts`
+ * pour la raison de cette règle, et l'avertissement qui l'accompagne.
+ */
+interface Props {
+  section: Testimonials;
+}
+
+const { section } = Astro.props;
+const entries = section.entries ?? [];
+const shown = entries.find((entry) => entry.active);
+---
+
+{
+  shown && (
+    <section class="testimonial">
+      <div class="testimonial__sheet">
+        {section.label && (
+          <p class="testimonial__label type-note" aria-hidden="true">
+            {section.label}
+          </p>
+        )}
+
+        <figure class="testimonial__figure">
+          {/*
+            `blockquote` dans `figure`, signature dans `figcaption` : c'est la
+            structure prévue pour une citation attribuée. La signature est
+            ainsi rattachée au texte, et non lue comme un paragraphe de plus.
+          */}
+          <blockquote class="testimonial__quote">
+            {/*
+              L'apparition est portée par le PARAGRAPHE, pas par la citation :
+              le révélateur découpe le texte de l'élément qui porte l'attribut,
+              et la boîte qui coule en deux colonnes doit rester la sienne.
+            */}
+            <p data-text-reveal>{shown.quote}</p>
+          </blockquote>
+
+          <figcaption class="testimonial__author type-note">
+            <span class="testimonial__name">{shown.author}</span>
+            {shown.role && <span class="testimonial__role">{shown.role}</span>}
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  /*
+    ┌─ LE TÉMOIGNAGE OCCUPE UN ÉCRAN ENTIER ────────────────────────────────┐
+    │ Il ferme la page, et il est court : au fil du texte, il passait comme │
+    │ un paragraphe de plus. Sur une pleine hauteur, il devient une PAGE —  │
+    │ on arrive dessus, il n'y a rien d'autre, on le lit.                   │
+    │                                                                        │
+    │ Le centrage remplace le réglage des blancs qui était ici : ils        │
+    │ valaient 101 px au-dessus et 187 en dessous, et il fallait défalquer  │
+    │ la garde de la section précédente pour tenir ce rapport. Une boîte    │
+    │ qui centre son contenu n'a plus rien à défalquer : ce qui reste       │
+    │ au-dessus et en dessous se partage tout seul, à toute hauteur         │
+    │ d'écran.                                                              │
+    │                                                                        │
+    │ `svh` et non `vh` : sur mobile, `vh` compte la barre d'adresse comme  │
+    │ si elle était déjà repliée, et la section dépasserait d'autant.       │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .testimonial {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    /*
+      Garde, et non hauteur : elle ne sert que si le témoignage dépasse la
+      fenêtre — un texte long, un écran bas, un corps de texte agrandi. La
+      section s'étire alors au-delà de l'écran plutôt que de rogner le texte.
+    */
+    padding-block: clamp(3rem, 6vw, 6rem);
+  }
+
+  /*
+    La feuille. Mesure volontairement courte et CENTRÉE dans la page : le bloc
+    se lit comme un document posé, pas comme une bande qui traverse l'écran.
+  */
+  .testimonial__sheet {
+    box-sizing: border-box;
+    width: min(100%, 52rem);
+    margin-inline: auto;
+    padding-inline: var(--spacing-gutter);
+  }
+
+  .testimonial__label {
+    margin: 0 0 clamp(2.5rem, 5vw, 4rem);
+    letter-spacing: var(--tracking-sous-titre);
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .testimonial__figure {
+    margin: 0;
+  }
+
+  .testimonial__quote {
+    /*
+      LE COULAGE. Le texte se répartit sur deux colonnes de lui-même. Il est
+      court — un témoignage, pas un article — donc les deux colonnes tiennent
+      dans un écran : on ne remonte jamais chercher le haut de la seconde,
+      seule condition qui rend la composition en colonnes lisible ici.
+    */
+    columns: 2;
+    column-gap: clamp(1.75rem, 4vw, 3rem);
+    margin: 0;
+    font-family: var(--font-titre);
+    font-size: clamp(0.8125rem, 0.45vw + 0.72rem, 0.9375rem);
+    line-height: 1.85;
+    letter-spacing: var(--tracking-copy);
+    /*
+      Fer à fer et césure vont ensemble : sur une colonne étroite, justifier
+      sans couper les mots ouvre des blancs irréguliers d'une ligne à l'autre.
+    */
+    text-align: justify;
+    hyphens: auto;
+    /* Jamais une ligne seule au pied ou en tête d'une colonne. */
+    orphans: 2;
+    widows: 2;
+  }
+
+  .testimonial__quote p {
+    margin: 0;
+  }
+
+  /*
+    La signature reprend la mesure ENTIÈRE, sous les deux colonnes : elle
+    referme le bloc. Dans une colonne, elle se lirait comme la suite du texte.
+  */
+  .testimonial__author {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin-top: clamp(2rem, 4vw, 3rem);
+    letter-spacing: var(--tracking-sous-titre);
+    text-transform: uppercase;
+  }
+
+  .testimonial__role {
+    opacity: 0.6;
+    text-transform: none;
+    letter-spacing: var(--tracking-copy);
+  }
+
+  @media (max-width: 639px) {
+    /*
+      Une seule colonne : à cette largeur, deux ne feraient plus qu'une
+      trentaine de signes par ligne — la justification y creuserait des trous
+      quoi qu'on fasse, et la césure couperait un mot sur deux.
+    */
+    .testimonial__quote {
+      columns: 1;
+      text-align: left;
+      hyphens: none;
+    }
+  }
+</style>

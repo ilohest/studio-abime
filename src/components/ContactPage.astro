@@ -2125,8 +2125,14 @@ const phases = [
       qui portait cet alignement avant qu'elle ne cesse d'être une boîte.
     */
     margin: 0 0.5rem;
-    /* La garniture basse loge l'horodatage, posé hors du flux sous le libellé. */
-    padding: 1.15rem 0.6rem 1.5rem;
+    /*
+      La garniture basse loge l'horodatage, posé hors du flux sous le libellé.
+      Elle valait 1,5 rem : la mention arrivait alors à UN PIXEL du bord du
+      champ, donc au contact du filet qui ferme la partie. Elle a la place de
+      respirer maintenant — c'est une mention de marge, elle ne doit toucher
+      ni la réglure au-dessus ni la séparation en dessous.
+    */
+    padding: 1.15rem 0.6rem 2.15rem;
     border: 0;
     transition: background-color 0.2s ease-out;
   }
@@ -2155,6 +2161,41 @@ const phases = [
 
   .contact-field--observation textarea {
     min-height: 7.5rem;
+  }
+
+  /*
+    ┌─ L'HORODATAGE DES QUESTIONS OUVERTES PASSE À DROITE ──────────────────┐
+    │ Dans une réponse d'une ligne, la mention se pose sous le libellé : il │
+    │ y a la place, la réponse est en face.                                 │
+    │                                                                        │
+    │ Dans une question ouverte, non : le libellé occupe sa ligne et le     │
+    │ papier réglé court juste dessous. La mention s'intercalait entre les  │
+    │ deux, collée à la première réglure — on ne savait plus si elle        │
+    │ appartenait à la question ou à la réponse.                            │
+    │                                                                        │
+    │ Elle rejoint donc la LIGNE DE LA QUESTION, calée au bord droit : la   │
+    │ mention marginale d'un formulaire imprimé, en face de son intitulé.   │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .contact-field--observation .contact-field__log {
+    top: 0;
+    right: 0;
+    left: auto;
+    margin-top: 0;
+    text-align: right;
+  }
+
+  @media (max-width: 639px) {
+    /*
+      Sous cette largeur l'intitulé passe sur deux lignes : la mention posée en
+      face chevaucherait sa seconde ligne. Elle repasse dessous, à gauche,
+      comme dans les réponses courtes.
+    */
+    .contact-field--observation .contact-field__log {
+      position: static;
+      margin-top: 0.45rem;
+      text-align: left;
+    }
   }
 
   /*
@@ -2271,7 +2312,12 @@ const phases = [
     background: transparent;
     color: var(--color-ink);
     font-family: var(--font-annotation);
-    font-size: var(--text-copy);
+    /*
+      Sous le corps courant : ce qu'on écrit ici est une RÉPONSE portée sur une
+      fiche, pas un texte de lecture. Au corps du texte courant, l'italique
+      d'annotation pesait autant que les questions imprimées en face.
+    */
+    font-size: 1rem;
     font-style: italic;
     line-height: 1.35;
     letter-spacing: var(--tracking-annotation);
@@ -2317,9 +2363,15 @@ const phases = [
     background-attachment: local;
   }
 
+  /*
+    L'indication est plus petite ENCORE que la réponse : c'est une amorce au
+    crayon, pas une valeur saisie. Au même corps, on ne distinguait un champ
+    vide d'un champ rempli qu'à la nuance de gris.
+  */
   .contact-field input::placeholder,
   .contact-field textarea::placeholder {
     color: var(--color-muted);
+    font-size: 0.875rem;
     opacity: 0.62;
   }
 

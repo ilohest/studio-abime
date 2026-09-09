@@ -92,6 +92,47 @@ const fr: LaboPage = {
     'Je ne sais pas jusqu’où il ira. Il existe maintenant, et il ne m’appartient plus tout à fait.',
   ],
   foundationSignature: 'Élodie',
+  /*
+    Les cinq strates de la méthode, dans l'ordre de la descente : on part de la
+    matière brute et on remonte avec un récit.
+
+    Sans spécimen : les images vivent dans Sanity, et le report vers le Studio
+    (`npm run labo:publish`) laisse en place celles qui y sont déjà.
+  */
+  methodTitle: 'Plongée sous le visible',
+  method: [
+    {
+      _key: 'roche',
+      word: 'La roche',
+      note: 'La matière brute : votre projet avant qu’on y touche.',
+    },
+    {
+      _key: 'strates',
+      word: 'Les strates',
+      note: 'Les couches déposées par le temps, qu’on lit avant de creuser.',
+    },
+    {
+      _key: 'outils',
+      word: 'Les outils',
+      note: 'Ce qu’on emporte pour descendre : nos gestes, vos ressources.',
+    },
+    {
+      _key: 'enquete',
+      word: 'L’enquête',
+      note: 'On questionne, on recoupe, on remonte ce qui résiste.',
+    },
+    {
+      _key: 'composition',
+      word: 'La composition',
+      note: 'Les fragments trouvent leur ordre, et le récit tient debout.',
+    },
+  ],
+  /*
+    Ni étoiles ni projets : les deux sont des documents à part, chargés par la
+    route et greffés sur ce repli. Rien à écrire ici — on ne peut pas inventer
+    des collaborateurs de secours.
+  */
+  stars: [],
   archiveProjects: [],
 };
 

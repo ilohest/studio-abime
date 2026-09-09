@@ -18,6 +18,15 @@
         "studio:dev"
       ],
       "port": 3333
+    },
+    {
+      "name": "astro-dev-ouvert",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "MAINTENANCE_MODE=off npx astro dev --port 4321"
+      ],
+      "port": 4321
     }
   ]
 }

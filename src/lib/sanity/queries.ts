@@ -21,7 +21,7 @@ const IMAGE = /* groq */ `{
   asset->{
     _id,
     url,
-    metadata { lqip, dimensions }
+    metadata { lqip, dimensions, isOpaque }
   }
 }`;
 
@@ -38,6 +38,30 @@ const LINK = /* groq */ `{
     language
   }
 }`;
+
+/**
+ * Étoiles d'une constellation — le strict nécessaire pour la composer : un nom,
+ * un rôle. La POSITION n'est jamais stockée : elle se calcule au rendu à partir
+ * de la liste (`src/lib/constellation.ts`).
+ */
+const STAR = /* groq */ `{ _id, name, role }`;
+
+/**
+ * Toutes les étoiles de la langue qui n'ont pas été retirées du Labo.
+ *
+ * L'ordre est celui de l'ENCODAGE, et il n'est pas indifférent : le calcul
+ * distribue les étoiles secteur par secteur, dans l'ordre de la liste. Trié par
+ * nom, l'arrivée d'une seule personne redessinerait toute la figure ; par date
+ * de création, elle vient s'ajouter aux autres sans les déplacer.
+ *
+ * `coalesce` : le champ est récent, les fiches antérieures y paraissent.
+ */
+const LABO_STARS = /* groq */ `*[
+  _type == "star" &&
+  language == $locale &&
+  defined(name) &&
+  coalesce(inLaboConstellation, true) == true
+] | order(_createdAt asc, _id asc) ${STAR}`;
 
 /**
  * Un projet masqué (`visible: false`) n'existe plus nulle part sur le site :
@@ -173,10 +197,8 @@ const SECTIONS = /* groq */ `sections[]{
       _key,
       number,
       caption,
-      span,
-      bleed,
-      pushRight,
-      image ${IMAGE}
+      image ${IMAGE},
+      "video": video.asset->{ url, mimeType }
     }
   },
   _type == "plateSpread" => {
@@ -416,6 +438,10 @@ export const projectBySlugQuery = /* groq */ `
   headline,
   excerpt,
   services,
+  // Le filtre porte sur la RÉFÉRENCE, avant le déréférencement : une étoile
+  // supprimée depuis laisserait sinon un trou dans la liste — un point sans nom
+  // relié au centre. (Commentaires de ligne : GROQ ne connaît pas /* … */.)
+  "stars": coalesce(stars[defined(@->name)]->${STAR}, []),
   "channels": coalesce(channels[]{ _key, label, url }, []),
   listingFacts[]{ _key, label, value },
   "gallery": coalesce(gallery[]{ _key, span, spanWide, caption, image ${IMAGE} }, []),
@@ -487,6 +513,15 @@ export const clientsQuery = /* groq */ `
 *[_type == "client" && language == $locale && defined(name)]
   | order(_createdAt asc, _id asc){ _id, name, sector }`;
 
+/**
+ * Étoiles de la constellation du Labo, hors du singleton éditorial.
+ *
+ * Même parti que `laboArchiveProjectsQuery` : la figure doit se composer même
+ * quand la page Labo n'a pas encore été publiée et que le site sert son contenu
+ * de repli. Les personnes existent indépendamment de la page qui les montre.
+ */
+export const laboStarsQuery = /* groq */ `${LABO_STARS}`;
+
 /** Page Labo : le contenu reste éditable, la mise en scène demeure intentionnelle. */
 /**
  * Contenu éditorial de la page Contact (section « Informations »).
@@ -542,6 +577,9 @@ export const laboPageQuery = /* groq */ `
   foundationTitle,
   "foundationParagraphs": coalesce(foundationParagraphs, []),
   foundationSignature,
+  methodTitle,
+  "method": coalesce(method[]{ _key, word, note, image ${IMAGE} }, []),
+  "stars": ${LABO_STARS},
   "archiveProjects": select(
     count(*[${FEATURED_PROJECT} && defined(thumbnail.asset)]) > 0 =>
       *[${FEATURED_PROJECT} && defined(thumbnail.asset)] | ${PROJECT_ORDER}[0...6] ${PROJECT_CARD},

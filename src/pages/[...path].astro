@@ -40,6 +40,7 @@ import {
   laboPageQuery,
   contactPageQuery,
   laboArchiveProjectsQuery,
+  laboStarsQuery,
   journalIndexQuery,
   journalPageQuery,
   shopPageQuery,
@@ -64,6 +65,7 @@ import type {
   ProjectCard,
   ProjectsPage,
   ShopPage,
+  Star,
 } from '~/lib/sanity/types';
 
 /**
@@ -173,7 +175,7 @@ if (route.kind === 'collection') {
 }
 
 if (route.kind === 'labo') {
-  const [pageContent, latestProjects] = await Promise.all([
+  const [pageContent, latestProjects, allStars] = await Promise.all([
     loadQuery<LaboPage | null>({
       query: laboPageQuery,
       locale,
@@ -184,11 +186,24 @@ if (route.kind === 'labo') {
       locale,
       fallback: [],
     }),
+    loadQuery<Star[]>({
+      query: laboStarsQuery,
+      locale,
+      fallback: [],
+    }),
   ]);
 
   laboPage = pageContent ?? getLaboFallback(locale);
   if (laboPage.archiveProjects.length === 0 && latestProjects.length > 0) {
     laboPage = { ...laboPage, archiveProjects: latestProjects };
+  }
+  /*
+    Les étoiles ne vivent pas dans le singleton : elles sont chargées à part,
+    comme l'archive, pour que la constellation se compose même quand la page
+    Labo n'a pas encore été publiée et que le site sert son contenu de repli.
+  */
+  if (laboPage.stars.length === 0 && allStars.length > 0) {
+    laboPage = { ...laboPage, stars: allStars };
   }
 } else if (route.kind === 'journal') {
   const [journalPosts, pageContent] = await Promise.all([

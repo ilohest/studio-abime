@@ -19,7 +19,8 @@
     "projects:demo": "node --env-file=.env scripts/seed-project-templates.mjs",
     "labo:publish": "node --env-file=.env --experimental-strip-types scripts/publish-labo-page.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",
-    "typecheck": "astro check"
+    "typecheck": "astro check",
+    "home:testimonial": "node --env-file=.env scripts/swap-home-testimonial.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",

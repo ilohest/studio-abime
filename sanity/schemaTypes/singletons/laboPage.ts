@@ -1,71 +1,157 @@
-import { defineArrayMember, defineField, defineType } from 'sanity';
-import { languageField } from '../../lib/i18n';
+import { defineArrayMember, defineField, defineType } from "sanity";
+import { languageField } from "../../lib/i18n";
 
 /**
  * Page Labo : une narration volontairement structurée, plutôt qu'un assemblage
  * libre de blocs. Les champs suivent l'ordre de lecture de la composition.
  */
 export const laboPage = defineType({
-  name: 'laboPage',
-  title: 'Page Labo',
-  type: 'document',
+  name: "laboPage",
+  title: "Page Labo",
+  type: "document",
   initialValue: {
-    title: 'Le Labo',
+    title: "Le Labo",
     philosophy: [
-      { _key: 'ouverture', _type: 'laboParagraph', text: 'Un labo de com, car avant de donner naissance à de nouvelles visions, il faut les expérimenter.' },
-      { _key: 'destinataires', _type: 'laboParagraph', text: 'Celles et ceux qui gardent la foi en une version de demain plus apaisée et sont prêt·e·s à revoir leur façon de communiquer. On n’a pas de solution toute faite à proposer, plutôt l’envie de consolider vos fondations, ensemble. Un virage doux, pas une rupture.' },
-      { _key: 'recherche-sensible', _type: 'laboParagraph', text: 'Le laboratoire est un espace de recherche sensible. Un lieu où l’on explore le fond : l’intention, la posture, le regard, les récits que l’on porte consciemment ou non.' },
-      { _key: 'traduction-fidele', _type: 'laboParagraph', text: 'Pour que ce qui prendra forme ensuite ne soit pas une façade, mais une traduction fidèle. Nous y explorons l’esthétique, le sensible, la symbolique et le réel pour aider chacun à devenir auteur de sa propre image, sans travestir qui il est. Créer devient alors un acte d’alignement. Voir devient un geste éthique.' },
-      { _key: 'racine-devenir', _type: 'laboParagraph', text: 'Une vision qui s’épanouit entre racine et devenir, qui décode pour mieux recoder. Le geste n’est pas de rejeter le passé, mais de le comprendre, et de questionner la pertinence de chaque choix visible pour qu’il construise un nouveau demain plus humain.' },
-      { _key: 'regard-systemique', _type: 'laboParagraph', text: 'Notre regard est systémique : on ne travaille pas des éléments séparés, mais ce qui les relie. Un nom, un texte, une image ne tiennent pas ensemble s’ils sont pensés chacun de leur côté. Ils tiennent s’ils s’engagent dans la même direction. Un système où tout dépend de tout peut s’effondrer. Alors au studio, on privilégie celui dont les parties se répondent sans se tenir en otage. C’est pourquoi on travaille à votre autonomie.' },
-      { _key: 'sobriete', _type: 'laboParagraph', text: 'L’optique choisie est la sobriété. On s’appuie sur vos ressources disponibles et pas sur celles qu’il faudrait avoir, tout en réfléchissant à celles qu’il serait judicieux de développer. On vous aide à trouver des solutions alternatives et on ne produit que lorsque c’est véritablement nécessaire.' },
-      { _key: 'collectif', _type: 'laboParagraph', text: 'Et durant toute la traversée, on ne vous laisse pas avancer seul·e. On partage avec vous notre réseau de partenaires de confiance, on s’appuie sur ce en quoi on croit le plus : le collectif.' },
+      {
+        _key: "ouverture",
+        _type: "laboParagraph",
+        text: "Un labo de com, car avant de donner naissance à de nouvelles visions, il faut les expérimenter.",
+      },
+      {
+        _key: "destinataires",
+        _type: "laboParagraph",
+        text: "Celles et ceux qui gardent la foi en une version de demain plus apaisée et sont prêt·e·s à revoir leur façon de communiquer. On n’a pas de solution toute faite à proposer, plutôt l’envie de consolider vos fondations, ensemble. Un virage doux, pas une rupture.",
+      },
+      {
+        _key: "recherche-sensible",
+        _type: "laboParagraph",
+        text: "Le laboratoire est un espace de recherche sensible. Un lieu où l’on explore le fond : l’intention, la posture, le regard, les récits que l’on porte consciemment ou non.",
+      },
+      {
+        _key: "traduction-fidele",
+        _type: "laboParagraph",
+        text: "Pour que ce qui prendra forme ensuite ne soit pas une façade, mais une traduction fidèle. Nous y explorons l’esthétique, le sensible, la symbolique et le réel pour aider chacun à devenir auteur de sa propre image, sans travestir qui il est. Créer devient alors un acte d’alignement. Voir devient un geste éthique.",
+      },
+      {
+        _key: "racine-devenir",
+        _type: "laboParagraph",
+        text: "Une vision qui s’épanouit entre racine et devenir, qui décode pour mieux recoder. Le geste n’est pas de rejeter le passé, mais de le comprendre, et de questionner la pertinence de chaque choix visible pour qu’il construise un nouveau demain plus humain.",
+      },
+      {
+        _key: "regard-systemique",
+        _type: "laboParagraph",
+        text: "Notre regard est systémique : on ne travaille pas des éléments séparés, mais ce qui les relie. Un nom, un texte, une image ne tiennent pas ensemble s’ils sont pensés chacun de leur côté. Ils tiennent s’ils s’engagent dans la même direction. Un système où tout dépend de tout peut s’effondrer. Alors au studio, on privilégie celui dont les parties se répondent sans se tenir en otage. C’est pourquoi on travaille à votre autonomie.",
+      },
+      {
+        _key: "sobriete",
+        _type: "laboParagraph",
+        text: "L’optique choisie est la sobriété. On s’appuie sur vos ressources disponibles et pas sur celles qu’il faudrait avoir, tout en réfléchissant à celles qu’il serait judicieux de développer. On vous aide à trouver des solutions alternatives et on ne produit que lorsque c’est véritablement nécessaire.",
+      },
+      {
+        _key: "collectif",
+        _type: "laboParagraph",
+        text: "Et durant toute la traversée, on ne vous laisse pas avancer seul·e. On partage avec vous notre réseau de partenaires de confiance, on s’appuie sur ce en quoi on croit le plus : le collectif.",
+      },
     ],
-    teamLead: 'Studio Abîme n’est ni une personne ni une agence. C’est un lieu de travail que des humain·e·s ont choisi, parce qu’on y partage la même conviction : plonger sous le visible pour mieux s’ancrer. On y cherche des solutions ensemble, car c’est comme ça qu’on va plus loin.',
-    teamBody: 'Parfois les projets ne nécessitent qu’une personne, parfois plusieurs. On ne se rencontre pas forcément autour d’un même nom mais on s’épaule pour construire des projets solides. On se réunit autour de ce qu’une histoire demande en partageant les ressources et l’expérience que chacun peut lui offrir.',
-    foundationTitle: 'Note de fondation',
+    teamLead:
+      "Studio Abîme n’est ni une personne ni une agence. C’est un lieu de travail que des humain·e·s ont choisi, parce qu’on y partage la même conviction : plonger sous le visible pour mieux s’ancrer. On y cherche des solutions ensemble, car c’est comme ça qu’on va plus loin.",
+    teamBody:
+      "Parfois les projets ne nécessitent qu’une personne, parfois plusieurs. On ne se rencontre pas forcément autour d’un même nom mais on s’épaule pour construire des projets solides. On se réunit autour de ce qu’une histoire demande en partageant les ressources et l’expérience que chacun peut lui offrir.",
+    foundationTitle: "Note de fondation",
     foundationParagraphs: [
-      'J’ai ouvert Studio Abîme parce qu’il me manquait un endroit comme celui-là. Un lieu où, dans un monde qui vise sans cesse la performance et la rapidité, on a le droit de prendre le temps de comprendre un projet avant de le mettre en forme, et où l’on peut travailler avec ce qu’on a plutôt que sous la pression de ce qu’on n’a pas.',
-      'Qui accueille la pluralité des regards avec curiosité en première intention et non le jugement qui accompagne la peur du changement.',
-      'Un lieu où je n’aurais pas à travailler seule pour autant. Sans la trouille qu’on me prenne ma place. Dans lequel il existe une place pour poser les briques d’une autre vision du collectif et du monde de demain.',
-      'Je ne sais pas jusqu’où il ira. Il existe maintenant, et il ne m’appartient plus tout à fait.',
+      "J’ai ouvert Studio Abîme parce qu’il me manquait un endroit comme celui-là. Un lieu où, dans un monde qui vise sans cesse la performance et la rapidité, on a le droit de prendre le temps de comprendre un projet avant de le mettre en forme, et où l’on peut travailler avec ce qu’on a plutôt que sous la pression de ce qu’on n’a pas.",
+      "Qui accueille la pluralité des regards avec curiosité en première intention et non le jugement qui accompagne la peur du changement.",
+      "Un lieu où je n’aurais pas à travailler seule pour autant. Sans la trouille qu’on me prenne ma place. Dans lequel il existe une place pour poser les briques d’une autre vision du collectif et du monde de demain.",
+      "Je ne sais pas jusqu’où il ira. Il existe maintenant, et il ne m’appartient plus tout à fait.",
     ],
-    foundationSignature: 'Élodie',
+    foundationSignature: "Élodie",
+    methodTitle: "Plongée sous le visible",
+    method: [
+      {
+        _key: "roche",
+        _type: "laboStrate",
+        word: "La roche",
+        note: "La matière brute : votre projet avant qu’on y touche.",
+      },
+      {
+        _key: "strates",
+        _type: "laboStrate",
+        word: "Les strates",
+        note: "Les couches déposées par le temps, qu’on lit avant de creuser.",
+      },
+      {
+        _key: "outils",
+        _type: "laboStrate",
+        word: "Les outils",
+        note: "Ce qu’on emporte pour descendre : nos gestes, vos ressources.",
+      },
+      {
+        _key: "enquete",
+        _type: "laboStrate",
+        word: "L’enquête",
+        note: "On questionne, on recoupe, on remonte ce qui résiste.",
+      },
+      {
+        _key: "composition",
+        _type: "laboStrate",
+        word: "La composition",
+        note: "Les fragments trouvent leur ordre, et le récit tient debout.",
+      },
+    ],
     services: [
       {
-        _key: 'questionner-histoire',
-        _type: 'laboService',
-        title: 'Questionner l’histoire',
-        description: 'Une histoire qui captive est celle dont la 4e de couverture nous emporte avant même d’avoir ouvert le livre et dont on se remémore le titre. On enquête à travers les strates de votre parcours pour en extraire la substance nécessaire à la construction d’une trame narrative qui touchera son lectorat.',
-        tools: ['Audit', 'Gestion des ressources', 'Pose de la trame'],
+        _key: "questionner-histoire",
+        _type: "laboService",
+        title: "Questionner l’histoire",
+        description:
+          "Une histoire qui captive est celle dont la 4e de couverture nous emporte avant même d’avoir ouvert le livre et dont on se remémore le titre. On enquête à travers les strates de votre parcours pour en extraire la substance nécessaire à la construction d’une trame narrative qui touchera son lectorat.",
+        tools: ["Audit", "Gestion des ressources", "Pose de la trame"],
       },
       {
-        _key: 'composer-recit',
-        _type: 'laboService',
-        title: 'Composer le récit',
-        description: 'Une fois cette trame pensée et le titre posé, on tisse le lien entre les concepts qui composent votre projet et les mots qui l’incarneront pour gagner en clarté. Du nom de votre projet à la manière dont il se raconte. Toujours main dans la main, on coécrit votre récit.',
-        tools: ['Stratégie de marque', 'Naming', 'Conceptualisation', 'Rédaction'],
+        _key: "composer-recit",
+        _type: "laboService",
+        title: "Composer le récit",
+        description:
+          "Une fois cette trame pensée et le titre posé, on tisse le lien entre les concepts qui composent votre projet et les mots qui l’incarneront pour gagner en clarté. Du nom de votre projet à la manière dont il se raconte. Toujours main dans la main, on coécrit votre récit.",
+        tools: [
+          "Stratégie de marque",
+          "Naming",
+          "Conceptualisation",
+          "Rédaction",
+        ],
       },
       {
-        _key: 'traduire-formes',
-        _type: 'laboService',
-        title: 'Traduire en formes',
-        description: 'C’est le pivot central entre la conceptualisation du fond et la forme. On vous guide vers la phase de production en structurant les besoins et en établissant une liste des ressources nécessaires à la production de votre communication.',
-        tools: ['Stratégie de com', 'Direction artistique'],
+        _key: "traduire-formes",
+        _type: "laboService",
+        title: "Traduire en formes",
+        description:
+          "C’est le pivot central entre la conceptualisation du fond et la forme. On vous guide vers la phase de production en structurant les besoins et en établissant une liste des ressources nécessaires à la production de votre communication.",
+        tools: ["Stratégie de com", "Direction artistique"],
       },
       {
-        _key: 'produire-besoins',
-        _type: 'laboService',
-        title: 'Produire selon les besoins',
-        description: 'Après réflexion des besoins, on produit vos matériaux de com en cohérence avec le fond de votre projet, mêlant digital et analogique. On vous aiguille vers la personne la plus outillée pour vous y aider.',
-        tools: ['Identité visuelle', 'Photographie', 'Site', 'Matériaux de com divers'],
+        _key: "produire-besoins",
+        _type: "laboService",
+        title: "Produire selon les besoins",
+        description:
+          "Après réflexion des besoins, on produit vos matériaux de com en cohérence avec le fond de votre projet, mêlant digital et analogique. On vous aiguille vers la personne la plus outillée pour vous y aider.",
+        tools: [
+          "Identité visuelle",
+          "Photographie",
+          "Site",
+          "Matériaux de com divers",
+        ],
       },
       {
-        _key: 'donner-vie',
-        _type: 'laboService',
-        title: 'Donner vie et transmettre',
-        description: 'Parce qu’on ne conçoit pas une communication sans l’extraire d’un schéma de dépendance, on veille à mettre en place un système d’accompagnement qui vise votre autonomie. Votre voix mérite d’être entendue.',
-        tools: ['Mentoring', 'Formations en com', 'Accompagnement dans la construction de vos réseaux'],
+        _key: "donner-vie",
+        _type: "laboService",
+        title: "Donner vie et transmettre",
+        description:
+          "Parce qu’on ne conçoit pas une communication sans l’extraire d’un schéma de dépendance, on veille à mettre en place un système d’accompagnement qui vise votre autonomie. Votre voix mérite d’être entendue.",
+        tools: [
+          "Mentoring",
+          "Formations en com",
+          "Accompagnement dans la construction de vos réseaux",
+        ],
       },
     ],
   },
@@ -76,11 +162,12 @@ export const laboPage = defineType({
     trouve.
   */
   groups: [
-    { name: 'header', title: 'En-tête', default: true },
-    { name: 'services', title: 'Services' },
-    { name: 'philosophy', title: 'Vision' },
-    { name: 'team', title: 'L’équipe' },
-    { name: 'seo', title: 'SEO' },
+    { name: "header", title: "En-tête", default: true },
+    { name: "services", title: "Services" },
+    { name: "philosophy", title: "Vision" },
+    { name: "team", title: "L’équipe" },
+    { name: "method", title: "La méthode" },
+    { name: "seo", title: "SEO" },
   ],
   fields: [
     languageField,
@@ -90,100 +177,211 @@ export const laboPage = defineType({
       chose lue de la page, avant même le système d'orbites.
     */
     defineField({
-      name: 'intro',
-      title: 'Texte d’introduction',
-      type: 'text',
+      name: "intro",
+      title: "Texte d’introduction",
+      type: "text",
       rows: 5,
       /*
         Onglet « En-tête » : ce schéma n'a pas de groupe « content » — il découpe
         la page en header / services / vision / équipe. Le texte
         d'ouverture appartient au premier.
       */
-      group: 'header',
-      description: 'Texte affiché au-dessus de l’animation, en ouverture de page.',
+      group: "header",
+      description:
+        "Texte affiché au-dessus de l’animation, en ouverture de page.",
     }),
     defineField({
-      name: 'title',
-      title: 'Titre',
-      type: 'string',
-      group: 'header',
-      initialValue: 'Le Labo',
+      name: "title",
+      title: "Titre",
+      type: "string",
+      group: "header",
+      initialValue: "Le Labo",
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: 'philosophy',
-      title: 'Vision',
+      name: "philosophy",
+      title: "Vision",
       description:
-        'Le premier paragraphe est le chapeau de la section. Les suivants se composent en deux colonnes, tous au même corps.',
-      type: 'array',
-      group: 'philosophy',
+        "Le premier paragraphe est le chapeau de la section. Les suivants se composent en deux colonnes, tous au même corps.",
+      type: "array",
+      group: "philosophy",
       of: [
         defineArrayMember({
-          name: 'laboParagraph',
-          title: 'Paragraphe',
-          type: 'object',
+          name: "laboParagraph",
+          title: "Paragraphe",
+          type: "object",
           fields: [
-            defineField({ name: 'text', title: 'Texte', type: 'text', rows: 4, validation: (rule) => rule.required() }),
+            defineField({
+              name: "text",
+              title: "Texte",
+              type: "text",
+              rows: 4,
+              validation: (rule) => rule.required(),
+            }),
           ],
-          preview: { select: { title: 'text' } },
+          preview: { select: { title: "text" } },
         }),
       ],
       validation: (rule) => rule.required().min(1),
     }),
     defineField({
-      name: 'services',
-      title: 'Services',
-      type: 'array',
-      group: 'services',
+      name: "services",
+      title: "Services",
+      type: "array",
+      group: "services",
       of: [
         defineArrayMember({
-          name: 'laboService',
-          title: 'Service',
-          type: 'object',
+          name: "laboService",
+          title: "Service",
+          type: "object",
           fields: [
-            defineField({ name: 'title', title: 'Titre', type: 'string', validation: (rule) => rule.required() }),
-            defineField({ name: 'description', title: 'Description', type: 'text', rows: 3, validation: (rule) => rule.required() }),
             defineField({
-              name: 'tools',
-              title: 'Prestations',
-              description: 'Listées sous la description, séparées par un point médian.',
-              type: 'array',
-              of: [defineArrayMember({ type: 'string' })],
+              name: "title",
+              title: "Titre",
+              type: "string",
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: "description",
+              title: "Description",
+              type: "text",
+              rows: 3,
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: "tools",
+              title: "Prestations",
+              description:
+                "Listées sous la description, séparées par un point médian.",
+              type: "array",
+              of: [defineArrayMember({ type: "string" })],
               validation: (rule) => rule.max(6),
             }),
           ],
-          preview: { select: { title: 'title', subtitle: 'description' } },
+          preview: { select: { title: "title", subtitle: "description" } },
         }),
       ],
       validation: (rule) => rule.required().min(1).max(8),
     }),
-    defineField({ name: 'teamLead', title: 'Ouverture de l’équipe', type: 'text', rows: 5, group: 'team' }),
-    defineField({ name: 'teamBody', title: 'Texte de l’équipe', type: 'text', rows: 5, group: 'team' }),
     defineField({
-      name: 'foundationTitle',
-      title: 'Titre de la note de fondation',
-      type: 'string',
-      group: 'team',
-      initialValue: 'Note de fondation',
+      name: "teamLead",
+      title: "Ouverture de l’équipe",
+      type: "text",
+      rows: 5,
+      group: "team",
     }),
     defineField({
-      name: 'foundationParagraphs',
-      title: 'Note de fondation',
-      type: 'array',
-      group: 'team',
-      of: [defineArrayMember({ type: 'text', rows: 4 })],
+      name: "teamBody",
+      title: "Texte de l’équipe",
+      type: "text",
+      rows: 5,
+      group: "team",
     }),
     defineField({
-      name: 'foundationSignature',
-      title: 'Signature',
-      type: 'string',
-      group: 'team',
-      initialValue: 'Élodie',
+      name: "foundationTitle",
+      title: "Titre de la note de fondation",
+      type: "string",
+      group: "team",
+      initialValue: "Note de fondation",
     }),
-    defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' }),
+    defineField({
+      name: "foundationParagraphs",
+      title: "Note de fondation",
+      type: "array",
+      group: "team",
+      of: [defineArrayMember({ type: "text", rows: 4 })],
+    }),
+    defineField({
+      name: "foundationSignature",
+      title: "Signature",
+      type: "string",
+      group: "team",
+      initialValue: "Élodie",
+    }),
+    /*
+      LA MÉTHODE — cinq strates rangées comme des livres sur une étagère.
+
+      Chaque strate porte son mot, sa phrase et son spécimen. Cinq au plus :
+      au-delà, les tranches deviennent trop étroites pour que le mot s'y
+      compose à la verticale, et la sixième n'est pas rendue.
+
+      C'est bien du CONTENU, pas un réglage de design : la composition de la
+      tranche — sa proportion, le sens de lecture, le cadrage du spécimen —
+      reste entièrement tenue par le code.
+    */
+    defineField({
+      name: "methodTitle",
+      title: "Titre de la méthode",
+      type: "string",
+      group: "method",
+      initialValue: "Plongée sous le visible",
+    }),
+    defineField({
+      name: "method",
+      title: "Les cinq strates",
+      description:
+        "Cinq strates, dans l’ordre de la descente. Chacune porte son mot et une phrase courte — une ligne ou deux, pas davantage : elle se lit à la verticale, sur la tranche.",
+      type: "array",
+      group: "method",
+      of: [
+        defineArrayMember({
+          name: "laboStrate",
+          title: "Strate",
+          type: "object",
+          fields: [
+            defineField({
+              name: "word",
+              title: "Le mot",
+              description:
+                "Deux ou trois mots au plus : c’est lui qui se compose en grand, à la verticale.",
+              type: "string",
+              validation: (rule) => rule.required(),
+            }),
+            defineField({
+              name: "note",
+              title: "La phrase",
+              type: "text",
+              rows: 2,
+              validation: (rule) =>
+                rule
+                  .required()
+                  .max(90)
+                  .warning(
+                    "Au-delà de 90 signes, la phrase déborde de la tranche.",
+                  ),
+            }),
+            /*
+              LE SPÉCIMEN. Il se compose sur le papier de la page, sans cadre :
+              une image DÉTOURÉE (PNG ou WebP à fond transparent) s'y pose donc
+              beaucoup mieux qu'une photographie à fond blanc, qui se verra
+              comme un carré rapporté.
+
+              Pas de recadrage imposé : l'image garde son format, c'est la mise
+              en page qui lui donne son empreinte carrée. Le point d'intérêt
+              (`hotspot`) reste réglable pour le grand format qui paraît au
+              survol.
+            */
+            defineField({
+              name: "image",
+              title: "Le spécimen",
+              description:
+                "L’image qui accompagne la strate. Détourée de préférence.",
+              type: "image",
+              options: { hotspot: true },
+            }),
+          ],
+          preview: { select: { title: "word", subtitle: "note" } },
+        }),
+      ],
+      validation: (rule) => rule.max(5),
+    }),
+    defineField({ name: "seo", title: "SEO", type: "seo", group: "seo" }),
   ],
   preview: {
-    select: { language: 'language' },
-    prepare: ({ language }) => ({ title: 'Page Labo', subtitle: language?.toUpperCase() ?? '—' }),
+    select: { language: "language" },
+    prepare: ({ language }) => ({
+      title: "Page Labo",
+      subtitle: language?.toUpperCase() ?? "—",
+    }),
   },
 });

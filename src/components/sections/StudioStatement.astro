@@ -5,7 +5,7 @@ import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { figureLabel } from '~/lib/figureLabel';
-import { projectsIndexPath } from '~/i18n/routes';
+import { laboPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { figureAttribute, sectionFieldAttribute } from '~/lib/visualEditing';
 import type { Locale } from '~/i18n/config';
@@ -56,9 +56,36 @@ const emphasizedStatementParts = new Set(['espace', 'les outils', 'les langages'
 */
 const note = figureLabel(section.noteNumber, section.note);
 
-const figures = (section.figures ?? []).map((figure) => ({
+/*
+  ┌─ LA NUMÉROTATION NE SE SAISIT PLUS ───────────────────────────────────────┐
+  │ Les figures portaient leur repère DANS leur légende — « fig.05 — La       │
+  │ roche ». Le jour où les légendes ont été réécrites en clair, les repères  │
+  │ sont partis avec, et la planche s'est retrouvée sans numéros : rien ne    │
+  │ signalait la perte, puisque le repère n'a jamais été un champ à part.     │
+  │                                                                           │
+  │ Il se DÉDUIT donc du rang, comme les folios du menu se déduisent de       │
+  │ l'ordre des sections. Une planche ne peut plus être mal numérotée, ni     │
+  │ sauter un numéro quand une figure change.                                 │
+  │                                                                           │
+  │ La série CONTINUE celle de la note : la note porte « fig. 04 », la        │
+  │ planche enchaîne donc à 05. C'est la lecture d'un document, où les        │
+  │ figures se suivent d'un bout à l'autre — pas deux comptes séparés.        │
+  └───────────────────────────────────────────────────────────────────────────┘
+*/
+const noteNumber = Number.parseInt((note.reference ?? '').replace(/\D+/g, ''), 10);
+const firstFigure = Number.isFinite(noteNumber) ? noteNumber + 1 : 1;
+
+const figures = (section.figures ?? []).map((figure, index) => ({
   ...figure,
-  label: figureLabel(figure.number, figure.caption),
+  label: {
+    reference: `fig. ${String(firstFigure + index).padStart(2, '0')}`,
+    /*
+      Le texte passe par `figureLabel` pour RETIRER un repère qui y serait
+      encore écrit — dans une légende ancienne, ou saisi par habitude. Sans
+      cela, la figure porterait deux numéros, et pas forcément le même.
+    */
+    text: figureLabel(figure.number, figure.caption).text,
+  },
 }));
 ---
 
@@ -106,16 +133,41 @@ const figures = (section.figures ?? []).map((figure) => ({
                   <figure
                     class="statement__figure"
                     data-sanity={figureAttribute(documentId, documentType, section._key, figure._key)}
-                    data-bleed={stegaClean(figure.bleed) ?? 'none'}
-                    data-push={figure.pushRight ? '' : undefined}
-                    style={`--span:${Math.min(Math.max(figure.span ?? 3, 1), 12)}`}
                   >
-                    {figure.image?.asset ? (
+                    {figure.video?.url ? (
+                      /*
+                        ── UNE FIGURE QUI BOUGE ───────────────────────────
+                        Elle se comporte comme un tirage, pas comme un
+                        lecteur : muette, en boucle, sans commande. D'où
+                        l'absence de `controls` — une barre de lecture sur
+                        une planche d'images romprait la série.
+
+                        `playsinline` est ce qui empêche iOS de la passer en
+                        plein écran de lui-même au démarrage ; `muted` est ce
+                        qui autorise la lecture automatique, aucun navigateur
+                        ne la donnant à une vidéo sonore.
+
+                        Elle est mise en pause pour qui a demandé moins
+                        d'animations — voir le script en pied de composant :
+                        le CSS ne sait pas arrêter une vidéo.
+                      */
+                      <video
+                        class="statement__image statement__video"
+                        src={figure.video.url}
+                        autoplay
+                        muted
+                        loop
+                        playsinline
+                        preload="metadata"
+                        aria-hidden="true"
+                        data-statement-video
+                      />
+                    ) : figure.image?.asset ? (
                       <SanityImage
                         image={figure.image}
-                        width={figureIndex === 4 ? 1200 : 900}
+                        width={figureIndex === 4 ? 1100 : 900}
                         sizes={figureIndex === 4
-                          ? '(min-width: 768px) 36vw, 80vw'
+                          ? '(min-width: 768px) 29vw, 80vw'
                           : '(min-width: 768px) 25vw, 80vw'}
                         class="statement__image"
                       />
@@ -163,12 +215,12 @@ const figures = (section.figures ?? []).map((figure) => ({
                   Placé dans la planche pour venir sous la dernière figure.
 
                   Libellé et destination sont FIXÉS EN CODE, comme les titres de
-                  section : ce bouton mène à la seule page vers laquelle le
-                  manifeste puisse conduire. En faire un champ, c'était proposer
-                  de le vider — et le vider laissait la déclaration sans suite.
+                  section : ce bouton mène à la méthode, la suite que la
+                  déclaration appelle. En faire un champ, c'était proposer de le
+                  vider — et le vider laissait la déclaration sans suite.
                 */}
                 <div class="statement__actions">
-                  <a href={projectsIndexPath(locale)} class="button-minimal">
+                  <a href={`${laboPath(locale)}#methode`} class="button-minimal">
                     <span class="button-minimal__label">{t('home.enterStudio')}</span>
                     <span class="button-minimal__arrow" aria-hidden="true">↳</span>
                   </a>
@@ -329,33 +381,30 @@ const figures = (section.figures ?? []).map((figure) => ({
     margin-top: clamp(3rem, 9vh, 7rem);
   }
 
+  /*
+    Gabarit par défaut, pour toute figure au-delà de la cinquième : les cinq
+    premières reçoivent leur place explicitement, juste en dessous.
+  */
   .statement__figure {
-    grid-column: span var(--span);
+    grid-column: span 3;
     min-width: 0;
   }
 
   /*
-    Débord : la figure sort de la marge du bloc sans élargir la page — le
-    `overflow: hidden` de la section coupe proprement le dépassement.
-  */
-  .statement__figure[data-bleed='left'] {
-    margin-inline-start: calc(-1 * clamp(1.5rem, 4vw, 4rem));
-  }
-
-  .statement__figure[data-bleed='right'] {
-    margin-inline-end: calc(-1 * clamp(1.5rem, 4vw, 4rem));
-  }
-
-  /* Pousse la figure en fin de rangée, en absorbant l'espace disponible. */
-  .statement__figure[data-push] {
-    grid-column: span var(--span) / -1;
-  }
-
-  /*
-    Composition desktop de la planche de référence : les blancs font partie
-    du rythme au même titre que les images. Les positions restent exprimées en
-    grille, jamais en pixels absolus, pour suivre naturellement la largeur du
-    contenu et le rail latéral.
+    ┌─ LA COMPOSITION EST FIXÉE EN CODE ────────────────────────────────────┐
+    │ Largeur, débord et rejet à droite étaient trois réglages du Studio.   │
+    │ Ils ne le sont plus : la planche est une DIRECTION ARTISTIQUE, pas un │
+    │ gabarit à remplir. Les blancs y font partie du rythme au même titre   │
+    │ que les images, et une figure déplacée d'une colonne ne produit pas   │
+    │ une variante mais une planche cassée.                                 │
+    │                                                                        │
+    │ C'est la même règle que pour l'enchaînement des blocs de l'accueil,   │
+    │ verrouillé lui aussi : ce qui relève de la mise en page ne se propose │
+    │ pas à la saisie. Ce qui reste éditable, c'est l'image et sa légende.  │
+    │                                                                        │
+    │ Les positions restent exprimées en GRILLE, jamais en pixels : elles   │
+    │ suivent ainsi la largeur du contenu et le rail latéral.               │
+    └────────────────────────────────────────────────────────────────────────┘
   */
   .statement__figure:nth-child(1) {
     grid-column: 1 / span 3;
@@ -377,8 +426,14 @@ const figures = (section.figures ?? []).map((figure) => ({
     grid-row: 2;
   }
 
+  /*
+    La grande figure de la planche. Elle occupait cinq colonnes sur douze —
+    près de la moitié de la largeur — et écrasait les quatre autres, qui n'en
+    tiennent que trois. À quatre, elle reste la plus grande sans devenir le
+    sujet de la planche.
+  */
   .statement__figure:nth-child(5) {
-    grid-column: 7 / span 5;
+    grid-column: 8 / span 4;
     grid-row: 2;
   }
 
@@ -386,6 +441,30 @@ const figures = (section.figures ?? []).map((figure) => ({
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  /*
+    ┌─ LES BANDES NOIRES SONT DANS LE FICHIER ──────────────────────────────┐
+    │ Le montage a été exporté dans un cadre 9:16 alors que le plan est     │
+    │ plus large : deux bandes noires l'encadrent, INCRUSTÉES dans la       │
+    │ vidéo. Rien dans la page ne les ajoutait — la boîte avait exactement  │
+    │ le rapport de la source.                                              │
+    │                                                                        │
+    │ On les rogne donc : la boîte prend le rapport de l'IMAGE UTILE, et    │
+    │ `cover` fait déborder la vidéo de part et d'autre, exactement de la   │
+    │ hauteur des bandes. Le plan n'est pas recadré sur les côtés — le      │
+    │ débordement est vertical et symétrique, comme les bandes.             │
+    │                                                                        │
+    │ Le rapport est MESURÉ au chargement, pas écrit ici : une autre vidéo  │
+    │ aurait d'autres bandes, ou pas du tout. Sans mesure, il reste le      │
+    │ rapport de la source, et la vidéo s'affiche telle quelle.             │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .statement__video {
+    aspect-ratio: var(--video-ratio, auto);
+    object-fit: cover;
+    /* Le fond évite le rectangle noir tant que la première image n'est pas là. */
+    background-color: var(--color-surface);
   }
 
   .statement__caption {
@@ -483,11 +562,6 @@ const figures = (section.figures ?? []).map((figure) => ({
       max-width: none;
     }
 
-    .statement__figure[data-bleed='left'],
-    .statement__figure[data-bleed='right'] {
-      margin-inline: 0;
-    }
-
     .statement__figure:nth-child(1) {
       width: 64%;
       align-self: flex-start;
@@ -561,6 +635,101 @@ const figures = (section.figures ?? []).map((figure) => ({
     }
   }
 </style>
+
+<script>
+  /*
+    Mouvement réduit : on ARRÊTE les vidéos de la planche.
+
+    `prefers-reduced-motion` est une préférence système qu'aucune règle CSS ne
+    peut appliquer à une vidéo — `animation: none` n'a pas de prise sur une
+    lecture. Il faut donc la retirer ici, et retirer aussi `autoplay`, sans
+    quoi un rechargement la relancerait.
+
+    La préférence est écoutée : elle peut changer pendant la visite.
+  */
+  const reducedMotionVideos = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  /*
+    Mesure des bandes noires incrustées, sur une image de la vidéo.
+
+    On relit la source en `crossOrigin: anonymous` plutôt que de dessiner
+    l'élément déjà en page : sans cet attribut posé AVANT le chargement, le
+    canevas est « teinté » par l'origine distante et devient illisible.
+
+    On sonde UNE colonne, au milieu de l'image : les bandes traversent toute
+    la largeur, une colonne suffit à les mesurer, et c'est mille fois moins de
+    pixels à lire que l'image entière.
+  */
+  const NOIR = 24;
+
+  const measureBars = async (video: HTMLVideoElement) => {
+    const source = video.getAttribute('src');
+    if (!source) return;
+
+    const probe = document.createElement('video');
+    probe.crossOrigin = 'anonymous';
+    probe.muted = true;
+    probe.src = source;
+
+    await new Promise<void>((resolve, reject) => {
+      probe.onloadeddata = () => resolve();
+      probe.onerror = () => reject(new Error('video'));
+    });
+
+    // Pas la toute première image : une ouverture en fondu au noir tromperait la mesure.
+    probe.currentTime = Math.min(0.5, (probe.duration || 1) / 2);
+    await new Promise<void>((resolve) => {
+      probe.onseeked = () => resolve();
+      window.setTimeout(resolve, 2000);
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = probe.videoWidth;
+    canvas.height = probe.videoHeight;
+    if (!canvas.width || !canvas.height) return;
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.drawImage(probe, 0, 0);
+
+    const column = context.getImageData(Math.floor(canvas.width / 2), 0, 1, canvas.height).data;
+    const isBlack = (row: number) =>
+      column[row * 4] < NOIR && column[row * 4 + 1] < NOIR && column[row * 4 + 2] < NOIR;
+
+    let top = 0;
+    while (top < canvas.height && isBlack(top)) top += 1;
+    let bottom = canvas.height - 1;
+    while (bottom > top && isBlack(bottom)) bottom -= 1;
+
+    const useful = bottom - top + 1;
+    // Rien de noir, ou une image entièrement sombre : on ne touche à rien.
+    if (useful >= canvas.height || useful < canvas.height / 4) return;
+
+    video.style.setProperty('--video-ratio', `${canvas.width} / ${useful}`);
+  };
+
+  for (const video of document.querySelectorAll<HTMLVideoElement>('[data-statement-video]')) {
+    // Silencieux : une mesure impossible (origine, format) laisse la vidéo intacte.
+    measureBars(video).catch(() => {});
+  }
+
+  const syncStatementVideos = () => {
+    for (const video of document.querySelectorAll<HTMLVideoElement>('[data-statement-video]')) {
+      if (reducedMotionVideos.matches) {
+        video.autoplay = false;
+        video.pause();
+      } else {
+        video.autoplay = true;
+        // `play()` rend une promesse rejetée si le navigateur refuse : sans
+        // rattrapage, elle remonterait en erreur non gérée dans la console.
+        video.play().catch(() => {});
+      }
+    }
+  };
+
+  syncStatementVideos();
+  reducedMotionVideos.addEventListener('change', syncStatementVideos);
+</script>
 
 <script>
   const statements = document.querySelectorAll<HTMLElement>('[data-statement-intro]');

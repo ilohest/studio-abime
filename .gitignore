@@ -23,3 +23,6 @@ node_modules/
 npm-debug.log*
 .vscode/
 !.vscode/extensions.json
+
+# thème passerelle Shopify (archive reconstruite à la demande)
+shopify/theme-passerelle.zip

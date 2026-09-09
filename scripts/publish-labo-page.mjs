@@ -17,7 +17,7 @@
  *
  * CE QU'IL NE TOUCHE PAS
  *
- * Seuls les champs listés dans `FIELDS` sont écrits, et ceux listés dans
+ * Seuls les champs rendus par `fieldsFor()` sont écrits, et ceux listés dans
  * `RETIRED` effacés. Le reste du document — « Pourquoi un laboratoire », les
  * principes, le manifeste de conclusion, le SEO — est laissé tel quel, y
  * compris s'il a été retouché depuis le Studio.
@@ -80,7 +80,31 @@ const services = content.services.map((service) => ({
   tools: service.tools ?? [],
 }));
 
-const FIELDS = {
+/*
+  Les cinq strates de la méthode. Même contrainte que les autres tableaux : une
+  clé stable et un `_type` explicite, sans quoi le Studio recrée les membres à
+  chaque report au lieu de les suivre.
+
+  LE SPÉCIMEN N'EST PAS REPORTÉ. C'est une image téléversée dans Sanity, elle
+  n'a pas d'équivalent dans le dépôt — et réécrire la strate sans lui
+  l'effacerait à chaque passage. On reprend donc celui qui est déjà en place,
+  document par document : le brouillon et le publié peuvent porter des images
+  différentes, c'est même le propre d'un travail en cours.
+*/
+const methodFor = (document) =>
+  content.method.map((strate) => {
+    const existing = (document.method ?? []).find((item) => item?._key === strate._key);
+
+    return {
+      _key: strate._key,
+      _type: 'laboStrate',
+      word: strate.word,
+      note: strate.note,
+      ...(existing?.image ? { image: existing.image } : {}),
+    };
+  });
+
+const fieldsFor = (document) => ({
   eyebrow: content.eyebrow,
   philosophy,
   servicesTitle: content.servicesTitle,
@@ -91,7 +115,9 @@ const FIELDS = {
   foundationTitle: content.foundationTitle,
   foundationParagraphs: content.foundationParagraphs,
   foundationSignature: content.foundationSignature,
-};
+  methodTitle: content.methodTitle,
+  method: methodFor(document),
+});
 
 /*
   Champs SORTIS DU MODÈLE. Retirer un champ du schéma le fait disparaître du
@@ -142,8 +168,11 @@ const expand = (document, path) => {
 const documentId = `laboPage-${language}`;
 
 /*
-  Le brouillon porte sa propre copie du document : effacer le seul publié
-  laisserait la valeur revenir à la prochaine publication depuis le Studio.
+  Le brouillon porte sa propre copie du document, et c'est LUI que le Studio
+  publiera la prochaine fois. Écrire ou effacer sur le seul document publié
+  laisserait donc l'ancien état revenir dès la publication suivante — et
+  l'aperçu du site, qui lit les brouillons, continuerait d'afficher l'ancien
+  contenu en attendant. Les deux documents reçoivent le même traitement.
 */
 const documentIds = [documentId, `drafts.${documentId}`];
 const documents = new Map(
@@ -167,26 +196,59 @@ const retiredByDocument = new Map(
 );
 const retiredCount = [...retiredByDocument.values()].reduce((total, fields) => total + fields.length, 0);
 
-const changed = purgeOnly
-  ? []
-  : Object.entries(FIELDS).filter(
-      ([field, value]) => JSON.stringify(existing[field]) !== JSON.stringify(value),
+/*
+  Comparaison INSENSIBLE À L'ORDRE DES CLÉS. Sanity renvoie les objets d'un
+  tableau avec ses propres clés dans son propre ordre (`_key`, `_type`, puis le
+  reste par ordre alphabétique) ; le contenu de référence, lui, les écrit dans
+  l'ordre de lecture. Comparer les deux sérialisations telles quelles déclarait
+  « Services » modifié à chaque passage, alors que pas un signe ne changeait —
+  et le script ne pouvait jamais dire qu'il n'avait rien à faire.
+*/
+const stable = (value) => {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, stable(value[key])]),
     );
+  }
+  return value;
+};
+const same = (a, b) => JSON.stringify(stable(a)) === JSON.stringify(stable(b));
 
-if (changed.length === 0 && retiredCount === 0) {
+// Chaque document a son propre écart : le brouillon peut être en retard sur le
+// publié, ou l'inverse.
+const changedByDocument = new Map(
+  [...documents].map(([id, document]) => [
+    id,
+    purgeOnly
+      ? []
+      : Object.entries(fieldsFor(document)).filter(([field, value]) => !same(document[field], value)),
+  ]),
+);
+const changedCount = [...changedByDocument.values()].reduce((total, fields) => total + fields.length, 0);
+
+if (changedCount === 0 && retiredCount === 0) {
   skip(`« ${documentId} » est déjà à jour.`);
   process.exit(0);
 }
 
-console.log(`\nDocument : ${documentId}  ·  dataset : ${dataset}\n`);
-for (const [field, value] of changed) {
-  const before = Array.isArray(existing[field])
-    ? `${existing[field].length} élément(s)`
-    : (existing[field] ?? '—');
-  const after = Array.isArray(value) ? `${value.length} élément(s)` : value;
-  console.log(`  ${field}`);
-  console.log(`    avant : ${String(before).slice(0, 110)}`);
-  console.log(`    après : ${String(after).slice(0, 110)}\n`);
+console.log(`\nDataset : ${dataset}\n`);
+for (const [id, fields] of changedByDocument) {
+  if (fields.length === 0) continue;
+  const document = documents.get(id);
+  console.log(`  ${id}`);
+  for (const [field, value] of fields) {
+    const before = Array.isArray(document[field])
+      ? `${document[field].length} élément(s)`
+      : (document[field] ?? '—');
+    const after = Array.isArray(value) ? `${value.length} élément(s)` : value;
+    console.log(`    ${field}`);
+    console.log(`      avant : ${String(before).slice(0, 100)}`);
+    console.log(`      après : ${String(after).slice(0, 100)}`);
+  }
+  console.log('');
 }
 
 for (const [id, paths] of retiredByDocument) {
@@ -198,7 +260,7 @@ for (const [id, paths] of retiredByDocument) {
 
 if (!apply) {
   skip(
-    `${changed.length} champ(s) à écrire, ${retiredCount} à effacer. ` +
+    `${changedCount} champ(s) à écrire, ${retiredCount} à effacer. ` +
       'Relancez avec « -- --apply » pour appliquer.',
   );
   process.exit(0);
@@ -209,9 +271,15 @@ if (!apply) {
   de référence écrit mais l'ancien champ encore là, ou l'inverse.
 */
 const transaction = client.transaction();
-if (changed.length > 0) transaction.patch(documentId, (patch) => patch.set(FIELDS));
+for (const [id, fields] of changedByDocument) {
+  if (fields.length > 0) transaction.patch(id, (patch) => patch.set(Object.fromEntries(fields)));
+}
 for (const [id, paths] of retiredByDocument) {
   if (paths.length > 0) transaction.patch(id, (patch) => patch.unset(paths));
 }
 await transaction.commit();
-ok(`${changed.length} champ(s) écrits, ${retiredCount} effacé(s) sur « ${documentId} ».`);
+const touched = new Set([
+  ...[...changedByDocument].filter(([, fields]) => fields.length > 0).map(([id]) => id),
+  ...[...retiredByDocument].filter(([, paths]) => paths.length > 0).map(([id]) => id),
+]);
+ok(`${changedCount} champ(s) écrits, ${retiredCount} effacé(s) sur ${touched.size} document(s).`);

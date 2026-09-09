@@ -32,6 +32,26 @@ const { section, locale } = Astro.props;
 
 <section class="services" data-services-menu>
   <div class="services__runway">
+    {/*
+      ── LE SEUIL ─────────────────────────────────────────────────────────
+      Le filet qui ouvre la section, et la croix qui marque son croisement
+      avec le pli du hero.
+
+      Les deux sont posés ICI plutôt que dans le hero, et pour une raison de
+      peinture : le hero recadre son contenu et la section des services se
+      peint par-dessus lui. Une croix dessinée là-haut perdait sa moitié
+      basse. Dessinée d'ici, elle déborde vers le haut sans que rien ne la
+      couvre, et se centre donc vraiment sur l'intersection.
+
+      Le filet ne prend que la MOITIÉ DROITE — celle du menu. À gauche, c'est
+      le visuel qui vient au contact : un trait l'y soulignerait au lieu de
+      marquer un seuil.
+    */}
+    <div class="services__threshold" aria-hidden="true">
+      <span class="services__threshold-line"></span>
+      <span class="services__threshold-cross"></span>
+    </div>
+
     <div class="services__stage">
 
       {/* ── Visuel : sort du cadre par la gauche ───────────────────────── */}
@@ -81,7 +101,49 @@ const { section, locale } = Astro.props;
   }
 
   .services__runway {
+    position: relative;
     height: calc(100svh + var(--travel));
+  }
+
+  /*
+    Au-dessus de la scène (`z-index: 30`) et du manifeste entrant (31) : le
+    seuil est une marque de composition, rien ne doit passer devant.
+  */
+  .services__threshold {
+    position: absolute;
+    z-index: 40;
+    top: 0;
+    inset-inline: 0;
+    pointer-events: none;
+  }
+
+  .services__threshold-line {
+    position: absolute;
+    top: 0;
+    /* De la colonne centrale au bord droit : le côté du menu. */
+    left: 50%;
+    right: 0;
+    height: 1px;
+    background-color: var(--color-line);
+  }
+
+  /*
+    Deux traits peints en fond plutôt que deux éléments : c'est le procédé des
+    croix de construction de la grille des archives, aux mêmes proportions —
+    un bras de 14 px, une épaisseur de 2. Elle est CENTRÉE sur le croisement,
+    d'où le décalage d'une demi-boîte dans les deux sens.
+  */
+  .services__threshold-cross {
+    --threshold-cross-color: color-mix(in srgb, var(--color-ink) 72%, var(--color-lumiere));
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    background:
+      linear-gradient(var(--threshold-cross-color), var(--threshold-cross-color)) center / 14px 2px no-repeat,
+      linear-gradient(var(--threshold-cross-color), var(--threshold-cross-color)) center / 2px 14px no-repeat;
   }
 
   .services__stage {
@@ -157,7 +219,15 @@ const { section, locale } = Astro.props;
     transform: translate3d(calc(var(--p) * -100%), 0, 0);
     will-change: transform;
     --rail-groups-margin: max(0px, calc((100% - 32rem) / 2 * (1 - var(--p))));
-    --rail-items-transform: translateX(calc((1 - var(--dock-progress)) * 10rem));
+    /*
+      Le retrait des SOUS-SECTIONS au repos. Elles partent nettement à droite
+      de leur intitulé — comme les prestations d'une page de sommaire — et
+      viennent le rejoindre au fil du défilement, jusqu'à l'aplomb du rail.
+
+      Le retrait ne vaut qu'à l'arrêt : `--dock-progress` le résorbe, la valeur
+      ci-dessous est donc la position de DÉPART, pas un décalage permanent.
+    */
+    --rail-items-transform: translateX(calc((1 - var(--dock-progress)) * 16rem));
   }
 
   /*
@@ -170,6 +240,13 @@ const { section, locale } = Astro.props;
     left: 0;
     width: var(--rail-width);
     height: 100svh;
+    /*
+      Ancré, le panneau EST le rail : il doit réserver la même bande de logo,
+      sinon la liste repasse sous le repère de marque sur un écran court. Au
+      repos la bande ne s'applique pas — il n'y a pas encore de logo affiché,
+      et elle décalerait la composition de départ.
+    */
+    padding-top: var(--rail-logo-band, 3rem);
     transform: none;
     /* Le contenu reste visible pendant toute la phase pilotée par le scroll. */
     overflow: visible;
@@ -190,6 +267,14 @@ const { section, locale } = Astro.props;
 
   /* ── Mobile : empilement simple, aucun mouvement horizontal ───────────── */
   @media (max-width: 767px) {
+    /*
+      En colonne il n'y a plus ni pli ni partage gauche/droite : le seuil ne
+      marquerait plus un croisement mais un trait en travers du visuel.
+    */
+    .services__threshold {
+      display: none;
+    }
+
     .services__runway {
       height: auto;
     }

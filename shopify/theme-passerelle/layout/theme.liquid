@@ -1,0 +1,122 @@
+{%- comment -%}
+  THÈME PASSERELLE — la boutique en ligne ne montre rien, elle renvoie.
+
+  Le site vit sur studioabime.com (Astro, Cloudflare) ; Shopify ne sert que le
+  catalogue et le tunnel de paiement. Mais Shopify continue d'écrire ses propres
+  liens de retour — le bouton « Continuer les achats » de la page de
+  remerciement, les liens des e-mails de confirmation, la page de suivi de
+  commande — et tous pointent vers la boutique en ligne, c'est-à-dire vers le
+  domaine principal de la boutique. Cette destination n'est réglable nulle part :
+  elle est déduite du domaine.
+
+  Plutôt que de tenter de la changer, on rend la boutique en ligne inoffensive :
+  chaque page qu'elle sert renvoie immédiatement vers son équivalent sur le vrai
+  site. Une seule route existe donc réellement ici — celle qui mène ailleurs.
+
+  Le renvoi est fait trois fois, du plus rapide au plus tolérant :
+  `location.replace` (immédiat, et sans laisser d'entrée dans l'historique, pour
+  que le bouton « Précédent » ne ramène pas ici), la balise `refresh` (si le JS
+  est coupé), et un lien visible (si les deux échouent). L'ordre compte : la
+  balise `refresh` doit précéder `content_for_header`, que Shopify exige et qui
+  charge ses propres scripts.
+{%- endcomment -%}
+
+{%- liquid
+  assign site = 'https://studioabime.com'
+  assign path = request.path
+
+  comment
+    Les handles de produits et de collections viennent de Shopify des deux côtés :
+    ceux d'ici et ceux du site sont le même identifiant. La correspondance est
+    donc exacte, pas approchée.
+  endcomment
+
+  assign destination = site | append: '/shop'
+
+  if path contains '/products/'
+    assign handle = path | split: '/products/' | last | split: '?' | first
+    assign destination = site | append: '/shop/' | append: handle
+
+  elsif path contains '/collections/'
+    assign handle = path | split: '/collections/' | last | split: '?' | first
+    comment
+      `/collections/all` est une collection fabriquée par Shopify, sans
+      équivalent sur le site : elle retombe sur l'index de la boutique.
+    endcomment
+    if handle == 'all' or handle == blank
+      assign destination = site | append: '/shop'
+    else
+      assign destination = site | append: '/shop/collections/' | append: handle
+    endif
+
+  elsif path contains '/policies/'
+    comment
+      Les politiques de boutique sont rédigées dans l'admin Shopify et réaffichées
+      par le site (src/lib/shopify/policies.ts) : une seule saisie, deux adresses.
+      C'est celle du site qui fait foi pour un visiteur.
+    endcomment
+    if path contains 'refund'
+      assign destination = site | append: '/retours'
+    elsif path contains 'shipping'
+      assign destination = site | append: '/livraison'
+    elsif path contains 'terms'
+      assign destination = site | append: '/cgv'
+    elsif path contains 'privacy'
+      assign destination = site | append: '/confidentialite'
+    elsif path contains 'legal'
+      assign destination = site | append: '/mentions-legales'
+    elsif path contains 'contact'
+      assign destination = site | append: '/contact'
+    endif
+
+  elsif path contains '/pages/contact' or path == '/contact'
+    assign destination = site | append: '/contact'
+  endif
+-%}
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {%- comment -%}
+      Cette boutique ne doit exister pour aucun moteur : elle ferait doublon avec
+      le vrai site et lui prendrait ses propres pages dans les résultats.
+    {%- endcomment -%}
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="{{ destination }}">
+    <meta http-equiv="refresh" content="0; url={{ destination }}">
+
+    <title>Studio Abîme</title>
+
+    {{ content_for_header }}
+
+    <script>window.location.replace({{ destination | json }});</script>
+
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font: 400 1rem/1.5 Georgia, 'Times New Roman', serif;
+        background: #fdfcf7;
+        color: #1a1a1a;
+      }
+      a { color: inherit; }
+    </style>
+  </head>
+
+  <body>
+    {%- comment -%}
+      Shopify exige `content_for_layout`. Il ne rend rien : les gabarits de ce
+      thème sont vides, le renvoi a déjà eu lieu bien avant qu'on arrive ici.
+    {%- endcomment -%}
+    {{ content_for_layout }}
+
+    <noscript style="display:block">
+      <p>Redirection vers <a href="{{ destination }}">Studio Abîme</a>…</p>
+    </noscript>
+  </body>
+</html>

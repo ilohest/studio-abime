@@ -1,0 +1,932 @@
+---
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import { buildConstellation, buildRays } from '~/lib/constellation';
+import type { Star } from '~/lib/sanity/types';
+
+/**
+ * LA CONSTELLATION — le studio au centre, ses collaborateurs autour.
+ *
+ * ┌─ Le geste ──────────────────────────────────────────────────────────────┐
+ * │ Un générique de fin ne se lit pas : on le survole. Une constellation, si │
+ * │ — parce qu'elle a une forme, et qu'on y cherche les noms comme on        │
+ * │ cherche une étoile. Studio Abîme occupe le centre ; chaque personne est  │
+ * │ un point relié à lui par un trait fin. La figure dit d'un coup d'œil ce  │
+ * │ qu'une liste met dix lignes à énoncer : personne ne travaille seul.      │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * ── DEUX COUCHES, DEUX MÉTIERS ─────────────────────────────────────────────
+ *
+ *  · LA PLANCHE — traits en SVG, points et libellés en HTML. Le mélange n'est
+ *    pas un caprice : les traits doivent s'étirer avec le cadre (d'où
+ *    `preserveAspectRatio="none"`), les libellés doivent rester du VRAI texte,
+ *    à la bonne graisse et au bon corps. Un `<text>` SVG se serait déformé
+ *    avec la planche. Elle est `aria-hidden` : c'est un dessin.
+ *
+ *  · LE RELEVÉ — la liste des noms et des rôles. C'est LUI que lisent les
+ *    technologies d'assistance, et lui qui paraît à l'écran sous 720 px, où
+ *    la planche n'a plus la largeur d'accueillir un libellé. Rien n'est perdu
+ *    en petit écran : la même information change de forme.
+ *
+ * ── CE QUI SE CALCULE ──────────────────────────────────────────────────────
+ *
+ * Aucune position n'est saisie : `src/lib/constellation.ts` place les étoiles
+ * à partir de la liste et d'un germe (l'identifiant du document). La figure est
+ * donc stable d'un build à l'autre, mais DIFFÉRENTE d'un projet à l'autre, même
+ * à collaborateurs identiques.
+ *
+ * ── L'ÉCHELLE ──────────────────────────────────────────────────────────────
+ *
+ * Tout ce qui est dans la planche — corps de texte, diamètre des points,
+ * écarts — se mesure en `cqw`, c'est-à-dire en pour-cent de la LARGEUR DE LA
+ * PLANCHE. Les libellés gardent ainsi la même place relative à toutes les
+ * tailles d'écran, et ne peuvent pas se recouvrir sur une planche plus étroite
+ * que celle pour laquelle le placement a été calculé.
+ */
+interface Props {
+  stars: Star[];
+  /** Germe du placement — l'identifiant du document qui porte la figure. */
+  seed: string;
+  /**
+   * `projet` : une planche large, en clôture d'une page projet.
+   * `labo`   : la grande constellation, plus haute, qui rassemble tout le monde.
+   */
+  variant?: 'projet' | 'labo';
+  centerLabel?: string;
+  /** Légende de la figure — reprend la numérotation de la page qui l'accueille. */
+  caption?: string;
+  class?: string;
+}
+
+const {
+  stars = [],
+  seed,
+  variant = 'projet',
+  centerLabel = 'Studio Abîme',
+  caption,
+  class: className,
+} = Astro.props;
+
+/* Une référence rompue ou une fiche sans nom ne fait pas une étoile. */
+const people = (stars ?? []).filter((star) => Boolean(star?.name?.trim()));
+
+/*
+  Les deux planches n'ont ni le même format ni le même nombre d'étoiles : les
+  écarts minimaux sont donnés en POUR-CENT de la planche, ils ne se transposent
+  donc pas d'un format à l'autre. Une même valeur de `gapY` vaut deux fois plus
+  de pixels sur la planche haute du Labo que sur le bandeau d'une page projet.
+*/
+const settings =
+  variant === 'labo'
+    ? { spreadX: 35, spreadY: 40, gapX: 21, gapY: 6.4 }
+    : { spreadX: 33, spreadY: 37, gapX: 25, gapY: 9 };
+
+const field = buildConstellation(people, { seed, ...settings });
+
+const rays = buildRays(field);
+
+/*
+  Les réglages voyagent jusqu'au navigateur : c'est LUI qui rejoue le placement
+  à chaque chargement (voir le script en fin de fichier), et il doit composer la
+  figure dans le même champ que le rendu servi.
+*/
+const fieldSettings = JSON.stringify(settings);
+---
+
+{
+  field.stars.length > 0 && (
+    <figure
+      class:list={['constellation', `constellation--${variant}`, className]}
+      style={`--cx:${field.center.x.toFixed(2)}%;--cy:${field.center.y.toFixed(2)}%`}
+      data-field={fieldSettings}
+    >
+      {/*
+        La planche est un DESSIN : elle redit, en figure, ce que le relevé
+        énonce en toutes lettres juste en dessous. La faire lire deux fois à
+        une synthèse vocale n'apporterait rien qu'une répétition.
+      */}
+      <div class="constellation__plate" aria-hidden="true">
+        <svg
+          class="constellation__rays"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          focusable="false"
+        >
+          {rays.map((ray) => (
+            <line
+              class="constellation__ray"
+              data-ray={ray.star}
+              x1={ray.x1}
+              y1={ray.y1}
+              x2={ray.x2}
+              y2={ray.y2}
+              vector-effect="non-scaling-stroke"
+              style={`--depth:${ray.depth.toFixed(3)}`}
+            />
+          ))}
+        </svg>
+
+        {field.dust.map((grain) => (
+          <span
+            class="constellation__dust"
+            style={`left:${grain.x.toFixed(2)}%;top:${grain.y.toFixed(2)}%;--grain:${grain.size.toFixed(2)};--offset:${grain.delay.toFixed(2)}s`}
+          />
+        ))}
+
+        <span
+          class="constellation__core"
+          style={`left:${field.center.x.toFixed(2)}%;top:${field.center.y.toFixed(2)}%`}
+        >
+          <span class="constellation__coreMark" />
+          <span class="constellation__coreLabel">{centerLabel}</span>
+        </span>
+
+        {field.stars.map((star, index) => (
+          <span
+            class="constellation__star"
+            data-star={index}
+            data-side={star.side}
+            style={`left:${star.x.toFixed(2)}%;top:${star.y.toFixed(2)}%;--depth:${star.depth.toFixed(3)}`}
+          >
+            <span class="constellation__mark" />
+            <span class="constellation__tag">
+              <span class="constellation__name">{star.name}</span>
+              {star.role && <span class="constellation__role">{star.role}</span>}
+            </span>
+          </span>
+        ))}
+      </div>
+
+      {/*
+        LE RELEVÉ — même contenu, autre forme. Réservé aux technologies
+        d'assistance tant que la planche porte ses libellés ; il paraît à
+        l'écran quand elle les abandonne, sous 720 px.
+      */}
+      <ul class="constellation__index">
+        {field.stars.map((star) => (
+          <li class="constellation__entry">
+            <span class="constellation__entryName">{star.name}</span>
+            {star.role && <span class="constellation__entryRole">{star.role}</span>}
+          </li>
+        ))}
+      </ul>
+
+      {caption && <FigureCaption value={caption} class="constellation__caption" />}
+    </figure>
+  )
+}
+
+{/*
+  Deux choses posées AVANT la première peinture, et dans cet ordre :
+
+   · `data-shuffle` masque la planche, sans transition. Le placement va être
+     REJOUÉ par le module (une figure différente à chaque chargement) : sans ce
+     voile, on verrait d'abord la figure servie par le serveur, puis les points
+     sauter à leur nouvelle place. Il ne dure que le temps d'un calcul.
+   · `data-anim` prépare le tracé, et seulement si le mouvement est accepté.
+
+  Le garde-fou : si le module ne s'exécute jamais (erreur, réseau coupé), les
+  deux attributs sont retirés au bout de trois secondes et la figure reparaît,
+  telle que le serveur l'a composée. Le module, lui, marque la figure dès qu'il
+  l'a prise en charge — le garde-fou ne lui coupe donc pas l'herbe sous le pied
+  quand elle est encore hors écran.
+
+  Sans JavaScript du tout, aucun attribut n'est posé : la figure du serveur se
+  rend simplement telle quelle. C'est le comportement de repli, et il est complet.
+*/}
+<script is:inline>
+  (() => {
+    const figure = document.currentScript?.previousElementSibling;
+    if (!figure || !figure.classList?.contains('constellation')) return;
+
+    figure.setAttribute('data-shuffle', '');
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      figure.setAttribute('data-anim', '');
+    }
+
+    window.setTimeout(() => {
+      if (figure.hasAttribute('data-anim-ready')) return;
+      figure.removeAttribute('data-shuffle');
+      figure.removeAttribute('data-anim');
+    }, 3000);
+  })();
+</script>
+
+<style>
+  .constellation {
+    margin: 0;
+    /*
+      Un libellé pousse vers l'extérieur de la planche : la marge intérieure lui
+      donne où aller sans que la figure ne déborde de la colonne.
+    */
+    padding-inline: clamp(0.25rem, 1.5vw, 1.25rem);
+  }
+
+  /*
+    LE CADRE DE RÉFÉRENCE. `container-type: inline-size` fait de la planche
+    l'unité de mesure de tout ce qu'elle contient : les `cqw` plus bas sont des
+    pour-cent de SA largeur, pas de celle de l'écran. Le relevé garde donc
+    exactement les mêmes proportions à 1440 px et à 900 px, et les libellés
+    calculés pour ne pas se toucher ne se touchent à aucune taille.
+  */
+  .constellation__plate {
+    position: relative;
+    container-type: inline-size;
+    width: 100%;
+    margin-inline: auto;
+    color: var(--color-ink);
+  }
+
+  .constellation--projet .constellation__plate {
+    max-width: 64rem;
+    aspect-ratio: 16 / 9;
+  }
+
+  .constellation--labo .constellation__plate {
+    max-width: 76rem;
+    aspect-ratio: 4 / 3;
+  }
+
+  /* ── Les traits ─────────────────────────────────────────────────────────── */
+
+  .constellation__rays {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  /*
+    Le trait s'étire avec la planche — d'où `preserveAspectRatio="none"` — mais
+    son ÉPAISSEUR ne doit pas suivre : sans `non-scaling-stroke`, un rayon
+    horizontal et un rayon vertical n'auraient pas la même finesse.
+  */
+  /*
+    Un filet, exactement celui qui souligne les lignes du Shop et de l'index de
+    la page Contact : la constellation n'invente pas son trait, elle reprend
+    celui du site. Une couleur UNIE, la même d'un rayon à l'autre — la distance
+    au centre se lit à la longueur du trait, pas à son intensité.
+  */
+  .constellation__ray {
+    fill: none;
+    stroke: var(--color-line);
+    stroke-width: 1;
+    transition: stroke 0.4s ease;
+  }
+
+  /* ── Le centre : Studio Abîme ───────────────────────────────────────────── */
+
+  /*
+    LE CENTRE EST LE POINT, PAS LE BLOC.
+
+    Le nom du studio était d'abord dans le flux, sous le point : le bloc mesurait
+    alors la hauteur des deux, et c'est son MILIEU qui se posait sur la
+    coordonnée — le disque remontait d'une demi-hauteur de texte, et les rayons,
+    eux, convergeaient toujours sur la coordonnée. Les traits se rejoignaient à
+    côté du point.
+
+    Le nom est donc sorti du flux : il pend sous le point, et le bloc n'a plus
+    d'autre taille que celle du disque. Le point, la coordonnée et le faisceau
+    ne font plus qu'un.
+  */
+  .constellation__core {
+    position: absolute;
+    display: block;
+    line-height: 0;
+    translate: -50% -50%;
+  }
+
+  .constellation__coreMark {
+    display: block;
+    width: clamp(7px, 0.95cqw, 12px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-ink);
+    /*
+      Aucun anneau : un point plein, plus large que les autres, et rien autour.
+      C'est le dégagement laissé par les rayons — ils s'arrêtent avant d'y
+      arriver — qui le détache, pas une bordure. Reste la lueur, qui n'est pas
+      un contour mais une magnitude : le studio est l'étoile la plus brillante
+      de sa propre carte.
+    */
+    box-shadow: 0 0 1.6cqw 0.2cqw color-mix(in oklab, var(--color-ink) 8%, transparent);
+  }
+
+  /*
+    Le nom se pose SOUS le point, sur un voile de papier : les rayons partent
+    dans toutes les directions, il en passe forcément un dessous. Le dégradé
+    l'efface sans qu'aucun bord ne se voie — un cartouche opaque aurait fait
+    une étiquette collée sur le dessin.
+  */
+  .constellation__coreLabel {
+    position: absolute;
+    top: calc(100% + 0.7cqw);
+    left: 50%;
+    translate: -50% 0;
+    padding: 0.3cqw 1.2cqw;
+    line-height: 1.2;
+    background: radial-gradient(
+      ellipse at center,
+      var(--color-surface) 45%,
+      color-mix(in oklab, var(--color-surface) 0%, transparent) 78%
+    );
+    font-family: var(--font-titre);
+    font-size: clamp(0.6875rem, 1.15cqw, 0.9375rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ── Les étoiles ────────────────────────────────────────────────────────── */
+
+  .constellation__star {
+    position: absolute;
+    translate: -50% -50%;
+  }
+
+  .constellation__mark {
+    display: block;
+    width: clamp(4px, 0.5cqw, 7px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-ink);
+    /*
+      Un liseré de papier, et rien d'autre : il détache le point du trait qui
+      arrive dessous. Pas de lueur — à cette taille, elle ne se lisait pas comme
+      une magnitude mais comme une tache grise autour d'un point net.
+    */
+    box-shadow: 0 0 0 0.22cqw var(--color-surface);
+    transition:
+      box-shadow 0.45s ease,
+      scale 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  /*
+    LE LIBELLÉ FUIT LE CENTRE. À droite pour une étoile de droite, à gauche pour
+    une étoile de gauche : le texte s'éloigne toujours de la figure au lieu de
+    la traverser, et aucun nom ne vient se poser sur un trait.
+  */
+  .constellation__tag {
+    position: absolute;
+    top: 50%;
+    display: grid;
+    gap: 0.15em;
+    width: max-content;
+    max-width: 13cqw;
+    translate: 0 -50%;
+    line-height: 1.25;
+  }
+
+  .constellation__star[data-side='right'] .constellation__tag {
+    left: calc(100% + 0.9cqw);
+    text-align: start;
+  }
+
+  .constellation__star[data-side='left'] .constellation__tag {
+    right: calc(100% + 0.9cqw);
+    text-align: end;
+  }
+
+  .constellation__name {
+    font-family: var(--font-titre);
+    font-size: clamp(0.6875rem, 1.25cqw, 0.9375rem);
+    letter-spacing: 0.02em;
+  }
+
+  .constellation__role {
+    font-family: var(--font-annotation);
+    font-size: clamp(0.625rem, 1.1cqw, 0.875rem);
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-muted);
+  }
+
+  /* ── La poussière ───────────────────────────────────────────────────────── */
+
+  /*
+    Des points muets : ni nom, ni trait, ni signification. Ils donnent au relevé
+    la profondeur d'un ciel — sans eux, la figure flotte sur un vide trop propre.
+
+    MÊME ENCRE que les étoiles nommées : un relevé se trace d'une seule plume.
+    Ils avaient d'abord été pâlis pour reculer — ils ne reculaient pas, ils
+    passaient pour un autre objet. C'est leur DIAMÈTRE, trois fois moindre, qui
+    les met au second plan.
+  */
+  .constellation__dust {
+    position: absolute;
+    width: calc(clamp(1.5px, 0.2cqw, 3px) * var(--grain, 1));
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-ink);
+    /*
+      Le décalage du champ (voir `drift()` dans le script) s'ajoute au centrage
+      plutôt que de le remplacer : le grain reste posé sur sa coordonnée, il ne
+      fait que s'en écarter un peu.
+    */
+    translate: calc(-50% + var(--push-x, 0px)) calc(-50% + var(--push-y, 0px));
+  }
+
+  /*
+    LE CHAMP QUI S'ÉCARTE. La transition est lente et amortie : elle ne suit pas
+    le curseur, elle le rattrape. C'est ce retard qui donne la sensation d'une
+    matière — un champ d'étoiles qu'on dérange doucement, pas des points collés
+    à la souris.
+  */
+  @media (prefers-reduced-motion: no-preference) {
+    .constellation__dust {
+      transition: translate 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  }
+
+  /* ── Le survol : un rayon s'allume ──────────────────────────────────────── */
+
+  /*
+    L'étoile approche. Le point grossit d'un tiers et s'entoure d'un cercle fin,
+    son trait passe à l'encre pleine, et le rôle — jusque-là en gris — se lit
+    aussi net que le nom. Rien ne se déplace, rien ne clignote : c'est la même
+    figure, un peu plus près.
+
+    La courbe est longue et sans rebond (0.55 s) : un agrandissement qui claque
+    ferait un bouton, pas une étoile. Le geste doit se sentir plus qu'il ne se
+    voit.
+
+    La zone sensible est l'étoile ENTIÈRE — son point et son libellé : viser un
+    disque de cinq pixels serait un exercice d'adresse.
+  */
+  .constellation__star.is-lit .constellation__mark {
+    scale: 1.35;
+    box-shadow:
+      0 0 0 0.22cqw var(--color-surface),
+      0 0 0 calc(0.22cqw + 1px) color-mix(in oklab, var(--color-ink) 55%, transparent);
+  }
+
+  .constellation__role {
+    transition: color 0.45s ease;
+  }
+
+  .constellation__star.is-lit .constellation__role {
+    color: var(--color-ink);
+  }
+
+  /*
+    ── LE CENTRE APPELLE ────────────────────────────────────────────────────
+    Survoler une étoile allume SA liaison ; survoler le studio les allume
+    TOUTES — et dans l'autre sens. L'onde part du centre et gagne les
+    extrémités, chaque trait puis chaque point s'allumant à son tour, du plus
+    proche au plus lointain. C'est le geste du tracé initial, rejoué à la
+    demande : le studio rappelle à lui tout ce qui le relie.
+
+    Le retard est proportionnel à l'éloignement (`--depth`, publié sur chaque
+    trait et chaque étoile au placement). Au retrait, les délais tombent : la
+    figure se rassoit d'un seul mouvement plutôt que de s'éteindre à l'envers,
+    ce qui aurait donné une seconde animation là où il n'en faut aucune.
+  */
+  .constellation.is-hailed .constellation__ray {
+    stroke: var(--color-ink);
+    transition-delay: calc(var(--depth, 0) * 0.3s);
+  }
+
+  .constellation.is-hailed .constellation__mark {
+    scale: 1.3;
+    transition-delay: calc(var(--depth, 0) * 0.3s);
+  }
+
+  .constellation.is-hailed .constellation__role {
+    color: var(--color-ink);
+    transition-delay: calc(var(--depth, 0) * 0.3s);
+  }
+
+  .constellation__coreMark {
+    transition:
+      scale 0.55s cubic-bezier(0.22, 0.61, 0.36, 1),
+      box-shadow 0.45s ease;
+  }
+
+  /*
+    Le centre s'entoure du MÊME cercle que les étoiles quand on l'approche : un
+    intervalle de papier, puis un filet. C'est ce qui fait de lui une étoile
+    parmi les autres au moment où il les rappelle toutes — l'écart de papier est
+    seulement plus large, à la mesure de son disque.
+  */
+  .constellation.is-hailed .constellation__coreMark {
+    scale: 1.2;
+    box-shadow:
+      0 0 0 0.3cqw var(--color-surface),
+      0 0 0 calc(0.3cqw + 1px) color-mix(in oklab, var(--color-ink) 55%, transparent);
+  }
+
+  .constellation__ray.is-lit {
+    stroke: var(--color-ink);
+  }
+
+  /* ── Le relevé ──────────────────────────────────────────────────────────── */
+
+  /*
+    Masqué à l'œil, jamais au lecteur d'écran : la planche étant un dessin, ce
+    relevé est la SEULE énonciation des noms. Il ne peut donc pas être posé en
+    `display: none`, qui le retirerait aussi de l'arbre d'accessibilité.
+  */
+  .constellation__index {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    list-style: none;
+  }
+
+  /*
+    La légende reprend exactement le corps des autres légendes du site — celle
+    de l'index orbital, celle des cinq strates. Elle se cale sur la LARGEUR DE
+    LA PLANCHE et non sur celle de la colonne : une légende appartient à sa
+    figure, elle commence là où la figure commence.
+  */
+  .constellation__caption {
+    margin: clamp(0.8rem, 1.2vw, 1.2rem) auto 0;
+    font-size: var(--text-note);
+    line-height: 1.25;
+  }
+
+  /*
+    Sur une page projet, la légende prend le gris des légendes de planche qui la
+    précèdent : la constellation est la dernière figure de la page, elle se
+    légende comme les autres. Au Labo, où les figures se légendent à l'encre
+    pleine (index orbital, cinq strates), elle garde l'encre.
+  */
+  .constellation--projet .constellation__caption {
+    width: min(100%, 64rem);
+    color: var(--color-muted);
+  }
+
+  .constellation--labo .constellation__caption {
+    width: min(100%, 76rem);
+  }
+
+  /*
+    ── SOUS 720 PX ──────────────────────────────────────────────────────────
+    La planche n'a plus la largeur d'un libellé : un nom y prendrait le tiers
+    de l'écran. Elle garde donc ses points et ses traits — la FORME de la
+    constellation, qui se lit encore très bien —, et les noms passent dans le
+    relevé, qui redevient une liste visible sous la figure.
+  */
+  @media (max-width: 719px) {
+    .constellation--projet .constellation__plate,
+    .constellation--labo .constellation__plate {
+      aspect-ratio: 1 / 1;
+      max-width: 32rem;
+    }
+
+    .constellation__tag {
+      display: none;
+    }
+
+    .constellation__coreLabel {
+      font-size: 0.6875rem;
+      padding-inline: 1.6cqw;
+    }
+
+    .constellation__index {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: clamp(1.5rem, 5vw, 2.25rem) 0 0;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      display: grid;
+      gap: 0.55rem;
+      max-width: 32rem;
+      margin-inline: auto;
+    }
+
+    .constellation__entry {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      border-top: 1px solid var(--color-line);
+      padding-top: 0.5rem;
+    }
+
+    .constellation__entryName {
+      font-family: var(--font-titre);
+      font-size: 0.8125rem;
+    }
+
+    .constellation__entryRole {
+      font-family: var(--font-annotation);
+      font-size: 0.8125rem;
+      letter-spacing: var(--tracking-annotation);
+      color: var(--color-muted);
+      text-align: end;
+    }
+  }
+
+  /*
+    LE VOILE DU REJEU. Sans transition, et sans mouvement : ce n'est pas une
+    animation mais l'absence d'un saut. La planche reste invisible le temps que
+    le navigateur recompose la figure, et reparaît en place.
+  */
+  .constellation[data-shuffle] .constellation__plate {
+    opacity: 0;
+  }
+
+  /*
+    ── L'ENTRÉE ────────────────────────────────────────────────────────────
+    La figure se TRACE : le centre d'abord, puis les rayons qui filent vers
+    l'extérieur, puis les étoiles qui s'allument au bout. L'ordre suit
+    l'éloignement — `--depth` —, si bien que la constellation se déploie du
+    centre vers le bord, comme on la dessinerait.
+
+    Rien de tout cela n'existe sans JavaScript ni sans mouvement accepté :
+    `data-anim` n'est posé que dans ce cas (voir le script en ligne plus haut).
+  */
+  .constellation[data-anim] .constellation__core,
+  .constellation[data-anim] .constellation__dust {
+    opacity: 0;
+  }
+
+  .constellation[data-anim] .constellation__star {
+    opacity: 0;
+    scale: 0.4;
+  }
+
+  /*
+    LE TRACÉ. Les traits ne se dessinent pas un à un mais tous ensemble, par un
+    disque qui s'ouvre depuis le centre : la figure se déploie du studio vers ses
+    étoiles, dans le geste même qui la fabrique.
+
+    Le pointillé progressif (`stroke-dasharray`) avait été essayé d'abord — il
+    est INCOMPATIBLE avec `non-scaling-stroke`, qui fait mesurer les tirets en
+    pixels d'écran et non le long du tracé : les rayons se couvraient de
+    pointillés au lieu de s'allonger. Le disque, lui, ignore la question.
+  */
+  .constellation[data-anim] .constellation__rays {
+    clip-path: circle(0% at var(--cx, 50%) var(--cy, 50%));
+  }
+
+  .constellation[data-anim].is-drawn .constellation__core {
+    opacity: 1;
+    transition: opacity 0.6s ease-out;
+  }
+
+  .constellation[data-anim].is-drawn .constellation__dust {
+    opacity: 1;
+    transition: opacity 1.2s ease-out calc(var(--offset, 0s) * 0.12 + 0.5s);
+  }
+
+  .constellation[data-anim].is-drawn .constellation__rays {
+    clip-path: circle(125% at var(--cx, 50%) var(--cy, 50%));
+    transition: clip-path 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) 0.12s;
+  }
+
+  .constellation[data-anim].is-drawn .constellation__star {
+    opacity: 1;
+    scale: 1;
+    transition:
+      opacity 0.5s ease-out calc(var(--depth, 0) * 0.35s + 0.6s),
+      scale 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) calc(var(--depth, 0) * 0.35s + 0.6s);
+  }
+
+}
+</style>
+<script>
+  import { buildConstellation, buildRays } from '~/lib/constellation';
+
+  /*
+    ┌─ UNE FIGURE PAR CHARGEMENT ───────────────────────────────────────────┐
+    │ Le serveur compose une constellation déterministe — elle doit exister  │
+    │ dans le HTML, pour les moteurs et pour qui n'a pas de JavaScript. Mais │
+    │ un relevé céleste n'a pas de version canonique : le navigateur en      │
+    │ REJOUE une autre à chaque visite, avec le même appareil de calcul et   │
+    │ les mêmes réglages de champ. Deux visites, deux ciels.                 │
+    │                                                                        │
+    │ Rien n'est recréé : les points, les traits et les libellés existent    │
+    │ déjà, on ne fait que les déplacer. C'est nécessaire autant qu'élégant  │
+    │ — un élément fabriqué ici n'aurait pas la marque de portée d'Astro, et │
+    │ aucune règle de style ne s'y appliquerait. Quand il faut un trait de   │
+    │ plus, on CLONE celui du serveur, qui la porte.                         │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  const place = (figure: HTMLElement) => {
+    const svg = figure.querySelector<SVGSVGElement>('.constellation__rays');
+    const core = figure.querySelector<HTMLElement>('.constellation__core');
+    const starElements = Array.from(
+      figure.querySelectorAll<HTMLElement>('.constellation__star'),
+    );
+    const dustElements = Array.from(figure.querySelectorAll<HTMLElement>('.constellation__dust'));
+    if (!svg || !core || starElements.length === 0) return;
+
+    let settings: Record<string, number> = {};
+    try {
+      settings = JSON.parse(figure.dataset.field ?? '{}');
+    } catch {
+      /* Réglages illisibles : le champ par défaut fera l'affaire. */
+    }
+
+    /*
+      Seul le NOMBRE d'étoiles compte ici : le calcul ne lit ni les noms ni les
+      rôles, il place des points. Les libellés, eux, ne bougent pas de leur
+      étoile — ils sont dans le même élément.
+    */
+    const field = buildConstellation(
+      starElements.map((_, index) => ({ _id: String(index), name: '·' })),
+      { ...settings, seed: `${Date.now()}-${Math.random()}` },
+    );
+
+    figure.style.setProperty('--cx', `${field.center.x.toFixed(2)}%`);
+    figure.style.setProperty('--cy', `${field.center.y.toFixed(2)}%`);
+    core.style.left = `${field.center.x.toFixed(2)}%`;
+    core.style.top = `${field.center.y.toFixed(2)}%`;
+
+    field.stars.forEach((star, index) => {
+      const element = starElements[index];
+      if (!element) return;
+      element.style.left = `${star.x.toFixed(2)}%`;
+      element.style.top = `${star.y.toFixed(2)}%`;
+      element.style.setProperty('--depth', star.depth.toFixed(3));
+      element.dataset.side = star.side;
+    });
+
+    /* Le gabarit est pris AVANT toute retouche : un modèle vierge, pas un déjà déplacé. */
+    const rayTemplate = svg.querySelector('line')?.cloneNode(true) as SVGLineElement | undefined;
+    const rays = buildRays(field);
+    const pool = Array.from(svg.querySelectorAll<SVGLineElement>('line'));
+
+    rays.forEach((ray, index) => {
+      let line = pool[index];
+      if (!line) {
+        if (!rayTemplate) return;
+        line = rayTemplate.cloneNode(true) as SVGLineElement;
+        svg.append(line);
+      }
+      line.setAttribute('x1', ray.x1.toFixed(3));
+      line.setAttribute('y1', ray.y1.toFixed(3));
+      line.setAttribute('x2', ray.x2.toFixed(3));
+      line.setAttribute('y2', ray.y2.toFixed(3));
+      line.dataset.ray = String(ray.star);
+      line.style.setProperty('--depth', ray.depth.toFixed(3));
+      line.classList.remove('is-lit');
+    });
+    pool.slice(rays.length).forEach((line) => line.remove());
+
+    const dustTemplate = dustElements[0]?.cloneNode(true) as HTMLElement | undefined;
+    field.dust.forEach((grain, index) => {
+      let element = dustElements[index];
+      if (!element) {
+        if (!dustTemplate) return;
+        element = dustTemplate.cloneNode(true) as HTMLElement;
+        core.before(element);
+      }
+      element.style.left = `${grain.x.toFixed(2)}%`;
+      element.style.top = `${grain.y.toFixed(2)}%`;
+      element.style.setProperty('--grain', grain.size.toFixed(2));
+      element.style.setProperty('--offset', `${grain.delay.toFixed(2)}s`);
+    });
+    dustElements.slice(field.dust.length).forEach((element) => element.remove());
+  };
+
+  /*
+    L'ALLUMAGE. Survoler une étoile allume SON trait — les deux vivent dans deux
+    couches distinctes (HTML et SVG), et seul un index partagé les relie. La
+    planche est `aria-hidden` : ce survol est un agrément visuel, jamais le seul
+    accès à une information. Les noms sont dans le relevé, en clair.
+  */
+  const wire = (figure: HTMLElement) => {
+    figure.querySelectorAll<HTMLElement>('.constellation__star').forEach((star, index) => {
+      /* Une étoile peut porter DEUX traits : `data-ray` les désigne tous. */
+      const light = (on: boolean) => {
+        star.classList.toggle('is-lit', on);
+        figure
+          .querySelectorAll<SVGLineElement>(`.constellation__ray[data-ray="${index}"]`)
+          .forEach((ray) => ray.classList.toggle('is-lit', on));
+      };
+
+      star.addEventListener('pointerenter', () => light(true));
+      star.addEventListener('pointerleave', () => light(false));
+    });
+
+    /*
+      Le centre, lui, rappelle TOUT : l'onde repart de lui vers les extrémités
+      (voir `.is-hailed` dans la feuille de style). Le libellé du studio fait
+      partie de la zone sensible — c'est le mot qu'on vise, pas le point.
+    */
+    const core = figure.querySelector<HTMLElement>('.constellation__core');
+    core?.addEventListener('pointerenter', () => figure.classList.add('is-hailed'));
+    core?.addEventListener('pointerleave', () => figure.classList.remove('is-hailed'));
+  };
+
+  /*
+    ┌─ LE CHAMP DÉRANGÉ ────────────────────────────────────────────────────┐
+    │ Les points muets — ceux qui ne sont reliés à rien — s'écartent à       │
+    │ l'approche du curseur, puis reviennent. Rien d'autre ne bouge : les    │
+    │ étoiles nommées et leurs traits sont la CARTE, et une carte ne se      │
+    │ déforme pas sous la main. Seul le fond de ciel réagit.                 │
+    │                                                                        │
+    │ L'écart est minuscule (une dizaine de pixels au plus) et décroît avec  │
+    │ la distance. On ne doit pas le remarquer : on doit sentir que le fond  │
+    │ est vivant.                                                            │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  const drift = (figure: HTMLElement) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const plate = figure.querySelector<HTMLElement>('.constellation__plate');
+    if (!plate) return;
+
+    /* Rayon d'influence et écart maximal, en pixels de l'écran. */
+    const REACH = 190;
+    const PUSH = 11;
+
+    let frame = 0;
+    let pointer: { x: number; y: number } | null = null;
+
+    const settle = () => {
+      frame = 0;
+      const grains = plate.querySelectorAll<HTMLElement>('.constellation__dust');
+
+      grains.forEach((grain) => {
+        if (!pointer) {
+          grain.style.removeProperty('--push-x');
+          grain.style.removeProperty('--push-y');
+          return;
+        }
+
+        /*
+          `offsetLeft` et non un rectangle mesuré : le grain est peut-être déjà
+          déplacé, et sa position de MISE EN PAGE est la seule qui ne bouge pas.
+          La planche est son parent de positionnement.
+        */
+        const dx = grain.offsetLeft - pointer.x;
+        const dy = grain.offsetTop - pointer.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance > REACH || distance < 0.001) {
+          grain.style.removeProperty('--push-x');
+          grain.style.removeProperty('--push-y');
+          return;
+        }
+
+        /* Décroissance au carré : franc tout près, nul bien avant la limite. */
+        const force = (1 - distance / REACH) ** 2 * PUSH;
+        grain.style.setProperty('--push-x', `${((dx / distance) * force).toFixed(2)}px`);
+        grain.style.setProperty('--push-y', `${((dy / distance) * force).toFixed(2)}px`);
+      });
+    };
+
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(settle);
+    };
+
+    plate.addEventListener('pointermove', (event) => {
+      /* Le survol au doigt n'existe pas : le champ ne réagit qu'à un curseur. */
+      if (event.pointerType === 'touch') return;
+      const box = plate.getBoundingClientRect();
+      pointer = { x: event.clientX - box.left, y: event.clientY - box.top };
+      schedule();
+    });
+
+    plate.addEventListener('pointerleave', () => {
+      pointer = null;
+      schedule();
+    });
+  };
+
+  document
+    .querySelectorAll<HTMLElement>('.constellation:not([data-anim-ready])')
+    .forEach((figure) => {
+      figure.dataset.animReady = '';
+
+      place(figure);
+      wire(figure);
+      drift(figure);
+      /* Le voile tombe : la figure rejouée est en place, rien ne sautera plus. */
+      figure.removeAttribute('data-shuffle');
+
+      /*
+        Le tracé n'a lieu que dans le champ de lecture : dessiné en haut de page
+        pendant qu'on lit ailleurs, il serait déjà fini quand on y arrive.
+      */
+      if (!('IntersectionObserver' in window)) {
+        figure.classList.add('is-drawn');
+        return;
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            figure.classList.add('is-drawn');
+            observer.disconnect();
+          });
+        },
+        /* Le tracé démarre quand le haut de la figure a franchi les trois quarts. */
+        { rootMargin: '0px 0px -25% 0px' },
+      );
+
+      observer.observe(figure);
+    });
+</script>

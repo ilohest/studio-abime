@@ -89,6 +89,25 @@ export const manifestoHero = defineType({
       description: 'Un paragraphe par entrée.',
       of: [defineArrayMember({ type: 'text', rows: 2 })],
     }),
+    /*
+      LE VERSO. Ce texte n'est pas lu : il est retourné et presque effacé, comme
+      l'encre du dos d'une feuille qu'on voit par transparence.
+
+      Il est décoratif au sens strict — masqué aux lecteurs d'écran, hors du
+      pointeur, non sélectionnable. Ce qu'on y écrit n'a donc pas à se
+      comprendre : ce qui compte est la MATIÈRE, une page dense qui affleure.
+      Un texte du studio y a plus de tenue qu'un faux texte, mais personne
+      n'est censé le déchiffrer.
+    */
+    defineField({
+      name: 'verso',
+      title: 'Texte au verso (transparence)',
+      type: 'text',
+      rows: 8,
+      group: 'body',
+      description:
+        'Affiché retourné et très pâle derrière la page de gauche, comme l’envers d’une feuille imprimée. Décoratif : il n’est pas lu par les lecteurs d’écran et n’a pas à être compris. Laisser vide pour n’en afficher aucun.',
+    }),
     defineField({
       name: 'tagline',
       title: 'Signature',

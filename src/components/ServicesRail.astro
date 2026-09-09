@@ -235,6 +235,21 @@ const panelId = `services-menu-${mode}`;
     pointer-events: auto;
   }
 
+  .services-rail {
+    /*
+      La bande que le repère de marque occupe en haut du rail : sa garde
+      (1,5 rem) plus sa hauteur rendue. Le logo est en `position: absolute` —
+      il ne pousse donc RIEN, et la liste passait dessous dès que la fenêtre
+      manquait de hauteur. Sur un écran de 640 px, « 01. Le Labo » se
+      retrouvait recouvert sur 58 px : le lien existait toujours, mais c'est le
+      logo qui recevait le clic.
+
+      La bande est réservée ici, en garniture du rail : la liste ne peut plus
+      remonter dedans, quelle que soit la hauteur.
+    */
+    --rail-logo-band: 6.5rem;
+  }
+
   .services-rail--page {
     position: fixed;
     z-index: 40;
@@ -242,7 +257,7 @@ const panelId = `services-menu-${mode}`;
     display: flex;
     width: var(--rail-width);
     align-items: center;
-    padding: 3rem 1.5rem;
+    padding: var(--rail-logo-band) 1.5rem 3rem;
   }
 
   .services-rail__groups {
@@ -257,8 +272,29 @@ const panelId = `services-menu-${mode}`;
       groupe porte déjà ses sous-entrées, un blanc trop large les faisait lire
       comme cinq listes sans rapport plutôt que comme un sommaire.
     */
-    gap: clamp(2rem, 4.8vh, 3.6rem);
+    /*
+      L'écart suit la HAUTEUR de la fenêtre, et son plancher est bas : sur un
+      écran court, c'est lui qu'on peut rendre, le texte non. Le plafond garde
+      au large le blanc qui fait lire un sommaire.
+    */
+    gap: clamp(0.9rem, 3.2vh, 3.6rem);
     margin-inline-start: var(--rail-groups-margin, 0);
+    /*
+      Le filet de sécurité, pour les hauteurs où même l'écart minimal ne suffit
+      plus : la liste défile dans sa boîte au lieu de déborder du rail. Chaque
+      entrée reste alors atteignable — c'est ce qui compte dans un menu.
+    */
+    max-height: 100%;
+    overflow-y: auto;
+    /*
+      Sans barre : le rail fait 16 rem, une barre y prendrait sur la mesure des
+      intitulés et les ferait passer à la ligne.
+    */
+    scrollbar-width: none;
+  }
+
+  .services-rail__groups::-webkit-scrollbar {
+    display: none;
   }
 
   .services-rail__group {

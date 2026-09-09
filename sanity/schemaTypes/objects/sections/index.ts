@@ -8,6 +8,7 @@ import { pullQuote } from './pullQuote';
 import { plateSpread } from './plateSpread';
 import { projectShowcase } from './projectShowcase';
 import { fullBleedImage } from './fullBleedImage';
+import { testimonials } from './testimonials';
 import { heroSection } from './heroSection';
 import { richTextSection } from './richTextSection';
 import { mediaSection } from './mediaSection';
@@ -22,6 +23,7 @@ export const sectionTypes = [
   plateSpread,
   projectShowcase,
   fullBleedImage,
+  testimonials,
   heroSection,
   richTextSection,
   mediaSection,

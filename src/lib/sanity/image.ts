@@ -59,6 +59,19 @@ export function resolveImage(
   */
   const naturalRatio = source.asset.metadata?.dimensions?.aspectRatio;
 
+  /*
+    Le LQIP est peint EN FOND de l'image, sous elle. Le procédé ne vaut que pour
+    une image OPAQUE, qui finira par le recouvrir entièrement : sous une image
+    détourée, il reste visible à travers la transparence, et un spécimen posé
+    sur le papier se retrouve cerné d'un rectangle flou et coloré.
+
+    Sanity sait si l'asset porte de la transparence — on le lui demande plutôt
+    que de le deviner à l'extension du fichier, un PNG étant le plus souvent
+    opaque. Métadonnée absente (contenu antérieur à cette projection) : on
+    suppose l'image opaque, c'est le cas de l'écrasante majorité.
+  */
+  const opaque = source.asset.metadata?.isOpaque ?? true;
+
   return {
     src: base(width),
     srcset: DEFAULT_WIDTHS.filter((w) => w <= width * 2)
@@ -67,6 +80,6 @@ export function resolveImage(
     width,
     height: height ?? Math.round(width / (naturalRatio || ASPECT_RATIOS.landscape)),
     alt: source.alt ?? '',
-    lqip: source.asset.metadata?.lqip,
+    lqip: opaque ? source.asset.metadata?.lqip : undefined,
   };
 }

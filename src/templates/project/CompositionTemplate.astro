@@ -3,6 +3,7 @@ import JournalComposition from '~/components/journal/JournalComposition.astro';
 import NextProject from '~/components/project/NextProject.astro';
 import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
 import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
+import ProjectConstellation from '~/components/project/ProjectConstellation.astro';
 
 import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
@@ -63,6 +64,13 @@ const blocks = project.blocks ?? [];
       )
     }
   </div>
+
+  {/*
+    Le générique, en clôture : qui a travaillé sur ce projet. Il vient après le
+    contenu et avant le renvoi au projet suivant — on nomme les gens une fois le
+    travail montré. Rien ne se rend si la fiche ne désigne aucune étoile.
+  */}
+  <ProjectConstellation project={project} locale={locale} />
 
   <NextProject project={project.next} locale={locale} />
 </article>

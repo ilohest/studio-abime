@@ -100,6 +100,11 @@ const SANITY: Chapitre[] = [
         texte:
           'La liste des références. Son ordre compte : c’est lui qui remplit les cases de la table des éléments, sur la page Expériences.',
       },
+      {
+        titre: 'Étoiles',
+        texte:
+          'Les personnes qui travaillent avec le studio : un nom, un rôle. Elles se rassemblent en constellation autour de Studio Abîme, en bas de la page Labo — automatiquement, toutes celles qui sont encodées. L’interrupteur « Dans la constellation du Labo » en retire une sans supprimer sa fiche. Dans un projet, le champ « Constellation » de la fiche désigne qui y a pris part : leur constellation se compose en clôture de la page. La place de chacune est calculée, jamais saisie — et elle change à chaque visite.',
+      },
       { titre: 'Journal', texte: 'Les articles, classés en deux rubriques : Cahier de recherche et Actualités.' },
       {
         titre: 'Réglages du site',

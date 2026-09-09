@@ -6,6 +6,7 @@ import PullQuote from './PullQuote.astro';
 import PlateSpread from './PlateSpread.astro';
 import ProjectShowcaseGrid from './ProjectShowcaseGrid.astro';
 import FullBleedImage from './FullBleedImage.astro';
+import Testimonials from './Testimonials.astro';
 import HeroSection from './HeroSection.astro';
 import RichTextSection from './RichTextSection.astro';
 import MediaSection from './MediaSection.astro';
@@ -48,7 +49,7 @@ interface Props {
 const { sections, locale, documentUpdatedAt, documentId, documentType } = Astro.props;
 
 if (import.meta.env.DEV) {
-  const known = ['manifestoHero', 'servicesMenu', 'studioStatement', 'pullQuote', 'plateSpread', 'projectShowcase', 'fullBleedImage', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
+  const known = ['manifestoHero', 'servicesMenu', 'studioStatement', 'pullQuote', 'plateSpread', 'projectShowcase', 'fullBleedImage', 'testimonials', 'heroSection', 'richTextSection', 'mediaSection', 'projectListSection', 'ctaSection'];
   for (const section of sections ?? []) {
     if (!known.includes(section._type)) {
       console.warn(`[sections] Aucun composant pour le type « ${section._type} ». Section ignorée.`);
@@ -89,6 +90,8 @@ if (import.meta.env.DEV) {
         return <ProjectShowcaseGrid section={section} locale={locale} />;
       case 'fullBleedImage':
         return <FullBleedImage section={section} />;
+      case 'testimonials':
+        return <Testimonials section={section} />;
       case 'heroSection':
         return <HeroSection section={section} locale={locale} isFirst={isFirst} />;
       case 'richTextSection':

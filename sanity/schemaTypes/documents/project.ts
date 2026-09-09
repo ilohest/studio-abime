@@ -1,5 +1,5 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
-import { languageField } from '../../lib/i18n';
+import { languageField, sameLanguageFilter } from '../../lib/i18n';
 import { previousSlugsField, slugField } from '../../lib/slugFields';
 import { definePageBuilder } from '../objects/sections';
 import { DEFAULT_PROJECT_TEMPLATE, PROJECT_TEMPLATES } from '../../lib/projectTemplates';
@@ -132,6 +132,32 @@ export const project = defineType({
       of: [defineArrayMember({ type: 'string' })],
       options: { layout: 'tags' },
       group: 'meta',
+    }),
+    /*
+      LA CONSTELLATION DU PROJET.
+
+      Qui a travaillé sur ce projet. Les personnes s'encodent une fois pour
+      toutes dans « Étoiles » et se désignent ici : leur constellation se
+      compose sous le contenu de la page projet, Studio Abîme au centre.
+
+      Rien à placer : la figure est calculée à partir de la liste, et l'ordre
+      de celle-ci ne décide de rien. Sans aucune étoile, la page n'affiche
+      simplement pas de constellation.
+    */
+    defineField({
+      name: 'stars',
+      title: 'Constellation',
+      type: 'array',
+      group: 'meta',
+      description:
+        'Les collaborateurs de ce projet. Leur constellation se compose sous le contenu de la page, autour de Studio Abîme.',
+      of: [
+        defineArrayMember({
+          type: 'reference',
+          to: [{ type: 'star' }],
+          options: { filter: sameLanguageFilter },
+        }),
+      ],
     }),
     defineField({
       name: 'channels',
