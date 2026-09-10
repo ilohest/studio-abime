@@ -15,6 +15,7 @@
  */
 
 import { metafieldIdentifiersLiteral } from './families';
+import { inventoryScopeGranted } from './env';
 
 /** Ce qu'une bande de l'index a besoin de connaître. */
 export const productCardFragment = /* GraphQL */ `
@@ -68,18 +69,33 @@ export const productCardFragment = /* GraphQL */ `
         currencyCode
       }
     }
+    # Distingue une vraie vente en rupture d'un produit disponible dont
+    # l'inventaire n'est simplement pas suivi.
+    variants(first: 50) {
+      nodes {
+        availableForSale
+        currentlyNotInStock
+      }
+    }
   }
 `;
 
 /**
- * Identifiants d'URL seuls — alimente `getStaticPaths()`.
- * Aucun champ superflu : cette requête tourne à chaque build.
+ * Identifiants d'URL et disponibilité — alimente `getStaticPaths()` sans
+ * générer de route pour un produit épuisé.
  */
 export const productHandlesQuery = /* GraphQL */ `
   query ProductHandles($first: Int = 250) {
     products(first: $first) {
       nodes {
         handle
+        availableForSale
+        variants(first: 50) {
+          nodes {
+            availableForSale
+            currentlyNotInStock
+          }
+        }
       }
     }
   }
@@ -93,10 +109,10 @@ export const productByHandleQuery = /* GraphQL */ `
       ...ProductCard
       descriptionHtml
       tags
-      # Une seule collection : c'est elle qui alimente les suggestions en bas
-      # de fiche. Un tirage peut en porter plusieurs dans l'admin ; on ne
-      # retient que la première, dans l'ordre où Shopify les renvoie.
-      collections(first: 1) {
+      # Toutes les collections structurantes servent à choisir le libellé
+      # d'achat. La première continue d'alimenter les suggestions en bas de
+      # fiche, mais le CTA ne dépend plus de cet ordre.
+      collections(first: 20) {
         nodes {
           handle
         }
@@ -143,6 +159,10 @@ export const productByHandleQuery = /* GraphQL */ `
           # d'identifiant marchand dans les données structurées de la fiche.
           sku
           availableForSale
+          currentlyNotInStock
+          # Amorce le sélecteur de quantité au premier rendu. Le navigateur
+          # relit ensuite cette valeur sans cache pour rester à jour.
+          ${inventoryScopeGranted ? 'quantityAvailable' : ''}
           price {
             amount
             currencyCode
@@ -153,13 +173,6 @@ export const productByHandleQuery = /* GraphQL */ `
           }
           selectedOptions {
             name
-            value
-          }
-          # La jauge peut être définie sur la variante plutôt que sur le
-          # produit : un A2 n'a pas le même tirage qu'un A4, ni la session de
-          # mars le même nombre de places que celle de juin. Demandée aux deux
-          # niveaux, elle reste vide là où la définition n'existe pas.
-          editionMax: metafield(namespace: "studio", key: "quantite_max") {
             value
           }
         }
@@ -184,6 +197,8 @@ export const productInventoryQuery = /* GraphQL */ `
       variants(first: 50) {
         nodes {
           id
+          availableForSale
+          currentlyNotInStock
           quantityAvailable
         }
       }
@@ -239,9 +254,10 @@ export const collectionsQuery = /* GraphQL */ `
  * `description` et non `descriptionHtml` : l'index compose lui-même sa mise en
  * page, il ne veut pas du balisage saisi dans l'admin.
  *
- * Les produits ne sont demandés que par leur identifiant : l'index de la
- * boutique ne les montre pas, il les COMPTE — « 07 pièces » sous le titre d'une
- * collection dit ce qu'on trouvera derrière sans rien déflorer.
+ * Les produits ne sont demandés que par leur identifiant et leur disponibilité :
+ * l'index de la boutique ne les montre pas, il compte seulement ceux qui sont
+ * encore achetables — « 07 pièces » sous le titre d'une collection dit ce qu'on
+ * trouvera derrière sans rien déflorer.
  */
 export const shopCollectionsQuery = /* GraphQL */ `
   query ShopCollections($first: Int = 20, $products: Int = 100) {
@@ -260,6 +276,13 @@ export const shopCollectionsQuery = /* GraphQL */ `
         products(first: $products) {
           nodes {
             id
+            availableForSale
+            variants(first: 50) {
+              nodes {
+                availableForSale
+                currentlyNotInStock
+              }
+            }
           }
         }
       }

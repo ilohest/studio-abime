@@ -199,7 +199,12 @@ watch(
               </p>
 
               <div class="cart__controls">
-                <div class="cart__stepper" role="group" :aria-label="props.labels.quantity">
+                <div
+                  v-if="line.maxQuantity !== 1"
+                  class="cart__stepper"
+                  role="group"
+                  :aria-label="props.labels.quantity"
+                >
                   <button
                     type="button"
                     class="cart__step"
@@ -220,7 +225,12 @@ watch(
                     type="button"
                     class="cart__step"
                     :aria-label="props.labels.increase"
-                    :disabled="cartState.busy"
+                    :disabled="
+                      cartState.busy ||
+                      (line.maxQuantity !== null &&
+                        line.maxQuantity > 0 &&
+                        line.quantity >= line.maxQuantity)
+                    "
                     @click="setQuantity(line.id, line.quantity + 1)"
                   >
                     +

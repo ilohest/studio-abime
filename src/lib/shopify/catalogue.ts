@@ -1,6 +1,12 @@
 import { shopifyFetch } from './client';
 import { shopifyConfigured } from './env';
-import { COMMON_FACTS, EDITION_MAX, EDITION_SHOW, FAMILIES, toFamily } from './families';
+import {
+  COMMON_FACTS,
+  FAMILIES,
+  GAUGE_SHOW,
+  PRODUCT_CONDITION,
+  toFamily,
+} from './families';
 import {
   collectionByHandleQuery,
   collectionsQuery,
@@ -54,11 +60,17 @@ interface RawMedia {
   sources?: VideoSource[];
 }
 
-interface RawProductCard {
+interface RawProductAvailability {
+  availableForSale: boolean;
+  variants: {
+    nodes: Array<{ availableForSale: boolean; currentlyNotInStock: boolean }>;
+  };
+}
+
+interface RawProductCard extends RawProductAvailability {
   id: string;
   handle: string;
   title: string;
-  availableForSale: boolean;
   productType: string | null;
   excerpt: string | null;
   media: { nodes: RawMedia[] };
@@ -78,10 +90,11 @@ interface RawVariant {
   title: string;
   sku: string | null;
   availableForSale: boolean;
+  currentlyNotInStock: boolean;
+  quantityAvailable?: number | null;
   price: Money;
   compareAtPrice: Money | null;
   selectedOptions: Array<{ name: string; value: string }>;
-  editionMax: { value: string } | null;
 }
 
 interface RawProduct extends RawProductCard {
@@ -181,74 +194,36 @@ function readFact(fact: FamilyFact, index: Map<string, RawMetafield>): ProductFa
 }
 
 /**
- * La jauge d'édition limitée : « 30 » exemplaires, « 12 » places.
- *
- * Volontairement une quantité totale et non un restant. Afficher « 8 sur 30 »
- * demanderait `quantityAvailable`, donc la portée
- * `unauthenticated_read_product_inventory`, que l'app Headless n'a pas (voir
- * la note dans `types.ts`). Annoncer la taille de l'édition tient la promesse
- * du champ sans mentir sur ce qu'on sait.
- *
- * La valeur est lue sur le produit d'abord, sur les variantes ensuite : selon
- * le niveau où la définition a été créée dans l'admin, l'un des deux répond.
- * Quand les variantes ne s'accordent pas — un A4 tiré à 50, un A2 à 20 — on
- * affiche la fourchette plutôt qu'un chiffre choisi au hasard.
- */
-function toEditionFact(
-  family: ProductFamily | null,
-  index: Map<string, RawMetafield>,
-  variants: ProductVariant[],
-): ProductFact | null {
-  if (!family) return null;
-  if (index.get(`${EDITION_SHOW.namespace}.${EDITION_SHOW.key}`)?.value !== 'true') return null;
-
-  const label = FAMILIES[family].editionLabel;
-
-  const onProduct = Number(index.get(`${EDITION_MAX.namespace}.${EDITION_MAX.key}`)?.value);
-  if (Number.isFinite(onProduct) && onProduct > 0) return { label, value: String(onProduct) };
-
-  const onVariants = variants
-    .map((variant) => variant.editionMax)
-    .filter((max): max is number => typeof max === 'number' && max > 0);
-
-  if (onVariants.length === 0) return null;
-
-  const low = Math.min(...onVariants);
-  const high = Math.max(...onVariants);
-
-  return { label, value: low === high ? String(low) : `${low}–${high}` };
-}
-
-/**
- * Fiche technique d'un produit : les champs de sa famille, puis la jauge, puis
- * les champs communs. Un produit sans famille n'affiche que les communs.
+ * Fiche technique d'un produit : les champs de sa famille, puis les champs
+ * communs. Un produit sans famille n'affiche que les communs.
  */
 function toFacts(
   family: ProductFamily | null,
   index: Map<string, RawMetafield>,
-  variants: ProductVariant[],
 ): ProductFact[] {
   const declared = family ? FAMILIES[family].facts : [];
 
   return [
     ...declared.map((fact) => readFact(fact, index)),
-    toEditionFact(family, index, variants),
     ...COMMON_FACTS.map((fact) => readFact(fact, index)),
   ].filter((fact): fact is ProductFact => fact !== null);
 }
 
 function toVariant(raw: RawVariant): ProductVariant {
-  const max = Number(raw.editionMax?.value);
+  const rawQuantity =
+    typeof raw.quantityAvailable === 'number' ? Math.max(0, raw.quantityAvailable) : null;
+  const inventoryIsNotTracked =
+    raw.availableForSale && !raw.currentlyNotInStock && rawQuantity === 0;
 
   return {
     id: raw.id,
     title: raw.title,
     sku: raw.sku,
-    availableForSale: raw.availableForSale,
+    availableForSale: raw.availableForSale && !raw.currentlyNotInStock,
+    quantityAvailable: inventoryIsNotTracked ? null : rawQuantity,
     price: raw.price,
     compareAtPrice: raw.compareAtPrice,
     selectedOptions: raw.selectedOptions,
-    editionMax: Number.isFinite(max) && max > 0 ? max : null,
   };
 }
 
@@ -284,9 +259,25 @@ function toProductCard(raw: RawProductCard): ProductCard {
   };
 }
 
+/**
+ * Un produit reste visible si au moins une variante peut réellement être
+ * achetée sans être en rupture. `currentlyNotInStock` distingue la vente en
+ * rupture d'un produit disponible dont l'inventaire n'est pas suivi : tous deux
+ * peuvent annoncer une quantité nulle, mais seul le premier doit disparaître.
+ */
+function isProductInStock(raw: RawProductAvailability): boolean {
+  if (!raw.availableForSale) return false;
+
+  return raw.variants.nodes.some(
+    (variant) =>
+      variant.availableForSale &&
+      !variant.currentlyNotInStock,
+  );
+}
+
 /* ── Lecture ────────────────────────────────────────────────────────────── */
 
-/** Fiche d'un tirage. `null` si le handle n'existe pas ou n'est plus publié. */
+/** Fiche d'un tirage. `null` s'il n'existe pas, n'est plus publié ou est épuisé. */
 export async function getProductByHandle(handle: string): Promise<Product | null> {
   const data = await shopifyFetch<{ product: RawProduct | null }>({
     query: productByHandleQuery,
@@ -295,7 +286,7 @@ export async function getProductByHandle(handle: string): Promise<Product | null
   });
 
   const raw = data.product;
-  if (!raw) return null;
+  if (!raw || !isProductInStock(raw)) return null;
 
   const card = toProductCard(raw);
   const variants = raw.variants.nodes.map(toVariant);
@@ -307,14 +298,16 @@ export async function getProductByHandle(handle: string): Promise<Product | null
     tags: raw.tags,
     media: raw.allMedia.nodes.map(toMedia),
     variants,
-    facts: toFacts(card.family, metafields, variants),
-    showEdition: metafields.get(`${EDITION_SHOW.namespace}.${EDITION_SHOW.key}`)?.value === 'true',
+    facts: toFacts(card.family, metafields),
+    hasCondition: readFact(PRODUCT_CONDITION, metafields) !== null,
+    showGauge: metafields.get(`${GAUGE_SHOW.namespace}.${GAUGE_SHOW.key}`)?.value === 'true',
+    collectionHandles: raw.collections.nodes.map((collection) => collection.handle),
     primaryCollectionHandle: raw.collections.nodes[0]?.handle ?? null,
   };
 }
 
 /**
- * Identifiants d'URL de tous les tirages — alimente `getStaticPaths()`.
+ * Identifiants d'URL des tirages encore achetables — alimente `getStaticPaths()`.
  *
  * Requête volontairement minimale : au build, on n'a besoin que des handles.
  * Le plafond de 250 est celui de l'API ; au-delà il faudra paginer, ce qui n'a
@@ -323,13 +316,17 @@ export async function getProductByHandle(handle: string): Promise<Product | null
 export async function getProductHandles(): Promise<string[]> {
   if (!shopifyConfigured) return [];
 
-  const data = await shopifyFetch<{ products: { nodes: Array<{ handle: string }> } }>({
+  const data = await shopifyFetch<{
+    products: { nodes: Array<RawProductAvailability & { handle: string }> };
+  }>({
     query: productHandlesQuery,
     variables: { first: 250 },
     fallback: { products: { nodes: [] } },
   });
 
-  return data.products.nodes.map((node) => node.handle);
+  return data.products.nodes
+    .filter(isProductInStock)
+    .map((node) => node.handle);
 }
 
 /** Collections publiées, pour la navigation de la boutique. */
@@ -368,7 +365,7 @@ export async function getShopCollections(): Promise<CollectionCard[]> {
         title: string;
         description: string | null;
         image: ShopImage | null;
-        products: { nodes: Array<{ id: string }> };
+        products: { nodes: RawProductAvailability[] };
       }>;
     };
   }>({
@@ -383,7 +380,7 @@ export async function getShopCollections(): Promise<CollectionCard[]> {
     title: node.title,
     description: node.description?.trim() ?? '',
     image: node.image,
-    count: node.products.nodes.length,
+    count: node.products.nodes.filter(isProductInStock).length,
   }));
 }
 
@@ -416,7 +413,7 @@ export async function getCollectionHandles(): Promise<string[]> {
   return collections.map((collection) => collection.handle);
 }
 
-/** Une collection et ses tirages. `null` si le handle n'existe pas ou n'est plus publié. */
+/** Une collection et ses tirages disponibles. `null` si elle n'existe pas ou n'est plus publiée. */
 export async function getCollectionByHandle(handle: string): Promise<Collection | null> {
   const data = await shopifyFetch<{ collection: RawCollection | null }>({
     query: collectionByHandleQuery,
@@ -433,7 +430,9 @@ export async function getCollectionByHandle(handle: string): Promise<Collection 
     title: raw.title,
     descriptionHtml: raw.descriptionHtml ?? '',
     image: raw.image,
-    products: raw.products.nodes.map(toProductCard),
+    products: raw.products.nodes
+      .filter(isProductInStock)
+      .map(toProductCard),
   };
 }
 

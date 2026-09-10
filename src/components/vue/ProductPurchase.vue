@@ -13,13 +13,15 @@
  * fourchette de prix et formats disponibles sont rendus par Astro — seul l'achat
  * demande l'hydratation.
  */
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { add, cartState } from '~/lib/shopify/cartStore';
 import { fetchInventory } from '~/lib/shopify/inventory';
 
 export interface VariantView {
   id: string;
   available: boolean;
+  /** Stock reçu au rendu serveur, rafraîchi ensuite dans le navigateur. */
+  initialStock: number | null;
   priceLabel: string;
   compareAtLabel: string | null;
   /** Valeur choisie sur chaque axe : `{ Format: 'A2 – 420 x 594 mm' }`. */
@@ -31,9 +33,12 @@ const props = defineProps<{
   handle: string;
   options: Array<{ name: string; values: string[] }>;
   variants: VariantView[];
+  /** La vitrine a le droit de lire le stock et peut donc borner la quantité. */
+  fetchInventory: boolean;
   /**
-   * La cliente a demandé la jauge sur cette fiche. Faux, on ne va même pas
-   * chercher le stock : pas de requête inutile sur un tirage courant.
+   * La cliente a demandé à rendre le stock visible sur cette fiche. Cette
+   * option ne gouverne que le libellé : le stock peut quand même être lu pour
+   * borner la quantité quand `fetchInventory` est vrai.
    */
   showRemaining: boolean;
   labels: {
@@ -45,19 +50,18 @@ const props = defineProps<{
     quantity: string;
     decrease: string;
     increase: string;
-    /** Décompte accordé à la famille : « places restantes », « exemplaires restants ». */
-    remaining: string;
+    /** Décompte accordé à la nature du produit et au nombre. */
+    remaining: { one: string; other: string };
   };
 }>();
 
 const quantity = ref(1);
+/* Garde l'état SSR et le premier rendu client identiques pendant l'initialisation du panier. */
+const hydrated = ref(false);
+const isBusy = computed(() => hydrated.value && cartState.busy);
 
 function decrease(): void {
   quantity.value = Math.max(1, quantity.value - 1);
-}
-
-function increase(): void {
-  quantity.value += 1;
 }
 
 /**
@@ -89,7 +93,7 @@ function select(optionName: string, value: string): void {
   selected.value = { ...selected.value, [optionName]: value };
 }
 
-const canBuy = computed(() => Boolean(currentVariant.value?.available) && !cartState.busy);
+const canBuy = computed(() => Boolean(currentVariant.value?.available) && !isBusy.value);
 
 /*
   Stock lu à l'hydratation, jamais au build : la page est statique, le nombre
@@ -97,20 +101,56 @@ const canBuy = computed(() => Boolean(currentVariant.value?.available) && !cartS
   d'inventaire manque — la carte reste vide et la fiche n'annonce que le total
   déjà rendu par Astro.
 */
-const remaining = ref<Map<string, number>>(new Map());
+const remaining = ref<Map<string, number>>(
+  new Map(
+    props.variants
+      .filter((variant) => variant.initialStock !== null)
+      .map((variant) => [variant.id, variant.initialStock as number]),
+  ),
+);
 
 onMounted(async () => {
-  if (!props.showRemaining) return;
-  remaining.value = await fetchInventory(props.handle);
+  hydrated.value = true;
+  if (!props.fetchInventory) return;
+  const liveInventory = await fetchInventory(props.handle);
+  /* Une panne ponctuelle ne doit pas effacer l'amorce serveur encore utile. */
+  if (liveInventory.size > 0) remaining.value = liveInventory;
+});
+
+/** Stock suivi de la variante choisie, ou `null` quand Shopify ne le suit pas. */
+const currentStock = computed(() => {
+  const variant = currentVariant.value;
+  if (!variant) return null;
+  return remaining.value.get(variant.id) ?? null;
+});
+
+/**
+ * Une pièce unique n'offre aucun choix : le pas-à-pas disparaît et la
+ * quantité reste à 1. Pour les autres stocks connus, le bouton + s'arrête au
+ * maximum réel au lieu de laisser Shopify refuser l'ajout après coup.
+ */
+const showQuantityStepper = computed(() => currentStock.value !== 1);
+
+function increase(): void {
+  const stock = currentStock.value;
+  if (stock !== null && stock > 0 && quantity.value >= stock) return;
+  quantity.value += 1;
+}
+
+watch([() => currentVariant.value?.id, currentStock], () => {
+  const stock = currentStock.value;
+  quantity.value = stock !== null && stock > 0 ? Math.min(quantity.value, stock) : 1;
 });
 
 /** « 12 places restantes » — `null` quand la variante ne suit pas son stock. */
 const remainingLabel = computed(() => {
+  if (!props.showRemaining) return null;
   const variant = currentVariant.value;
   if (!variant) return null;
 
   const left = remaining.value.get(variant.id);
-  return left === undefined ? null : `${left} ${props.labels.remaining}`;
+  if (left === undefined) return null;
+  return `${left} ${left === 1 ? props.labels.remaining.one : props.labels.remaining.other}`;
 });
 
 async function onSubmit(): Promise<void> {
@@ -164,12 +204,17 @@ async function onSubmit(): Promise<void> {
     </fieldset>
 
     <div class="purchase__action">
-      <div class="purchase__stepper" role="group" :aria-label="labels.quantity">
+      <div
+        v-if="showQuantityStepper"
+        class="purchase__stepper"
+        role="group"
+        :aria-label="labels.quantity"
+      >
         <button
           type="button"
           class="purchase__step"
           :aria-label="labels.decrease"
-          :disabled="cartState.busy || quantity <= 1"
+          :disabled="isBusy || quantity <= 1"
           @click="decrease"
         >
           &minus;
@@ -179,7 +224,10 @@ async function onSubmit(): Promise<void> {
           type="button"
           class="purchase__step"
           :aria-label="labels.increase"
-          :disabled="cartState.busy"
+          :disabled="
+            isBusy ||
+            (currentStock !== null && currentStock > 0 && quantity >= currentStock)
+          "
           @click="increase"
         >
           +
@@ -188,7 +236,7 @@ async function onSubmit(): Promise<void> {
 
       <button class="button-minimal purchase__submit" type="submit" :disabled="!canBuy">
         <span class="button-minimal__label">
-          <template v-if="cartState.busy">{{ labels.adding }}</template>
+          <template v-if="isBusy">{{ labels.adding }}</template>
           <template v-else-if="!currentVariant">{{ labels.unavailable }}</template>
           <template v-else-if="!currentVariant.available">{{ labels.soldOut }}</template>
           <template v-else>{{ labels.addToCart }}</template>
@@ -197,7 +245,7 @@ async function onSubmit(): Promise<void> {
       </button>
     </div>
 
-    <p v-if="cartState.error" class="purchase__error type-annotation" role="alert">
+    <p v-if="hydrated && cartState.error" class="purchase__error type-annotation" role="alert">
       {{ labels.error }}
     </p>
   </form>

@@ -5,13 +5,13 @@ import ShopProductGrid from '~/components/ShopProductGrid.astro';
 import ProjectCatalogRail from '~/components/ProjectCatalogRail.astro';
 import ProductPurchase from '~/components/vue/ProductPurchase.vue';
 
-import { shopIndexPath } from '~/i18n/routes';
+import { collectionPath, shopIndexPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
 import { formatMoney } from '~/lib/shopify/catalogue';
-import { FAMILIES } from '~/lib/shopify/families';
+import { FAMILIES, toFamilyFromCollections } from '~/lib/shopify/families';
 import { inventoryScopeGranted } from '~/lib/shopify/env';
 import type { Locale } from '~/i18n/config';
-import type { Product, ProductCard } from '~/lib/shopify/types';
+import type { Collection, Product, ProductCard } from '~/lib/shopify/types';
 import type { VariantView } from '~/components/vue/ProductPurchase.vue';
 
 /**
@@ -29,13 +29,22 @@ import type { VariantView } from '~/components/vue/ProductPurchase.vue';
  */
 interface Props {
   product: Product;
+  /** Collection principale, commune au fil d'Ariane et aux suggestions. */
+  collection: Pick<Collection, 'handle' | 'title'> | null;
   /** Autres tirages de la même collection — vide si le tirage n'en a aucune. */
   related: ProductCard[];
   locale: Locale;
 }
 
-const { product, related, locale } = Astro.props;
+const { product, collection, related, locale } = Astro.props;
 const t = useTranslations(locale);
+/* La collection fait foi pour le discours d'achat ; le type reste un repli. */
+const purchaseFamily = toFamilyFromCollections(product.collectionHandles) ?? product.family;
+const remainingKeys = product.hasCondition
+  ? ({ one: 'shop.copyRemaining', other: 'shop.copiesRemaining' } as const)
+  : product.family
+    ? FAMILIES[product.family].remainingLabels
+    : ({ one: 'shop.copyRemaining', other: 'shop.copiesRemaining' } as const);
 
 const mediaLabels = { video: t('shop.video'), noVisual: t('shop.noVisual') };
 const MEDIA_SIZES = '(max-width: 899px) 100vw, 55vw';
@@ -47,6 +56,7 @@ const MEDIA_SIZES = '(max-width: 899px) 100vw, 55vw';
 const variantViews: VariantView[] = product.variants.map((variant) => ({
   id: variant.id,
   available: variant.availableForSale,
+  initialStock: variant.quantityAvailable,
   priceLabel: formatMoney(variant.price, `${locale}-BE`),
   compareAtLabel: variant.compareAtPrice ? formatMoney(variant.compareAtPrice, `${locale}-BE`) : null,
   options: Object.fromEntries(variant.selectedOptions.map((option) => [option.name, option.value])),
@@ -54,13 +64,12 @@ const variantViews: VariantView[] = product.variants.map((variant) => ({
 
 const purchaseLabels = {
   /*
-    Le bouton porte la famille : on ne met pas un tirage au panier comme on
-    s'inscrit à une formation. Le libellé reste en code — c'est de la mise en
-    scène, pas du contenu que le back-office aurait à éditer. Un produit sans
-    famille retombe sur la formule neutre.
+    Le bouton porte la collection : on ne met pas un tirage au panier comme on
+    s'inscrit à une formation. Le Type de produit sert de repli aux anciennes
+    fiches hors collection ; sans l'un ni l'autre, la formule reste neutre.
   */
-  addToCart: t(product.family ? FAMILIES[product.family].cta : 'shop.addToCart'),
-  remaining: t(product.family ? FAMILIES[product.family].remainingLabel : 'shop.copiesRemaining'),
+  addToCart: t(purchaseFamily ? FAMILIES[purchaseFamily].cta : 'shop.addToCart'),
+  remaining: { one: t(remainingKeys.one), other: t(remainingKeys.other) },
   adding: t('shop.adding'),
   soldOut: t('shop.soldOut'),
   unavailable: t('shop.unavailable'),
@@ -78,10 +87,23 @@ const priceFallback =
 ---
 
 <article class="product container-wide py-(--spacing-section)">
-  <a href={shopIndexPath(locale)} class="button-minimal product__back">
-    <span class="button-minimal__label">{t('shop.back')}</span>
-    <span class="button-minimal__arrow product__back-arrow" aria-hidden="true">↲</span>
-  </a>
+  <nav class="product__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
+    <ol role="list">
+      <li>
+        <a class="link-underline" href={shopIndexPath(locale)}>{t('shop.title')}</a>
+      </li>
+      {collection && (
+        <li>
+          <span class="product__breadcrumb-separator" aria-hidden="true">/</span>
+          <a class="link-underline" href={collectionPath(locale, collection.handle)}>{collection.title}</a>
+        </li>
+      )}
+      <li aria-current="page">
+        <span class="product__breadcrumb-separator" aria-hidden="true">/</span>
+        <span>{product.title}</span>
+      </li>
+    </ol>
+  </nav>
 
   <div class="product__layout">
     {/*
@@ -126,17 +148,18 @@ const priceFallback =
       </noscript>
 
       {/*
-        `showRemaining` conjugue trois conditions : la cliente a coché la jauge
-        sur cette fiche, le produit appartient à une famille, et le jeton a la
-        portée d'inventaire. Faute d'une seule, l'îlot n'émet aucune requête et
-        la fiche s'en tient au total rendu ci-dessus.
+        Le stock sert toujours à borner la quantité quand la portée est
+        disponible. Son affichage reste, lui, conditionné par la jauge : une
+        fiche peut donc masquer le décompte tout en empêchant de demander deux
+        exemplaires quand il n'en reste qu'un.
       */}
       <ProductPurchase
         client:visible
         handle={product.handle}
         options={product.options}
         variants={variantViews}
-        showRemaining={product.showEdition && product.family !== null && inventoryScopeGranted}
+        fetchInventory={inventoryScopeGranted}
+        showRemaining={product.showGauge && product.family !== null && inventoryScopeGranted}
         labels={purchaseLabels}
       />
 
@@ -149,7 +172,7 @@ const priceFallback =
       {/*
         Fiche technique : uniquement les champs que la famille du produit
         déclare, dans son ordre, et seulement ceux qui sont remplis. Une
-        formation montre sa date et ses prérequis, un tirage son édition —
+        formation montre sa date et ses prérequis, un livre son état —
         jamais l'inverse, même si les deux définitions existent côté admin.
       */}
       {product.facts.length > 0 && (
@@ -228,21 +251,37 @@ const priceFallback =
 </article>
 
 <style>
-  /* Même motif que le retour aux expériences et au journal : la flèche s'inverse au survol. */
-  .product__back {
-    color: var(--color-ink);
+  .product__breadcrumb {
     margin-bottom: clamp(2rem, 5vw, 3.5rem);
+    color: var(--color-muted);
   }
 
-  .product__back:hover .product__back-arrow {
-    transform: translate(-0.18em, 0.1em);
+  .product__breadcrumb ol,
+  .product__breadcrumb li {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .product__back-arrow,
-    .product__back:hover .product__back-arrow {
-      transform: none;
-    }
+  .product__breadcrumb ol {
+    gap: 0.35rem 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .product__breadcrumb a {
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .product__breadcrumb a:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.2rem;
+  }
+
+  .product__breadcrumb-separator {
+    margin-inline: 0.55rem;
+    color: var(--color-line);
   }
 
   /*

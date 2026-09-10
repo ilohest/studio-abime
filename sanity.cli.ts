@@ -30,5 +30,14 @@ export default defineCliConfig({
    * quand l'URL désigne une vue plutôt qu'un fichier — est réglé côté
    * hébergeur, par `not_found_handling` dans `wrangler.studio.jsonc`.
    */
-  vite: (config) => ({ ...config, publicDir: 'sanity/static' }),
+  vite: (config) => ({
+    ...config,
+    publicDir: 'sanity/static',
+    /*
+     * Le sélecteur des liens de l’index lit le catalogue Shopify depuis le
+     * navigateur. Ces variables sont déjà publiques côté Astro : n’exposer au
+     * Studio que ce sous-ensemble, jamais une variable serveur arbitraire.
+     */
+    envPrefix: ['SANITY_STUDIO_', 'PUBLIC_SHOPIFY_'],
+  }),
 });

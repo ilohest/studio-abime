@@ -8,7 +8,7 @@
     "start": "astro dev",
     "studio:dev": "sanity dev",
     "studio:build": "sanity build dist-studio",
-    "build": "astro check && astro build",
+    "build": "astro check && astro build && npm run check:invisible",
     "preview": "astro build && wrangler dev --config dist/server/wrangler.json",
     "astro": "astro",
     "sanity": "sanity",
@@ -21,6 +21,7 @@
     "home:seed": "node sanity/seed/build-home.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",
     "typecheck": "astro check",
+    "check:invisible": "node scripts/check-invisible-chars.mjs",
     "home:testimonial": "node --env-file=.env scripts/swap-home-testimonial.mjs"
   },
   "dependencies": {

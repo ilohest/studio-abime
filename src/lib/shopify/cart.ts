@@ -1,4 +1,5 @@
 import { shopifyFetch } from './client';
+import { inventoryScopeGranted } from './env';
 import type { Money, ShopImage } from './types';
 
 /**
@@ -27,6 +28,8 @@ export interface CartLine {
   image: ShopImage | null;
   unitPrice: Money;
   linePrice: Money;
+  /** Stock courant, ou `null` lorsque la variante ne suit pas son inventaire. */
+  maxQuantity: number | null;
 }
 
 export interface Cart {
@@ -63,6 +66,9 @@ const CART_FRAGMENT = /* GraphQL */ `
           ... on ProductVariant {
             id
             title
+            availableForSale
+            currentlyNotInStock
+            ${inventoryScopeGranted ? 'quantityAvailable' : ''}
             price {
               amount
               currencyCode
@@ -113,6 +119,9 @@ interface RawCart {
       merchandise: {
         id: string;
         title: string;
+        availableForSale: boolean;
+        currentlyNotInStock: boolean;
+        quantityAvailable?: number | null;
         price: Money;
         image: ShopImage | null;
         product: {
@@ -146,6 +155,15 @@ function toCart(raw: RawCart): Cart {
       image: line.merchandise.image ?? line.merchandise.product.media.nodes[0]?.previewImage ?? null,
       unitPrice: line.merchandise.price,
       linePrice: line.cost.totalAmount,
+      maxQuantity:
+        typeof line.merchandise.quantityAvailable === 'number' &&
+        !(
+          line.merchandise.quantityAvailable === 0 &&
+          line.merchandise.availableForSale &&
+          !line.merchandise.currentlyNotInStock
+        )
+          ? Math.max(0, line.merchandise.quantityAvailable)
+          : null,
     })),
   };
 }

@@ -120,6 +120,7 @@ let shopProducts: ShopProductCard[] = [];
 let shopCollections: ShopCollectionCard[] = [];
 let shopPage: ShopPage | null = null;
 let shopProduct: ShopProduct | null = null;
+let shopProductCollection: ShopCollection | null = null;
 let shopCollection: ShopCollection | null = null;
 let shopCollectionFolio: string | null = null;
 let shopRelated: ShopProductCard[] = [];
@@ -151,6 +152,7 @@ if (route.kind === 'product') {
 
   if (shopProduct.primaryCollectionHandle) {
     const collection = await getCollectionByHandle(shopProduct.primaryCollectionHandle);
+    shopProductCollection = collection;
     // Le tirage courant ne se suggère pas lui-même.
     shopRelated = (collection?.products ?? []).filter((p) => p.id !== shopProduct!.id).slice(0, 4);
   }
@@ -444,7 +446,7 @@ const jsonLd = buildPageGraph({
   project,
   post,
   product: shopProduct,
-  collection: shopCollection,
+  collection: shopCollection ?? shopProductCollection,
   projects,
   posts,
   products: shopProducts,
@@ -501,7 +503,16 @@ const jsonLd = buildPageGraph({
 
   {route.kind === 'contact' && contactPage && <ContactPage page={contactPage} locale={locale} />}
 
-  {shopProduct && <ProductPage product={shopProduct} related={shopRelated} locale={locale} />}
+  {
+    shopProduct && (
+      <ProductPage
+        product={shopProduct}
+        collection={shopProductCollection}
+        related={shopRelated}
+        locale={locale}
+      />
+    )
+  }
 
   {route.kind === 'orderConfirmation' && <OrderConfirmation locale={locale} />}
 

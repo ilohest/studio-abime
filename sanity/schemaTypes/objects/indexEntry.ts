@@ -1,5 +1,7 @@
 import { defineArrayMember, defineField, defineType } from 'sanity';
 import { sameLanguageFilter } from '../../lib/i18n';
+import { IndexLinkInput } from '../../components/IndexLinkInput';
+import { IndexWorksInput } from '../../components/IndexWorksInput';
 
 /**
  * Une entrée de l'index qui referme la page Contact.
@@ -32,22 +34,22 @@ const indexWork = defineType({
       name: 'label',
       title: 'Titre affiché',
       type: 'string',
-      description:
-        'Laisser vide pour reprendre le titre du document. À ne remplir que si l’index doit citer l’œuvre sous un autre nom.',
+      hidden: true,
+      readOnly: true,
+      deprecated: { reason: 'Le titre du document est maintenant toujours repris automatiquement.' },
     }),
     defineField({
       name: 'year',
       title: 'Année',
       type: 'string',
-      description: 'Affichée entre parenthèses, comme dans un index de livre : « (2024) ».',
+      hidden: true,
+      readOnly: true,
+      deprecated: { reason: 'L’année n’est plus affichée dans l’index.' },
     }),
   ],
   preview: {
-    select: { label: 'label', title: 'reference.title', year: 'year' },
-    prepare: ({ label, title, year }) => ({
-      title: label || title || 'Œuvre',
-      subtitle: year || undefined,
-    }),
+    select: { title: 'reference.title' },
+    prepare: ({ title }) => ({ title: title || 'Œuvre' }),
   },
 });
 
@@ -62,6 +64,7 @@ const indexLink = defineType({
   name: 'indexLink',
   title: 'Lien',
   type: 'object',
+  components: { input: IndexLinkInput },
   fields: [
     defineField({
       name: 'internal',
@@ -75,7 +78,42 @@ const indexLink = defineType({
         { type: 'journalPage' },
       ],
       options: { filter: sameLanguageFilter },
-      validation: (rule) => rule.required(),
+      validation: (rule) =>
+        rule.custom((value, context) => {
+          const parent = context.parent as
+            | { shopifyType?: string; externalUrl?: string }
+            | undefined;
+          return value || parent?.shopifyType || parent?.externalUrl?.trim()
+            ? true
+            : 'Sélectionner une destination.';
+        }),
+    }),
+    defineField({
+      name: 'shopifyType',
+      title: 'Type de destination Shopify',
+      type: 'string',
+      options: { list: ['shop', 'collection', 'product'] },
+      hidden: true,
+    }),
+    defineField({
+      name: 'shopifyHandle',
+      title: 'Identifiant Shopify',
+      type: 'string',
+      hidden: true,
+    }),
+    defineField({
+      name: 'shopifyTitle',
+      title: 'Titre Shopify',
+      type: 'string',
+      hidden: true,
+    }),
+    defineField({
+      name: 'externalUrl',
+      title: 'URL ou chemin',
+      type: 'url',
+      hidden: true,
+      validation: (rule) =>
+        rule.uri({ scheme: ['http', 'https', 'mailto', 'tel'], allowRelative: true }),
     }),
     defineField({
       name: 'openInNewTab',
@@ -85,8 +123,14 @@ const indexLink = defineType({
     }),
   ],
   preview: {
-    select: { title: 'internal.title' },
-    prepare: ({ title }) => ({ title: title || 'Destination' }),
+    select: {
+      title: 'internal.title',
+      shopifyTitle: 'shopifyTitle',
+      externalUrl: 'externalUrl',
+    },
+    prepare: ({ title, shopifyTitle, externalUrl }) => ({
+      title: title || shopifyTitle || externalUrl || 'Destination',
+    }),
   },
 });
 
@@ -132,7 +176,9 @@ const indexEntry = defineType({
       title: 'Œuvres citées',
       type: 'array',
       of: [defineArrayMember({ type: 'indexWork' })],
-      description: 'Les sous-entrées en italique : projets et articles où le terme est à l’œuvre.',
+      components: { input: IndexWorksInput },
+      description:
+        'Ajouter directement les projets et articles où le terme est à l’œuvre.',
     }),
   ],
   preview: {

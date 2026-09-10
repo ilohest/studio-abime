@@ -46,14 +46,17 @@ const LINK = /* groq */ `{
 /**
  * Lien d'une entrée d'index — un type à part, et donc un fragment à part.
  *
- * `indexLink` ne porte QUE une destination et l'ouverture dans un onglet :
- * c'est le TERME lui-même qui devient cliquable, il n'y a donc ni libellé ni
- * URL externe à saisir. Le fragment commun leur en réclamait trois de plus,
- * absents du schéma — GROQ renvoyait `null` sans rien dire, et la requête
- * décrivait un objet qui n'existe pas.
+ * `indexLink` ne porte qu'une destination et l'ouverture dans un onglet :
+ * c'est le TERME lui-même qui devient cliquable, il n'y a donc aucun libellé
+ * propre au lien. La destination peut être une référence Sanity, une ressource
+ * Shopify ou une URL/un chemin saisi librement.
  */
 const INDEX_LINK = /* groq */ `{
   openInNewTab,
+  externalUrl,
+  shopifyType,
+  shopifyHandle,
+  shopifyTitle,
   internal->{
     _id,
     _type,
@@ -574,10 +577,9 @@ export const contactPageQuery = /* groq */ `
     link ${INDEX_LINK},
     "works": coalesce(works[defined(reference->slug.current)]{
       _key,
-      year,
       "type": reference->_type,
       "slug": reference->slug.current,
-      "title": coalesce(label, reference->title)
+      "title": reference->title
     }, [])
   }, []),
   seo ${SEO}

@@ -298,16 +298,15 @@ interface Crumb {
 /**
  * Fil d'Ariane de la page courante.
  *
- * Il n'existe pas à l'écran — la navigation du site vit en pied de page — mais
- * il existe dans la structure des URLs, et c'est cette structure que Google
- * affiche à la place de l'URL brute sous le titre d'un résultat. Le déclarer
- * revient à choisir « studioabime.com › Expériences › Nom du projet » plutôt
- * qu'une URL tronquée.
+ * Il suit la structure des URLs et, sur une fiche produit, le fil visible. C'est
+ * cette structure que Google peut afficher à la place de l'URL brute sous le
+ * titre d'un résultat.
  */
 function breadcrumbTrail(
   route: RouteEntry,
   locale: Locale,
   title: string,
+  collection: Pick<ShopCollection, 'handle' | 'title'> | null = null,
 ): Crumb[] {
   const t = useTranslations(locale);
   const home: Crumb = { name: 'Accueil', path: localizedPath(locale) };
@@ -332,6 +331,14 @@ function breadcrumbTrail(
       renvoie sur une 404 est pire que ne pas l'annoncer.
     */
     case 'product':
+      return [
+        home,
+        section('shop'),
+        ...(collection
+          ? [{ name: collection.title, path: collectionPath(locale, collection.handle) }]
+          : []),
+        { name: title, path: route.path },
+      ];
     case 'collection':
     case 'orderConfirmation':
       return [home, section('shop'), { name: title, path: route.path }];
@@ -657,7 +664,7 @@ export function buildPageGraph(input: PageGraphInput): JsonLdGraph {
   ];
 
   const primaryImage = imageNode(image, ids.primaryImage(canonical));
-  const crumbs = breadcrumbTrail(route, locale, title);
+  const crumbs = breadcrumbTrail(route, locale, title, input.collection);
   const breadcrumb = breadcrumbNode(crumbs, origin, canonical);
 
   /* ── L'entité décrite par la page ────────────────────────────────────── */

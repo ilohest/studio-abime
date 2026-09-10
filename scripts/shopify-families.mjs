@@ -20,9 +20,8 @@
  */
 import {
   COMMON_FACTS,
-  EDITION_MAX,
-  EDITION_SHOW,
   FAMILIES,
+  GAUGE_SHOW,
   metafieldIdentifiersLiteral,
   toFamily,
 } from '../src/lib/shopify/families.ts';
@@ -54,14 +53,6 @@ const query = `
           namespace
           key
           value
-        }
-        variants(first: 50) {
-          nodes {
-            title
-            editionMax: metafield(namespace: "${EDITION_MAX.namespace}", key: "${EDITION_MAX.key}") {
-              value
-            }
-          }
         }
       }
     }
@@ -121,15 +112,14 @@ for (const product of products) {
   console.log(`  ${heading}`);
 
   /*
-    On n'affiche que les champs de la famille du produit, plus la jauge et les
-    champs communs : c'est précisément ce que la fiche montrera. Un champ d'une
-    autre famille resté rempli par erreur n'apparaît pas — il est invisible du
-    site, donc sans effet.
+    On n'affiche que les champs de la famille du produit, l'interrupteur de
+    jauge et les champs communs : c'est précisément ce que la fiche utilisera.
+    Un champ d'une autre famille resté rempli par erreur n'apparaît pas — il est
+    invisible du site, donc sans effet.
   */
   const declared = [
     ...(family ? FAMILIES[family].facts : []),
-    EDITION_SHOW,
-    EDITION_MAX,
+    GAUGE_SHOW,
     ...COMMON_FACTS,
   ];
 
@@ -141,14 +131,6 @@ for (const product of products) {
     const mark = value ? '\x1b[32m✓\x1b[0m' : dim('·');
     const shown = value ? ` ${dim(value.length > 60 ? `${value.slice(0, 57)}…` : value)}` : '';
     console.log(`    ${mark} ${slot}${shown}`);
-  }
-
-  const perVariant = product.variants.nodes.filter((variant) => variant.editionMax?.value);
-  if (perVariant.length > 0) {
-    readable += perVariant.length;
-    for (const variant of perVariant) {
-      console.log(`    \x1b[32m✓\x1b[0m ${dim(`variante « ${variant.title} » → jauge ${variant.editionMax.value}`)}`);
-    }
   }
 
   console.log('');

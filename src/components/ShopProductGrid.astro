@@ -70,7 +70,12 @@ const EAGER_COUNT = 4;
 
       return (
         <li class="shop-card">
-          <article class="shop-card__inner">
+          <article
+            class:list={[
+              'shop-card__inner',
+              { 'shop-card__inner--has-hover': Boolean(hoverPreview?.url) },
+            ]}
+          >
             <ShopMedia
               media={product.cover}
               fallbackAlt={product.title}
@@ -111,10 +116,6 @@ const EAGER_COUNT = 4;
                   ? formatMoney(product.minPrice)
                   : `${t('shop.from')} ${formatMoney(product.minPrice)}`}
               </p>
-
-              {!product.availableForSale && (
-                <p class="shop-card__soldout">({t('shop.soldOut')})</p>
-              )}
             </div>
           </article>
         </li>
@@ -158,23 +159,42 @@ const EAGER_COUNT = 4;
     opacity: 1;
   }
 
+  /*
+    Aucun aplat entre les deux vues : le premier média passe réellement à
+    zéro d'opacité dès que la seconde vue apparaît. Les zones transparentes du
+    PNG montrent donc le fond de page, jamais l'image précédente. Au départ du
+    pointeur, le premier média attend la fin du fondu avant de revenir.
+  */
+  .shop-card__inner--has-hover :global(.shop-media__el) {
+    transition: opacity 0s linear 260ms;
+  }
+
+  .shop-card__inner--has-hover:hover :global(.shop-media__el),
+  .shop-card__inner--has-hover:focus-within :global(.shop-media__el) {
+    opacity: 0;
+    transition-delay: 0s;
+  }
+
   /* Sur écran tactile, le survol n'existe pas : la seconde vue reste masquée. */
   @media (hover: none) {
     .shop-card__hover {
       display: none;
     }
-  }
 
-  @media (prefers-reduced-motion: reduce) {
-    .shop-card__hover {
+    .shop-card__inner--has-hover :global(.shop-media__el) {
+      opacity: 1;
       transition: none;
     }
   }
 
-  /*
-    Titre et prix sur la même ligne, prix à droite ; l'état épuisé passe en
-    dessous, sur toute la largeur.
-  */
+  @media (prefers-reduced-motion: reduce) {
+    .shop-card__hover,
+    .shop-card__inner--has-hover :global(.shop-media__el) {
+      transition: none;
+    }
+  }
+
+  /* Titre et prix sur la même ligne, prix à droite. */
   .shop-card__body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -197,15 +217,6 @@ const EAGER_COUNT = 4;
     color: var(--color-muted);
     font-family: var(--font-copy);
     /* Dérivé de l'échelle plutôt qu'une valeur libre : le prix s'efface derrière le titre. */
-    font-size: calc(var(--text-copy) * 0.8);
-    letter-spacing: var(--tracking-copy);
-  }
-
-  .shop-card__soldout {
-    margin: 0;
-    grid-column: 1 / -1;
-    color: var(--color-muted);
-    font-family: var(--font-copy);
     font-size: calc(var(--text-copy) * 0.8);
     letter-spacing: var(--tracking-copy);
   }

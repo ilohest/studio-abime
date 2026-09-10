@@ -18,7 +18,16 @@ import { productInventoryQuery } from './queries';
 export type InventoryByVariant = Map<string, number>;
 
 interface RawInventory {
-  product: { variants: { nodes: Array<{ id: string; quantityAvailable: number | null }> } } | null;
+  product: {
+    variants: {
+      nodes: Array<{
+        id: string;
+        availableForSale: boolean;
+        currentlyNotInStock: boolean;
+        quantityAvailable: number | null;
+      }>;
+    };
+  } | null;
 }
 
 export async function fetchInventory(handle: string): Promise<InventoryByVariant> {
@@ -45,6 +54,13 @@ export async function fetchInventory(handle: string): Promise<InventoryByVariant
       préfère ne rien dire plutôt que d'afficher zéro.
     */
     if (typeof variant.quantityAvailable !== 'number') continue;
+    if (
+      variant.quantityAvailable === 0 &&
+      variant.availableForSale &&
+      !variant.currentlyNotInStock
+    ) {
+      continue;
+    }
     inventory.set(variant.id, Math.max(0, variant.quantityAvailable));
   }
 

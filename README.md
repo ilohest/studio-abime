@@ -49,15 +49,31 @@ Le site a besoin de deux documents pour s'afficher :
 | --- | --- |
 | `npm run dev` | serveur de développement du **site** (4321) |
 | `npm run studio:dev` | serveur de développement du **Studio** (3333) |
-| `npm run build` | vérification des types **puis** build de production du site |
+| `npm run build` | vérification des types, build de production, **puis** contrôle des caractères invisibles |
 | `npm run studio:build` | build du Studio dans `dist-studio/` |
 | `npm run preview` | build **puis** exécution locale dans le runtime Cloudflare (`wrangler`) |
 | `npm run typecheck` | `astro check` seul |
+| `npm run check:invisible` | inspecte `dist/` — ajouter `-- --fix` pour nettoyer un build déjà construit |
 | `npx sanity <cmd>` | CLI Sanity (datasets, tokens, import/export) |
 
 `npm run preview` passe par `wrangler` plutôt que par `astro preview` : c'est le
 seul moyen d'exécuter `/api/contact` dans le vrai runtime Workers, celui qui
 tournera en production. Au quotidien, `npm run dev` reste l'outil de travail.
+
+`npm run build` se termine par `npm run check:invisible`, et **échoue** si le
+site construit contient des caractères invisibles. Ceux-ci ne viennent pas du
+contenu : c'est le stega de l'édition visuelle, l'encodage qui rend chaque texte
+cliquable dans le Presentation Tool. Il n'a rien à faire dans une page publiée —
+mesuré ici, il pesait 60 % du poids des pages et emportait l'URL du Studio
+(`http://localhost:3333`) dans le HTML. Le mode d'emploi complet, et la raison
+pour laquelle une variable posée en ligne de commande ne suffit PAS à le
+désactiver — sur une clé définie à la fois dans `.env` et dans l'environnement,
+`loadEnv()` retient l'environnement mais `import.meta.env` retient le `.env` —
+sont en tête de `scripts/check-invisible-chars.mjs`.
+
+`npm run preview` appelle `astro build` directement et ne passe donc pas par ce
+contrôle : c'est un outil d'inspection locale, pas une porte de sortie vers la
+production.
 
 ---
 
@@ -682,6 +698,8 @@ Aucun token : le Studio authentifie chaque éditeur par son propre compte Sanity
 - [ ] `curl -s https://studioabime.com/sitemap.xml | grep -c '<loc>'` renvoie **30** —
       moins signifie que la boutique n'est pas passée, et elle échoue en silence ;
 - [ ] `grep -rl "/_image" dist/client --include="*.html"` ne renvoie rien après un build ;
+- [ ] `npm run check:invisible` passe au vert après un build — `npm run build` s'en charge,
+      mais un `dist/` construit autrement (`npm run preview`, build à la main) n'est pas contrôlé ;
 - [ ] `Always Use HTTPS` et `SSL/TLS → Full (strict)` activés sur la zone ;
 - [ ] les six adresses testées : apex, `www`, `.be`, `.fr` et leurs versions `http://`.
 

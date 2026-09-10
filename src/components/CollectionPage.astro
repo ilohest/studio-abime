@@ -49,13 +49,20 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
     Positionné en absolu à partir de 768px, pour que le titre et la description
     tombent exactement là où ils tombent sur `/shop`, qui n'a rien au-dessus
     des siens. En dessous, la barre mobile du menu (logo + bouton) occupe déjà
-    ce coin en position fixe : le lien y reste en flux normal, comme partout
+    ce coin en position fixe : le fil y reste en flux normal, comme partout
     ailleurs sur le site, pour ne pas se superposer à elle.
   */}
-  <a href={shopHref} class="button-minimal collection-page__all">
-    <span class="button-minimal__label">{t('shop.back')}</span>
-    <span class="button-minimal__arrow collection-page__all-arrow" aria-hidden="true">↲</span>
-  </a>
+  <nav class="collection-page__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
+    <ol role="list">
+      <li>
+        <a class="link-underline" href={shopHref}>{t('shop.title')}</a>
+      </li>
+      <li aria-current="page">
+        <span class="collection-page__breadcrumb-separator" aria-hidden="true">/</span>
+        <span>{collection.title}</span>
+      </li>
+    </ol>
+  </nav>
 
   {/*
     Valeurs reprises telles quelles de `.project-index__header` /
@@ -91,10 +98,37 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
 <style>
 
   /* Flux normal sur mobile — voir le commentaire dans le balisage. */
-  .collection-page__all {
-    display: inline-block;
+  .collection-page__breadcrumb {
     margin-bottom: clamp(2rem, 5vw, 3.5rem);
+    color: var(--color-muted);
+  }
+
+  .collection-page__breadcrumb ol,
+  .collection-page__breadcrumb li {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .collection-page__breadcrumb ol {
+    gap: 0.35rem 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .collection-page__breadcrumb a {
     color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .collection-page__breadcrumb a:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.2rem;
+  }
+
+  .collection-page__breadcrumb-separator {
+    margin-inline: 0.55rem;
+    color: var(--color-line);
   }
 
   @media (min-width: 768px) {
@@ -107,23 +141,19 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
       position: relative;
     }
 
-    .collection-page__all {
+    .collection-page__breadcrumb {
       position: absolute;
       top: clamp(1.5rem, 4vw, 2.5rem);
       inset-inline-start: 0;
+      width: max-content;
+      max-width: 100%;
       margin-bottom: 0;
+      white-space: nowrap;
     }
-  }
 
-  /* Même motif que le retour aux expériences, au journal et à la fiche produit. */
-  .collection-page__all:hover .collection-page__all-arrow {
-    transform: translate(-0.18em, 0.1em);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .collection-page__all-arrow,
-    .collection-page__all:hover .collection-page__all-arrow {
-      transform: none;
+    .collection-page__breadcrumb ol,
+    .collection-page__breadcrumb li {
+      flex-wrap: nowrap;
     }
   }
 

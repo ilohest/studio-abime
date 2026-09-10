@@ -59,21 +59,12 @@ export interface ProductVariant {
   /** Référence de l'atelier. Jamais affichée : elle identifie l'offre pour les moteurs. */
   sku: string | null;
   availableForSale: boolean;
-  /*
-    Pas de `quantityAvailable` ici volontairement : ce champ exige la portée
-    `unauthenticated_read_product_inventory`, non accordée à l'app Headless par
-    défaut. Il ne sert qu'à afficher le nombre d'exemplaires restants, c'est-à-dire
-    l'option « éditions limitées ». `availableForSale` couvre le besoin de base.
-  */
+  /** Stock au rendu initial, ou `null` si le suivi/la portée est absent. */
+  quantityAvailable: number | null;
   price: Money;
   compareAtPrice: Money | null;
   /** Valeurs choisies sur chaque axe, dans l'ordre des options du produit. */
   selectedOptions: Array<{ name: string; value: string }>;
-  /**
-   * Tirage ou nombre de places de cette variante. `null` quand la jauge est
-   * définie au niveau du produit, ou pas définie du tout.
-   */
-  editionMax: number | null;
 }
 
 /**
@@ -124,13 +115,16 @@ export interface Product extends ProductCard {
    * rien plutôt qu'une liste de définitions creuse.
    */
   facts: ProductFact[];
+  /** `true` lorsque le metafield « État » identifie un livre. */
+  hasCondition: boolean;
   /**
-   * La jauge est-elle demandée sur cette fiche ? Porte le metafield
-   * `studio.afficher_jauge`, et gouverne les deux affichages d'un seul geste :
-   * la ligne de fiche technique rendue au build et le décompte du restant
-   * ajouté à l'hydratation. Le premier sans le second serait bancal.
+   * Le stock restant doit-il être annoncé sur cette fiche ? Porte le metafield
+   * `studio.afficher_jauge`. Le chiffre vient exclusivement de l'inventaire
+   * Shopify et reste donc à jour après chaque vente.
    */
-  showEdition: boolean;
+  showGauge: boolean;
+  /** Toutes les collections du produit, notamment pour résoudre son CTA. */
+  collectionHandles: string[];
   /** Handle de la première collection du tirage — `null` s'il n'en a aucune. */
   primaryCollectionHandle: string | null;
 }

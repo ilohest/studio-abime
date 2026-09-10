@@ -294,12 +294,32 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
 /**
  * Convertit un lien Sanity en lien prêt à rendre.
  *
- * La référence prime sur l'URL : le CMS ne propose plus que des pages du site,
- * et une destination fraîchement choisie doit donc l'emporter sur l'éventuelle
- * URL héritée du temps où les deux formes coexistaient.
+ * Les destinations structurées priment sur l'URL libre. Le composant Sanity
+ * efface les autres formes lorsqu'une nouvelle destination est choisie ; cet
+ * ordre conserve aussi un rendu prévisible pour les anciennes données.
  */
 export function resolveLink(link: SanityLink | undefined | null, locale: Locale): ResolvedLink | null {
   if (!link) return null;
+
+  if (link.shopifyType) {
+    const href =
+      link.shopifyType === 'shop'
+        ? shopIndexPath(locale)
+        : link.shopifyHandle
+          ? link.shopifyType === 'collection'
+            ? collectionPath(locale, link.shopifyHandle)
+            : productPath(locale, link.shopifyHandle)
+          : null;
+
+    if (href) {
+      return {
+        label: link.label ?? link.shopifyTitle ?? '',
+        href,
+        isExternal: false,
+        openInNewTab: link.openInNewTab ?? false,
+      };
+    }
+  }
 
   const target = link.internal;
 
@@ -335,7 +355,7 @@ export function resolveLink(link: SanityLink | undefined | null, locale: Locale)
     }
   }
 
-  // Lien externe hérité : conservé au rendu tant qu'il n'a pas été rebasculé.
+  // URL absolue ou chemin relatif depuis la racine du site.
   if (!link.externalUrl) return null;
   return {
     label: link.label ?? link.externalUrl,

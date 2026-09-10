@@ -45,14 +45,13 @@ export interface Seo {
  */
 export interface SanityLink {
   label?: string;
-  /*
-    Conservé : `resolveLink()` s'en sert pour les liens externes hérités, que
-    le schéma n'expose plus à la saisie mais continue de résoudre au rendu.
-    (`kind`, lui, ne sert plus qu'à l'aperçu du Studio — il n'est donc pas
-    projeté.)
-  */
+  /** URL absolue ou chemin relatif saisi directement dans Sanity. */
   externalUrl?: string;
   openInNewTab?: boolean;
+  /** Destination issue de Shopify, absente pour les pages gérées dans Sanity. */
+  shopifyType?: 'shop' | 'collection' | 'product';
+  shopifyHandle?: string;
+  shopifyTitle?: string;
   internal?: {
     _id?: string;
     _type: 'page' | 'project' | 'post' | 'projectsPage' | 'journalPage';
@@ -486,7 +485,6 @@ export interface IndexWork {
   type: 'project' | 'post';
   slug: string;
   title: string;
-  year?: string;
 }
 
 /** Entrée d'index : un terme, sa catégorie, ses renvois, ses œuvres. */

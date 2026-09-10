@@ -28,7 +28,7 @@ export interface FamilyFact {
     Emplacement d'origine, lu seulement quand le nouveau champ est vide. Il
     couvre la reprise de saisie : les fiches déjà remplies sous `custom` ne
     perdent rien tant qu'elles n'ont pas été reprises. À retirer une fois le
-    catalogue à jour — avec les deux définitions `custom` correspondantes.
+    catalogue à jour — avec les anciennes définitions `custom` correspondantes.
   */
   legacy?: { namespace: string; key: string };
 }
@@ -36,34 +36,40 @@ export interface FamilyFact {
 interface FamilyDefinition {
   /** Valeur attendue dans « Type de produit ». La casse est tolérée à la lecture. */
   productType: string;
+  /** Collection dont l'appartenance gouverne le libellé du bouton d'achat. */
+  collectionHandle: string;
   /** Libellé du bouton d'achat. */
   cta: TranslationKey;
   /** Champs propres à la famille, dans l'ordre d'affichage. */
   facts: FamilyFact[];
-  /** Étiquette de la jauge : des places pour une formation, un tirage pour une édition. */
-  editionLabel: TranslationKey;
   /**
    * Décompte du restant, accord compris — « places restantes » contre
    * « exemplaires restants ». Le nombre est préfixé au moment du rendu.
    */
-  remainingLabel: TranslationKey;
+  remainingLabels: { one: TranslationKey; other: TranslationKey };
 }
 
-/** Emplacements de la jauge, communs aux trois familles. */
-export const EDITION_MAX = { namespace: 'studio', key: 'quantite_max' } as const;
-export const EDITION_SHOW = { namespace: 'studio', key: 'afficher_jauge' } as const;
+/** Interrupteur d'affichage du stock restant, commun aux trois familles. */
+export const GAUGE_SHOW = { namespace: 'studio', key: 'afficher_jauge' } as const;
 
 /** Champs affichés partout, quelle que soit la famille — présentés en dernier. */
+export const PRODUCT_CONDITION: FamilyFact = {
+  namespace: 'transmission',
+  key: 'etat',
+  label: 'shop.condition',
+};
+
 export const COMMON_FACTS: FamilyFact[] = [
+  PRODUCT_CONDITION,
   { namespace: 'studio', key: 'origine_production', label: 'shop.origin' },
 ];
 
 export const FAMILIES: Record<ProductFamily, FamilyDefinition> = {
   transmission: {
     productType: 'Transmission',
+    collectionHandle: 'ce-qui-se-transmet',
     cta: 'shop.ctaTransmission',
-    editionLabel: 'shop.seats',
-    remainingLabel: 'shop.seatsRemaining',
+    remainingLabels: { one: 'shop.seatRemaining', other: 'shop.seatsRemaining' },
     facts: [
       {
         namespace: 'transmission',
@@ -77,6 +83,12 @@ export const FAMILIES: Record<ProductFamily, FamilyDefinition> = {
         label: 'shop.where',
         legacy: { namespace: 'custom', key: 'ou' },
       },
+      {
+        namespace: 'transmission',
+        key: 'duree',
+        label: 'shop.duration',
+        legacy: { namespace: 'custom', key: 'duree' },
+      },
       { namespace: 'transmission', key: 'prerequis', label: 'shop.prerequisites' },
       { namespace: 'transmission', key: 'competences', label: 'shop.skills' },
       { namespace: 'transmission', key: 'apres', label: 'shop.after' },
@@ -85,17 +97,17 @@ export const FAMILIES: Record<ProductFamily, FamilyDefinition> = {
   },
   contemplation: {
     productType: 'Contemplation',
+    collectionHandle: 'ce-qui-se-contemple',
     cta: 'shop.ctaContemplation',
-    editionLabel: 'shop.edition',
-    remainingLabel: 'shop.copiesRemaining',
-    /* Rien en propre : le tirage maximum est porté par la jauge, commune. */
+    remainingLabels: { one: 'shop.copyRemaining', other: 'shop.copiesRemaining' },
+    /* Rien en propre : les informations communes suffisent. */
     facts: [],
   },
   outil: {
     productType: 'Outil',
+    collectionHandle: 'ce-qui-sutilise',
     cta: 'shop.ctaOutil',
-    editionLabel: 'shop.edition',
-    remainingLabel: 'shop.copiesRemaining',
+    remainingLabels: { one: 'shop.copyRemaining', other: 'shop.copiesRemaining' },
     facts: [{ namespace: 'outil', key: 'categorie', label: 'shop.rayon' }],
   },
 };
@@ -120,6 +132,21 @@ export function toFamily(productType: string | null): ProductFamily | null {
   return found ?? null;
 }
 
+/**
+ * Famille commerciale déduite des collections Shopify.
+ *
+ * Un produit peut appartenir à plusieurs collections : on retient la première
+ * des trois collections structurantes trouvée, sans dépendre de l'ordre dans
+ * lequel Shopify renvoie ses autres collections.
+ */
+export function toFamilyFromCollections(handles: string[]): ProductFamily | null {
+  const found = (Object.keys(FAMILIES) as ProductFamily[]).find((family) =>
+    handles.includes(FAMILIES[family].collectionHandle),
+  );
+
+  return found ?? null;
+}
+
 /** Tous les emplacements à demander au Storefront, sans doublon. */
 export function metafieldIdentifiers(): Array<{ namespace: string; key: string }> {
   const seen = new Set<string>();
@@ -132,8 +159,7 @@ export function metafieldIdentifiers(): Array<{ namespace: string; key: string }
     identifiers.push({ namespace, key });
   };
 
-  push(EDITION_MAX);
-  push(EDITION_SHOW);
+  push(GAUGE_SHOW);
 
   for (const family of Object.values(FAMILIES)) {
     for (const fact of family.facts) {

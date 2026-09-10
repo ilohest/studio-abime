@@ -7,16 +7,11 @@
  * permet d'y rentrer à nouveau. Posé après le formulaire, il retourne la page
  * de contact — d'ordinaire un cul-de-sac — en table de tout ce qui a été lu.
  *
- * ── Les folios sont vrais ──────────────────────────────────────────────────
- * « 01.2 » désigne réellement Le Labo → Philosophie, et le renvoi y mène. Les
- * numéros ne se saisissent pas dans le CMS : ils sont calculés depuis
- * `src/lib/siteIndex.ts`, la même table que lit le rail de navigation. C'est
- * ce qui empêche l'index d'être un décor — il est aussi le plan du site.
- *
  * Une œuvre dont la cible a disparu est écartée plutôt qu'affichée sans
- * destination : mieux vaut une sous-entrée en moins qu'un folio qui ment.
+ * destination : mieux vaut une sous-entrée en moins qu'un lien qui ne mène
+ * nulle part.
  */
-import { resolveWorkFolio, type ResolvedFolio } from '~/lib/siteIndex';
+import { resolveWorkFolio } from '~/lib/siteIndex';
 import { getLocaleMeta } from '~/i18n/config';
 import { resolveLink } from '~/lib/routing';
 import type { IndexEntry } from '~/lib/sanity/types';
@@ -55,10 +50,10 @@ const initial = (term: string) => {
   return /[A-Z]/.test(letter) ? letter : '—';
 };
 
-interface PreparedWork extends ResolvedFolio {
+interface PreparedWork {
   key: string;
   title: string;
-  year?: string;
+  href: string;
 }
 
 const prepared = entries
@@ -66,10 +61,10 @@ const prepared = entries
   .map((entry) => {
     const works = (entry.works ?? [])
       .map((work): PreparedWork | null => {
-        const folio = resolveWorkFolio(locale, work.type, work.slug);
-        if (!folio || !work.title) return null;
+        const target = resolveWorkFolio(locale, work.type, work.slug);
+        if (!target || !work.title) return null;
 
-        return { ...folio, key: work._key, title: work.title, year: work.year?.trim() };
+        return { href: target.href, key: work._key, title: work.title };
       })
       .filter((work): work is PreparedWork => work !== null);
 
@@ -154,10 +149,8 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
 
                   {entry.works.map((work) => (
                     <dd class="index-entry__work">
-                      <a href={work.href} title={work.label} data-folio data-cursor-interactive>
+                      <a href={work.href} data-index-work data-cursor-interactive>
                         <i>{work.title}</i>
-                        {work.year && <span class="index-entry__year"> ({work.year})</span>}
-                        <span class="index-entry__folio">{work.folio}</span>
                       </a>
                     </dd>
                   ))}
@@ -171,8 +164,8 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
       {/*
         La dernière ligne de l'index, et du site. Elle reste vide jusqu'à ce
         qu'une fiche parte : le visiteur y entre alors sous son propre nom, avec
-        le numéro de son enquête et sans folio — une entrée d'index qui n'a pas
-        encore de page, parce que cette page reste à écrire.
+        le numéro de son enquête — une entrée d'index qui n'a pas encore de page,
+        parce que cette page reste à écrire.
 
         Rien n'en sort du navigateur : c'est la fiche envoyée qui est reçue au
         studio, pas cette ligne.
@@ -259,7 +252,7 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
     color: var(--color-muted);
   }
 
-  /* Le terme cliquable : souligné au survol seulement, comme les folios. */
+  /* Le terme cliquable est souligné au survol seulement. */
   .index-entry__link {
     color: inherit;
     text-decoration: none;
@@ -268,34 +261,6 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
 
   .index-entry__link:hover,
   .index-entry__link:focus-visible {
-    text-decoration: underline;
-  }
-
-  /*
-    Les folios suivent le terme, séparés par des virgules — pas de points de
-    conduite : l'index de référence n'en a pas, et ils encombreraient des
-    colonnes déjà étroites.
-  */
-  .index-entry__folio {
-    margin-left: 0.5em;
-    font-variant-numeric: tabular-nums;
-    text-decoration: none;
-    text-underline-offset: 0.18em;
-  }
-
-  .index-entry__term .index-entry__folio + .index-entry__folio {
-    margin-left: 0;
-  }
-
-  .index-entry__term .index-entry__folio + .index-entry__folio::before {
-    content: ', ';
-    /* La virgule appartient à la liste, pas au lien : elle ne se souligne pas. */
-    display: inline-block;
-    text-decoration: none;
-  }
-
-  .index-entry__folio:hover,
-  .index-entry__folio:focus-visible {
     text-decoration: underline;
   }
 
@@ -320,7 +285,7 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
     font-style: italic;
   }
 
-  /* Les œuvres citées, en italique et datées : « Le Parnasse (1508-1511) ». */
+  /* Les œuvres citées reprennent directement le titre du document. */
   .index-entry__work a {
     text-decoration: none;
   }
@@ -329,10 +294,6 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
   .index-entry__work a:focus-visible {
     text-decoration: underline;
     text-underline-offset: 0.18em;
-  }
-
-  .index-entry__year {
-    font-style: normal;
   }
 
   .contact-index__pending {
@@ -374,23 +335,14 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
 
 <script>
   /*
-    LE RENVOI ALLUME LE RAIL.
-
-    Survoler un folio de l'index allume le point de la section correspondante
-    dans le rail de navigation — le même point qui dit « c'est ici » pour la
-    page courante et la section lue. L'index et la colonne vertébrale du site
-    se répondent donc physiquement, avec le signe que le menu emploie déjà
-    plutôt qu'avec un vocabulaire de plus.
-
-    Réservé aux pointeurs : au doigt, un survol reste collé après le geste et
-    laisserait un point allumé au hasard. Et la classe est distincte de celle du
-    rail (`is-echo`, pas `is-current`) pour ne pas entrer en conflit avec son
-    propre suivi de lecture, qui pose et retire `is-current` au défilement.
+    Au survol d'une œuvre, conserver le dialogue avec le rail de navigation :
+    le point de sa section (Expériences ou Journal) s'allume, même si son
+    numéro n'est plus affiché dans l'index.
   */
   const rail = document.querySelector<HTMLElement>('[data-page-rail]');
-  const folios = document.querySelectorAll<HTMLAnchorElement>('.contact-index [data-folio]');
+  const works = document.querySelectorAll<HTMLAnchorElement>('.contact-index [data-index-work]');
 
-  if (rail && folios.length > 0 && window.matchMedia('(hover: hover)').matches) {
+  if (rail && works.length > 0 && window.matchMedia('(hover: hover)').matches) {
     const targets = new Map<string, HTMLElement>();
 
     rail.querySelectorAll<HTMLElement>('.services-rail__group').forEach((group) => {
@@ -412,14 +364,14 @@ const slug = (letter: string) => (letter === '—' ? 'autres' : letter.toLowerCa
       lit?.classList.add('is-echo');
     };
 
-    folios.forEach((folio) => {
-      const target = targets.get(folio.getAttribute('href') ?? '') ?? null;
+    works.forEach((work) => {
+      const target = targets.get(work.getAttribute('href') ?? '') ?? null;
       if (!target) return;
 
-      folio.addEventListener('pointerenter', () => light(target));
-      folio.addEventListener('focus', () => light(target));
-      folio.addEventListener('pointerleave', () => light(null));
-      folio.addEventListener('blur', () => light(null));
+      work.addEventListener('pointerenter', () => light(target));
+      work.addEventListener('focus', () => light(target));
+      work.addEventListener('pointerleave', () => light(null));
+      work.addEventListener('blur', () => light(null));
     });
   }
 </script>
