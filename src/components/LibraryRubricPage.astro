@@ -1,0 +1,494 @@
+---
+import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import LibraryGrid from '~/components/library/LibraryGrid.astro';
+import PlateFigure, { type PlateVariant } from '~/components/library/PlateFigure.astro';
+
+import { libraryIndexPath, libraryRubricsPath } from '~/i18n/routes';
+import { useTranslations } from '~/i18n/ui';
+import type { LibraryRubricView, PostCardView } from '~/lib/journal';
+import type { Locale } from '~/i18n/config';
+
+/**
+ * Page d'une rubrique — `/bibliotheque/rubriques/{rubrique}`, et la vue
+ * « tout » qui les réunit toutes.
+ *
+ * Même geste que la page d'une collection de la boutique : on est entré par un
+ * mot, on retrouve ce mot en tête, et dessous ce qu'il contient. Une seule
+ * différence avec le shop, et elle vient du fond : un article peut appartenir à
+ * plusieurs rubriques, il paraît donc dans plusieurs planches. Ses cotes le
+ * disent sur chaque fiche.
+ *
+ * ── Sortir sans revenir en arrière ──────────────────────────────────────────
+ * L'accueil de la Bibliothèque est un texte : y retourner pour changer de
+ * rubrique obligerait à relire le paragraphe. Les autres rubriques sont donc
+ * rappelées en bas de planche — c'est la seule liste de rubriques du site, et
+ * elle est là où on en a besoin.
+ */
+interface Props {
+  /** La rubrique ouverte, ou `null` pour la vue « tout ». */
+  rubric: LibraryRubricView | null;
+  posts: PostCardView[];
+  /** Les cinq rubriques, pour le renvoi de bas de page. */
+  rubrics: LibraryRubricView[];
+  locale: Locale;
+  total: number;
+}
+
+const { rubric, posts, rubrics, locale, total } = Astro.props;
+const t = useTranslations(locale);
+
+const title = rubric?.title ?? t('library.all');
+/*
+  Le titre est le NOM de la rubrique, sans cote.
+
+  La cote a disparu d'ici parce qu'elle y faisait double emploi : elle se lit
+  déjà dans le rail, dans le fil d'Ariane et sous la légende de la planche des
+  autres rubriques. En tête de page, elle ne classait rien — elle numérotait un
+  titre qui se suffisait.
+*/
+const description = rubric?.description ?? null;
+
+/*
+  LA PLANCHE DE LA RUBRIQUE.
+
+  Chaque rubrique a la sienne, déclarée avec elle dans `libraryRubrics.ts` : le
+  relevé pour le Journal, les orbites pour le Carnet de voyages, le faisceau
+  pour les Correspondances, la trame pour les Références, le binaire pour les
+  Essais. On la retrouve ici en grand et pâle, dans la marge — la même encre
+  que sur l'accueil, où les cinq se tiennent côte à côte.
+
+  La vue « tout » n'en a pas : elle n'est pas une rubrique, c'est leur réunion,
+  et lui en attribuer une reviendrait à en élire une.
+*/
+const plate = (rubric?.plate ?? null) as PlateVariant | null;
+
+
+const others = rubrics.filter((entry) => entry.key !== rubric?.key);
+
+/*
+  Le repère de la planche des autres rubriques. Il emprunte la cote de la
+  rubrique ouverte — « fig. 05 » sur les Essais — ce qui en fait un numéro
+  stable et propre à la page. La vue « tout » n'a pas de cote : sa légende se
+  passe de repère plutôt que d'en inventer un.
+*/
+const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
+---
+
+<div class="rubric container-wide py-(--spacing-section)">
+  {
+    plate && (
+      <div class="rubric__plate" aria-hidden="true">
+        <PlateFigure variant={plate} />
+      </div>
+    )
+  }
+
+  <nav class="breadcrumb rubric__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
+    <ol role="list">
+      <li>
+        <a class="link-underline" href={libraryIndexPath(locale)}>{t('library.title')}</a>
+      </li>
+      <li aria-current="page">
+        <span class="breadcrumb__separator" aria-hidden="true">/</span>
+        <span>{title}</span>
+      </li>
+    </ol>
+  </nav>
+
+  <header class="rubric__header">
+    <h1 class="rubric__title type-titre text-balance" data-text-reveal>{title}</h1>
+
+    {description && <p class="rubric__description type-copy text-pretty">{description}</p>}
+
+  </header>
+
+  {
+    posts.length === 0 ? (
+      <p class="rubric__empty type-copy">{total === 0 ? t('library.emptyAll') : t('library.empty')}</p>
+    ) : (
+      <LibraryGrid posts={posts} labels={{ read: t('library.read') }} />
+    )
+  }
+
+  {/*
+    LES AUTRES RUBRIQUES, en bas à droite.
+
+    Chacune paraît par SA PLANCHE, en petit, avec son nom dessous — les mêmes
+    figures que sur l'accueil, où elles sont déjà rattachées à leur rubrique.
+    Une image se reconnaît plus vite qu'une liste de mots, et c'est la seule
+    liste de rubriques du site : elle est là où on en a besoin, une fois la
+    planche parcourue.
+
+    La vue « tout » n'a pas de figure — elle n'est pas une rubrique — et ne
+    reçoit donc que son nom, à la même place que les autres.
+  */}
+  <nav class="rubric__others" aria-label={t('library.rubrics')}>
+    {/*
+      La légende de planche, à gauche du jeu de figures qu'elle nomme — comme
+      sous une planche d'ouvrage. Le repère reprend la cote de la rubrique
+      courante : sur une page, une figure se numérote par rapport à ce qu'on y
+      lit, pas dans une suite qui traverserait tout le site.
+    */}
+    {/*
+      La légende passe par `FigureCaption`, comme toutes les légendes du site :
+      le repère `fig. 05` en italique d'annotation, le tiret et le texte en
+      romain. C'est une convention typographique du studio, pas une mise en
+      forme locale — la réécrire ici la ferait diverger au premier réglage.
+    */}
+    <FigureCaption
+      as="p"
+      class="rubric__others-caption"
+      value={`${figureLabel} ${t('library.otherRubrics')}`}
+    />
+
+    <ul class="rubric__others-list" role="list">
+      {
+        others.map((entry) => (
+          <li>
+            <a class="rubric__other" href={entry.href} data-cursor-interactive>
+              <span class="rubric__other-plate" aria-hidden="true">
+                <PlateFigure variant={entry.plate as PlateVariant} />
+              </span>
+              <span class="rubric__other-label type-note">{entry.title}</span>
+            </a>
+          </li>
+        ))
+      }
+
+    </ul>
+  </nav>
+
+  {
+    /*
+      « Tout » ne rejoint pas la rangée de figures : ce n'est pas une rubrique,
+      elle n'a pas de planche, et une case vide au milieu des autres se serait
+      lue comme une figure manquante. Elle referme la page à sa place, sous
+      elles — c'est la dernière sortie, celle qui ouvre tout le reste.
+    */
+    rubric && (
+      <p class="rubric__all type-note">
+        <a class="link-underline" href={libraryRubricsPath(locale)} data-cursor-interactive>
+          {t('library.all')}
+        </a>
+      </p>
+    )
+  }
+</div>
+
+<script>
+  /*
+    LA PLANCHE SE RÈGLE TOUTE SEULE À L'ARRIVÉE.
+
+    Quelques secondes après le chargement, la figure du frontispice joue son
+    mouvement une fois, puis se repose. Deux raisons : elle montre ce qu'elle
+    sait faire à qui ne passera jamais la souris dessus, et ce mouvement bref
+    au milieu d'une page fixe désigne la rubrique où l'on vient d'entrer.
+
+    Le délai n'est pas décoratif : jouer à l'instant du chargement mêlerait ce
+    geste à l'arrivée de la page — les images, le titre, le dessin du texte. On
+    attend que tout soit posé, et c'est alors le seul mouvement de l'écran.
+
+    En mouvement réduit, rien ne se joue : la planche attend le survol, qui
+    reste, lui, un choix du lecteur.
+  */
+  /*
+    ═══════════════════════════════════════════════════════════════════════════
+    LE SURVOL D'UNE PLANCHE SE PILOTE DEPUIS SON ENVELOPPE
+    ═══════════════════════════════════════════════════════════════════════════
+    Une image SVG en ligne ne se survole QUE là où elle peint : entre deux
+    filets, le pointeur la traverse comme s'il n'y avait rien. Sur ces figures
+    faites de traits fins, `:hover` ne se déclenchait donc qu'en visant un trait
+    — en pratique, la seule ligne du haut du cadre.
+
+    L'enveloppe, elle, est un élément HTML ordinaire : son survol vaut pour
+    toute sa boîte. C'est donc elle qu'on écoute, et elle qui pose la classe
+    `is-active` sur la figure — exactement l'état auquel mène le `:hover` de la
+    planche (voir `PlateFigure.astro`).
+
+    Seule la GRANDE planche en a besoin. Les petites — celles du pied de page,
+    celles des notes de l'accueil — sont assez denses pour que le pointeur
+    rencontre un trait où qu'il se pose : leur survol fonctionne déjà, et rien
+    ne justifie de leur ajouter un écouteur.
+  */
+  function follow(holder: HTMLElement) {
+    const figure = holder.querySelector<SVGElement>('.plate');
+    if (!figure) return;
+
+    const set = (on: boolean) => figure.classList.toggle('is-active', on);
+
+    holder.addEventListener('pointerenter', () => set(true));
+    holder.addEventListener('pointerleave', () => set(false));
+  }
+
+  for (const holder of document.querySelectorAll<HTMLElement>('.rubric__plate')) {
+    follow(holder);
+  }
+
+  const holder = document.querySelector<HTMLElement>('.rubric__plate');
+  const plate = holder?.querySelector<SVGElement>('.plate');
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (holder && plate && !still) {
+    window.setTimeout(() => {
+      /*
+        Elle MONTE en même temps qu'elle bouge. Au repos, la planche est à
+        16 % : le mouvement s'y jouait sans que personne le voie. Les deux
+        vont donc ensemble — la figure paraît, se règle, et retourne à sa
+        pâleur de trame.
+      */
+      holder.classList.add('is-showing');
+      plate.classList.add('is-active');
+
+      window.setTimeout(() => {
+        holder.classList.remove('is-showing');
+        plate.classList.remove('is-active');
+      }, 2400);
+    }, 2000);
+  }
+</script>
+
+<style>
+  /* Repère de la planche et du verso, qui se posent en marge de la page. */
+  .rubric {
+    position: relative;
+  }
+
+  /*
+    LA PLANCHE — la même encre que le verso, dans la marge de gauche, à
+    hauteur du titre. Masquée tant que la page n'a pas de marge à lui donner :
+    en dessous, elle passerait sous le texte au lieu d'être à côté.
+  */
+  .rubric__plate {
+    display: none;
+  }
+
+  /*
+    LA COUCHE DE FOND est explicitement derrière le contenu.
+
+    Sans niveau déclaré, une planche en position absolue passerait PAR-DESSUS
+    le titre et le fil d'Ariane, qui ne sont pas positionnés : c'est l'ordre de
+    peinture du CSS qui décide, pas celui du document.
+  */
+  .rubric__breadcrumb,
+  .rubric__header,
+  .rubric__empty,
+  .rubric__others,
+  .rubric__all,
+  .rubric :global(.plate) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+    Le fil d'Ariane passe AU-DESSUS de l'en-tête.
+
+    Il est posé en absolu dans le coin haut-gauche, mais l'en-tête qui le suit
+    occupe toute la largeur et vient après lui dans le document : à niveau
+    égal, c'est l'en-tête qui gagnait, et le titre — pourtant centré et
+    invisible à cet endroit — interceptait les clics du fil.
+  */
+  .rubric__breadcrumb {
+    z-index: 2;
+  }
+
+  @media (min-width: 1300px) {
+    .rubric__plate {
+      /*
+        En haut à DROITE : le fil d'Ariane occupe le coin gauche, la planche
+        d'un frontispice se pose dans l'angle resté libre.
+
+        Le retrait est le MÊME en haut qu'à droite, mesuré depuis le bord de la
+        page. Il faut donc ajouter la gouttière au décalage vertical : `right`
+        part du bord intérieur du conteneur, qui est déjà rentré d'une
+        gouttière, alors que `top` part du haut de la section — sans quoi la
+        planche paraît collée en haut et rentrée à droite.
+      */
+      --plate-inset: 2rem;
+
+      position: absolute;
+      top: calc(var(--spacing-gutter) + var(--plate-inset));
+      right: var(--plate-inset);
+      /*
+        AU-DESSUS DE L'EN-TÊTE, et non derrière.
+
+        L'en-tête occupe toute la largeur de la page ; sous la planche, sa
+        boîte — vide à cet endroit, mais bien là — interceptait le pointeur.
+        Seul le trait du haut du cadre, qui dépassait, restait survolable.
+
+        Le passer au-dessus ne masque rien : le titre est centré et court, la
+        planche est calée dans l'angle droit, les deux ne se rencontrent jamais
+        à cette largeur — et à 16 % d'opacité, un croisement resterait sans
+        conséquence sur la lecture.
+      */
+      z-index: 2;
+      display: block;
+      width: 11rem;
+      opacity: 0.16;
+      transition: opacity 300ms ease;
+    }
+
+    .rubric__plate:hover,
+    .rubric__plate.is-showing {
+      opacity: 0.85;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .rubric__plate {
+        transition: none;
+      }
+    }
+
+  }
+
+  /*
+    Fil d'Ariane positionné en absolu à partir de 768px, pour que le titre
+    tombe exactement là où il tombe sur l'accueil de la Bibliothèque, qui n'a
+    rien au-dessus du sien. En dessous, la barre mobile du menu occupe déjà ce
+    coin : le fil y reste en flux normal.
+  */
+  /* Voir `.breadcrumb` dans global.css : il ne reste ici que le placement. */
+  .rubric__breadcrumb {
+    margin-bottom: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  .rubric__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  .rubric__title {
+    text-align: center;
+  }
+
+  .rubric__description {
+    max-width: 46rem;
+    margin-top: clamp(3rem, 7vw, 6rem);
+    margin-inline: auto;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  .rubric__empty {
+    max-width: 40rem;
+    margin-inline: auto;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  /*
+    Le bloc entier se range à DROITE, et la légende se colle à la gauche des
+    figures — comme sous une planche, où l'intitulé commence là où commence le
+    dessin. `justify-content: flex-end` et non `space-between` : ce dernier
+    envoyait la légende à l'autre bout de la page, séparée de ce qu'elle nomme
+    par toute la largeur du blanc.
+  */
+  .rubric__others {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: clamp(1.25rem, 3vw, 2.5rem);
+    flex-wrap: wrap;
+    margin-top: clamp(5rem, 12vw, 10rem);
+  }
+
+  .rubric__others-caption {
+    margin: 0;
+    max-width: 12rem;
+    /* Calée sur la ligne des NOMS, sous les figures. */
+    padding-bottom: 0.1rem;
+    color: var(--color-muted);
+    font-size: var(--text-note);
+    line-height: 1.35;
+  }
+
+  /* La sortie « tout », seule sur sa ligne, sous les figures. */
+  .rubric__all {
+    margin: 1.75rem 0 0;
+    text-align: right;
+  }
+
+  .rubric__all a {
+    color: var(--color-ink);
+  }
+
+  /*
+    Rangées à DROITE, sous la planche : c'est la sortie de la page, et une
+    sortie ne se met pas dans l'axe de lecture. Le retour à la ligne se fait
+    depuis la droite lui aussi — les rubriques restent alignées sur ce bord.
+  */
+  .rubric__others-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 1.5rem clamp(1.25rem, 3vw, 2.5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rubric__other {
+    display: block;
+    width: 4.5rem;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  /*
+    La figure est pâle au repos, comme sur l'accueil, et vient au premier plan
+    sous la main. Son animation propre se déclenche seule : c'est le `:hover`
+    de la planche elle-même, elle n'a rien à recevoir d'ici.
+  */
+  .rubric__other-plate {
+    display: block;
+    opacity: 0.3;
+    transition: opacity 260ms ease;
+  }
+
+  .rubric__other:hover .rubric__other-plate,
+  .rubric__other:focus-visible .rubric__other-plate {
+    opacity: 0.9;
+  }
+
+  .rubric__other-label {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.62rem;
+    line-height: 1.3;
+    color: var(--color-muted);
+    text-wrap: pretty;
+  }
+
+  .rubric__other:hover .rubric__other-label,
+  .rubric__other:focus-visible .rubric__other-label {
+    color: var(--color-ink);
+  }
+
+  .rubric__other:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.4rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rubric__other-plate {
+      transition: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .rubric {
+      position: relative;
+    }
+
+    .rubric__breadcrumb {
+      position: absolute;
+      top: var(--spacing-section);
+      left: var(--spacing-gutter);
+      margin-bottom: 0;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .rubric__header {
+      margin-bottom: 3rem;
+    }
+  }
+</style>

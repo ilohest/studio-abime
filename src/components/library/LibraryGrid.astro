@@ -1,0 +1,218 @@
+---
+import { toLibraryGrid } from '~/lib/library';
+import type { PostCardView } from '~/lib/journal';
+
+/**
+ * La planche cotée d'une rubrique.
+ *
+ * ── L'idée ──────────────────────────────────────────────────────────────────
+ * Une trame de cases numérotées, très largement vide, où les articles sont
+ * posés au fil du classement. Ce n'est pas une grille de cartes : il n'y a ni
+ * cadre, ni vignette, ni bouton. Une cote, une date, un titre. Le reste est du
+ * papier.
+ *
+ * ── Pourquoi toutes les cases portent un numéro ─────────────────────────────
+ * Parce que la trame doit se voir. Numéroter seulement les cases occupées
+ * ferait une liste ; numéroter tout fait un plan, et le vide y devient une
+ * quantité lisible — on voit ce que la rubrique contient ET ce qu'elle n'a pas
+ * encore.
+ *
+ * ── Ordre de lecture ────────────────────────────────────────────────────────
+ * Les cases vides sont des `<li>` de décor, retirés de l'arbre d'accessibilité.
+ * Un lecteur d'écran entend donc les articles dans l'ordre chronologique, sans
+ * quarante numéros interposés.
+ */
+interface Props {
+  posts: PostCardView[];
+  labels: { read: string };
+}
+
+const { posts, labels } = Astro.props;
+const cells = toLibraryGrid(posts);
+---
+
+<ol class="plate" role="list">
+  {
+    cells.map((cell) =>
+      cell.entry ? (
+        <li class="plate__cell">
+          <span class="plate__number type-note" aria-hidden="true">( {cell.number} )</span>
+
+          {/*
+            UNE SEULE cible pour toute l'entrée : le visuel, la date et le titre
+            ouvrent l'article. Deux liens vers la même page doubleraient les
+            arrêts au clavier sans rien ouvrir de plus, et une image muette à
+            côté d'un titre cliquable se lit comme une panne.
+          */}
+          <a class="plate__entry" href={cell.entry.href} data-cursor-interactive>
+            {/*
+              Le visuel de couverture, recadré au carré comme toutes les autres
+              entrées. `alt` vide : dans ce cadre, l'image ne dit rien de plus
+              que le titre qui la suit, et c'est lui qui nomme le lien. Un
+              article sans visuel n'en reçoit pas d'échantillon — une case vide
+              vaut mieux qu'un cadre vide.
+            */}
+            {cell.entry.image && (
+              <img
+                class="plate__image"
+                src={cell.entry.image.src}
+                srcset={cell.entry.image.srcset}
+                sizes="(max-width: 599px) 42vw, (max-width: 899px) 28vw, 14vw"
+                width={cell.entry.image.width}
+                height={cell.entry.image.height}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            )}
+
+            <span class="plate__stamp type-note">
+              <time datetime={cell.entry.dateIso}>{cell.entry.dateStamp}</time>
+            </span>
+
+            <span class="plate__title type-note text-pretty">
+              <span class="plate__title-line">{cell.entry.title}</span>
+              <span class="sr-only"> — {labels.read}</span>
+            </span>
+          </a>
+        </li>
+      ) : (
+        <li class="plate__cell" aria-hidden="true">
+          <span class="plate__number type-note">( {cell.number} )</span>
+        </li>
+      ),
+    )
+  }
+</ol>
+
+<style>
+  .plate {
+    /*
+      Six colonnes : c'est la trame qui laisse le plus de vide sans que la
+      cote et le titre d'une entrée se cassent en deux.
+    */
+    --plate-columns: 6;
+
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--plate-columns), minmax(0, 1fr));
+    /*
+      Une hauteur PLANCHER, pas une hauteur fixe.
+
+      Les cases vides gardent toutes la même mesure — c'est ce qui fait lire la
+      trame comme un plan. Une rangée qui porte une entrée illustrée s'ouvre en
+      revanche à la hauteur de son visuel : cadrer l'image dans la case vide
+      l'aurait réduite à une vignette, et l'article n'a pas d'autre image.
+    */
+    grid-auto-rows: minmax(clamp(6rem, 9vw, 8rem), auto);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .plate__cell {
+    position: relative;
+    min-width: 0;
+  }
+
+  .plate__number {
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .plate__entry {
+    /*
+      Dans le flux, et non en position absolue : c'est l'entrée qui donne sa
+      hauteur à la rangée. Posée en absolu, elle ne pesait rien et son visuel
+      serait passé par-dessus la rangée suivante.
+    */
+    display: block;
+    margin-top: 0.75rem;
+    padding-bottom: 1.5rem;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .plate__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    /*
+      Le CARRÉ, pour toutes les entrées.
+
+      Une planche se lit à ce que ses cases ont en commun : des hauteurs
+      inégales faisaient une suite de vignettes, le carré fait une trame. Le
+      recadrage est centré — c'est le seul réglage qui vaille sans savoir, d'ici,
+      ce que montre chaque visuel.
+    */
+    aspect-ratio: 1;
+    object-fit: cover;
+    margin-bottom: 0.75rem;
+  }
+
+  .plate__stamp {
+    display: block;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .plate__title {
+    display: block;
+    margin-top: 0.35rem;
+    /*
+      La fonte des Titres (GT Canon Mono), portée par `type-note` : sur une
+      planche de relevé, le titre d'une entrée est une MENTION, de la même
+      encre que la cote et la date qui l'encadrent. Le romain de lecture y
+      faisait entrer une seconde voix, qui n'a sa place que dans l'article.
+
+      Un cran au-dessus de la cote malgré tout : c'est la seule chose qu'on
+      vient lire sur cette planche.
+    */
+    font-size: clamp(0.8rem, 0.9vw, 0.95rem);
+    line-height: 1.4;
+    font-weight: 400;
+  }
+
+  /*
+    Le filet ne se tire que sous le TITRE, jamais sous toute l'entrée : c'est
+    lui qu'on lit, la date et le visuel l'accompagnent. Peint en fond, comme
+    partout ailleurs sur le site.
+  */
+  .plate__title-line {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: left calc(100% - 0.04em);
+    background-repeat: no-repeat;
+    background-size: 0 1px;
+    transition: background-size 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .plate__entry:hover .plate__title-line,
+  .plate__entry:focus-visible .plate__title-line {
+    background-size: 100% 1px;
+  }
+
+  .plate__entry:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.4rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate__title-line {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 899px) {
+    .plate {
+      --plate-columns: 3;
+      grid-auto-rows: clamp(8rem, 18vw, 11rem);
+    }
+  }
+
+  @media (max-width: 599px) {
+    .plate {
+      --plate-columns: 2;
+      grid-auto-rows: 9.5rem;
+    }
+  }
+</style>

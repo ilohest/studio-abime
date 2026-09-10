@@ -1,0 +1,101 @@
+---
+/**
+ * Le verso — l'envers de la feuille.
+ *
+ * Un texte retourné sur l'axe vertical et presque effacé, posé DERRIÈRE le
+ * contenu : l'encre du dos de la page, vue par transparence. Le procédé vient
+ * du hero de l'accueil (`ManifestoHero.astro`) ; il sert ici les deux pages de
+ * la Bibliothèque, qui montrent chacune leur propre texte au travers.
+ *
+ * `scaleX(-1)` plutôt qu'une image ou une fonte inversée : le retournement
+ * porte sur la boîte entière, donc sur les glyphes ET sur l'ordre des colonnes
+ * — exactement ce qu'on voit au dos d'une feuille. Le texte reste du texte, il
+ * se recompose à chaque largeur et suit ce que l'éditrice écrit.
+ *
+ * ── Réglages de l'appelant ──────────────────────────────────────────────────
+ * `--verso-width`   largeur du bloc (défaut : la colonne de lecture, élargie)
+ * `--verso-inset`   débord vertical (défaut : −3,5 rem en haut et en bas)
+ * `--verso-columns` nombre de colonnes (défaut : 2)
+ *
+ * Ni lu, ni cliquable, ni sélectionnable : ce n'est pas du contenu, c'est du
+ * papier. Il disparaît sous 1300 px — sur une colonne étroite, une trame
+ * derrière le texte ne fait plus une page vue par transparence, elle fait du
+ * bruit sous les mots.
+ */
+interface Props {
+  /**
+   * Les paragraphes à retourner.
+   *
+   * L'appelant les DOUBLE s'il faut remplir la hauteur : un verso qui
+   * s'arrêterait à mi-page se lirait comme un second texte, pas comme une
+   * trame. À 8 % d'opacité, la répétition ne se voit pas — le regard y
+   * reconnaît du texte, jamais des mots.
+   */
+  lines: string[];
+}
+
+const { lines } = Astro.props;
+---
+
+<div class="verso" aria-hidden="true">
+  {lines.map((line) => <p>{line}</p>)}
+</div>
+
+<style>
+  .verso {
+    display: none;
+  }
+
+  @media (min-width: 1300px) {
+    .verso {
+      /* Résolue une fois : elle sert à la largeur ET au centrage. */
+      --width: var(--verso-width, calc(var(--container-content) + 7rem));
+
+      position: absolute;
+      inset-block: var(--verso-inset, -3.5rem);
+      left: 50%;
+      /*
+        Centré par une marge négative et non par `translateX` : la boîte porte
+        déjà le retournement, et deux transformations composées y placeraient
+        le bloc à côté.
+      */
+      width: var(--width);
+      margin-left: calc(var(--width) / -2);
+      display: block;
+      overflow: hidden;
+
+      color: var(--color-ink);
+      font-family: var(--font-titre);
+      font-size: var(--text-note);
+      /*
+        Interligne large : une page vue par transparence laisse voir des lignes
+        espacées, pas un bloc compact. C'est ce qui la fait lire comme un fond
+        et non comme un second texte.
+      */
+      line-height: 2.1;
+      letter-spacing: var(--tracking-copy);
+
+      columns: var(--verso-columns, 2);
+      column-gap: 2.5rem;
+      text-align: justify;
+      hyphens: auto;
+      overflow-wrap: break-word;
+
+      /* Le retournement, autour de l'axe vertical du bloc. */
+      transform: scaleX(-1);
+      /*
+        Assez pour qu'on devine une page imprimée, pas assez pour qu'on essaie
+        de la lire : au-delà, l'œil s'y accroche et le texte de devant recule.
+      */
+      opacity: 0.08;
+      /* Ni cliquable ni sélectionnable : ce n'est pas du contenu. */
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .verso p {
+      margin: 0;
+      text-indent: 1.6em;
+    }
+  }
+</style>

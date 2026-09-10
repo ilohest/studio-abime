@@ -12,7 +12,12 @@ import { defaultLocale, locales, prefixDefaultLocale, type Locale } from './conf
 export const routeSegments = {
   projects: { fr: 'experiences', en: 'work', nl: 'werk', de: 'arbeiten' },
   labo: { fr: 'labo', en: 'lab', nl: 'lab', de: 'labor' },
-  journal: { fr: 'journal', en: 'journal', nl: 'journaal', de: 'journal' },
+  /*
+    La section éditoriale s'appelle la Bibliothèque : elle contient cinq
+    rubriques, dont l'une porte le nom de « Journal ». Voir
+    `src/content/libraryRubrics.ts`.
+  */
+  library: { fr: 'bibliotheque', en: 'library', nl: 'bibliotheek', de: 'bibliothek' },
   contact: { fr: 'contact', en: 'contact', nl: 'contact', de: 'kontakt' },
   shop: { fr: 'shop', en: 'shop', nl: 'winkel', de: 'shop' },
 } satisfies Record<string, Record<string, string>>;
@@ -101,14 +106,43 @@ export function laboPath(locale: Locale): string {
   return localizedPath(locale, getSegment('labo', locale));
 }
 
-/** URL de l'index du Journal pour une langue. */
-export function journalIndexPath(locale: Locale): string {
-  return localizedPath(locale, getSegment('journal', locale));
+/** URL de la page d'accueil de la Bibliothèque — le texte et ses six mots. */
+export function libraryIndexPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('library', locale));
 }
 
-/** URL d'un article du Journal. */
+/**
+ * Segment des pages de rubrique.
+ *
+ * Il existe pour la même raison que `collections` sous `/shop` : sans lui,
+ * `/bibliotheque/essais` serait indistinguable de l'article dont le slug
+ * serait « essais ». Un niveau de plus, et les deux familles d'adresses ne se
+ * disputent plus rien.
+ */
+const rubricsSegments = {
+  fr: 'rubriques',
+  en: 'sections',
+  nl: 'rubrieken',
+  de: 'rubriken',
+} satisfies Record<string, string>;
+
+export function getRubricsSegment(locale: Locale): string {
+  return rubricsSegments[locale] ?? rubricsSegments[defaultLocale as 'fr'];
+}
+
+/** URL de la vue « tout » : `/bibliotheque/rubriques`. */
+export function libraryRubricsPath(locale: Locale): string {
+  return localizedPath(locale, getSegment('library', locale), getRubricsSegment(locale));
+}
+
+/** URL d'une rubrique : `/bibliotheque/rubriques/essais`. */
+export function libraryRubricPath(locale: Locale, rubric: string): string {
+  return localizedPath(locale, getSegment('library', locale), getRubricsSegment(locale), rubric);
+}
+
+/** URL d'un article. */
 export function postPath(locale: Locale, slug: string): string {
-  return localizedPath(locale, getSegment('journal', locale), slug);
+  return localizedPath(locale, getSegment('library', locale), slug);
 }
 
 /** URL de la page Contact, expérience dédiée et localisée. */

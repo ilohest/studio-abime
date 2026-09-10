@@ -199,9 +199,9 @@ export const structure: StructureResolver = (S, context) =>
                 .id('laboPage')
                 .child(localizedSingleton(S, 'laboPage', 'Page Labo')),
               S.listItem()
-                .title('Page Journal')
+                .title('Page Bibliothèque')
                 .id('journalPage')
-                .child(localizedSingleton(S, 'journalPage', 'Page Journal')),
+                .child(localizedSingleton(S, 'journalPage', 'Page Bibliothèque')),
               S.listItem()
                 .title('Page Shop')
                 .id('shopPage')

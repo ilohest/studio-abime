@@ -87,19 +87,19 @@ const priceFallback =
 ---
 
 <article class="product container-wide py-(--spacing-section)">
-  <nav class="product__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
+  <nav class="breadcrumb product__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
     <ol role="list">
       <li>
         <a class="link-underline" href={shopIndexPath(locale)}>{t('shop.title')}</a>
       </li>
       {collection && (
         <li>
-          <span class="product__breadcrumb-separator" aria-hidden="true">/</span>
+          <span class="breadcrumb__separator" aria-hidden="true">/</span>
           <a class="link-underline" href={collectionPath(locale, collection.handle)}>{collection.title}</a>
         </li>
       )}
       <li aria-current="page">
-        <span class="product__breadcrumb-separator" aria-hidden="true">/</span>
+        <span class="breadcrumb__separator" aria-hidden="true">/</span>
         <span>{product.title}</span>
       </li>
     </ol>
@@ -251,37 +251,9 @@ const priceFallback =
 </article>
 
 <style>
+  /* Voir `.breadcrumb` dans global.css : il ne reste ici que le placement. */
   .product__breadcrumb {
     margin-bottom: clamp(2rem, 5vw, 3.5rem);
-    color: var(--color-muted);
-  }
-
-  .product__breadcrumb ol,
-  .product__breadcrumb li {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-  }
-
-  .product__breadcrumb ol {
-    gap: 0.35rem 0;
-    margin: 0;
-    padding: 0;
-  }
-
-  .product__breadcrumb a {
-    color: var(--color-ink);
-    text-decoration: none;
-  }
-
-  .product__breadcrumb a:focus-visible {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 0.2rem;
-  }
-
-  .product__breadcrumb-separator {
-    margin-inline: 0.55rem;
-    color: var(--color-line);
   }
 
   /*

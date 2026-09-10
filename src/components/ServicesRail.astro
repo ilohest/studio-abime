@@ -2,7 +2,13 @@
 import Wordmark from '~/components/brand/Wordmark.astro';
 import CartDrawer from '~/components/vue/CartDrawer.vue';
 import { getCollections } from '~/lib/shopify/catalogue';
-import { collectionPath, getCollectionsSegment, shopIndexPath } from '~/i18n/routes';
+import {
+  collectionPath,
+  getCollectionsSegment,
+  getRubricsSegment,
+  libraryIndexPath,
+  shopIndexPath,
+} from '~/i18n/routes';
 import { getSiteSections } from '~/lib/siteIndex';
 import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
@@ -69,22 +75,22 @@ const groups = getSiteSections(locale).map((section) => ({
   items:
     section.key === 'shop'
       ? shopItems
-      : section.items.map((item) => ({
-          label: item.label,
-          href: item.href,
-          filterKey: item.filterKey,
-        })),
+      : section.items.map((item) => ({ label: item.label, href: item.href })),
 }));
 const currentPath = Astro.url.pathname;
 // Une page de collection a sa propre sous-entrée à allumer : le groupe
 // « Shop » ne doit pas s'allumer en plus, sous peine de deux points à la fois.
 const collectionsPrefix = `${shopHref}/${getCollectionsSegment(locale)}/`;
+// Même raison pour la Bibliothèque : une page de rubrique allume sa propre
+// sous-entrée, le groupe doit alors s'éteindre.
+const rubricsPrefix = `${libraryIndexPath(locale)}/${getRubricsSegment(locale)}/`;
 const numbered = groups.map((group) => ({
   ...group,
   isCurrent:
     currentPath === group.href ||
     (currentPath.startsWith(`${group.href}/`) &&
-      !(group._key === 'shop' && currentPath.startsWith(collectionsPrefix))),
+      !(group._key === 'shop' && currentPath.startsWith(collectionsPrefix)) &&
+      !(group._key === 'bibliotheque' && currentPath.startsWith(rubricsPrefix))),
   // Correspondance stricte : contrairement au groupe, une sous-entrée ne doit
   // pas s'allumer pour une simple page « en dessous » d'elle dans l'arborescence.
   items: group.items.map((item) => ({ ...item, isCurrent: currentPath === item.href })),
@@ -150,10 +156,7 @@ const panelId = `services-menu-${mode}`;
               (group.items.length > 0 || group._key === 'shop') && (
                 <ul class="services-rail__items">
                   {group.items.map((item) => (
-                    <li
-                      class:list={['type-note', { 'is-current': item.isCurrent }]}
-                      data-filter-key={'filterKey' in item ? item.filterKey : undefined}
-                    >
+                    <li class:list={['type-note', { 'is-current': item.isCurrent }]}>
                       <a
                         href={item.href}
                         aria-current={item.isCurrent ? 'page' : undefined}
@@ -182,6 +185,35 @@ const panelId = `services-menu-${mode}`;
         ))
       }
     </ol>
+
+    {/*
+      LES REPÈRES DE SUITE. Sur un écran bas, la liste ne tient pas dans le
+      rail et défile dans sa boîte — mais rien ne le disait : les dernières
+      entrées étaient simplement absentes, sans que le menu paraisse incomplet.
+
+      Ce sont des BOUTONS et non des marques : on les clique et la liste s'y
+      rend. Un repère qu'on voit et qu'on ne peut pas suivre est une invitation
+      sans porte. Ils portent donc un nom, et le clavier les atteint.
+
+      Ils n'existent que quand il reste quelque chose à voir de leur côté :
+      celui du haut apparaît dès qu'on a descendu la liste, celui du bas
+      disparaît quand on touche le fond.
+    */}
+    <button
+      class="services-rail__more services-rail__more--up"
+      type="button"
+      data-rail-scroll="up"
+      aria-label={t('a11y.railScrollUp')}
+      data-cursor-interactive
+    >↑</button>
+
+    <button
+      class="services-rail__more services-rail__more--down"
+      type="button"
+      data-rail-scroll="down"
+      aria-label={t('a11y.railScrollDown')}
+      data-cursor-interactive
+    >↓</button>
 
     <a
       class="services-rail__logo"
@@ -278,7 +310,7 @@ const panelId = `services-menu-${mode}`;
       au large le blanc qui fait lire un sommaire.
     */
     gap: clamp(0.9rem, 3.2vh, 3.6rem);
-    margin-inline-start: var(--rail-groups-margin, 0);
+    margin-inline-start: calc(var(--rail-groups-margin, 0px) - var(--rail-dot-gutter, 0px));
     /*
       Le filet de sécurité, pour les hauteurs où même l'écart minimal ne suffit
       plus : la liste défile dans sa boîte au lieu de déborder du rail. Chaque
@@ -286,6 +318,21 @@ const panelId = `services-menu-${mode}`;
     */
     max-height: 100%;
     overflow-y: auto;
+    /*
+      ⚠️ LA GOUTTIÈRE DU POINT. Rendre la liste défilante en fait une boîte de
+      défilement — et une boîte de défilement ROGNE ce qui déborde, sur les
+      DEUX axes. Or le point de section ne se pose pas dans le texte : il pend
+      dans la marge, à gauche du numéro. Il se retrouvait donc coupé, allumé
+      mais invisible : « 01. LE LABO » n'avait plus jamais son point.
+
+      On lui rend sa place en garniture, et on décale la boîte d'autant vers la
+      gauche : le texte ne bouge pas d'un pixel, et le point a de nouveau où
+      s'afficher. Le décalage s'ajoute à la marge de la scène d'accueil, qui
+      résorbe le centrage au fil du défilement — d'où le calcul plutôt qu'une
+      valeur seule.
+    */
+    --rail-dot-gutter: 1.5rem;
+    padding-inline-start: var(--rail-dot-gutter);
     /*
       Sans barre : le rail fait 16 rem, une barre y prendrait sur la mesure des
       intitulés et les ferait passer à la ligne.
@@ -295,6 +342,102 @@ const panelId = `services-menu-${mode}`;
 
   .services-rail__groups::-webkit-scrollbar {
     display: none;
+  }
+
+  /*
+    ┌─ « ÇA CONTINUE PLUS BAS » ────────────────────────────────────────────┐
+    │ Deux signes, posés seulement quand il reste quelque chose à voir :    │
+    │                                                                        │
+    │  · la liste s'ESTOMPE sur son dernier centimètre — le texte ne se      │
+    │    coupe plus net, il s'efface, ce qui se lit comme une suite ;       │
+    │  · une flèche discrète sous le rail le confirme.                      │
+    │                                                                        │
+    │ Les deux disparaissent dès qu'on touche le bas de la liste : un       │
+    │ repère qui reste allumé quand il n'y a plus rien à voir cesse d'être  │
+    │ un repère.                                                            │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  /*
+    Le fondu est un MASQUE, pas un dégradé posé par-dessus : un dégradé aurait
+    dû reprendre la couleur du fond, et le rail en traverse plusieurs selon la
+    page. Un masque efface, quelle que soit la couleur dessous.
+
+    Les deux bords sont pilotés par des variables, à zéro par défaut : le
+    masque est alors franc de bout en bout, donc sans effet. Chaque attribut
+    n'ouvre QUE son côté.
+  */
+  .services-rail__groups {
+    --rail-fade-top: 0px;
+    --rail-fade-bottom: 0px;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--rail-fade-top),
+      #000 calc(100% - var(--rail-fade-bottom)),
+      transparent 100%
+    );
+  }
+
+  .services-rail[data-more-up] .services-rail__groups {
+    --rail-fade-top: 2.5rem;
+  }
+
+  .services-rail[data-more-down] .services-rail__groups {
+    --rail-fade-bottom: 2.5rem;
+  }
+
+  .services-rail__more {
+    position: absolute;
+    left: 1.5rem;
+    /* Assez large pour le doigt sans peser à l'œil : le signe reste petit. */
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-ink);
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    /* Invisible, elle ne doit pas non plus intercepter un clic. */
+    pointer-events: none;
+    transition:
+      opacity 0.5s ease-out,
+      transform 0.5s ease-out;
+  }
+
+  /* Chacune part du côté d'où elle vient, et s'y remet en disparaissant. */
+  .services-rail__more--up {
+    top: calc(var(--rail-logo-band, 3rem) - 1.9rem);
+    transform: translateY(0.25rem);
+  }
+
+  .services-rail__more--down {
+    bottom: 1.1rem;
+    transform: translateY(-0.25rem);
+  }
+
+  .services-rail[data-more-up] .services-rail__more--up,
+  .services-rail[data-more-down] .services-rail__more--down {
+    opacity: 0.5;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .services-rail__more:hover,
+  .services-rail__more:focus-visible {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .services-rail__more {
+      transition: none;
+      transform: none;
+    }
   }
 
   .services-rail__group {
@@ -651,6 +794,70 @@ const panelId = `services-menu-${mode}`;
 </style>
 
 <script>
+  /*
+    ── RESTE-T-IL QUELQUE CHOSE À VOIR SOUS LA LISTE ? ─────────────────────
+    Le rail pose `data-more` tant que la liste n'est pas au bout. C'est ce
+    seul attribut qui allume le fondu et la flèche — la mise en forme reste
+    entièrement dans la feuille de style.
+
+    Trois choses le remettent en question : le défilement de la liste, un
+    changement de taille du rail (fenêtre plus basse), et le chargement des
+    fontes, qui change la hauteur du texte donc le débordement.
+  */
+  for (const rail of document.querySelectorAll<HTMLElement>('[data-services-rail]')) {
+    const groups = rail.querySelector<HTMLElement>('.services-rail__groups');
+    if (!groups) continue;
+
+    /* Une tolérance d'un pixel : les hauteurs fractionnaires ne tombent jamais juste. */
+    const END = 1;
+    let frame = 0;
+
+    const sync = () => {
+      frame = 0;
+      const reste = groups.scrollHeight - groups.clientHeight - groups.scrollTop;
+      rail.toggleAttribute('data-more-up', groups.scrollTop > END);
+      rail.toggleAttribute('data-more-down', reste > END);
+    };
+
+    const request = () => {
+      if (!frame) frame = requestAnimationFrame(sync);
+    };
+
+    /*
+      Le pas d'un clic : la hauteur visible moins un tiers. On garde ainsi
+      quelques entrées de l'écran précédent sous les yeux — sans ce recouvrement
+      on saute d'un bloc à l'autre sans savoir ce qu'on vient de quitter.
+    */
+    const pas = () => groups.clientHeight * 0.66;
+
+    for (const bouton of rail.querySelectorAll<HTMLElement>('[data-rail-scroll]')) {
+      bouton.addEventListener('click', () => {
+        const sens = bouton.dataset.railScroll === 'up' ? -1 : 1;
+        /*
+          `smooth` en dur plutôt qu'hérité : le rail est un conteneur à part,
+          et le défilement doux de la page ne descend pas jusqu'à lui. Le
+          navigateur respecte de lui-même le réglage « moins d'animations ».
+        */
+        groups.scrollBy({ top: sens * pas(), behavior: 'smooth' });
+      });
+    }
+
+    sync();
+    document.fonts?.ready.then(sync);
+    /*
+      Au défilement, on met à jour DIRECTEMENT : deux attributs à poser, et les
+      mesures lues sont celles que le navigateur vient de calculer pour
+      défiler. Passer par une image d'animation retardait le repère d'un cran —
+      et, dans un onglet qui ne peint pas, ne le mettait jamais à jour.
+
+      Le redimensionnement, lui, garde la coalescence : il arrive en rafale.
+    */
+    groups.addEventListener('scroll', sync, { passive: true });
+    new ResizeObserver(request).observe(groups);
+  }
+</script>
+
+<script>
   const mobileMenus = document.querySelectorAll<HTMLElement>('[data-services-rail]');
   const mobileMedia = window.matchMedia('(max-width: 767px)');
 
@@ -706,60 +913,6 @@ const panelId = `services-menu-${mode}`;
 
 <script>
   /*
-    Point actif sous « Journal », pour les deux rubriques.
-
-    Contrairement à une collection Shopify, une rubrique n'a pas sa propre
-    page : le filtre change le contenu sur place (`JournalExplorer.vue`,
-    `history.pushState`) sans navigation, donc sans jamais faire rejouer ce
-    composant Astro côté serveur. Le point ne peut donc s'allumer qu'ici,
-    en lisant l'URL après coup et en écoutant les changements du filtre.
-
-    Le nom du paramètre (« rubrique ») est dupliqué depuis `JournalIndex.astro`
-    faute d'un point commun entre les deux composants : les faire diverger
-    casserait ce repère silencieusement, sans erreur visible.
-  */
-  const QUERY_PARAM = 'rubrique';
-
-  function syncJournalNav(rail: HTMLElement) {
-    const groupCandidate = rail.querySelector<HTMLElement>('[data-nav-group="journal"]');
-    if (!groupCandidate) return;
-    const group = groupCandidate;
-
-    const items = rail.querySelectorAll<HTMLElement>('[data-nav-group="journal"] [data-filter-key]');
-    const groupHref = group.dataset.href;
-
-    function activeKey(): string | null {
-      if (location.pathname !== groupHref) return null;
-      const hash = location.hash.replace('#', '');
-      if (hash) return hash;
-      return new URLSearchParams(location.search).get(QUERY_PARAM);
-    }
-
-    function apply() {
-      /*
-        Seule la page d'index a un filtre à lire. Sur toute autre page —
-        `/journal/micaras`, un article — le point que le serveur a déjà posé
-        sur le groupe doit rester tel quel : ne rien toucher plutôt que
-        recalculer une égalité stricte qui l'effacerait par erreur.
-      */
-      if (location.pathname !== groupHref) return;
-
-      const key = activeKey();
-      group.classList.toggle('is-current', !key);
-      items.forEach((item) => {
-        item.classList.toggle('is-current', item.dataset.filterKey === key);
-      });
-    }
-
-    apply();
-    window.addEventListener('popstate', apply);
-    window.addEventListener('hashchange', apply);
-    // Émis par JournalExplorer.vue après chaque `pushState`, qui ne déclenche
-    // lui-même ni `popstate` ni `hashchange`.
-    window.addEventListener('journal:filter', apply);
-  }
-
-  /*
     LA SECTION LUE — le point suit le défilement.
 
     Les sous-entrées du Labo, des Expériences et du Contact désignent des
@@ -768,12 +921,13 @@ const panelId = `services-menu-${mode}`;
     jamais être vraie. Ces points ne s'allumaient donc jamais. Le hash ne se lit
     qu'ici, côté navigateur.
 
-    Le groupe « Journal » est laissé de côté : ses sous-entrées ne sont pas des
-    sections mais des filtres, et `syncJournalNav` s'en occupe déjà.
+    Les rubriques de la Bibliothèque ne passent pas par là : ce sont des pages
+    entières, dont le point est posé par le serveur à la comparaison des
+    chemins. Elles n'ont aucune ancre à observer, et `watched` les écarte donc
+    de lui-même.
   */
   function syncSectionNav(rail: HTMLElement) {
     const watched = [...rail.querySelectorAll<HTMLAnchorElement>('.services-rail__items a')]
-      .filter((link) => !link.closest('[data-nav-group="journal"]'))
       .map((link) => {
         const url = new URL(link.href, location.href);
         if (url.pathname !== location.pathname || !url.hash) return null;
@@ -789,8 +943,7 @@ const panelId = `services-menu-${mode}`;
 
     if (watched.length === 0) return;
 
-    // Le groupe rend son point à la section lue : un seul point allumé à la
-    // fois, comme le fait déjà le Journal avec ses filtres.
+    // Le groupe rend son point à la section lue : un seul point allumé à la fois.
     const groups = [
       ...new Set(
         watched
@@ -807,20 +960,34 @@ const panelId = `services-menu-${mode}`;
     const READING_LINE = 0.3;
 
     /*
-      EN TÊTE DE PAGE, C'EST LA PAGE QU'ON LIT — pas encore l'une de ses
-      sections. Le point revient donc à son TITRE tant que rien n'a bougé.
-
-      Sans cette réserve, une page dont la première section commence haut —
-      Contact ouvre sur « Informations », Expériences sur ses cas d'étude —
-      allumait cette section dès l'arrivée : la ligne de lecture était déjà
-      franchie avant le premier geste. On atterrissait sur la page sans que le
-      menu dise laquelle, et son titre n'avait jamais son point.
-
-      Le seuil est de quelques pixels et non de zéro : le haut d'une page n'est
-      pas toujours exactement à zéro — restauration de position, élastique de
-      défilement. Au-delà, on a quitté le haut, et la lecture reprend ses droits.
+      ┌─ TANT QU'ON N'A PAS ATTEINT LA PREMIÈRE SECTION, C'EST LA PAGE ───────┐
+      │ qu'on lit — pas encore l'une de ses sections. Le point revient donc à │
+      │ son TITRE, et la première sous-entrée prend le relais quand on arrive │
+      │ RÉELLEMENT sur elle.                                                  │
+      │                                                                        │
+      │ Sans cette réserve, une page dont la première section commence haut —  │
+      │ le Labo ouvre sur « Services », Contact sur « Informations » —         │
+      │ allumait cette sous-entrée dès l'arrivée : la ligne de lecture, au     │
+      │ tiers de l'écran, était déjà franchie avant le premier geste. On       │
+      │ atterrissait sur la page sans que le menu dise laquelle.               │
+      │                                                                        │
+      │ Le seuil n'est pas une valeur choisie : c'est la position OÙ SON       │
+      │ ANCRE DÉPOSE — le haut de la section moins la garde qu'elle s'est      │
+      │ réservée. La sous-entrée s'allume donc exactement là où un clic sur    │
+      │ elle aurait mené. Le menu dit la même chose qu'il fait.                │
+      │                                                                        │
+      │ Au-delà de ce seuil, la ligne de lecture reprend ses droits pour       │
+      │ toutes les sections : c'est elle qui décide de la suite.               │
+      └────────────────────────────────────────────────────────────────────────┘
     */
-    const TOP_ZONE = 4;
+    const firstSection = watched[0].section;
+
+    /** Position de défilement à laquelle l'ancre de la première section dépose. */
+    const firstSectionLanding = () => {
+      const guard = Number.parseFloat(getComputedStyle(firstSection).scrollMarginTop) || 0;
+      return firstSection.getBoundingClientRect().top + window.scrollY - guard;
+    };
+
     let frame = 0;
 
     const apply = () => {
@@ -828,7 +995,7 @@ const panelId = `services-menu-${mode}`;
       const line = window.innerHeight * READING_LINE;
       let active: HTMLElement | null = null;
       // La dernière section à avoir franchi la ligne est celle qu'on lit.
-      if (window.scrollY > TOP_ZONE) {
+      if (window.scrollY >= firstSectionLanding()) {
         for (const { item, section } of watched) {
           if (section.getBoundingClientRect().top <= line) active = item;
         }
@@ -848,7 +1015,6 @@ const panelId = `services-menu-${mode}`;
   }
 
   for (const rail of document.querySelectorAll<HTMLElement>('[data-services-rail]')) {
-    syncJournalNav(rail);
     syncSectionNav(rail);
   }
 </script>

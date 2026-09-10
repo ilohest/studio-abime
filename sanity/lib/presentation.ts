@@ -4,7 +4,7 @@ import { defaultLocale, isLocale, locales } from '../../src/i18n/config';
 import {
   contactPath,
   getSegment,
-  journalIndexPath,
+  libraryIndexPath,
   shopIndexPath,
   laboPath,
   legalPageFromId,
@@ -73,7 +73,7 @@ const locations: PresentationPluginOptions['resolve'] = {
         return {
           locations: [
             { title: doc.title || 'Article', href: postPath(locale, doc.slug) },
-            { title: 'Tout le Journal', href: journalIndexPath(locale) },
+            { title: 'La Bibliothèque', href: libraryIndexPath(locale) },
           ],
         };
       },
@@ -82,7 +82,7 @@ const locations: PresentationPluginOptions['resolve'] = {
     journalPage: defineLocations({
       select: { language: 'language' },
       resolve: (doc: Selected | null) => ({
-        locations: [{ title: 'Page Journal', href: journalIndexPath(toLocale(doc?.language)) }],
+        locations: [{ title: 'Page Bibliothèque', href: libraryIndexPath(toLocale(doc?.language)) }],
       }),
     }),
 
@@ -131,13 +131,13 @@ const locations: PresentationPluginOptions['resolve'] = {
       const prefix = localizedPath(locale) === '/' ? '' : `/${locale}`;
       const projects = getSegment('projects', locale);
       const labo = getSegment('labo', locale);
-      const journal = getSegment('journal', locale);
+      const library = getSegment('library', locale);
       const shop = getSegment('shop', locale);
       const contact = getSegment('contact', locale);
 
       return [
         {
-          route: `${prefix}/${journal}`,
+          route: `${prefix}/${library}`,
           filter: `_type == "journalPage" && language == $language`,
           params: { language: locale },
         },
@@ -147,7 +147,7 @@ const locations: PresentationPluginOptions['resolve'] = {
           params: { language: locale },
         },
         {
-          route: `${prefix}/${journal}/:slug`,
+          route: `${prefix}/${library}/:slug`,
           filter: `_type == "post" && slug.current == $slug && language == $language`,
           params: { language: locale },
         },

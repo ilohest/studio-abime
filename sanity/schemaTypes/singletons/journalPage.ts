@@ -1,10 +1,34 @@
-import { defineField, defineType } from 'sanity';
+import { defineArrayMember, defineField, defineType } from 'sanity';
 import { languageField } from '../../lib/i18n';
+import {
+  ALL_RUBRICS,
+  LIBRARY_RUBRICS,
+} from '../../../src/content/libraryRubrics';
 
-/** Contenu éditorial propre à l'index du Journal. */
+/**
+ * Accueil de la Bibliothèque.
+ *
+ * ── Ce que porte cette page ─────────────────────────────────────────────────
+ * Un seul texte continu. Certains de ses mots ouvrent une rubrique : c'est le
+ * SEUL chemin vers les articles depuis cette page — il n'y a ni menu de
+ * rubriques, ni grille, ni liste. Le sommaire est écrit, pas listé.
+ *
+ * ── Comment on marque un mot ────────────────────────────────────────────────
+ * On sélectionne le mot dans le texte, puis on applique l'annotation
+ * « Rubrique » (l'icône ⌗ de la barre d'outils) et on choisit laquelle. Le
+ * site s'occupe du reste : l'encadré tracé autour du mot et le trait qui le
+ * relie au suivant.
+ *
+ * Les six mots doivent être présents — les cinq rubriques et « tout ». Un mot
+ * oublié rend une section du site inatteignable ; la page affiche alors un
+ * rattrapage en bas de texte, mais mieux vaut ne pas en arriver là.
+ *
+ * Le type reste `journalPage` : le renommer imposerait de migrer le document
+ * existant pour un gain purement cosmétique.
+ */
 export const journalPage = defineType({
   name: 'journalPage',
-  title: 'Page Journal',
+  title: 'Page Bibliothèque',
   type: 'document',
   groups: [
     { name: 'content', title: 'Contenu', default: true },
@@ -13,12 +37,47 @@ export const journalPage = defineType({
   fields: [
     languageField,
     defineField({
-      name: 'intro',
-      title: 'Texte d’introduction',
-      type: 'text',
-      rows: 5,
+      name: 'composition',
+      title: 'Texte de la page',
+      type: 'array',
       group: 'content',
-      description: 'Texte affiché au-dessus de la grille des articles.',
+      description:
+        'Le texte d’accueil. Sélectionner un mot et lui appliquer l’annotation « Rubrique » ' +
+        'pour en faire une porte vers l’une des cinq rubriques — ou vers l’ensemble.',
+      of: [
+        defineArrayMember({
+          type: 'block',
+          // Aucun style, aucune liste, aucune autre marque : ce texte n'a pas de
+          // mise en forme propre. Il a des portes, et rien d'autre.
+          styles: [{ title: 'Paragraphe', value: 'normal' }],
+          lists: [],
+          marks: {
+            decorators: [],
+            annotations: [
+              {
+                name: 'rubricLink',
+                title: 'Rubrique',
+                type: 'object',
+                icon: () => '⌗',
+                fields: [
+                  defineField({
+                    name: 'rubric',
+                    title: 'Ouvre',
+                    type: 'string',
+                    options: {
+                      list: [
+                        ...LIBRARY_RUBRICS.map(({ value, title }) => ({ value, title })),
+                        { value: ALL_RUBRICS, title: 'Tout — l’ensemble des rubriques' },
+                      ],
+                    },
+                    validation: (rule) => rule.required(),
+                  }),
+                ],
+              },
+            ],
+          },
+        }),
+      ],
     }),
     defineField({
       name: 'seo',
@@ -31,7 +90,7 @@ export const journalPage = defineType({
   preview: {
     select: { language: 'language' },
     prepare: ({ language }) => ({
-      title: 'Page Journal',
+      title: 'Page Bibliothèque',
       subtitle: language?.toUpperCase() ?? '—',
     }),
   },

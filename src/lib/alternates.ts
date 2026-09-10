@@ -1,8 +1,10 @@
 import { isLocale, locales, type Locale } from '~/i18n/config';
 import {
   contactPath,
-  journalIndexPath,
   laboPath,
+  libraryIndexPath,
+  libraryRubricPath,
+  libraryRubricsPath,
   localizedPath,
   legalPageFromId,
   legalPagePath,
@@ -14,6 +16,7 @@ import {
   shopIndexPath,
   type PolicyRouteKey,
 } from '~/i18n/routes';
+import type { LibraryRubric } from '~/content/libraryRubrics';
 import { loadQuery } from './sanity/loadQuery';
 import { translationsQuery } from './sanity/queries';
 
@@ -72,7 +75,7 @@ export async function getDocumentAlternates(
 
 /** Alternates des routes générées par le code (accueil, index portfolio). */
 export function getStaticAlternates(
-  kind: 'home' | 'projectIndex' | 'labo' | 'contact' | 'journal' | 'shop' | 'orderConfirmation',
+  kind: 'home' | 'projectIndex' | 'labo' | 'contact' | 'library' | 'shop' | 'orderConfirmation',
 ): Partial<Record<Locale, string>> {
   if (locales.length < 2) return {};
 
@@ -85,8 +88,8 @@ export function getStaticAlternates(
           ? contactPath(locale)
         : kind === 'labo'
           ? laboPath(locale)
-        : kind === 'journal'
-          ? journalIndexPath(locale)
+        : kind === 'library'
+          ? libraryIndexPath(locale)
         : kind === 'shop'
           ? shopIndexPath(locale)
         : kind === 'orderConfirmation'
@@ -94,6 +97,28 @@ export function getStaticAlternates(
           : projectsIndexPath(locale),
     ]),
   );
+}
+
+/**
+ * Alternates d'une page de rubrique.
+ *
+ * Même cas qu'une politique de boutique : le chemin dépend de la rubrique
+ * autant que de la langue. La clé de rubrique, elle, ne se traduit pas — seul
+ * le segment qui la précède change d'une langue à l'autre.
+ */
+export function getLibraryRubricAlternates(rubric: LibraryRubric): Partial<Record<Locale, string>> {
+  if (locales.length < 2) return {};
+
+  return Object.fromEntries(locales.map((locale) => [locale, libraryRubricPath(locale, rubric)]));
+}
+
+/**
+ * Alternates de la vue « tout ».
+ */
+export function getLibraryRubricsAlternates(): Partial<Record<Locale, string>> {
+  if (locales.length < 2) return {};
+
+  return Object.fromEntries(locales.map((locale) => [locale, libraryRubricsPath(locale)]));
 }
 
 /**

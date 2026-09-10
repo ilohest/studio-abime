@@ -1,12 +1,13 @@
 import { stegaClean } from '@sanity/client/stega';
 import { resolveImage } from './sanity/image';
-import { postPath } from '~/i18n/routes';
+import { libraryRubricPath, postPath } from '~/i18n/routes';
 import {
-  JOURNAL_CATEGORIES,
-  defaultJournalCategory,
-  getJournalCategory,
-  type JournalCategory,
-} from '~/content/journalCategories';
+  LIBRARY_RUBRICS,
+  defaultLibraryRubric,
+  getLibraryRubric,
+  isLibraryRubric,
+  type LibraryRubric,
+} from '~/content/libraryRubrics';
 import type { Locale } from '~/i18n/config';
 import type { JournalBlock, JournalFigure, JournalNote, PostCard } from './sanity/types';
 
@@ -18,10 +19,16 @@ import type { JournalBlock, JournalFigure, JournalNote, PostCard } from './sanit
  * de document Sanity brut ni de logique de formatage à rejouer côté navigateur.
  */
 
-export interface JournalCategoryView {
-  key: JournalCategory;
+export interface LibraryRubricView {
+  key: LibraryRubric;
   title: string;
   mark: string;
+  description: string;
+  /** La planche qui accompagne la rubrique — voir `PlateFigure.astro`. */
+  plate: string;
+  href: string;
+  /** Cote de la rubrique dans le classement — « 01 » à « 05 ». */
+  folio: string;
   count: number;
 }
 
@@ -31,8 +38,8 @@ export interface PostCardView {
   number: string;
   title: string;
   href: string;
-  categoryKey: JournalCategory;
-  categoryTitle: string;
+  /** Rubriques de l'article, dans l'ordre du classement. */
+  rubrics: Array<{ key: LibraryRubric; title: string; mark: string }>;
   /** Date complète, lisible : « 25 août 2026 ». */
   dateLabel: string;
   /** Date compacte imprimée en grand sur la fiche : « 25.08.26 ». */
@@ -54,9 +61,22 @@ export interface PostCardView {
   } | null;
 }
 
-/** Rubrique d'un article, avec repli sur le Cahier de recherche. */
-export function postCategory(card: Pick<PostCard, 'category'>): JournalCategory {
-  return getJournalCategory(stegaClean(card.category))?.value ?? defaultJournalCategory;
+/**
+ * Rubriques d'un article, nettoyées et remises dans l'ordre du classement.
+ *
+ * L'ordre vient de `LIBRARY_RUBRICS`, jamais de la saisie : deux articles
+ * classés dans les mêmes rubriques doivent afficher leurs cotes dans le même
+ * ordre, sans quoi la grille ne se lit plus. Un article dont aucune valeur
+ * n'est reconnue retombe sur la rubrique par défaut plutôt que de paraître
+ * sans classement.
+ */
+export function postRubrics(card: Pick<PostCard, 'rubrics'>): LibraryRubric[] {
+  const declared = new Set(
+    (card.rubrics ?? []).map((rubric) => stegaClean(rubric)).filter(isLibraryRubric),
+  );
+
+  const ordered = LIBRARY_RUBRICS.map(({ value }) => value).filter((value) => declared.has(value));
+  return ordered.length > 0 ? ordered : [defaultLibraryRubric];
 }
 
 /** Date ISO exploitable, quelle que soit la fraîcheur du champ côté CMS. */
@@ -100,26 +120,27 @@ export function toPostCardView(
   locale: Locale,
   index = 0,
   /** Intitulé de la ligne « rubrique », traduit par la page appelante. */
-  categoryLabel = 'Rubrique',
+  rubricLabel = 'Rubrique',
 ): PostCardView {
   const image = resolveImage(card.coverImage, { width: 900 });
-  const category = postCategory(card);
-  const categoryTitle = getJournalCategory(category)?.title ?? '';
+  const rubrics = postRubrics(card).map((key) => {
+    const rubric = getLibraryRubric(key)!;
+    return { key, title: rubric.title, mark: rubric.mark };
+  });
 
   return {
     id: card._id,
     number: String(index + 1).padStart(2, '0'),
     title: card.title,
     href: postPath(locale, card.slug),
-    categoryKey: category,
-    categoryTitle,
+    rubrics,
     dateLabel: formatJournalDate(card.publishedAt, locale),
     dateStamp: formatJournalStamp(card.publishedAt),
     dateIso: stegaClean(card.publishedAt ?? '').slice(0, 10),
     facts: [
-      ...(categoryTitle
-        ? [{ key: 'category', label: categoryLabel, value: categoryTitle }]
-        : []),
+      // Les rubriques tiennent sur une seule ligne, séparées par une virgule :
+      // un article classé trois fois ne doit pas ouvrir trois lignes de fiche.
+      { key: 'rubrics', label: rubricLabel, value: rubrics.map((r) => r.title).join(', ') },
       ...postFreeFacts(card),
     ],
     excerpt: card.excerpt?.trim() ? card.excerpt : null,
@@ -128,18 +149,29 @@ export function toPostCardView(
 }
 
 /**
- * Rubriques proposées au filtrage.
+ * Les cinq rubriques, avec leur adresse et le nombre d'articles qu'elles tiennent.
  *
- * Une rubrique sans article n'est pas affichée : aucun filtre ne peut renvoyer
- * une grille vide.
+ * Contrairement à l'ancien filtre, une rubrique vide n'est PAS retirée : elle a
+ * désormais une page, une adresse partageable et un mot dans le texte
+ * d'accueil. La faire disparaître casserait un lien plutôt qu'elle
+ * n'épargnerait une grille vide — la page vide, elle, le dit avec des mots.
  */
-export function toJournalCategoryViews(posts: PostCardView[]): JournalCategoryView[] {
-  return JOURNAL_CATEGORIES.map(({ value, title, mark }) => ({
+export function toLibraryRubricViews(posts: PostCardView[], locale: Locale): LibraryRubricView[] {
+  return LIBRARY_RUBRICS.map(({ value, title, mark, description, plate }, index) => ({
     key: value,
     title,
     mark,
-    count: posts.filter((post) => post.categoryKey === value).length,
-  })).filter((category) => category.count > 0);
+    description,
+    plate,
+    href: libraryRubricPath(locale, value),
+    folio: String(index + 1).padStart(2, '0'),
+    count: posts.filter((post) => post.rubrics.some((rubric) => rubric.key === value)).length,
+  }));
+}
+
+/** Les articles d'une rubrique, dans l'ordre chronologique déjà établi. */
+export function filterByRubric(posts: PostCardView[], rubric: LibraryRubric): PostCardView[] {
+  return posts.filter((post) => post.rubrics.some((entry) => entry.key === rubric));
 }
 
 /* -------------------------------------------------------------------------- */

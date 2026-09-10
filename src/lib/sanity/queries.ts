@@ -185,7 +185,15 @@ const POST_CARD = /* groq */ `{
     defined(slug.current) &&
     coalesce(publishedAt, _createdAt) > coalesce(^.publishedAt, ^._createdAt)
   ]) + 1,
-  "category": coalesce(category, "cahier-de-recherche"),
+  // Un article porte désormais PLUSIEURS rubriques. Le champ est toujours un
+  // tableau non vide : la saisie d'avant la refonte tenait dans un champ
+  // "category" unique, qu'on replie ici, et un article sans classement retombe
+  // sur le Journal plutôt que de disparaître des grilles.
+  "rubrics": select(
+    count(rubrics) > 0 => rubrics,
+    defined(category) => [category],
+    ["journal"]
+  ),
   "publishedAt": coalesce(publishedAt, _createdAt),
   excerpt,
   listingFacts[]{ _key, label, value },
@@ -641,13 +649,19 @@ export const shopPageQuery = /* groq */ `
   seo ${SEO}
 }`;
 
-/** Contenu éditorial de la page Journal, singleton propre à chaque langue. */
+/**
+ * Contenu éditorial de l'accueil de la Bibliothèque, singleton par langue.
+ *
+ * `composition` est le texte continu dont certains mots ouvrent une rubrique.
+ * Les annotations sont résolues comme partout ailleurs (`PORTABLE_TEXT`), qui
+ * conserve `markDefs` — c'est là que se trouve la rubrique visée.
+ */
 export const journalPageQuery = /* groq */ `
 *[_type == "journalPage" && language == $locale][0]{
   _id,
   _type,
   language,
-  intro,
+  "composition": composition ${PORTABLE_TEXT},
   seo ${SEO}
 }`;
 
@@ -666,7 +680,15 @@ export const postBySlugQuery = /* groq */ `
   "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
-  "category": coalesce(category, "cahier-de-recherche"),
+  // Un article porte désormais PLUSIEURS rubriques. Le champ est toujours un
+  // tableau non vide : la saisie d'avant la refonte tenait dans un champ
+  // "category" unique, qu'on replie ici, et un article sans classement retombe
+  // sur le Journal plutôt que de disparaître des grilles.
+  "rubrics": select(
+    count(rubrics) > 0 => rubrics,
+    defined(category) => [category],
+    ["journal"]
+  ),
   "publishedAt": coalesce(publishedAt, _createdAt),
   standfirst,
   excerpt,

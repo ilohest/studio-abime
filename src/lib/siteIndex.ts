@@ -15,21 +15,29 @@
 import type { Locale } from '../i18n/config';
 import {
   contactPath,
-  journalIndexPath,
   laboPath,
+  libraryIndexPath,
+  libraryRubricPath,
   projectsIndexPath,
   shopIndexPath,
 } from '../i18n/routes';
+import { LIBRARY_RUBRICS } from '../content/libraryRubrics';
 
-export type SiteSectionKey = 'labo' | 'experiences' | 'journal' | 'shop' | 'contact';
+export type SiteSectionKey = 'labo' | 'experiences' | 'bibliotheque' | 'shop' | 'contact';
 
 export interface SiteSectionItem {
   key: string;
   label: string;
-  /** Ancre dans la page de la section. */
+  /**
+   * Ancre dans la page de la section.
+   *
+   * Vide pour une sous-entrée qui a sa PROPRE page — les rubriques de la
+   * Bibliothèque, qui ne sont plus des filtres au sein d'un index mais des
+   * adresses à part entière.
+   */
   hash: string;
-  /** Clé de filtre du Journal, lue par le rail pour son suivi de lecture. */
-  filterKey?: string;
+  /** Page propre de la sous-entrée, quand elle en a une. Prime sur `hash`. */
+  path?: (locale: Locale) => string;
 }
 
 interface SiteSectionDefinition {
@@ -65,18 +73,20 @@ const sections: SiteSectionDefinition[] = [
     ],
   },
   {
-    key: 'journal',
-    title: 'Journal',
-    path: journalIndexPath,
-    items: [
-      {
-        key: 'cahier-de-recherche',
-        label: 'Cahier de recherche',
-        hash: '#cahier-de-recherche',
-        filterKey: 'cahier-de-recherche',
-      },
-      { key: 'actualites', label: 'Actualités', hash: '#actualites', filterKey: 'actualites' },
-    ],
+    /*
+      Les sous-entrées ne sont plus des filtres posés sur un index : chaque
+      rubrique a sa page. Le rail y mène directement, et la liste vient de la
+      même source que le texte d'accueil et les cases du Studio.
+    */
+    key: 'bibliotheque',
+    title: 'Bibliothèque',
+    path: libraryIndexPath,
+    items: LIBRARY_RUBRICS.map((rubric) => ({
+      key: rubric.value,
+      label: rubric.title,
+      hash: '',
+      path: (locale: Locale) => libraryRubricPath(locale, rubric.value),
+    })),
   },
   {
     /*
@@ -131,7 +141,7 @@ export function getSiteSections(locale: Locale): ResolvedSiteSection[] {
       items: section.items.map((item, itemIndex) => ({
         ...item,
         folio: `${folio}.${itemIndex + 1}`,
-        href: `${href}${item.hash}`,
+        href: item.path ? item.path(locale) : `${href}${item.hash}`,
       })),
     };
   });

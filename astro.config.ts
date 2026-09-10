@@ -217,6 +217,14 @@ export default defineConfig({
     // redirection héritée du contenu ne doit jamais écraser celles du code.
     ...previousSlugRedirects,
     '/projets': '/experiences',
+    /*
+      Le Journal est devenu la Bibliothèque : la section porte cinq rubriques,
+      dont l'une s'appelle « Journal ». Les articles n'ont pas changé de slug,
+      seulement de section — d'où la redirection à paramètre, qui les suit tous
+      sans en énumérer un seul.
+    */
+    '/journal': '/bibliotheque',
+    '/journal/[slug]': '/bibliotheque/[slug]',
   },
 
   /**

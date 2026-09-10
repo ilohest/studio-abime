@@ -1,0 +1,1141 @@
+---
+import LibraryVerso from '~/components/library/LibraryVerso.astro';
+import PlateFigure, { type PlateVariant } from '~/components/library/PlateFigure.astro';
+
+import { useTranslations } from '~/i18n/ui';
+import { rubricTargetPath, type LibraryComposition } from '~/lib/library';
+import { getLibraryRubric, ALL_RUBRICS } from '~/content/libraryRubrics';
+import type { Locale } from '~/i18n/config';
+
+/**
+ * Accueil de la Bibliothèque.
+ *
+ * ── L'intention ─────────────────────────────────────────────────────────────
+ * La page ne présente pas un sommaire : elle en EST un. Un texte continu, dans
+ * lequel six mots sont entourés à la main — cinq rubriques et leur réunion.
+ * Lire la page, c'est déjà choisir par où entrer. C'est le geste d'un livre
+ * annoté : quelqu'un est passé avant nous, a entouré ce qui compte, tiré des
+ * traits entre les mots et écrit dans la marge ce qu'il en pensait.
+ *
+ * ── Les trois couches ───────────────────────────────────────────────────────
+ *  1. LE TEXTE, au corps courant du site. C'est une page, pas une affiche.
+ *  2. LA TOILE — cadres tracés autour des mots, et traits DROITS qui les
+ *     relient les uns aux autres. Pas une chaîne : un réseau. Les rubriques ne
+ *     se succèdent pas, elles se répondent.
+ *  3. LES MARGINALIA — à gauche, des planches d'appareil ; à droite, une note
+ *     par rubrique, dispersée, pâle, reliée par une flèche au mot qu'elle
+ *     commente. Survoler le mot fait monter sa note.
+ *
+ * Tout cela est mesuré dans le navigateur : la position d'un mot dans un
+ * paragraphe justifié n'est connue qu'une fois la page composée, et change à
+ * chaque largeur.
+ *
+ * ── Sans JavaScript, sans mouvement, sans marge ─────────────────────────────
+ * Les six mots restent six liens soulignés ; les notes restent lisibles par
+ * les technologies d'assistance (`aria-describedby`). Le dessin, les planches
+ * et la mise en marge sont des enrichissements — jamais le seul moyen de
+ * comprendre ou d'agir. `prefers-reduced-motion` garde le dessin et supprime
+ * son apparition progressive.
+ */
+interface Props {
+  composition: LibraryComposition;
+  locale: Locale;
+  title: string;
+  number: string;
+}
+
+const { composition, locale, title, number } = Astro.props;
+const t = useTranslations(locale);
+
+/** Libellé lisible d'une cible, pour les rattrapages et les noms accessibles. */
+const targetTitle = (target: string) =>
+  target === ALL_RUBRICS ? t('library.all') : (getLibraryRubric(target)?.title ?? target);
+
+/*
+  LES NOTES DE MARGE.
+
+  Une par mot-rubrique. « tout » n'en reçoit pas : ce n'est pas une rubrique, et
+  une note qui dirait « toutes les rubriques » à côté du mot « l'ensemble »
+  n'apprendrait rien.
+
+  Elles sont écrites dans le HTML, pas fabriquées par le script : ce sont des
+  phrases, elles doivent exister même si aucun JavaScript ne s'exécute. Le
+  script ne fait que les DÉPLACER dans la marge et tirer la flèche.
+
+  Le désordre — décalage, rotation, largeur — est calculé à partir du rang du
+  mot. Il ne change donc pas d'un rendu à l'autre : une marge annotée a son
+  propre ordre, elle n'est pas remise en page à chaque visite.
+*/
+/*
+  Une petite rentrée par note, pour que la colonne ne soit pas au cordeau : le
+  gros de la distance au texte vient de la page elle-même, pas de ces valeurs.
+  Une même largeur pour toutes — c'est la seule mesure que le désordre ne peut
+  pas se permettre, faute de quoi une note sortirait de la page.
+*/
+const SHIFTS = ['0rem', '0.9rem', '0.4rem', '1.4rem', '0.6rem'];
+const TILTS = ['-2.1deg', '1.4deg', '-1.2deg', '2.3deg', '-0.8deg'];
+const WIDTHS = ['6.5rem', '6.5rem', '6.5rem', '6.5rem', '6.5rem'];
+
+/*
+  Les notes ne s'entassent pas d'un seul côté : une marge d'épreuve se remplit
+  des deux mains, et deux colonnes de notes courtes se lisent mieux qu'une
+  seule qui descendrait toute la page.
+
+  L'alternance n'est pas mécanique. Les Essais ne vont NI À GAUCHE NI À DROITE :
+  leur mot ferme le texte, et leur note se pose EN DESSOUS, à peu près dans
+  l'axe. C'est la place que prend la dernière annotation d'une page — celle
+  qu'on écrit quand les marges sont pleines — et la seule d'où la flèche
+  n'ait à traverser ni le paragraphe ni une autre note.
+*/
+const SIDES = ['right', 'left', 'right', 'left', 'bottom'] as const;
+
+/*
+  La hauteur de pose, en pixels au-dessus de la ligne du mot.
+
+  Une note strictement alignée sur son mot fait une colonne trop sage. Une
+  valeur positive la remonte, une valeur négative la fait descendre sous sa
+  ligne : les cinq se répartissent ainsi sur toute la hauteur de la page au
+  lieu de se serrer contre le paragraphe. La flèche reste attachée au bon mot
+  quelle que soit la hauteur — c'est elle qui dit ce que la note commente, pas
+  sa position.
+
+  LE CAS DES ESSAIS (−150). Son mot est sur la dernière ligne, et « l'ensemble »
+  se tient juste après lui sur cette même ligne : une note posée à sa hauteur
+  faisait traverser le trait EN PLEIN MILIEU de l'autre mot encadré, comme s'il
+  le désignait. Descendue franchement sous le texte, la note tire une diagonale
+  qui passe bien au-dessous de la ligne et ne rencontre plus rien.
+*/
+const LIFTS = [92, 116, -64, -78, -215];
+
+const notes = composition.paragraphs
+  .flatMap((paragraph) => paragraph.segments)
+  .flatMap((segment, position) =>
+    segment.kind === 'rubric' && segment.target !== ALL_RUBRICS
+      ? [
+          {
+            id: `library-note-${segment.order}`,
+            order: segment.order,
+            text: getLibraryRubric(segment.target)?.description ?? '',
+            shift: SHIFTS[position % SHIFTS.length]!,
+            tilt: TILTS[position % TILTS.length]!,
+            width: WIDTHS[position % WIDTHS.length]!,
+            side: SIDES[segment.order % SIDES.length]!,
+            lift: LIFTS[segment.order % LIFTS.length]!,
+            /*
+              LA PLANCHE DE LA RUBRIQUE, rangée avec sa note.
+
+              Chaque rubrique a la sienne, déclarée avec elle dans
+              `libraryRubrics.ts` : le relevé pour le Journal, les orbites pour
+              le Carnet de voyages, le faisceau pour les Correspondances, la
+              trame pour les Références, le binaire pour les Essais.
+
+              Elle est posée AU-DESSUS de sa note, qui lui sert alors de
+              légende : figure puis texte, comme sur une planche d'ouvrage. Les
+              deux font une seule annotation, portant sur un seul mot, et
+              partagent tout — la largeur, l'inclinaison, la pâleur, et le fait
+              de s'animer ensemble quand on survole le mot.
+            */
+            plate: getLibraryRubric(segment.target)?.plate ?? null,
+            /*
+              La note mène à la rubrique, comme le mot.
+
+              Une figure et sa légende posées à côté d'un mot cliquable se
+              lisent comme faisant partie de la même chose : les cliquer doit
+              mener au même endroit. Le lien est retiré du parcours clavier
+              (`tabindex="-1"`) — il n'ouvre rien que le mot n'ouvre déjà, et
+              deux arrêts pour une seule destination allongeraient la
+              navigation sans rien apporter.
+            */
+            href: segment.href,
+          },
+        ]
+      : [],
+  )
+  .filter((note) => note.text);
+
+const noteId = (order: number) => notes.find((note) => note.order === order)?.id;
+
+/*
+  LE VERSO — l'envers de la feuille.
+
+  Le même texte, retourné sur l'axe vertical et presque effacé, posé DERRIÈRE
+  lui-même : l'encre du dos de la page, vue par transparence. Le procédé vient
+  du hero de l'accueil (`ManifestoHero.astro`) ; il dit ici quelque chose de
+  plus juste encore, puisque c'est littéralement cette page-ci qu'on voit au
+  travers.
+
+  Il est doublé pour remplir ses deux colonnes sur toute la hauteur du bloc :
+  un verso qui s'arrêterait à mi-page se lirait comme un second texte, pas
+  comme une trame. À 8 % d'opacité, la répétition ne se voit pas — le regard y
+  reconnaît du texte, jamais des mots.
+*/
+const versoText = composition.paragraphs.map((paragraph) =>
+  paragraph.segments.map((segment) => segment.text).join(''),
+);
+const verso = [...versoText, ...versoText];
+---
+
+<div class="library container-wide py-(--spacing-section)">
+  <header class="library__header">
+    <h1 class="library__title type-titre text-balance" data-text-reveal>
+      {number} {title}
+    </h1>
+  </header>
+
+  <div class="library__body">
+    {/*
+      Le verso vient AVANT la composition dans le document : il se peint donc
+      sous elle sans avoir à revendiquer un niveau. Ni lu, ni cliquable, ni
+      sélectionnable — ce n'est pas du contenu, c'est du papier.
+    */}
+    <LibraryVerso lines={verso} />
+
+    {/*
+      Le texte porte le rôle de navigation : ses six mots SONT le menu de la
+      section. Sans cette annonce, un lecteur d'écran traverserait un paragraphe
+      sans savoir qu'il vient de passer devant la table des matières.
+    */}
+    <nav
+      class="library__composition"
+      aria-label={t('library.compositionLabel')}
+      data-library-composition
+      data-mark-start={t('library.start')}
+      data-mark-end={t('library.end')}
+    >
+      {/*
+        La toile. Elle est sous le texte et sans interaction : ce n'est pas
+        elle qu'on clique, ce sont les mots.
+      */}
+      <svg class="library__thread" aria-hidden="true" focusable="false" data-library-thread></svg>
+
+      {
+        composition.paragraphs.map((paragraph) => (
+          <p class="library__paragraph type-copy">
+            {paragraph.segments.map((segment) =>
+              segment.kind === 'text' ? (
+                <>{segment.text}</>
+              ) : (
+                <a
+                  class="library__word"
+                  href={segment.href}
+                  data-library-word
+                  data-order={segment.order}
+                  aria-describedby={noteId(segment.order)}
+                  data-cursor-interactive
+                >
+                  {segment.text}
+                </a>
+              ),
+            )}
+          </p>
+        ))
+      }
+
+    </nav>
+
+    {/*
+      Les notes sont posées APRÈS le texte dans le document, et non à côté du
+      mot qu'elles commentent : intercalées, elles couperaient la phrase en
+      deux à la lecture d'écran. `aria-describedby` fait le lien — le mot est
+      annoncé, puis sa note.
+
+    Elles sont posées HORS du bloc de texte, dans le corps de la page : c'est
+    ce qui leur permet de se ranger contre le bord, aussi loin du texte que la
+    page le permet — et de s'en éloigner encore à mesure que l'écran s'élargit.
+
+    Tant que le script n'a pas mesuré la page, elles sont masquées à l'œil sans
+    disparaître de l'annonce. C'est aussi leur état définitif sur les écrans
+    sans marge.
+    */}
+    {
+      notes.map((note) => (
+        <a
+          class="library__note type-note"
+          id={note.id}
+          href={note.href}
+          tabindex="-1"
+          data-cursor-interactive
+          data-library-note={note.order}
+          data-side={note.side}
+          data-lift={note.lift}
+          style={`--note-shift: ${note.shift}; --note-tilt: ${note.tilt}; --note-width: ${note.width}`}
+        >
+          {
+            note.plate && (
+              <span class="library__note-plate">
+                <PlateFigure variant={note.plate as PlateVariant} />
+              </span>
+            )
+          }
+
+          <span class="library__note-text">{note.text}</span>
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    /*
+      Rattrapage. Cette page est le seul chemin vers les rubriques : si le texte
+      saisi dans le Studio en oublie une, la section deviendrait inatteignable
+      à la souris comme au clavier. On ne laisse pas une porte murée — on la
+      rouvre ici, discrètement, et l'oubli se voit assez pour être corrigé.
+    */
+    composition.missing.length > 0 && (
+      <p class="library__missing type-note">
+        {composition.missing.map((target, index) => (
+          <>
+            {index > 0 ? ' · ' : ''}
+            <a class="link-underline" href={rubricTargetPath(target, locale)}>
+              {targetTitle(target)}
+            </a>
+          </>
+        ))}
+      </p>
+    )
+  }
+</div>
+
+<style>
+  /* Repère des planches, qui se posent aux angles de la section entière. */
+  .library {
+    position: relative;
+  }
+
+  .library__header {
+    margin-bottom: clamp(4rem, 9vw, 8rem);
+  }
+
+  .library__title {
+    text-align: center;
+  }
+
+  /*
+    Le corps de la page. Les deux marges sont peuplées en position absolue :
+    le texte garde ainsi exactement la place qu'il aurait seul, et rien ne le
+    décale quand une marge devient trop étroite pour être servie.
+  */
+  .library__body {
+    position: relative;
+  }
+
+  .library__composition {
+    position: relative;
+    /*
+      La mesure de lecture du site (`--container-content`), celle des articles
+      et des pages légales : à corps courant, une colonne plus large ferait des
+      lignes trop longues à suivre.
+    */
+    max-width: var(--container-content);
+    margin-inline: auto;
+    /*
+      De la place pour que la toile respire : les cadres débordent des mots, et
+      les traits sortent par le haut et par le bas du bloc.
+    */
+    padding-block: clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .library__paragraph {
+    /*
+      Le corps courant du site, sans agrandissement.
+
+      Ce n'est pas une affiche : c'est une PAGE, et le dessin ne prend son sens
+      que par contraste avec un texte imprimé ordinaire. `type-copy` porte déjà
+      la taille et l'interlignage.
+    */
+    text-align: justify;
+    text-wrap: pretty;
+    hyphens: auto;
+  }
+
+  /*
+    L'ALINÉA. Le premier prend la grande indentation du studio, celle des
+    textes d'ouverture des autres index. Les suivants reprennent l'alinéa
+    ordinaire d'un livre. `:first-of-type` et non `:first-child` : la toile est
+    le premier enfant du conteneur.
+  */
+  .library__paragraph:first-of-type {
+    text-indent: clamp(4rem, 14vw, 11rem);
+  }
+
+  .library__paragraph + .library__paragraph {
+    margin-top: 1.4em;
+    text-indent: 2em;
+  }
+
+  /*
+    LE MOT-RUBRIQUE.
+
+    État de base — celui qui vaut sans JavaScript : un lien souligné, comme
+    partout ailleurs sur le site. L'encadré ne le remplace qu'une fois la toile
+    tracée, et le soulignement disparaît alors.
+  */
+  .library__word {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    /* Un mot entouré ne se coupe pas en fin de ligne : le cadre le suivrait mal. */
+    white-space: nowrap;
+    hyphens: none;
+
+    /*
+      LE COUP DE FLUO.
+
+      Un cadre tracé dit « ce mot compte » ; il ne dit pas « ce mot s'ouvre ».
+      La bande de Lumière, elle, passe sur le mot au survol comme un
+      surligneur — de la gauche vers la droite, dans le sens de l'écriture —
+      et ne laisse aucun doute sur ce qui va se produire au clic.
+
+      Peinte en FOND et non en pseudo-élément : un fond est toujours sous le
+      texte et suit le mot s'il se coupe en fin de ligne, là où un
+      pseudo-élément en `z-index: -1` dépend du contexte d'empilement de ses
+      ancêtres et peut disparaître sous l'aplat de la page.
+    */
+    background-image: linear-gradient(var(--color-accent), var(--color-accent));
+    background-repeat: no-repeat;
+    background-position: 0 82%;
+    background-size: 0% 0.55em;
+    transition: background-size 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .library__word:hover,
+  .library__word:focus-visible,
+  .library__word.is-lit {
+    background-size: 100% 0.55em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .library__word {
+      transition: none;
+    }
+  }
+
+  .library__thread {
+    /*
+      La toile déborde de la colonne des deux côtés : c'est ce débord qui donne
+      aux mentions et aux flèches un endroit où aller. Il est nul tant que la
+      page n'a pas de marge à offrir — une toile plus large que son conteneur
+      ferait défiler la page de côté.
+    */
+    --thread-margin: 0px;
+    --thread-margin-right: var(--thread-margin);
+
+    position: absolute;
+    top: 0;
+    /*
+      Largeur EXPLICITE, et non `left`/`right` opposés : une image SVG est un
+      élément remplacé, elle ne s'étire pas entre deux décalages — elle
+      retomberait sur sa taille intrinsèque de 300 px.
+    */
+    left: calc(var(--thread-margin) * -1);
+    width: calc(100% + var(--thread-margin) + var(--thread-margin-right));
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    /* Rien à afficher tant que le tracé n'a pas été calculé. */
+    opacity: 0;
+  }
+
+  .library__composition[data-traced] .library__thread {
+    opacity: 1;
+  }
+
+  .library__composition[data-traced] .library__word {
+    text-decoration: none;
+    /* Un peu d'air pour que le cadre ne touche pas les lettres. */
+    padding-inline: 0.18em;
+    margin-inline: -0.06em;
+  }
+
+  /* ── LES MARGINALIA ─────────────────────────────────────────────────────
+     Ce que contient chaque rubrique, écrit à côté du mot et relié à lui par
+     une flèche. Pâles et dispersées : on les remarque comme on remarque une
+     écriture au crayon sur une page imprimée — d'abord comme une texture,
+     ensuite seulement comme un texte. Survoler le mot fait monter la sienne.
+
+     ÉTAT DE BASE : invisible à l'œil, présent pour les lecteurs d'écran. On ne
+     met pas `display: none` — la note EST la description du lien, la masquer
+     ainsi la retirerait de l'annonce.
+  */
+  .library__note {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /*
+    La note s'accroche au BORD DE LA PAGE, pas au bord du texte.
+
+    `--note-outer` réserve le couloir de la planche ; `--note-shift` ne sert
+    plus qu'à rentrer légèrement telle ou telle note, pour que la colonne ne
+    soit pas au cordeau. La distance au texte n'est donc pas un réglage : c'est
+    ce qui reste de la page une fois la colonne de lecture posée, et elle
+    grandit d'elle-même sur un grand écran.
+  */
+  .library__body[data-notes] .library__note {
+    --note-outer: 0.6rem;
+
+    width: var(--note-width);
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+
+    /* Beaucoup plus petit que la note courante, et penché. */
+    font-size: 0.62rem;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    text-wrap: pretty;
+    transform: rotate(var(--note-tilt));
+
+    color: var(--color-ink);
+    opacity: 0.34;
+    transition: opacity 260ms ease;
+  }
+
+  /*
+    Le côté. Une note de gauche penche depuis SON bord droit — celui tourné
+    vers le texte : c'est le point d'attache de la flèche, et une rotation
+    prise à l'autre bout l'en éloignerait.
+  */
+  .library__body[data-notes] .library__note[data-side='right'] {
+    right: calc(var(--note-outer) + var(--note-shift));
+    transform-origin: left center;
+  }
+
+  .library__body[data-notes] .library__note[data-side='left'] {
+    left: calc(var(--note-outer) + var(--note-shift));
+    text-align: right;
+    transform-origin: right center;
+  }
+
+  /*
+    LA NOTE DU BAS. Ni marge gauche ni marge droite : dans l'axe du texte, sous
+    le dernier paragraphe. Légèrement décentrée vers la gauche — posée
+    exactement au milieu, elle aurait l'air d'un pied de page, et c'est une
+    annotation.
+
+    Le retournement de centrage se compose AVANT l'inclinaison : l'ordre
+    inverse ferait pivoter le décalage avec le bloc, et la note glisserait de
+    côté à mesure qu'elle penche.
+  */
+  .library__body[data-notes] .library__note[data-side='bottom'] {
+    left: 44%;
+    transform: translateX(-50%) rotate(var(--note-tilt));
+    transform-origin: center;
+    text-align: center;
+  }
+
+  /* Posée par le script au survol — ou au focus clavier — du mot relié. */
+  .library__body[data-notes] .library__note:hover,
+  .library__body[data-notes] .library__note.is-lit {
+    opacity: 1;
+  }
+
+  /* Un lien, mais rien d'un lien : le mot porte déjà toute la signalisation. */
+  .library__note {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /*
+    LA PLANCHE DE LA NOTE.
+
+    Rangée contre sa note, du côté du bord : la figure et la phrase font une
+    seule annotation, portant sur un seul mot. Elle hérite de tout ce qui rend
+    la note discrète — la pâleur, l'inclinaison, et le fait de monter avec elle
+    quand on survole le mot. Rien à régler séparément.
+
+    Elle n'apparaît qu'à 1440 px : en dessous, la marge tient la note mais pas
+    sa figure, et la faire chevaucher le texte serait pire que l'omettre.
+  */
+  .library__note-plate {
+    display: none;
+  }
+
+  /*
+    Posée DANS le fil de la note, au-dessus du texte, elle ne coûte aucune
+    largeur : elle paraît donc en même temps que les notes, sans seuil
+    supplémentaire. C'est ce que la mise en légende a fait gagner — une figure
+    posée à côté réclamait un couloir, une figure au-dessus n'en réclame pas.
+  */
+  .library__body[data-notes] .library__note-plate {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.45rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .library__body[data-notes] .library__note {
+      transition: none;
+    }
+  }
+
+  .library__missing {
+    max-width: var(--container-content);
+    margin: clamp(3rem, 8vw, 6rem) auto 0;
+    color: var(--color-muted);
+    text-align: center;
+  }
+
+  .library__missing a {
+    color: var(--color-ink);
+  }
+
+  @media (max-width: 599px) {
+    .library__composition {
+      padding-block: 2rem;
+    }
+
+    .library__paragraph {
+      text-align: left;
+      hyphens: none;
+    }
+
+    /* Une indentation de 11rem sur 375 px ne laisserait qu'un mot en tête. */
+    .library__paragraph:first-of-type {
+      text-indent: 2.5rem;
+    }
+  }
+
+  @media (min-width: 700px) {
+    .library__thread {
+      --thread-margin: 5rem;
+    }
+  }
+
+  /*
+    Les seuils.
+
+    Le rail occupe 16 rem à gauche et le conteneur ses gouttières : la marge
+    disponible de chaque côté vaut (largeur utile − 44 rem) / 2. Les notes
+    demandent 9 rem à droite, les planches 11 rem à gauche — d'où ces deux
+    largeurs de fenêtre, et pas des valeurs choisies au jugé.
+  */
+  @media (min-width: 1300px) {
+    /*
+      LA PAGE TIENT DANS UN ÉCRAN.
+
+      Le texte se cale au milieu de la hauteur disponible, et tout ce qui
+      l'entoure — planches, notes, mentions — se distribue autour de lui sans
+      jamais l'allonger. On ne fait pas défiler un sommaire : on le voit.
+
+      `100svh` et non `100vh` : sur les navigateurs à barre d'outils
+      escamotable, `vh` compte une hauteur que l'écran n'a pas toujours, et le
+      bas de la composition passerait sous la barre.
+    */
+    .library {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 100svh;
+    }
+
+    .library__header {
+      margin-bottom: clamp(3rem, 6vw, 5rem);
+    }
+
+    /* La toile s'ouvre des DEUX côtés : il y a maintenant des notes à gauche. */
+    .library__thread {
+      --thread-margin: 13rem;
+      --thread-margin-right: 13rem;
+    }
+
+    /*
+      Les planches occupent les quatre angles laissés libres par le texte
+      centré : deux en haut, à hauteur du titre, deux en bas. Leurs tailles
+      sont franchement inégales — c'est ce qui les empêche de faire motif.
+    */
+  }
+</style>
+
+<script>
+  /*
+    ═══════════════════════════════════════════════════════════════════════════
+    LA MAIN QUI ANNOTE
+    ═══════════════════════════════════════════════════════════════════════════
+    Trois gestes : entourer chaque mot, tirer des traits entre eux, ranger les
+    notes dans la marge et les y relier par une flèche.
+
+    ── Pourquoi dans le navigateur ─────────────────────────────────────────
+    La position d'un mot dans un paragraphe justifié dépend de la largeur, de
+    la fonte réellement chargée et de la langue. Aucune de ces trois choses
+    n'est connue au build. On mesure donc après composition, et on redessine à
+    chaque changement de taille.
+
+    ── Pourquoi les mêmes irrégularités à chaque fois ──────────────────────
+    Le tremblement vient d'une suite pseudo-aléatoire SEMÉE par le rang du mot.
+    Redimensionner ne rebat pas les cartes : le cadre du mot « essais » tremble
+    toujours de la même façon. Un tracé qui change à chaque redraw se lirait
+    comme un bug, pas comme une main.
+  */
+  const NS = 'http://www.w3.org/2000/svg';
+
+  /** Suite déterministe dans [-1, 1], semée par un entier. */
+  function wobble(seed: number) {
+    let state = seed * 9301 + 49297;
+    return () => {
+      state = (state * 9301 + 49297) % 233280;
+      return (state / 233280) * 2 - 1;
+    };
+  }
+
+  interface Box {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+
+  /**
+   * Le contour d'un mot, tracé comme à la main.
+   *
+   * Quatre côtés dont chaque extrémité s'écarte du coin théorique, et qui se
+   * referment en dépassant légèrement — c'est ce dépassement qui fait la
+   * différence entre un rectangle et un rectangle DESSINÉ.
+   */
+  function framePath(box: Box, seed: number): string {
+    const noise = wobble(seed);
+    const drift = () => noise() * 2.4;
+
+    const left = box.x - 4;
+    const right = box.x + box.width + 4;
+    const top = box.y - 2;
+    const bottom = box.y + box.height + 2;
+
+    const points = [
+      [left + drift(), top + drift()],
+      [right + drift(), top + drift()],
+      [right + drift(), bottom + drift()],
+      [left + drift(), bottom + drift()],
+    ];
+
+    // Le retour au départ dépasse d'un cheveu : la main ne s'arrête jamais
+    // pile là où elle a commencé.
+    const closing = [points[0]![0] + drift(), points[0]![1] + drift()];
+
+    return (
+      `M ${points[0]![0]} ${points[0]![1]} ` +
+      points
+        .slice(1)
+        .map(([x, y]) => `L ${x} ${y}`)
+        .join(' ') +
+      ` L ${closing[0]} ${closing[1]}`
+    );
+  }
+
+  /**
+   * Point où un trait quitte un cadre.
+   *
+   * Un segment tiré de centre à centre barrerait les deux mots qu'il relie. On
+   * cherche donc où la droite sort du rectangle, et on s'écarte encore un peu :
+   * le mot reste net, le trait commence à son bord.
+   */
+  function exitPoint(box: Box, towards: [number, number], gap: number): [number, number] {
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const dx = towards[0] - cx;
+    const dy = towards[1] - cy;
+    if (dx === 0 && dy === 0) return [cx, cy];
+
+    // Demi-dimensions du CADRE, un peu plus larges que le mot lui-même.
+    const hw = box.width / 2 + 6;
+    const hh = box.height / 2 + 4;
+
+    // Le côté touché en premier est celui qui donne le plus petit facteur.
+    const scale = Math.min(
+      dx === 0 ? Infinity : hw / Math.abs(dx),
+      dy === 0 ? Infinity : hh / Math.abs(dy),
+    );
+
+    const length = Math.hypot(dx, dy);
+    return [cx + dx * (scale + gap / length), cy + dy * (scale + gap / length)];
+  }
+
+  function draw(composition: HTMLElement) {
+    const svg = composition.querySelector<SVGSVGElement>('[data-library-thread]');
+    if (!svg) return;
+
+    const words = [...composition.querySelectorAll<HTMLAnchorElement>('[data-library-word]')].sort(
+      (a, b) => Number(a.dataset.order ?? 0) - Number(b.dataset.order ?? 0),
+    );
+    if (words.length === 0) return;
+
+    /*
+      Le repère est celui de la TOILE, qui déborde de la colonne. `columnLeft`
+      dit où commence le texte dans ce repère — c'est contre cette limite que
+      viennent se ranger les mentions de marge.
+    */
+    const frame = svg.getBoundingClientRect();
+    const columnLeft = composition.getBoundingClientRect().left - frame.left;
+    svg.setAttribute('viewBox', `0 0 ${frame.width} ${frame.height}`);
+    svg.replaceChildren();
+
+    /*
+      Un mot qui tombe à cheval sur deux lignes a plusieurs rectangles ; on ne
+      garde que le premier. `white-space: nowrap` l'empêche normalement, mais
+      une fonte de repli très large peut encore forcer la coupe, et un cadre
+      dessiné sur l'union des deux morceaux couvrirait une demi-ligne.
+    */
+    const boxes: Box[] = words.map((word) => {
+      const rect = word.getClientRects()[0] ?? word.getBoundingClientRect();
+      return {
+        x: rect.left - frame.left,
+        y: rect.top - frame.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    });
+
+    /*
+      Les mentions « début » et « fin » se posent À CÔTÉ du premier et du
+      dernier cadre, dans le blanc. Sur une colonne étroite, ce blanc n'existe
+      pas et l'annotation viendrait se coucher sur la ligne du dessus. Les
+      traits, eux, se dessinent partout : droits et fins, ils traversent le
+      texte sans le rendre illisible.
+    */
+    const wide = window.matchMedia('(min-width: 700px)').matches;
+
+    const group = document.createElementNS(NS, 'g');
+    group.setAttribute('fill', 'none');
+    group.setAttribute('stroke', 'currentColor');
+    group.setAttribute('stroke-linecap', 'round');
+    group.setAttribute('stroke-linejoin', 'round');
+
+    /*
+      ═══════════════════════════════════════════════════════════════════════
+      LE RÉSEAU, dessiné en premier pour passer SOUS les cadres.
+      ═══════════════════════════════════════════════════════════════════════
+      Ce n'est pas un chemin qui passerait d'un mot au suivant : c'est une
+      TOILE. Chaque mot est relié à ses deux voisins et au suivant du suivant,
+      et le premier rejoint le dernier — de sorte qu'aucun mot ne se lise comme
+      une étape sur un parcours obligé.
+
+      Les traits sont DROITS et traversent le texte, comme sur une page
+      annotée à la règle. C'est ce qui distingue ce dessin d'un ornement de
+      navigation : quelqu'un a tiré ces lignes par-dessus le texte imprimé,
+      après coup.
+    */
+    const LINKS = [1, 2];
+    const edges: Array<[number, number]> = [];
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (const step of LINKS) {
+        if (i + step < boxes.length) edges.push([i, i + step]);
+      }
+    }
+    if (boxes.length > 2) edges.push([0, boxes.length - 1]);
+
+    const web = document.createElementNS(NS, 'path');
+    const strokes: string[] = [];
+
+    edges.forEach(([from, to], index) => {
+      const a = boxes[from]!;
+      const b = boxes[to]!;
+      const noise = wobble(index + 101);
+
+      const centreA: [number, number] = [a.x + a.width / 2, a.y + a.height / 2];
+      const centreB: [number, number] = [b.x + b.width / 2, b.y + b.height / 2];
+
+      const start = exitPoint(a, centreB, 3);
+      const end = exitPoint(b, centreA, 3);
+
+      /*
+        Un cheveu de tremblement aux deux bouts. Le trait reste DROIT — c'est
+        la règle du dessin — mais il ne part ni n'arrive au millimètre près,
+        comme une ligne tirée à la main le long d'un bord.
+      */
+      const jitter = () => noise() * 1.6;
+
+      strokes.push(
+        `M ${start[0] + jitter()} ${start[1] + jitter()} ` +
+          `L ${end[0] + jitter()} ${end[1] + jitter()}`,
+      );
+    });
+
+    if (strokes.length > 0) {
+      web.setAttribute('d', strokes.join(' '));
+      web.setAttribute('stroke-width', '1');
+      /*
+        Assez pâle pour qu'on lise le texte À TRAVERS la toile. C'est le seul
+        réglage qui compte ici : au-dessus, le paragraphe devient un grillage ;
+        en dessous, le dessin disparaît sur un écran mal calibré.
+      */
+      web.setAttribute('opacity', '0.38');
+      group.append(web);
+    }
+
+    /* ── LES NOTES ET LEURS FLÈCHES ──────────────────────────────────────── */
+
+    /*
+      Les notes vivent hors du bloc de texte, dans le corps de la page : c'est
+      lui qui les positionne, donc lui qui porte l'état « rangées en marge ».
+    */
+    const stage = composition.parentElement ?? composition;
+    const notes = [...stage.querySelectorAll<HTMLElement>('[data-library-note]')];
+    const roomForNotes = window.matchMedia('(min-width: 1300px)').matches;
+
+    if (roomForNotes && notes.length > 0) {
+      stage.dataset.notes = '';
+
+      /*
+        Chaque note se range à la hauteur du mot qu'elle commente. Deux mots
+        voisins auraient deux notes superposées : on descend alors la seconde
+        sous la première. Le décalage se voit, et c'est la flèche qui dit à
+        quel mot chaque note appartient — comme dans une marge d'épreuve, où
+        l'ordre des annotations ne suit jamais exactement celui du texte.
+      */
+      const placed = notes
+        .map((note) => ({
+          note,
+          box: boxes[Number(note.dataset.libraryNote ?? -1)],
+          side: (note.dataset.side ?? 'right') as 'left' | 'right' | 'bottom',
+          lift: Number(note.dataset.lift ?? 0),
+        }))
+        .filter((entry) => Boolean(entry.box))
+        /*
+          Trié sur la hauteur RÉELLE de pose, et non sur celle du mot : une note
+          remontée doit être empilée avant celles qu'elle dépasse, sinon la
+          suivante viendrait se poser par-dessus elle.
+        */
+        .sort((a, b) => a.box.y - a.lift - (b.box.y - b.lift));
+
+      /*
+        Une pile par côté. Une note de gauche n'a aucune raison de pousser vers
+        le bas une note de droite : elles ne se croisent jamais.
+      */
+      const floors: Record<string, number> = { left: 0, right: 0, bottom: 0 };
+      for (const { note, box, side, lift } of placed) {
+        const top = Math.max(box.y - 2 - lift, floors[side] ?? 0);
+        note.style.top = `${top}px`;
+        // Mesurée APRÈS la pose : la hauteur dépend du nombre de lignes.
+        floors[side] = top + note.getBoundingClientRect().height + 10;
+      }
+
+      /*
+        LE PIED DE PAGE FAIT LOI.
+
+        Les décalages voulus sont des souhaits, pas des positions : une note
+        descendue sous le texte peut, selon la fonte chargée ou la hauteur de
+        la fenêtre, se retrouver hors de l'écran — et il n'y a pas de valeur
+        magique qui tienne pour toutes les tailles. On borne donc APRÈS coup,
+        en mesurant : aucune note ne dépasse le pied de la page.
+      */
+      const stageTop = stage.getBoundingClientRect().top;
+      const page = stage.closest('.library');
+      const limit = page ? page.getBoundingClientRect().bottom - stageTop - 20 : Infinity;
+
+      for (const { note } of placed) {
+        const height = note.getBoundingClientRect().height;
+        const wanted = Number.parseFloat(note.style.top || '0');
+        if (wanted + height > limit) note.style.top = `${Math.max(0, limit - height)}px`;
+      }
+
+      /*
+        La flèche, du mot VERS SA NOTE — pointe tournée vers l'extérieur.
+
+        Le sens compte : c'est le mot qu'on lit d'abord, et la flèche dit où
+        aller voir. Pointée vers le texte, elle aurait désigné le mot à
+        quelqu'un qui le regarde déjà, et toutes les pointes se seraient
+        refermées sur le paragraphe.
+
+        Une flèche par note, et non un chemin unique : c'est ce qui permet
+        d'allumer celle du mot survolé sans rallumer les autres.
+      */
+      for (const { note, box, side } of placed) {
+        const rect = note.getBoundingClientRect();
+        /*
+          La flèche touche la note par son bord TOURNÉ VERS LE TEXTE : le bord
+          gauche d'une note de droite, le bord droit d'une note de gauche.
+          Viser l'autre bord ferait passer le trait par-dessus sa propre note.
+        */
+        const tip: [number, number] =
+          side === 'bottom'
+            ? /*
+                La note du bas est SOUS le texte : la flèche la touche par son
+                bord supérieur, au milieu. Viser un côté ferait remonter le
+                trait le long du bloc avant de rejoindre le mot.
+              */
+              [
+                rect.left - frame.left + rect.width / 2,
+                rect.top - frame.top - 7,
+              ]
+            : [
+          side === 'left' ? rect.right - frame.left + 7 : rect.left - frame.left - 7,
+          /*
+            À mi-hauteur de la FIGURE, plafonnée : sur un bloc devenu haut, viser
+            le milieu de l'ensemble ferait pointer la flèche sur la légende.
+          */
+          rect.top - frame.top + Math.min(rect.height / 2, 38),
+        ];
+        const start = exitPoint(box, tip, 5);
+
+        // Angle du trajet mot → note : la pointe s'ouvre dans ce sens-là.
+        const angle = Math.atan2(tip[1] - start[1], tip[0] - start[0]);
+        const barb = (spread: number) =>
+          `M ${tip[0]} ${tip[1]} ` +
+          `L ${tip[0] - Math.cos(angle - spread) * 6} ${tip[1] - Math.sin(angle - spread) * 6}`;
+
+        const arrow = document.createElementNS(NS, 'path');
+        arrow.setAttribute(
+          'd',
+          `M ${start[0]} ${start[1]} L ${tip[0]} ${tip[1]} ${barb(0.4)} ${barb(-0.4)}`,
+        );
+        arrow.setAttribute('stroke-width', '1');
+        arrow.setAttribute('opacity', '0.3');
+        arrow.setAttribute('data-arrow-for', note.dataset.libraryNote ?? '');
+        group.append(arrow);
+      }
+    } else {
+      delete stage.dataset.notes;
+      for (const note of notes) note.style.top = '';
+    }
+
+    /* ── LES CADRES, par-dessus tout le reste ────────────────────────────── */
+
+    boxes.forEach((box, index) => {
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', framePath(box, index + 7));
+      path.setAttribute('stroke-width', '1.6');
+      group.append(path);
+    });
+
+    /*
+      LES MENTIONS. Elles disent le sens de lecture — sans elles, la toile est
+      un ornement ; avec elles, c'est un relevé. Décoratives au sens strict :
+      le texte, lui, se lit dans l'ordre du DOM.
+    */
+    const annotate = (box: Box, label: string, side: 'left' | 'right') => {
+      const text = document.createElementNS(NS, 'text');
+      text.textContent = label;
+
+      /*
+        « début » se pose DANS LA MARGE DE GAUCHE, à la hauteur du mot qu'il
+        annonce — là où on annote une page, dans le blanc, jamais entre deux
+        lignes. Il est ancré par sa FIN : c'est son bord droit qui vient se
+        ranger contre la colonne, quelle que soit la longueur du mot.
+      */
+      if (side === 'left') {
+        text.setAttribute('x', String(columnLeft - 12));
+        text.setAttribute('text-anchor', 'end');
+        text.setAttribute('y', String(box.y + box.height * 0.78));
+      } else {
+        text.setAttribute('x', String(box.x + box.width + 8));
+        text.setAttribute('y', String(box.y + box.height + 20));
+      }
+
+      text.setAttribute('fill', 'currentColor');
+      text.setAttribute('stroke', 'none');
+      text.setAttribute('opacity', '0.55');
+      text.setAttribute('font-size', '13');
+      text.setAttribute('font-style', 'italic');
+      text.setAttribute('font-family', 'var(--font-annotation)');
+      group.append(text);
+    };
+
+    const startLabel = composition.dataset.markStart;
+    const endLabel = composition.dataset.markEnd;
+    const lastBox = boxes.at(-1);
+    if (wide && startLabel && boxes[0]) annotate(boxes[0], startLabel, 'left');
+    // Un seul mot entouré : « début » suffit, « fin » se poserait par-dessus.
+    if (wide && endLabel && lastBox && boxes.length > 1) annotate(lastBox, endLabel, 'right');
+
+    svg.append(group);
+
+    /*
+      Le tracé progressif. `getTotalLength` n'a de sens qu'une fois le chemin
+      dans le document — d'où le report après `append`. En mouvement réduit,
+      tout est déjà dessiné : on ne fait que renoncer à la mise en réserve.
+    */
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduced && !composition.dataset.traced) {
+      for (const path of group.querySelectorAll('path')) {
+        const length = path.getTotalLength();
+        path.style.strokeDasharray = `${length}`;
+        path.style.strokeDashoffset = `${length}`;
+        path.style.transition = 'stroke-dashoffset 900ms cubic-bezier(0.22, 1, 0.36, 1)';
+        requestAnimationFrame(() => {
+          path.style.strokeDashoffset = '0';
+        });
+      }
+    }
+
+    composition.dataset.traced = '';
+  }
+
+  /**
+   * Le lien vivant entre un mot et sa note.
+   *
+   * Posé une seule fois, au chargement : les écouteurs vivent sur les mots,
+   * qui ne sont jamais remplacés — seul le dessin l'est. Le focus clavier
+   * allume comme le survol, sans quoi la note serait une information réservée
+   * à la souris.
+   */
+  function link(composition: HTMLElement) {
+    const scope = composition.parentElement ?? composition;
+
+    for (const word of composition.querySelectorAll<HTMLElement>('[data-library-word]')) {
+      const order = word.dataset.order;
+      if (!order) continue;
+
+      const note = scope.querySelector<HTMLElement>(`[data-library-note="${order}"]`);
+
+      const light = (on: boolean) => {
+        // Le mot s'allume aussi quand c'est la NOTE qu'on survole : la paire
+        // se désigne dans les deux sens, sinon le lien entre eux ne se voit
+        // que d'un côté.
+        word.classList.toggle('is-lit', on);
+        note?.classList.toggle('is-lit', on);
+
+        /*
+          La planche se met en marche avec sa note : les vecteurs poussent, les
+          orbites tournent, les chiffres basculent. C'est la même annotation —
+          elle ne peut pas s'allumer à moitié. `is-active` mène exactement à
+          l'état que produirait un survol de la figure elle-même (voir
+          `PlateFigure.astro`).
+        */
+        note?.querySelector('.plate')?.classList.toggle('is-active', on);
+
+        const arrow = composition.querySelector<SVGPathElement>(`[data-arrow-for="${order}"]`);
+        arrow?.setAttribute('opacity', on ? '0.75' : '0.3');
+      };
+
+      for (const target of [word, note]) {
+        if (!target) continue;
+        target.addEventListener('pointerenter', () => light(true));
+        target.addEventListener('pointerleave', () => light(false));
+      }
+
+      word.addEventListener('focus', () => light(true));
+      word.addEventListener('blur', () => light(false));
+    }
+  }
+
+  for (const composition of document.querySelectorAll<HTMLElement>('[data-library-composition]')) {
+    /*
+      On attend les fontes. Mesurer avant leur chargement placerait les cadres
+      sur les mots tels que les dessine la fonte de repli — c'est-à-dire à côté.
+    */
+    const start = () => draw(composition);
+    if (document.fonts?.status === 'loaded') start();
+    else document.fonts?.ready.then(start).catch(start);
+
+    link(composition);
+
+    let frame = 0;
+    const redraw = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        draw(composition);
+      });
+    };
+
+    // Le paragraphe se recompose à chaque largeur : cadres et notes suivent.
+    new ResizeObserver(redraw).observe(composition);
+  }
+</script>

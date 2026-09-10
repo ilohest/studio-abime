@@ -16,12 +16,15 @@ import {
   getCollectionsSegment,
   getOrderConfirmationSegment,
   getSegment,
-  journalIndexPath,
+  getRubricsSegment,
   laboPath,
   localizedPath,
   legalPageFromId,
   legalPageIds,
   legalPagePath,
+  libraryIndexPath,
+  libraryRubricPath,
+  libraryRubricsPath,
   matchLegalSegment,
   matchPolicySegment,
   orderConfirmationPath,
@@ -32,6 +35,7 @@ import {
   projectsIndexPath,
   shopIndexPath,
 } from '~/i18n/routes';
+import { LIBRARY_RUBRICS, isLibraryRubric } from '~/content/libraryRubrics';
 import { getCollectionHandles, getProductHandles } from './shopify/catalogue';
 import { getShopPolicies } from './shopify/policies';
 import { loadQuery } from './sanity/loadQuery';
@@ -86,7 +90,21 @@ export async function buildRouteManifest(): Promise<RouteEntry[]> {
     routes.push({ kind: 'home', locale, path: localizedPath(locale) });
     routes.push({ kind: 'labo', locale, path: laboPath(locale) });
     routes.push({ kind: 'contact', locale, path: contactPath(locale) });
-    routes.push({ kind: 'journal', locale, path: journalIndexPath(locale) });
+    routes.push({ kind: 'library', locale, path: libraryIndexPath(locale) });
+    routes.push({ kind: 'libraryRubrics', locale, path: libraryRubricsPath(locale) });
+    /*
+      Une page par rubrique, y compris vide. Les rubriques sont fixées en code
+      et le texte d'accueil pointe vers chacune : leurs adresses existent donc
+      indépendamment du contenu publié, comme celles des sections du site.
+    */
+    for (const rubric of LIBRARY_RUBRICS) {
+      routes.push({
+        kind: 'libraryRubric',
+        locale,
+        path: libraryRubricPath(locale, rubric.value),
+        rubric: rubric.value,
+      });
+    }
     routes.push({ kind: 'projectIndex', locale, path: projectsIndexPath(locale) });
     routes.push({ kind: 'shop', locale, path: shopIndexPath(locale) });
     routes.push({ kind: 'orderConfirmation', locale, path: orderConfirmationPath(locale) });
@@ -231,10 +249,24 @@ export function matchRoute(pathParam: string | undefined): RouteEntry | null {
     return rest.length === 1 ? { kind: 'labo', locale, path } : null;
   }
 
-  // 4. Journal : index éditorial + article. Même forme que la section portfolio.
-  const journalSegment = getSegment('journal', locale);
-  if (rest[0] === journalSegment) {
-    if (rest.length === 1) return { kind: 'journal', locale, path };
+  /*
+    4. Bibliothèque : le texte d'accueil, la réunion des rubriques, une rubrique,
+       puis l'article. Même forme que la boutique — `rubriques` y joue le rôle
+       de `collections`, et réserve du même coup ce mot : aucun article ne peut
+       porter ce slug.
+  */
+  const librarySegment = getSegment('library', locale);
+  if (rest[0] === librarySegment) {
+    if (rest.length === 1) return { kind: 'library', locale, path };
+
+    if (rest[1] === getRubricsSegment(locale)) {
+      if (rest.length === 2) return { kind: 'libraryRubrics', locale, path };
+      if (rest.length === 3 && isLibraryRubric(rest[2])) {
+        return { kind: 'libraryRubric', locale, path, rubric: rest[2] };
+      }
+      return null;
+    }
+
     if (rest.length === 2) return { kind: 'post', locale, path, slug: rest[1]! };
     return null;
   }
@@ -328,15 +360,15 @@ export function resolveLink(link: SanityLink | undefined | null, locale: Locale)
     const targetLocale = isLocale(target.language) ? target.language : locale;
 
     /*
-      Les pages Expériences et Journal n'ont pas de slug : leur URL est une
-      route calculée par langue (`/experiences`, `/en/work`, `/journal`). Les
-      autres cibles passent par leur slug.
+      Les pages Expériences et Bibliothèque n'ont pas de slug : leur URL est
+      une route calculée par langue (`/experiences`, `/en/work`,
+      `/bibliotheque`). Les autres cibles passent par leur slug.
     */
     const href =
       target._type === 'projectsPage'
         ? projectsIndexPath(targetLocale)
         : target._type === 'journalPage'
-          ? journalIndexPath(targetLocale)
+          ? libraryIndexPath(targetLocale)
         : target._type === 'page'
           ? pageHref(target._id, targetLocale)
         : target.slug

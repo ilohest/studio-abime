@@ -5,9 +5,10 @@ import JournalComposition from '~/components/journal/JournalComposition.astro';
 import NextEntry from '~/components/NextEntry.astro';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 
-import { journalIndexPath, postPath } from '~/i18n/routes';
+import { libraryIndexPath, libraryRubricPath, postPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
-import { formatJournalStamp } from '~/lib/journal';
+import { formatJournalStamp, postRubrics } from '~/lib/journal';
+import { getLibraryRubric } from '~/content/libraryRubrics';
 import type { Locale } from '~/i18n/config';
 import type { Post } from '~/lib/sanity/types';
 
@@ -39,18 +40,52 @@ const t = useTranslations(locale);
 const template = stegaClean(post.template) === 'planche' ? 'planche' : 'revue';
 
 const next = post.next ?? null;
+
+/*
+  Le fil d'Ariane remplace le bouton de retour.
+
+  Un bouton ne disait qu'une chose — « sortir » — là où le lecteur a besoin de
+  savoir OÙ il se trouve : dans quelle rubrique cet article est rangé, et donc
+  d'où viennent ceux qui lui ressemblent. Le fil le dit et permet les deux
+  remontées, la section et la rubrique.
+
+  La PREMIÈRE rubrique de l'article, quand il en porte plusieurs : le fil
+  d'Ariane décrit un chemin, et un chemin n'a qu'une branche. Les autres
+  rubriques restent lisibles sur les grilles où l'article paraît aussi.
+*/
+const rubric = getLibraryRubric(postRubrics(post)[0]);
 ---
 
-<article class="journal-post" data-template={template}>
+<article class="journal-post" data-template={template} data-last={next ? undefined : ''}>
   {/*
-    Le retour se tient en haut à gauche, hors de la colonne de titre — la même
-    place que sur une page projet. Il quitte l'article, il n'en fait pas partie.
+    Le fil se tient en haut à gauche, hors de la colonne de titre — la même
+    place que sur une page de rubrique. Il situe l'article, il n'en fait pas
+    partie.
   */}
   <div class="journal-post__top container-wide">
-    <a href={journalIndexPath(locale)} class="button-minimal journal-post__back">
-      <span class="button-minimal__label">{t('journal.backToJournal')}</span>
-      <span class="button-minimal__arrow journal-post__back-arrow" aria-hidden="true">↲</span>
-    </a>
+    <nav class="breadcrumb journal-post__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
+      <ol role="list">
+        <li>
+          <a class="link-underline" href={libraryIndexPath(locale)}>{t('library.title')}</a>
+        </li>
+
+        {
+          rubric && (
+            <li>
+              <span class="breadcrumb__separator" aria-hidden="true">/</span>
+              <a class="link-underline" href={libraryRubricPath(locale, rubric.value)}>
+                {rubric.title}
+              </a>
+            </li>
+          )
+        }
+
+        <li aria-current="page">
+          <span class="breadcrumb__separator" aria-hidden="true">/</span>
+          <span>{post.title}</span>
+        </li>
+      </ol>
+    </nav>
   </div>
 
   <header class="journal-post__header container-content">
@@ -82,16 +117,32 @@ const next = post.next ?? null;
   {next && (
     <NextEntry
       href={postPath(locale, next.slug)}
-      label={t('journal.next')}
+      label={t('library.next')}
       number={String(next.number ?? 1).padStart(2, '0')}
       symbol={formatJournalStamp(next.publishedAt)}
       title={next.title}
+      variant="planche"
       image={next.coverImage}
     />
   )}
 </article>
 
 <style>
+  /*
+    LE DERNIER ARTICLE A BESOIN DE SON BLANC.
+
+    Le renvoi vers l'article suivant porte l'air qui sépare la lecture du pied
+    de page (`padding-block` de `NextEntry`). Le plus ancien article de la
+    Bibliothèque n'en a pas : son texte s'arrêtait net contre le pied de page,
+    sans respiration, comme s'il avait été coupé.
+
+    La réserve n'est posée QUE dans ce cas : ajoutée à tous les articles, elle
+    se serait cumulée avec celle du renvoi partout ailleurs.
+  */
+  .journal-post[data-last] {
+    padding-bottom: clamp(6rem, 14vw, 12rem);
+  }
+
   /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
   .journal-post__top {
     padding-top: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance));
@@ -103,9 +154,10 @@ const next = post.next ?? null;
     text-align: center;
   }
 
-  .journal-post__back:hover .journal-post__back-arrow {
-    transform: translate(-0.18em, 0.1em);
-  }
+  /*
+    Voir `.breadcrumb` dans global.css. Rien à ajouter ici : le fil d'un
+    article se dispose exactement comme celui d'une fiche de tirage.
+  */
 
   /*
     Un titre d'article est bien plus long qu'un nom de projet : la taille de
@@ -142,10 +194,4 @@ const next = post.next ?? null;
     margin-top: clamp(3rem, 7vw, 5rem);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .journal-post__back-arrow,
-    .journal-post__back:hover .journal-post__back-arrow {
-      transform: none;
-    }
-  }
 </style>

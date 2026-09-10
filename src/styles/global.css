@@ -176,19 +176,19 @@
   }
 
   /*
-    Journal : sœur de la page Expériences, mais sur le second accent de la
+    Bibliothèque : sœur de la page Expériences, mais sur le second accent de la
     palette. Le Ciel distingue la section éditoriale du portfolio sans sortir
     de la charte — la trame, les fiches et la typographie restent les mêmes.
   */
-  body.page-journal,
-  body.page-journal > main,
-  body.page-journal > footer,
-  body.page-journal [data-page-rail] {
+  body.page-bibliotheque,
+  body.page-bibliotheque > main,
+  body.page-bibliotheque > footer,
+  body.page-bibliotheque [data-page-rail] {
     background-color: var(--color-ciel);
   }
 
-  body.page-journal ::selection,
-  body.page-journal::selection {
+  body.page-bibliotheque ::selection,
+  body.page-bibliotheque::selection {
     background-color: var(--color-lumiere);
     color: var(--color-ink);
   }
@@ -581,6 +581,67 @@
     outline: 1px solid currentColor;
     outline-offset: 0.35rem;
   }
+
+  /**
+   * FIL D'ARIANE.
+   *
+   * Quatre pages en ont un — collection, tirage, rubrique, article — et il y
+   * était réécrit quatre fois, avec quatre réglages qui divergeaient déjà. Ici
+   * une seule fois : les composants ne gardent que le PLACEMENT du bloc, qui
+   * seul leur appartient.
+   *
+   * ➜ EMPLOI : `<nav class="breadcrumb type-note">` autour d'un `<ol>` de
+   *   maillons, chaque séparateur en `<span class="breadcrumb__separator">`.
+   *
+   * UNE SEULE LIGNE, toujours. Un fil qui passe à la ligne cesse d'être un fil :
+   * il devient un paragraphe de liens, et la hiérarchie qu'il dessine se perd.
+   * Le dernier maillon — la page courante, la seule qui ne mène nulle part —
+   * se tronque donc plutôt que de rompre la ligne. C'est aussi celui dont on
+   * peut le mieux se passer : on est dessus.
+   */
+  .breadcrumb {
+    color: var(--color-muted);
+  }
+
+  .breadcrumb ol {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    /* Sans quoi un maillon long refuse de se réduire et déborde du conteneur. */
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .breadcrumb li {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .breadcrumb a {
+    color: var(--color-ink);
+    /* Le filet est peint en fond par `link-underline` : pas de second trait. */
+    text-decoration: none;
+  }
+
+  .breadcrumb a:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 0.2rem;
+  }
+
+  .breadcrumb__separator {
+    margin-inline: 0.55rem;
+    color: var(--color-line);
+  }
+
+  .breadcrumb li:last-child > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
 
   .button-minimal__arrow {
     display: inline-block;

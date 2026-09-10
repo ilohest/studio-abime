@@ -27,14 +27,15 @@ import { stegaClean } from '@sanity/client/stega';
 import { getLocaleMeta, type Locale } from '~/i18n/config';
 import {
   collectionPath,
-  journalIndexPath,
+  libraryIndexPath,
+  libraryRubricsPath,
   localizedPath,
   projectsIndexPath,
   shopIndexPath,
   type PolicyRouteKey,
 } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
-import { getJournalCategory } from '~/content/journalCategories';
+import { getLibraryRubric } from '~/content/libraryRubrics';
 import { resolveImage, type AspectRatio } from '~/lib/sanity/image';
 import { shopifyImageUrl } from '~/lib/shopify/catalogue';
 import type {
@@ -187,7 +188,7 @@ const ids = {
   organization: (origin: string) => `${origin}/#organization`,
   logo: (origin: string) => `${origin}/#logo`,
   website: (origin: string) => `${origin}/#website`,
-  blog: (origin: string, locale: Locale) => `${abs(journalIndexPath(locale), origin)}#blog`,
+  blog: (origin: string, locale: Locale) => `${abs(libraryRubricsPath(locale), origin)}#blog`,
   webPage: (canonical: string) => `${canonical}#webpage`,
   breadcrumb: (canonical: string) => `${canonical}#breadcrumb`,
   primaryImage: (canonical: string) => `${canonical}#primaryimage`,
@@ -311,11 +312,11 @@ function breadcrumbTrail(
   const t = useTranslations(locale);
   const home: Crumb = { name: 'Accueil', path: localizedPath(locale) };
 
-  const section = (key: 'projects' | 'journal' | 'shop'): Crumb =>
+  const section = (key: 'projects' | 'library' | 'shop'): Crumb =>
     key === 'projects'
       ? { name: t('nav.projects'), path: projectsIndexPath(locale) }
-      : key === 'journal'
-        ? { name: t('journal.title'), path: journalIndexPath(locale) }
+      : key === 'library'
+        ? { name: t('library.title'), path: libraryIndexPath(locale) }
         : { name: t('shop.title'), path: shopIndexPath(locale) };
 
   switch (route.kind) {
@@ -324,7 +325,17 @@ function breadcrumbTrail(
     case 'project':
       return [home, section('projects'), { name: title, path: route.path }];
     case 'post':
-      return [home, section('journal'), { name: title, path: route.path }];
+      return [home, section('library'), { name: title, path: route.path }];
+    /*
+      Le segment « rubriques » est sauté pour la même raison que
+      « collections » sous la boutique : il a bien une page — la vue « tout » —
+      mais elle n'est pas le parent éditorial d'une rubrique, elle en est la
+      sœur. L'annoncer ferait un niveau de plus sans hiérarchie réelle.
+    */
+    case 'libraryRubrics':
+      return [home, section('library'), { name: title, path: route.path }];
+    case 'libraryRubric':
+      return [home, section('library'), { name: title, path: route.path }];
     /*
       Le segment « collections » est sauté : il n'a pas de page à lui. Un fil
       d'Ariane doit être cliquable de bout en bout — annoncer un niveau qui
@@ -467,7 +478,10 @@ function blogPostingNode(
     dateModified: isoDate(lastmod) ?? published,
     // La rubrique est publiée sous son intitulé lisible, pas sous son
     // identifiant technique : c'est un libellé destiné à être lu.
-    articleSection: getJournalCategory(stegaClean(post.category))?.title,
+    articleSection: post.rubrics
+      .map((rubric) => getLibraryRubric(stegaClean(rubric))?.title)
+      .filter((title) => Boolean(title))
+      .join(', '),
     author: ref(ids.organization(origin)),
     publisher: ref(ids.organization(origin)),
     image: image ? ref(ids.primaryImage(canonical)) : undefined,
@@ -487,7 +501,7 @@ function blogNode(
   return compact({
     '@type': 'Blog',
     '@id': ids.blog(origin, locale),
-    url: abs(journalIndexPath(locale), origin),
+    url: abs(libraryRubricsPath(locale), origin),
     name: clean(title),
     description: summarize(description),
     inLanguage: getLocaleMeta(locale).htmlLang,
@@ -495,8 +509,8 @@ function blogNode(
     blogPost: posts.slice(0, 50).map((post) =>
       compact({
         '@type': 'BlogPosting',
-        '@id': `${abs(`${journalIndexPath(locale)}/${post.slug}`, origin)}#article`,
-        url: abs(`${journalIndexPath(locale)}/${post.slug}`, origin),
+        '@id': `${abs(`${libraryIndexPath(locale)}/${post.slug}`, origin)}#article`,
+        url: abs(`${libraryIndexPath(locale)}/${post.slug}`, origin),
         headline: clean(post.title),
         datePublished: isoDate(post.publishedAt),
       }),
@@ -589,7 +603,9 @@ function webPageType(route: RouteEntry, isLegal: boolean): string {
     case 'contact':
       return 'ContactPage';
     case 'projectIndex':
-    case 'journal':
+    case 'library':
+    case 'libraryRubrics':
+    case 'libraryRubric':
     case 'shop':
     case 'collection':
       return 'CollectionPage';
@@ -694,14 +710,20 @@ export function buildPageGraph(input: PageGraphInput): JsonLdGraph {
       compact({
         '@type': 'Blog',
         '@id': ids.blog(origin, locale),
-        url: abs(journalIndexPath(locale), origin),
-        name: useTranslations(locale)('journal.title'),
+        url: abs(libraryRubricsPath(locale), origin),
+        name: useTranslations(locale)('library.title'),
         publisher: ref(ids.organization(origin)),
       }),
     );
   }
 
-  if (route.kind === 'journal') {
+  /*
+    Le blog, c'est la Bibliothèque prise dans son entier — la vue « tout », qui
+    liste réellement les articles. La page d'accueil, elle, ne porte qu'un
+    texte : la déclarer comme blog annoncerait à Google une liste d'articles
+    qu'elle ne contient pas.
+  */
+  if (route.kind === 'libraryRubrics') {
     const node = blogNode(origin, locale, input.posts ?? [], title, description);
     entityId = node['@id'] as string;
     nodes.push(node);

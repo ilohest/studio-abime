@@ -12,7 +12,7 @@ import type { PortableTextBlock } from '@portabletext/types';
 import type { ImageMetadata } from 'astro';
 import type { Locale } from '~/i18n/config';
 import type { LegalPageKey, PolicyRouteKey } from '~/i18n/routes';
-import type { JournalCategory } from '~/content/journalCategories';
+import type { LibraryRubric } from '~/content/libraryRubrics';
 
 export type { PortableTextBlock };
 
@@ -372,8 +372,16 @@ export interface PostCard {
   title: string;
   slug: string;
   language: Locale;
-  category: JournalCategory;
-  /** Rang dans le Journal, du plus récent au plus ancien. */
+  /**
+   * Rubriques de l'article — un article peut en porter plusieurs.
+   *
+   * Le classement n'est pas exclusif : un récit de voyage qui cite trois
+   * lectures est autant un carnet qu'un jeu de références, et l'obliger à
+   * choisir reviendrait à le cacher d'un côté ou de l'autre. La requête
+   * garantit au moins une valeur, jamais un tableau vide.
+   */
+  rubrics: LibraryRubric[];
+  /** Rang dans la Bibliothèque, du plus récent au plus ancien. */
   number?: number;
   /** Date de publication, au format ISO (`2026-08-25`). */
   publishedAt: string;
@@ -435,12 +443,22 @@ export interface ShopPage {
   seo?: Seo;
 }
 
-/** Contenu éditorial de l'index du Journal (singleton par langue). */
+/**
+ * Contenu éditorial de l'accueil de la Bibliothèque (singleton par langue).
+ *
+ * Le type Sanity reste `journalPage` : renommer un type de document imposerait
+ * de migrer les documents existants pour un gain purement cosmétique. Son
+ * titre dans le Studio, lui, dit bien « Page Bibliothèque ».
+ */
 export interface JournalPage {
   _id: string;
   _type: 'journalPage';
   language: Locale;
-  intro?: string;
+  /**
+   * Le texte continu, avec ses mots-rubriques annotés. C'est le seul chemin
+   * vers les articles depuis cette page.
+   */
+  composition?: PortableTextBlock[];
   seo?: Seo;
 }
 
@@ -637,7 +655,11 @@ export type RouteEntry = RouteMeta &
   | { kind: 'legalPage'; locale: Locale; path: string; key: LegalPageKey }
   | { kind: 'projectIndex'; locale: Locale; path: string }
   | { kind: 'project'; locale: Locale; path: string; slug: string }
-  | { kind: 'journal'; locale: Locale; path: string }
+  /* Accueil de la Bibliothèque : le texte et ses mots-rubriques. */
+  | { kind: 'library'; locale: Locale; path: string }
+  /* La réunion des rubriques — le mot « tout » du texte d'accueil. */
+  | { kind: 'libraryRubrics'; locale: Locale; path: string }
+  | { kind: 'libraryRubric'; locale: Locale; path: string; rubric: LibraryRubric }
   | { kind: 'post'; locale: Locale; path: string; slug: string }
   | { kind: 'shop'; locale: Locale; path: string }
   /* `handle` et non `slug` : c'est le terme de Shopify, autant ne pas traduire. */

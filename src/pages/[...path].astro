@@ -6,7 +6,8 @@ import LaboPageView from '~/components/LaboPage.astro';
 import ContactPage from '~/components/ContactPage.astro';
 import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro';
 import ExperienceReferences from '~/components/ExperienceReferences.astro';
-import JournalIndex from '~/components/JournalIndex.astro';
+import LibraryIndex from '~/components/LibraryIndex.astro';
+import LibraryRubricPage from '~/components/LibraryRubricPage.astro';
 import JournalPost from '~/components/JournalPost.astro';
 import ShopIndex from '~/components/ShopIndex.astro';
 import ProductPage from '~/components/ProductPage.astro';
@@ -27,7 +28,13 @@ import {
 } from '~/lib/shopify/catalogue';
 import { getShopPolicy } from '~/lib/shopify/policies';
 import { getSiteContext } from '~/lib/siteContext';
-import { getDocumentAlternates, getPolicyAlternates, getStaticAlternates } from '~/lib/alternates';
+import {
+  getDocumentAlternates,
+  getLibraryRubricAlternates,
+  getLibraryRubricsAlternates,
+  getPolicyAlternates,
+  getStaticAlternates,
+} from '~/lib/alternates';
 import { legalPageId } from '~/i18n/routes';
 import { loadQuery } from '~/lib/sanity/loadQuery';
 import {
@@ -47,8 +54,10 @@ import {
   postBySlugQuery,
 } from '~/lib/sanity/queries';
 import { getHomeFallback } from '~/content/homeFallback';
-import { getJournalCategory } from '~/content/journalCategories';
+import { getLibraryRubric } from '~/content/libraryRubrics';
 import { getShopIntro } from '~/content/shopFallback';
+import { filterByRubric, toLibraryRubricViews, toPostCardView } from '~/lib/journal';
+import { toLibraryComposition } from '~/lib/library';
 import { getLaboFallback } from '~/content/laboFallback';
 import { getContactFallback } from '~/content/contactFallback';
 import { useTranslations } from '~/i18n/ui';
@@ -207,13 +216,20 @@ if (route.kind === 'labo') {
   if (laboPage.stars.length === 0 && allStars.length > 0) {
     laboPage = { ...laboPage, stars: allStars };
   }
-} else if (route.kind === 'journal') {
-  const [journalPosts, pageContent] = await Promise.all([
+} else if (route.kind === 'library') {
+  /*
+    L'accueil ne montre AUCUN article — c'est un texte. Les articles sont
+    quand même chargés : ce sont eux qui donnent leur compte aux rubriques du
+    rattrapage, et la même requête sert aux trois routes de la section.
+  */
+  const [libraryPosts, pageContent] = await Promise.all([
     loadQuery<PostCard[]>({ query: journalIndexQuery, locale, fallback: [] }),
     loadQuery<JournalPage | null>({ query: journalPageQuery, locale, fallback: null }),
   ]);
-  posts = journalPosts;
+  posts = libraryPosts;
   journalPage = pageContent;
+} else if (route.kind === 'libraryRubrics' || route.kind === 'libraryRubric') {
+  posts = await loadQuery<PostCard[]>({ query: journalIndexQuery, locale, fallback: [] });
 } else if (route.kind === 'post') {
   post = await loadQuery<Post | null>({
     query: postBySlugQuery,
@@ -270,7 +286,9 @@ if (route.kind === 'labo') {
 if (
   route.kind !== 'projectIndex' &&
   route.kind !== 'contact' &&
-  route.kind !== 'journal' &&
+  route.kind !== 'library' &&
+  route.kind !== 'libraryRubrics' &&
+  route.kind !== 'libraryRubric' &&
   route.kind !== 'shop' &&
   route.kind !== 'product' &&
   route.kind !== 'orderConfirmation' &&
@@ -290,8 +308,12 @@ const document = project ?? post ?? page;
 const alternates =
   route.kind === 'projectIndex'
     ? getStaticAlternates('projectIndex')
-    : route.kind === 'journal'
-      ? getStaticAlternates('journal')
+    : route.kind === 'library'
+      ? getStaticAlternates('library')
+    : route.kind === 'libraryRubrics'
+      ? getLibraryRubricsAlternates()
+    : route.kind === 'libraryRubric'
+      ? getLibraryRubricAlternates(route.rubric)
     : route.kind === 'contact'
       ? getStaticAlternates('contact')
     : route.kind === 'labo'
@@ -308,14 +330,18 @@ const alternates =
 
 /* Les intitulés de section sont fixés en code : le CMS porte le contenu. */
 const projectIndexTitle = t('nav.projects');
-const journalTitle = t('journal.title');
+const libraryTitle = t('library.title');
 const shopTitle = t('shop.title');
 
 const title =
   route.kind === 'projectIndex'
     ? projectIndexTitle
-    : route.kind === 'journal'
-      ? journalTitle
+    : route.kind === 'library'
+      ? libraryTitle
+    : route.kind === 'libraryRubrics'
+      ? `${libraryTitle} — ${t('library.all')}`
+    : route.kind === 'libraryRubric'
+      ? (getLibraryRubric(route.rubric)?.title ?? libraryTitle)
     : route.kind === 'contact'
       ? 'Contact'
     : route.kind === 'labo'
@@ -332,7 +358,32 @@ const title =
       ? t(`policy.${route.policy}` as 'policy.terms')
       : (document?.title ?? site.localized?.siteTitle ?? '');
 
-const journalIntro = journalPage?.intro?.trim();
+/*
+  Le texte d'accueil, aplati en segments. Il n'est construit que pour sa route :
+  c'est le seul endroit du site qui l'affiche, et il sert aussi de description
+  de repli — d'où le rendu en texte simple juste après.
+*/
+const libraryComposition =
+  route.kind === 'library' ? toLibraryComposition(journalPage?.composition, locale) : null;
+
+/** Le texte sans ses marques, pour la description de partage. */
+const libraryIntro = libraryComposition?.paragraphs
+  .map((paragraph) => paragraph.segments.map((segment) => segment.text).join(''))
+  .join(' ')
+  .trim();
+
+/*
+  Modèles de vue des articles, partagés par les deux planches. Le rang
+  chronologique est figé sur la liste COMPLÈTE : l'article n° 07 porte le même
+  numéro qu'on le lise dans « tout » ou dans sa rubrique.
+*/
+const postViews =
+  route.kind === 'libraryRubrics' || route.kind === 'libraryRubric'
+    ? posts.map((card, index) => toPostCardView(card, locale, index, t('library.rubric')))
+    : [];
+const rubricViews = toLibraryRubricViews(postViews, locale);
+const platePosts =
+  route.kind === 'libraryRubric' ? filterByRubric(postViews, route.rubric) : postViews;
 
 const projectsIntro = projectsPage?.intro?.trim();
 
@@ -364,7 +415,7 @@ const hasEmbeddedServicesRail = pageSections?.some((section) => section._type ==
 const seo =
   route.kind === 'projectIndex'
     ? projectsPage?.seo
-    : route.kind === 'journal'
+    : route.kind === 'library'
       ? journalPage?.seo
       : route.kind === 'labo'
         ? laboPage?.seo
@@ -389,8 +440,10 @@ const descriptionFallback =
         ? shopProduct?.excerpt
         : route.kind === 'collection'
           ? shopCollection?.descriptionHtml?.replace(/<[^>]*>/g, ' ').trim()
-          : route.kind === 'journal'
-            ? journalIntro
+          : route.kind === 'library'
+            ? libraryIntro
+            : route.kind === 'libraryRubric'
+              ? getLibraryRubric(route.rubric)?.description
             : route.kind === 'projectIndex'
               ? projectsIntro
               : route.kind === 'shop'
@@ -465,12 +518,21 @@ const jsonLd = buildPageGraph({
   ogType={route.kind === 'post' ? 'article' : 'website'}
   publishedTime={post?.publishedAt}
   modifiedTime={post?.updatedAt}
-  section={post ? (getJournalCategory(post.category)?.title ?? undefined) : undefined}
+  section={
+    post
+      ? (getLibraryRubric(post.rubrics[0])?.title ?? undefined)
+      : undefined
+  }
   noIndex={noIndex}
   bodyClass={[
     route.kind === 'projectIndex' || route.kind === 'project' ? 'page-projects' : '',
     route.kind === 'labo' ? 'page-labo' : '',
-    route.kind === 'journal' || route.kind === 'post' ? 'page-journal' : '',
+    route.kind === 'library' ||
+    route.kind === 'libraryRubrics' ||
+    route.kind === 'libraryRubric' ||
+    route.kind === 'post'
+      ? 'page-bibliotheque'
+      : '',
     route.kind === 'contact' ? 'page-contact' : '',
     route.kind === 'shop' ||
     route.kind === 'product' ||
@@ -490,13 +552,28 @@ const jsonLd = buildPageGraph({
   {post && <JournalPost post={post} locale={locale} />}
 
   {
-    route.kind === 'journal' && (
-      <JournalIndex
-        posts={posts}
+    route.kind === 'library' && libraryComposition && (
+      <LibraryIndex
+        composition={libraryComposition}
         locale={locale}
-        title={journalTitle}
+        title={libraryTitle}
         number="03."
-        intro={journalIntro}
+      />
+    )
+  }
+
+  {
+    (route.kind === 'libraryRubrics' || route.kind === 'libraryRubric') && (
+      <LibraryRubricPage
+        rubric={
+          route.kind === 'libraryRubric'
+            ? (rubricViews.find((entry) => entry.key === route.rubric) ?? null)
+            : null
+        }
+        posts={platePosts}
+        rubrics={rubricViews}
+        locale={locale}
+        total={postViews.length}
       />
     )
   }

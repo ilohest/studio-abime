@@ -1,0 +1,525 @@
+---
+/**
+ * Planches d'appareil — les figures dispersées dans la page.
+ *
+ * ── Ce qu'elles sont ────────────────────────────────────────────────────────
+ * Des schémas de mesure, pas des illustrations : une trame et sa forme
+ * inscrite, un faisceau de vecteurs, des orbites autour d'un foyer, un relevé
+ * en bâtons. Elles ne représentent rien du texte — elles installent le registre
+ * du studio : l'appareil du savoir plutôt que son résultat, la planche d'un
+ * traité ancien plutôt qu'une image d'ambiance.
+ *
+ * ── Au survol ───────────────────────────────────────────────────────────────
+ * Chaque planche réagit SELON CE QU'ELLE EST, jamais par un effet passe-partout :
+ * les vecteurs s'allongent et se rétractent, les orbites tournent d'un cran, le
+ * relevé se recalcule, la forme inscrite se resserre dans sa trame, les chiffres
+ * basculent. L'instrument paraît se régler sous la main. Rien de tout cela ne
+ * porte d'information : ce sont des figures `aria-hidden`, et la page se
+ * comprend sans les toucher.
+ *
+ * `:is(:hover, .is-active)` partout : la planche doit pouvoir se régler SANS
+ * qu'on la touche elle-même. Sur l'accueil de la Bibliothèque, survoler le mot
+ * d'une rubrique allume sa note ET met sa figure en marche — la classe est
+ * alors posée par le script de la page. Les deux déclencheurs mènent
+ * exactement au même état, il n'y en a pas un « vrai » et un « simulé ».
+ *
+ * ── Pourquoi tracées et non importées ───────────────────────────────────────
+ * Un SVG écrit ici suit la couleur du texte, reste net à toute échelle et ne
+ * pèse que le HTML qu'il occupe. Les coordonnées sont calculées, jamais tirées
+ * au hasard à l'exécution : deux builds produisent la même planche.
+ */
+export type PlateVariant = 'grille' | 'radiante' | 'orbites' | 'releve' | 'binaire';
+
+interface Props {
+  variant: PlateVariant;
+  class?: string;
+}
+
+const { variant, class: className } = Astro.props;
+
+/* -------------------------------------------------------------------------- */
+/* Suite déterministe — le grain de la main, reproductible d'un build à l'autre */
+/* -------------------------------------------------------------------------- */
+
+function sequence(seed: number) {
+  let state = seed * 9301 + 49297;
+  return () => {
+    state = (state * 9301 + 49297) % 233280;
+    return state / 233280;
+  };
+}
+
+const round = (value: number) => Math.round(value * 100) / 100;
+
+/* ── Trame carrée et cercle inscrit ───────────────────────────────────────── */
+
+const DIVISIONS = 12;
+const step = 100 / DIVISIONS;
+const gridLines = Array.from({ length: DIVISIONS - 1 }, (_, index) => round((index + 1) * step));
+
+/** Poignées : les quatre coins et le milieu de chaque côté. */
+const handles = [
+  [0, 0], [50, 0], [100, 0],
+  [0, 50], [100, 50],
+  [0, 100], [50, 100], [100, 100],
+] as const;
+
+/* ── Faisceau de vecteurs ─────────────────────────────────────────────────── */
+
+const RAYS = 34;
+const rayRandom = sequence(17);
+
+const rays = Array.from({ length: RAYS }, (_, index) => {
+  const angle = (index / RAYS) * Math.PI * 2 + (rayRandom() - 0.5) * 0.07;
+  const length = 30 + rayRandom() * 20;
+  const tip = [round(50 + Math.cos(angle) * length), round(50 + Math.sin(angle) * length)];
+
+  /*
+    La pointe : deux traits courts rabattus depuis la direction du vecteur. On
+    la dessine plutôt que d'employer un `marker`, dont l'échelle se règle mal
+    quand le trait ne suit pas la mise à l'échelle de la figure.
+  */
+  const barb = (spread: number) => [
+    round(tip[0]! - Math.cos(angle - spread) * 4.5),
+    round(tip[1]! - Math.sin(angle - spread) * 4.5),
+  ];
+
+  return {
+    tip,
+    barbs: [barb(0.38), barb(-0.38)],
+    /* Un vecteur sur trois est redoublé — c'est ce qui donne la main au relevé. */
+    doubled: index % 3 === 0,
+    offset: round((rayRandom() - 0.5) * 2.2),
+    /*
+      Ce que devient le vecteur au survol. Certains poussent, d'autres se
+      rétractent : un faisceau qui grandirait tout entier ne serait qu'un zoom.
+      C'est l'écart entre les vecteurs qui fait voir la mesure.
+    */
+    grow: round(0.72 + rayRandom() * 0.62),
+  };
+});
+
+/* ── Orbites ──────────────────────────────────────────────────────────────── */
+
+/*
+  Chaque orbite a UN FOYER COMMUN au centre de la figure, comme les comètes
+  autour de leur soleil. C'est ce qui fait le nœud serré du milieu et
+  l'éparpillement des grands axes ; une étoile d'ellipses concentriques n'aurait
+  pas cette allure.
+
+  ⚠️ Une ellipse dont un FOYER est au centre s'étend jusqu'à `rx + c` de ce
+  centre — bien au-delà de son demi-grand axe. Les grandes orbites sortaient
+  donc du carré de référence et se retrouvaient coupées en plein vol.
+
+  On les ramène à l'échelle plutôt que d'élargir la fenêtre : agrandir le
+  `viewBox` réparait bien le cadrage, mais tassait le dessin au milieu d'un
+  carré trop grand — la planche paraissait deux fois plus petite que ses
+  voisines. Ici, la plus lointaine touche le bord, et toutes les planches
+  gardent le même carré de 100.
+*/
+const orbitRandom = sequence(53);
+
+const rawOrbits = Array.from({ length: 8 }, (_, index) => {
+  const rx = 14 + index * 5.2 + orbitRandom() * 3;
+  const ry = rx * (0.42 + orbitRandom() * 0.3);
+  /** Distance centre-foyer : c'est elle qui décale l'ellipse hors du centre. */
+  const focal = Math.sqrt(Math.max(rx * rx - ry * ry, 0));
+
+  return {
+    rx,
+    ry,
+    focal,
+    /** Point de l'orbite le plus éloigné du foyer — l'aphélie. */
+    reach: rx + focal,
+    base: round((index * 47 + orbitRandom() * 22) % 360),
+    /* Chaque orbite tourne d'un angle propre au survol : le système se remet en marche. */
+    spin: round(6 + orbitRandom() * 26),
+  };
+});
+
+/** Facteur qui amène l'aphélie la plus lointaine juste au bord du carré. */
+const orbitScale = 49 / Math.max(...rawOrbits.map((orbit) => orbit.reach));
+
+const orbits = rawOrbits.map((orbit, index) => ({
+  rx: round(orbit.rx * orbitScale),
+  ry: round(orbit.ry * orbitScale),
+  /* Centre décalé du foyer : l'orbite passe près du centre, jamais autour. */
+  cx: round(50 + orbit.focal * orbitScale),
+  base: orbit.base,
+  /*
+    LA MISE EN MARCHE DU SYSTÈME.
+
+    Trois choses bougent ensemble, et c'est leur désaccord qui fait le
+    mouvement — une rotation d'ensemble n'aurait été qu'un tourniquet.
+
+    · `spin`   l'angle parcouru. Une orbite sur deux part À REBOURS : deux
+               plans d'orbite qui se croisent ne tournent pas du même côté vu
+               d'un même point, et c'est ce croisement qu'on veut voir.
+    · `swell`  la respiration. L'orbite s'élargit ou se resserre autour de son
+               foyer — l'aphélie s'éloigne, le périhélie se rapproche.
+    · `delay`  le retard à l'allumage. Les orbites intérieures partent les
+               premières, les grandes suivent : c'est la loi de Kepler en
+               raccourci, et c'est ce qui donne au système l'air de S'ÉBRANLER
+               plutôt que de basculer d'un bloc.
+  */
+  spin: index % 2 === 0 ? orbit.spin : round(-orbit.spin * 0.7),
+  swell: round(0.88 + ((index * 7) % 5) * 0.062),
+  delay: `${index * 55}ms`,
+}));
+
+/* ── Relevé en bâtons ─────────────────────────────────────────────────────── */
+
+const BARS = 17;
+const barRandom = sequence(89);
+const barWidth = 100 / (BARS * 1.7);
+
+const bars = Array.from({ length: BARS }, (_, index) => {
+  const height = 18 + barRandom() * 62;
+  return {
+    x: round(index * (100 / BARS) + barWidth * 0.35),
+    y: round(100 - height),
+    width: round(barWidth),
+    height: round(height),
+    /* Le relevé se recalcule au survol : certaines mesures montent, d'autres tombent. */
+    scale: round(0.45 + barRandom() * 1.05),
+  };
+});
+
+const RELEVE_STEP = 100 / 10;
+const releveLines = Array.from({ length: 9 }, (_, index) => round((index + 1) * RELEVE_STEP));
+
+/* ── Matrice binaire ──────────────────────────────────────────────────────── */
+
+/*
+  Un relevé brut : la donnée avant qu'on en fasse une courbe. C'est la planche
+  la plus littérale du jeu, et c'est pour cela qu'elle y tient sa place — les
+  quatre autres montrent des mesures mises en forme, celle-ci montre ce qu'on
+  mesure.
+
+  Au survol, chaque chiffre bascule vers son contraire, à son propre moment.
+  Les deux états sont écrits dans le HTML et on ne fait qu'échanger leur
+  opacité : pas de script, et rien qui puisse se figer à mi-parcours.
+*/
+const BIT_COLUMNS = 5;
+const BIT_ROWS = 3;
+const bitRandom = sequence(41);
+
+const bits = Array.from({ length: BIT_ROWS }, (_, row) =>
+  Array.from({ length: BIT_COLUMNS }, (_, column) => ({
+    value: bitRandom() > 0.5 ? 1 : 0,
+    x: round(((column + 0.5) * 100) / BIT_COLUMNS),
+    y: round(((row + 0.78) * 62) / BIT_ROWS),
+    /*
+      Le retard de bascule, calculé ICI et non en CSS.
+
+      `transition: opacity 300ms ease calc(var(--rank) * 45ms)` ne survit pas à
+      la transformation des feuilles de style : la règle entière est écartée, et
+      les chiffres se retrouvaient sans police ni remplissage. Une valeur toute
+      faite ne pose aucune question à personne.
+    */
+    delay: `${(row * BIT_COLUMNS + column) * 45}ms`,
+  })),
+).flat();
+---
+
+<svg
+  class:list={['plate', `plate--${variant}`, className]}
+  viewBox={variant === 'binaire' ? '-4 -6 108 74' : '-4 -4 108 108'}
+  fill="none"
+  aria-hidden="true"
+  focusable="false"
+>
+  {
+    variant === 'grille' && (
+      <>
+        <g class="plate__grid">
+          {gridLines.map((position) => <line x1={position} y1="0" x2={position} y2="100" />)}
+          {gridLines.map((position) => <line x1="0" y1={position} x2="100" y2={position} />)}
+        </g>
+
+        <rect class="plate__rule" x="0" y="0" width="100" height="100" />
+        {/* Le cercle touche les quatre côtés sans les dépasser. */}
+        <circle class="plate__rule plate__inscribed" cx="50" cy="50" r="50" />
+
+        <g class="plate__handles">
+          {handles.map(([x, y]) => <rect x={x - 1.8} y={y - 1.8} width="3.6" height="3.6" />)}
+        </g>
+      </>
+    )
+  }
+
+  {
+    variant === 'radiante' && (
+      <g class="plate__rule">
+        {
+          /*
+            Un groupe par vecteur : c'est lui qu'on met à l'échelle au survol,
+            pour que la pointe suive la tige au lieu de rester en arrière.
+          */
+          rays.map((ray) => (
+            <g class="plate__ray" style={`--grow: ${ray.grow}`}>
+              <line x1="50" y1="50" x2={ray.tip[0]} y2={ray.tip[1]} />
+              {ray.doubled && (
+                <line
+                  x1="50"
+                  y1="50"
+                  x2={round(ray.tip[0]! + ray.offset)}
+                  y2={round(ray.tip[1]! + ray.offset)}
+                />
+              )}
+              {ray.barbs.map((barb) => (
+                <line x1={ray.tip[0]} y1={ray.tip[1]} x2={barb[0]} y2={barb[1]} />
+              ))}
+            </g>
+          ))
+        }
+      </g>
+    )
+  }
+
+  {
+    variant === 'orbites' && (
+      <>
+        <g class="plate__rule">
+          {
+            /*
+              L'inclinaison est portée par une PROPRIÉTÉ CSS et non par un
+              attribut `transform` : un attribut serait écrasé par la rotation
+              du survol, et l'orbite retomberait à plat avant de tourner.
+            */
+            orbits.map((orbit) => (
+              <ellipse
+                class="plate__orbit"
+                style={`--base: ${orbit.base}deg; --spin: ${orbit.spin}deg; --swell: ${orbit.swell}; --delay: ${orbit.delay}`}
+                cx={orbit.cx}
+                cy="50"
+                rx={orbit.rx}
+                ry={orbit.ry}
+              />
+            ))
+          }
+        </g>
+        {/* Le foyer : le point que toutes les orbites contournent. */}
+        <circle class="plate__focus" cx="50" cy="50" r="1.6" />
+      </>
+    )
+  }
+
+  {
+    variant === 'binaire' && (
+      <g class="plate__bits">
+        {
+          bits.map((bit) => (
+            <g class="plate__bit" style={`--bit-delay: ${bit.delay}`}>
+              <text class="plate__digit plate__digit--rest" x={bit.x} y={bit.y} text-anchor="middle">
+                {bit.value}
+              </text>
+              <text class="plate__digit plate__digit--flip" x={bit.x} y={bit.y} text-anchor="middle">
+                {1 - bit.value}
+              </text>
+            </g>
+          ))
+        }
+      </g>
+    )
+  }
+
+  {
+    variant === 'releve' && (
+      <>
+        <g class="plate__grid">
+          {releveLines.map((position) => <line x1={position} y1="0" x2={position} y2="100" />)}
+          {releveLines.map((position) => <line x1="0" y1={position} x2="100" y2={position} />)}
+        </g>
+
+        <g class="plate__bars">
+          {
+            bars.map((bar) => (
+              <rect
+                style={`--scale: ${bar.scale}`}
+                x={bar.x}
+                y={bar.y}
+                width={bar.width}
+                height={bar.height}
+              />
+            ))
+          }
+        </g>
+
+        {/* Les deux axes, seuls traits appuyés du relevé. */}
+        <g class="plate__rule">
+          <line x1="0" y1="100" x2="100" y2="100" />
+          <line x1="0" y1="0" x2="0" y2="100" />
+        </g>
+      </>
+    )
+  }
+</svg>
+
+<style>
+  .plate {
+    display: block;
+    width: 100%;
+    height: auto;
+    color: var(--color-ink);
+  }
+
+  /*
+    Le trait garde son épaisseur quelle que soit la taille d'affichage. Sans
+    cela, une figure réduite verrait sa trame s'épaissir jusqu'à l'aplat gris —
+    et les planches n'ont justement pas toutes la même taille.
+  */
+  .plate :is(line, rect, circle, ellipse) {
+    vector-effect: non-scaling-stroke;
+    stroke: currentColor;
+    stroke-linecap: round;
+  }
+
+  .plate__grid {
+    stroke-width: 0.5;
+    opacity: 0.22;
+    transition: opacity 420ms ease;
+  }
+
+  .plate__rule {
+    stroke-width: 0.8;
+    opacity: 0.55;
+  }
+
+  /* Les poignées et le foyer sont pleins : ce sont des points, pas des contours. */
+  .plate__handles rect,
+  .plate__focus {
+    fill: currentColor;
+    stroke: none;
+    opacity: 0.75;
+  }
+
+  .plate__bars rect {
+    fill: currentColor;
+    fill-opacity: 0.28;
+    stroke-width: 0.7;
+    opacity: 0.6;
+  }
+
+  /*
+    ── LE RÉGLAGE DE L'INSTRUMENT ────────────────────────────────────────────
+    Les transformations se rapportent au repère du dessin (`view-box`) et non
+    à la boîte de chaque élément : sans cela, chaque vecteur tournerait autour
+    de son propre milieu au lieu du centre de la figure.
+
+    Le relevé fait exception — ses bâtons poussent depuis LEUR base, c'est le
+    seul cas où le repère de l'élément est le bon.
+  */
+  .plate__ray,
+  .plate__orbit,
+  .plate__inscribed,
+  .plate__handles {
+    transform-box: view-box;
+    transform-origin: 50px 50px;
+    transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .plate__focus {
+    transform-box: view-box;
+    transform-origin: 50px 50px;
+  }
+
+  /*
+    L'inclinaison au repos de chaque orbite, et son propre retard à l'allumage.
+    Le retard est une valeur toute faite : `calc()` dans le raccourci
+    `transition` ne survit pas à la transformation des feuilles de style.
+  */
+  .plate__orbit {
+    transform: rotate(var(--base));
+    transition:
+      transform 1100ms cubic-bezier(0.33, 1, 0.5, 1) var(--delay, 0ms),
+      opacity 700ms ease var(--delay, 0ms);
+  }
+
+  /* LES VECTEURS — les uns poussent, les autres se rétractent. */
+  .plate--radiante:is(:hover, .is-active) .plate__ray {
+    transform: scale(var(--grow));
+  }
+
+  /* LES ORBITES — le système s'ébranle, chacune à son pas et dans son sens. */
+  .plate--orbites:is(:hover, .is-active) .plate__orbit {
+    transform: rotate(calc(var(--base) + var(--spin))) scale(var(--swell));
+  }
+
+  /* Le foyer s'allume : c'est lui qui tient tout le système. */
+  .plate__focus {
+    transition:
+      r 900ms cubic-bezier(0.33, 1, 0.5, 1),
+      opacity 900ms ease;
+  }
+
+  .plate--orbites:is(:hover, .is-active) .plate__focus {
+    r: 2.6;
+    opacity: 1;
+  }
+
+  /* LA TRAME — la forme inscrite se resserre, et le quadrillage se précise. */
+  .plate--grille:is(:hover, .is-active) .plate__inscribed {
+    transform: scale(0.74);
+  }
+
+  .plate--grille:is(:hover, .is-active) .plate__handles {
+    transform: scale(0.94);
+  }
+
+  .plate--grille:is(:hover, .is-active) .plate__grid {
+    opacity: 0.42;
+  }
+
+  /* LE RELEVÉ — la mesure se refait : certaines colonnes montent, d'autres tombent. */
+  .plate__bars rect {
+    transform-box: fill-box;
+    transform-origin: bottom;
+    transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .plate--releve:is(:hover, .is-active) .plate__bars rect {
+    transform: scaleY(var(--scale));
+  }
+
+  /* LA MATRICE — chaque chiffre bascule vers son contraire, à son propre moment. */
+  .plate__digit {
+    font-family: var(--font-titre);
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    fill: currentColor;
+    stroke: none;
+    transition: opacity 300ms ease var(--bit-delay, 0ms);
+  }
+
+  .plate__digit--flip {
+    opacity: 0;
+  }
+
+  .plate--binaire:is(:hover, .is-active) .plate__digit--rest {
+    opacity: 0;
+  }
+
+  .plate--binaire:is(:hover, .is-active) .plate__digit--flip {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .plate__digit {
+      transition: none;
+    }
+
+    .plate :is(
+        .plate__ray,
+        .plate__orbit,
+        .plate__focus,
+        .plate__inscribed,
+        .plate__handles,
+        .plate__grid
+      ),
+    .plate__bars rect {
+      transition: none;
+    }
+  }
+</style>
