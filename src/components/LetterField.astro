@@ -27,6 +27,23 @@ import type { Locale } from '~/i18n/config';
  * hauteur de la planche, se déduisent de lui. Ils vivent avec les autres
  * textes d'interface traduits, dans `src/i18n/ui.ts`.
  *
+ * ── DEUX COMPOSITIONS, UN SEUL PROPOS ──────────────────────────────────────
+ *
+ *  · AU CURSEUR — la planche est un carré, plafonnée par la hauteur d'écran.
+ *    La main explore latéralement ; le mot « sous le » lui tient lieu de
+ *    pointeur, et la phrase se recompose là où elle se pose.
+ *
+ *  · AU DOIGT — il n'y a pas de survol, et un téléphone ne s'explore pas de
+ *    côté : il se DESCEND. La planche s'y poursuit donc bien au-delà de
+ *    l'écran (rangées de réserve), et l'aimant devient un point fixe au
+ *    milieu de la vue, qui porte le mot. C'est le DÉFILEMENT qui fait
+ *    traverser la phrase au champ : les rangées se retournent une à une au
+ *    passage, et « sous le visible » se forme sans qu'on ait rien à toucher.
+ *    Un doigt posé reprend la main, le temps du glissement.
+ *
+ *    Ce n'est pas la version réduite du geste au curseur : c'est le même
+ *    propos — plonger — dit avec le geste natif de l'appareil.
+ *
  * ── RIEN NE S'ANNONCE ──────────────────────────────────────────────────────
  *
  * Ni filet d'encadrement, ni invitation écrite : la planche n'a pas de bord et
@@ -62,7 +79,24 @@ const t = useTranslations(locale);
 */
 const letters = Array.from(t('home.fieldWord').toLocaleUpperCase(locale));
 const rowCount = rows ?? letters.length;
-const rowIndexes = Array.from({ length: rowCount }, (_, index) => index);
+
+/*
+  ┌─ LES RANGÉES DE RÉSERVE ──────────────────────────────────────────────────┐
+  │ Au doigt, la planche doit être PLUS HAUTE QUE L'ÉCRAN : sans cela, le      │
+  │ point fixe la traverserait en un seul geste de pouce et la phrase          │
+  │ n'aurait pas le temps de se former. Ces rangées supplémentaires sont       │
+  │ rendues pour tout le monde et masquées là où il y a un curseur — une       │
+  │ requête de média ne peut pas ajouter du contenu, seulement en retirer.     │
+  │                                                                            │
+  │ Elles ne coûtent rien d'autre que leur balisage : masquées, elles n'ont    │
+  │ plus de boîte, et le script les ignore à la mesure.                        │
+  └────────────────────────────────────────────────────────────────────────────┘
+*/
+const TOUCH_ROWS = 18;
+const rowIndexes = Array.from(
+  { length: Math.max(rowCount, TOUCH_ROWS) },
+  (_, index) => index,
+);
 
 /*
   Le corps des lettres se déduit du nombre de colonnes, en pour-cent de la
@@ -127,18 +161,32 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
   >
     {rowIndexes.map((row) =>
       letters.map((letter) => (
-        <span class="letter-field__cell" style={`--row: ${row};`}>
+        <span
+          class:list={['letter-field__cell', row >= rowCount && 'letter-field__cell--reserve']}
+          style={`--row: ${row};`}
+        >
           <span class="letter-field__glyph">{letter}</span>
         </span>
       )),
     )}
   </div>
 
+  {/*
+    Le mot du doigt. Au curseur, c'est le compagnon qui le porte et ce
+    marqueur n'existe pas ; au doigt, il se pose au milieu de la vue et
+    descend avec le défilement — ou saute sous le doigt qui glisse, décalé
+    vers le haut pour ne pas disparaître sous la main.
+
+    Il naît masqué : sans script, aucun mot ne flotte au milieu des lettres.
+  */}
+  <p class="letter-field__anchor" aria-hidden="true" hidden>{t('home.fieldCursor')}</p>
+
   <figcaption class="sr-only">{t('home.fieldDescription')}</figcaption>
 </figure>
 
 <style>
   .letter-field {
+    position: relative;
     margin: 0;
     /*
       La bande déborde un peu la planche, en haut comme en bas : la main est
@@ -176,8 +224,6 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       lettres suivent donc la planche quand elle se resserre.
     */
     container-type: inline-size;
-    /* Tient dans l'écran, en laissant respirer au-dessus et au-dessous. */
-    max-width: min(100%, calc(76svh * var(--plate-span)));
     /* Plafonnée, la planche devient plus étroite que la colonne : on la centre. */
     margin-inline: auto;
     display: grid;
@@ -216,7 +262,80 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       retourne en vague, du haut vers le bas. Quatre-vingts millisecondes au
       plus — au-delà, le champ traîne derrière la main.
     */
-    transition-delay: calc(var(--row) * 16ms);
+    transition-delay: calc(min(var(--row), 6) * 16ms);
+  }
+
+  /*
+    ┌─ CE QUI DISTINGUE LES DEUX COMPOSITIONS ──────────────────────────────┐
+    │ Un seul basculement, sur la PRÉSENCE D'UN CURSEUR — pas sur la largeur │
+    │ de l'écran : c'est le geste disponible qui décide de la forme, et une  │
+    │ tablette en paysage doit avoir la planche du doigt, pas celle de la    │
+    │ souris.                                                                │
+    │                                                                        │
+    │ Au curseur : la planche est plafonnée par la hauteur d'écran et les    │
+    │ rangées de réserve disparaissent — un carré qu'on embrasse d'un        │
+    │ regard. Au doigt : elle garde toute sa hauteur et déborde la vue.      │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  @media (pointer: fine) {
+    .letter-field__plate {
+      max-width: min(100%, calc(76svh * var(--plate-span)));
+    }
+
+    .letter-field__cell--reserve {
+      display: none;
+    }
+
+    .letter-field__anchor {
+      display: none;
+    }
+  }
+
+  /* ── Le mot du doigt ──────────────────────────────────────────────────── */
+  .letter-field__anchor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    margin: 0;
+    /* Posé par le script, en pixels, dans le repère de la bande. */
+    transform: translate(calc(var(--anchor-x, 50%) - 50%), calc(var(--anchor-y, 50%) - 50%));
+    font-family: var(--font-annotation);
+    font-style: italic;
+    font-size: var(--text-annotation);
+    line-height: 1;
+    letter-spacing: var(--tracking-annotation);
+    color: var(--color-ink);
+    white-space: nowrap;
+    /* Le mot ne prend jamais le geste : il le commente. */
+    pointer-events: none;
+    text-shadow:
+      0 0 0.4em var(--color-surface),
+      0 0 0.9em var(--color-surface);
+  }
+
+  .letter-field__anchor[hidden] {
+    display: none;
+  }
+
+  /* Le même halo rond que porte le curseur : le mot se détache des lettres. */
+  .letter-field__anchor::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: -1;
+    width: 6.5em;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      var(--color-surface) 26%,
+      color-mix(in srgb, var(--color-surface) 62%, transparent) 52%,
+      color-mix(in srgb, var(--color-surface) 20%, transparent) 78%,
+      color-mix(in srgb, var(--color-surface) 0%, transparent) 100%
+    );
   }
 
   /*
@@ -229,27 +348,42 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       transform: none;
       transition: none;
     }
+
+    /* Rien ne suit le défilement : le marqueur n'aurait plus de sens. */
+    .letter-field__anchor {
+      display: none;
+    }
   }
 </style>
 
 <script>
   /*
     ┌─ L'AIMANT ────────────────────────────────────────────────────────────┐
-    │ Chaque lettre reçoit l'angle qui met SON BAS face au pointeur. Une     │
-    │ lettre posée juste au-dessus du curseur est donc droite ; une lettre   │
-    │ posée en dessous est retournée ; sur les côtés, elle se couche. Le     │
-    │ champ entier converge visuellement vers un seul point : la main.       │
+    │ Chaque lettre reçoit l'angle qui met SON BAS face au point visé. Une   │
+    │ lettre posée juste au-dessus est donc droite ; une lettre posée en     │
+    │ dessous est retournée ; sur les côtés, elle se couche. Le champ entier │
+    │ converge visuellement vers un seul point.                              │
     │                                                                        │
-    │ Le repos vaut zéro : pointeur sorti, la planche se redresse et le mot  │
-    │ redevient lisible d'un bout à l'autre de chaque rangée.                │
+    │ Ce point a deux origines selon le geste disponible :                   │
+    │   · au curseur — la position de la main, tant qu'elle est dans la      │
+    │     bande ; à la sortie, le champ se redresse et le mot redevient      │
+    │     lisible d'un bout à l'autre de chaque rangée ;                     │
+    │   · au doigt — le MILIEU DE LA VUE, que le défilement fait descendre   │
+    │     à travers la planche. Un doigt posé reprend la main le temps du    │
+    │     glissement, puis rend le point au défilement.                      │
     └───────────────────────────────────────────────────────────────────────┘
   */
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const coarse = window.matchMedia('(pointer: coarse)');
+
+  /* De combien le mot remonte au-dessus du doigt, pour rester visible. */
+  const FINGER_LIFT = 44;
 
   for (const field of document.querySelectorAll<HTMLElement>('[data-letter-field]')) {
     const plate = field.querySelector<HTMLElement>('.letter-field__plate');
     if (!plate) continue;
 
+    const anchor = field.querySelector<HTMLElement>('.letter-field__anchor');
     const cells = Array.from(plate.querySelectorAll<HTMLElement>('.letter-field__cell'));
     const glyphs = cells.map((cell) => cell.querySelector<HTMLElement>('.letter-field__glyph'));
 
@@ -259,14 +393,17 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       se mettrait à viser de travers dès le premier mouvement.
 
       Ils sont relatifs à la planche, donc insensibles au défilement : une
-      seule mesure tient tant que la mise en page ne change pas.
+      seule mesure tient tant que la mise en page ne change pas. Une case sans
+      boîte — les rangées de réserve, masquées au curseur — vaut `null` et
+      sort du calcul.
     */
-    let centers: { x: number; y: number }[] = [];
+    let centers: ({ x: number; y: number } | null)[] = [];
 
     const measure = () => {
       const plateBox = plate.getBoundingClientRect();
       centers = cells.map((cell) => {
         const box = cell.getBoundingClientRect();
+        if (!box.width) return null;
         return {
           x: box.left - plateBox.left + box.width / 2,
           y: box.top - plateBox.top + box.height / 2,
@@ -278,6 +415,10 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
     const angles = new Float64Array(cells.length);
     let pointer: { x: number; y: number } | null = null;
     let frame = 0;
+    /* Un doigt est posé : il l'emporte sur le défilement, le temps du geste. */
+    let touching = false;
+    /* La bande est à l'écran : sinon, le défilement n'a rien à piloter. */
+    let onScreen = false;
 
     const settle = () => {
       frame = 0;
@@ -285,17 +426,18 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
 
       for (let index = 0; index < glyphs.length; index += 1) {
         const glyph = glyphs[index];
-        if (!glyph) continue;
+        const center = centers[index];
+        if (!glyph || !center) continue;
 
         let target = 0;
 
         if (pointer) {
-          const dx = pointer.x - centers[index].x;
-          const dy = pointer.y - centers[index].y;
+          const dx = pointer.x - center.x;
+          const dy = pointer.y - center.y;
 
           /*
             Le bas de la lettre — le vecteur (0, 1) de son repère — doit
-            pointer vers le curseur. Une rotation d'angle a l'envoie sur
+            pointer vers le point visé. Une rotation d'angle a l'envoie sur
             (-sin a, cos a) : l'angle cherché est donc atan2(-dx, dy).
           */
           target = (Math.atan2(-dx, dy) * 180) / Math.PI;
@@ -319,6 +461,48 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
     };
 
     /*
+      Le mot du doigt se place dans le repère de la BANDE — c'est son parent
+      de positionnement — alors que le point visé est exprimé dans celui de la
+      planche. Hors de la bande, il n'est pas dessiné : un mot ne flotte pas
+      au milieu de la section suivante.
+    */
+    const placeAnchor = (plateBox: DOMRect, point: { x: number; y: number }, lift: number) => {
+      if (!anchor) return;
+
+      const fieldBox = field.getBoundingClientRect();
+      const x = plateBox.left - fieldBox.left + point.x;
+      const y = plateBox.top - fieldBox.top + point.y - lift;
+
+      if (y < 0 || y > fieldBox.height) {
+        anchor.hidden = true;
+        return;
+      }
+
+      anchor.style.setProperty('--anchor-x', `${x.toFixed(1)}px`);
+      anchor.style.setProperty('--anchor-y', `${y.toFixed(1)}px`);
+      anchor.hidden = false;
+    };
+
+    const hideAnchor = () => {
+      if (anchor) anchor.hidden = true;
+    };
+
+    /*
+      Le point du défilement : le milieu de la vue, ramené dans le repère de
+      la planche. Il n'y a rien à animer — c'est le doigt de l'utilisateur qui
+      fait avancer la scène, image par image, au rythme qu'il choisit.
+    */
+    const syncScroll = () => {
+      if (touching || !coarse.matches || reducedMotion.matches || !onScreen) return;
+      if (!centers.length) measure();
+
+      const plateBox = plate.getBoundingClientRect();
+      pointer = { x: plateBox.width / 2, y: window.innerHeight / 2 - plateBox.top };
+      placeAnchor(plateBox, pointer, 0);
+      schedule();
+    };
+
+    /*
       Le rectangle de la planche est relu à chaque mouvement plutôt que gardé :
       la page défile, et une position mémorisée viserait le point où la planche
       se trouvait. C'est une lecture par événement, jamais par lettre.
@@ -333,16 +517,36 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
         if (reducedMotion.matches) return;
         if (!centers.length) measure();
 
-        const box = plate.getBoundingClientRect();
-        pointer = { x: event.clientX - box.left, y: event.clientY - box.top };
+        const plateBox = plate.getBoundingClientRect();
+        pointer = { x: event.clientX - plateBox.left, y: event.clientY - plateBox.top };
+
+        if (event.pointerType === 'mouse') {
+          hideAnchor();
+        } else {
+          touching = true;
+          placeAnchor(plateBox, pointer, FINGER_LIFT);
+        }
+
         schedule();
       },
       { passive: true },
     );
 
-    /* Au doigt, l'orientation suit le glissement ; le relâchement redresse. */
+    /*
+      Fin du geste. Au doigt, le point retourne au défilement — la planche ne
+      se redresse pas, elle reprend sa lecture là où la vue en est. Au
+      curseur, la sortie de la bande redresse tout.
+    */
     const release = () => {
+      touching = false;
+
+      if (coarse.matches) {
+        syncScroll();
+        return;
+      }
+
       pointer = null;
+      hideAnchor();
       schedule();
     };
 
@@ -352,17 +556,43 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       if (event.pointerType !== 'mouse') release();
     });
 
+    window.addEventListener('scroll', syncScroll, { passive: true });
+    window.addEventListener('resize', syncScroll, { passive: true });
+
+    /*
+      Rien n'est calculé quand la bande est ailleurs : l'écoute du défilement
+      est globale, mais elle rend la main tout de suite tant que le champ
+      n'est pas à l'écran. En sortant, le mot s'efface avec lui.
+    */
+    new IntersectionObserver((entries) => {
+      onScreen = entries.some((entry) => entry.isIntersecting);
+      if (onScreen) syncScroll();
+      else hideAnchor();
+    }).observe(field);
+
     /* La planche change de taille (fenêtre, rail, rotation) : on remesure. */
     new ResizeObserver(() => {
       if (centers.length) measure();
+      syncScroll();
     }).observe(plate);
 
     /*
       La préférence peut changer pendant la visite : on redresse la planche
-      sans attendre le prochain mouvement.
+      sans attendre le prochain geste.
     */
     reducedMotion.addEventListener('change', () => {
-      if (reducedMotion.matches) release();
+      if (!reducedMotion.matches) return;
+      touching = false;
+      pointer = null;
+      hideAnchor();
+      schedule();
+    });
+
+    /* Le geste disponible peut changer aussi — clavier posé, souris branchée. */
+    coarse.addEventListener('change', () => {
+      measure();
+      if (coarse.matches) syncScroll();
+      else release();
     });
   }
 </script>
