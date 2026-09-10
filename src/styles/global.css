@@ -632,14 +632,69 @@
     outline-offset: 0.2rem;
   }
 
+  /*
+    La barre prend la couleur des mentions secondaires, et non celle des
+    filets : sur le fond Ciel de la Bibliothèque, `--color-line` s'efface au
+    point que les maillons paraissent collés les uns aux autres — on lisait
+    « BibliothèqueEssais ».
+  */
   .breadcrumb__separator {
     margin-inline: 0.55rem;
-    color: var(--color-line);
+    color: var(--color-muted);
   }
 
   .breadcrumb li:last-child > span:last-child {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /*
+    ── LE FIL EN ÉTROIT ──────────────────────────────────────────────────────
+    Sur une colonne de 375 px, trois maillons ne tiennent pas : le dernier — le
+    titre de la page — s'y coupait en plein mot pour ne rien apprendre, puisque
+    ce titre est écrit en grand juste dessous.
+
+    On le retire donc, et le fil se réduit à ce qu'il sait faire ici : dire
+    d'où l'on vient et permettre d'y remonter. Ce n'est pas une troncature de
+    la version large, c'est le même outil ramené à son office.
+
+    Le maillon reste dans le document pour les technologies d'assistance et
+    pour les données structurées ; seul son affichage cesse.
+  */
+  /*
+    ── LE FIL EN ÉTROIT ──────────────────────────────────────────────────────
+    Sur une colonne étroite, les trois maillons ne tiennent pas côte à côte : le
+    dernier — le titre de la page — s'y coupait en plein mot.
+
+    Il PASSE À LA LIGNE plutôt que de se tronquer. `flex-basis: 100 %` le force
+    seul sur la sienne, où il dispose alors de toute la largeur pour se
+    composer sur deux lignes s'il le faut. Le fil dit toujours la même chose, il
+    l'écrit simplement sur deux rangs.
+  */
+  @media (max-width: 767px) {
+    .breadcrumb ol {
+      flex-wrap: wrap;
+      row-gap: 0.15rem;
+    }
+
+    .breadcrumb li:last-child {
+      flex-basis: 100%;
+      white-space: normal;
+    }
+
+    /* Plus rien à tronquer : la place est là. */
+    .breadcrumb li:last-child > span:last-child {
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    /*
+      La barre du dernier maillon disparaît : en tête de ligne, elle ne sépare
+      plus rien — c'est le retour à la ligne qui fait la séparation.
+    */
+    .breadcrumb li:last-child > .breadcrumb__separator {
+      display: none;
+    }
   }
 
 

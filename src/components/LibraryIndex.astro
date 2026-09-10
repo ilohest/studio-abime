@@ -147,6 +147,14 @@ const notes = composition.paragraphs
               navigation sans rien apporter.
             */
             href: segment.href,
+            /*
+              Le nom de la rubrique. Invisible tant que la note se tient à côté
+              de son mot : celui-ci le dit déjà, et le répéter ferait bégayer
+              la marge. Il ne paraît que dans la composition étroite, où la
+              note quitte la marge pour devenir une entrée autonome — sans lui,
+              on lirait « Les inspis » sans savoir de quoi c'est la rubrique.
+            */
+            name: getLibraryRubric(segment.target)?.title ?? '',
           },
         ]
       : [],
@@ -247,31 +255,44 @@ const verso = [...versoText, ...versoText];
     disparaître de l'annonce. C'est aussi leur état définitif sur les écrans
     sans marge.
     */}
-    {
-      notes.map((note) => (
-        <a
-          class="library__note type-note"
-          id={note.id}
-          href={note.href}
-          tabindex="-1"
-          data-cursor-interactive
-          data-library-note={note.order}
-          data-side={note.side}
-          data-lift={note.lift}
-          style={`--note-shift: ${note.shift}; --note-tilt: ${note.tilt}; --note-width: ${note.width}`}
-        >
-          {
-            note.plate && (
-              <span class="library__note-plate">
-                <PlateFigure variant={note.plate as PlateVariant} />
-              </span>
-            )
-          }
+    {/*
+      LA MARGINALIA.
 
-          <span class="library__note-text">{note.text}</span>
-        </a>
-      ))
-    }
+      Une enveloppe qui ne pèse RIEN en large : `display: contents` l'efface,
+      et les notes redeviennent des enfants directs du corps de page, qu'elles
+      prennent pour repère afin de se ranger dans ses marges.
+
+      En étroit, elle reprend corps et devient la planche qui recompose la
+      page — voir la feuille de style.
+    */}
+    <div class="library__marginalia">
+      {
+        notes.map((note) => (
+          <a
+            class="library__note type-note"
+            id={note.id}
+            href={note.href}
+            tabindex="-1"
+            data-cursor-interactive
+            data-library-note={note.order}
+            data-side={note.side}
+            data-lift={note.lift}
+            style={`--note-shift: ${note.shift}; --note-tilt: ${note.tilt}; --note-width: ${note.width}`}
+          >
+            {
+              note.plate && (
+                <span class="library__note-plate">
+                  <PlateFigure variant={note.plate as PlateVariant} />
+                </span>
+              )
+            }
+
+            <span class="library__note-name type-note">{note.name}</span>
+            <span class="library__note-text">{note.text}</span>
+          </a>
+        ))
+      }
+    </div>
   </div>
 
   {
@@ -458,6 +479,15 @@ const verso = [...versoText, ...versoText];
      met pas `display: none` — la note EST la description du lien, la masquer
      ainsi la retirerait de l'annonce.
   */
+  /*
+    L'enveloppe ne pèse rien tant que la page a des marges : elle s'efface, et
+    les notes redeviennent des enfants directs du corps de page — c'est lui
+    qu'elles prennent pour repère.
+  */
+  .library__marginalia {
+    display: contents;
+  }
+
   .library__note {
     position: absolute;
     width: 1px;
@@ -466,6 +496,11 @@ const verso = [...versoText, ...versoText];
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  /* Le nom ne sert qu'à la composition étroite — voir plus bas. */
+  .library__note-name {
+    display: none;
   }
 
   /*
@@ -585,6 +620,81 @@ const verso = [...versoText, ...versoText];
 
   .library__missing a {
     color: var(--color-ink);
+  }
+
+  /*
+    ══════════════════════════════════════════════════════════════════════════
+    LA COMPOSITION ÉTROITE — une planche, pas une marge amputée
+    ══════════════════════════════════════════════════════════════════════════
+    Sous 1300 px, il n'y a pas de marge : les notes et leurs figures n'ont plus
+    où se ranger. Les faire disparaître aurait été le geste facile — et la page
+    se serait réduite à son texte, l'idée en moins.
+
+    Elles se recomposent donc au lieu de s'effacer. Ce qui était une marge
+    annotée devient une PLANCHE DE RUBRIQUES sous le texte : deux colonnes,
+    une figure par entrée, son nom, ce qu'elle contient. Le mot du texte reste
+    la porte principale ; la planche en est la table, à l'endroit où le pouce
+    la cherche.
+
+    Ce qui se perd — les flèches, les cadres reliés à leur note, l'inclinaison
+    — se perd parce qu'il n'avait de sens que dans une marge. Ce qui compte,
+    la figure et son propos, arrive entier.
+  */
+  @media (max-width: 1299px) {
+    .library__marginalia {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(2.5rem, 8vw, 4rem) clamp(1.5rem, 6vw, 3rem);
+      margin-top: clamp(4rem, 14vw, 7rem);
+      padding-top: clamp(2rem, 6vw, 3rem);
+      border-top: 1px solid var(--color-line);
+    }
+
+    /*
+      La note quitte son état de repli — masquée à l'œil, lue par les
+      technologies d'assistance — et redevient une entrée à part entière.
+    */
+    .library__note {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+
+    .library__note-plate {
+      display: block;
+      width: 100%;
+      max-width: 7rem;
+      margin-bottom: 0.85rem;
+      opacity: 0.5;
+    }
+
+    .library__note-name {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: var(--color-ink);
+    }
+
+    .library__note-text {
+      display: block;
+      font-size: 0.72rem;
+      line-height: 1.4;
+      color: var(--color-muted);
+      text-wrap: pretty;
+    }
+
+    /*
+      Cible tactile : la figure et son texte forment un seul bloc, et c'est ce
+      bloc entier qui s'ouvre. Rien ici ne dépend du survol — il n'y en a pas.
+    */
+    .library__note:focus-visible {
+      outline: 2px solid var(--color-ink);
+      outline-offset: 0.5rem;
+    }
   }
 
   @media (max-width: 599px) {
@@ -991,6 +1101,11 @@ const verso = [...versoText, ...versoText];
         group.append(arrow);
       }
     } else {
+      /*
+        Pas de marge : le script rend la main. Les décalages qu'il avait pu
+        poser sont effacés, et la feuille de style reprend les notes pour en
+        faire la planche sous le texte.
+      */
       delete stage.dataset.notes;
       for (const note of notes) note.style.top = '';
     }

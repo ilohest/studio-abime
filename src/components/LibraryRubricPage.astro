@@ -490,5 +490,55 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     .rubric__header {
       margin-bottom: 3rem;
     }
+
+    /*
+      ── LA PLANCHE DES AUTRES RUBRIQUES, EN ÉTROIT ────────────────────────
+      La ligne unique ne tient plus : les figures s'y serraient jusqu'à ce que
+      « Correspondances » et « Références » se touchent, faute d'une largeur
+      qui n'existe pas.
+
+      Elle se recompose donc, elle ne se réduit pas : la légende reprend le fer
+      à gauche et ouvre le bloc — sur une colonne étroite, une légende centrée
+      ou rejetée à droite n'a plus de figure à désigner — puis les rubriques se
+      rangent en DEUX COLONNES, chacune sur toute la largeur de la sienne.
+    */
+    .rubric__others {
+      display: block;
+    }
+
+    .rubric__others-caption {
+      max-width: none;
+      margin-bottom: 1.75rem;
+      text-align: left;
+    }
+
+    /*
+      Deux colonnes CALÉES SUR LE BORD DROIT, et serrées.
+
+      Étirées sur toute la largeur, les figures flottaient au milieu d'un blanc
+      qui n'était pas une composition mais un reste : chacune tenait une
+      demi-page pour un dessin de cinq centimètres. Ramenées à leur taille et
+      poussées contre le bord, elles refont un jeu — et la légende, restée à
+      gauche, retrouve en face d'elle quelque chose à désigner.
+
+      `max-content` plutôt que `1fr` : c'est la figure qui donne sa largeur à
+      sa colonne, pas la page.
+    */
+    .rubric__others-list {
+      display: grid;
+      grid-template-columns: repeat(2, max-content);
+      justify-content: end;
+      gap: clamp(1.25rem, 5vw, 1.75rem) clamp(1rem, 4vw, 1.5rem);
+    }
+
+    .rubric__other {
+      width: 5.5rem;
+    }
+
+    /* La sortie suit le bord des figures, pas celui de la légende. */
+    .rubric__all {
+      margin-top: 1.25rem;
+      text-align: right;
+    }
   }
 </style>

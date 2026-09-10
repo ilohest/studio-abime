@@ -202,17 +202,26 @@ const cells = toLibraryGrid(posts);
     }
   }
 
+  /*
+    Moins de colonnes en étroit — et TOUJOURS une hauteur plancher, jamais une
+    hauteur fixe.
+
+    Ces deux règles gardaient un `grid-auto-rows` figé d'avant les visuels : une
+    entrée illustrée dépassait alors de sa rangée, et les cotes de la rangée
+    suivante venaient se peindre par-dessus son image. Le plancher laisse la
+    rangée s'ouvrir à la hauteur de ce qu'elle porte.
+  */
   @media (max-width: 899px) {
     .plate {
       --plate-columns: 3;
-      grid-auto-rows: clamp(8rem, 18vw, 11rem);
+      grid-auto-rows: minmax(clamp(7rem, 14vw, 9rem), auto);
     }
   }
 
   @media (max-width: 599px) {
     .plate {
       --plate-columns: 2;
-      grid-auto-rows: 9.5rem;
+      grid-auto-rows: minmax(8rem, auto);
     }
   }
 </style>
