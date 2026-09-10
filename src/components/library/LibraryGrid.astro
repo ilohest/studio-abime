@@ -105,6 +105,18 @@ const cells = toLibraryGrid(posts);
       l'aurait réduite à une vignette, et l'article n'a pas d'autre image.
     */
     grid-auto-rows: minmax(clamp(6rem, 9vw, 8rem), auto);
+    /*
+      UNE GOUTTIÈRE ENTRE LES COLONNES.
+
+      Sans elle, deux entrées illustrées voisines collaient leurs visuels bord
+      à bord : les deux images se lisaient comme une seule, et la trame — dont
+      tout l'intérêt est de séparer — ne séparait plus rien. Le vide entre les
+      cases est ce qui fait la planche.
+
+      Colonnes seulement : les rangées sont déjà espacées par la réserve que
+      chaque entrée garde sous son titre.
+    */
+    column-gap: clamp(0.85rem, 1.6vw, 1.75rem);
     margin: 0;
     padding: 0;
     list-style: none;

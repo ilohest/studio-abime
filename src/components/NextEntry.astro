@@ -54,7 +54,7 @@ const {
 } = Astro.props;
 ---
 
-<nav class:list={['next-entry container-wide', className]} aria-label={label}>
+<nav class:list={['next-entry container-wide', `next-entry--${variant}`, className]} aria-label={label}>
   {/*
     Le titre de la fiche est de niveau 3 : sans cette marche, la page projet
     sauterait de son titre principal à lui. Le libellé du bloc — « Projet
@@ -278,6 +278,26 @@ const {
 
     .next-entry__item {
       width: 100%;
+    }
+
+    /*
+      LA VARIANTE « PLANCHE » EN ÉTROIT.
+
+      Sa fiche portait une largeur fixe (`clamp(13rem, 20vw, 17rem)`), héritée
+      de la case de trame dont elle reprend la forme. À 390 px, cette largeur
+      dépassait celle du cadre qui la contient : la fiche sortait de la
+      gouttière et son visuel se retrouvait coupé par le bord de l'écran.
+
+      Elle remplit donc son cadre, qui sait, lui, ce que la page peut lui
+      donner. Et sa légende perd la réserve de 7 px : celle-ci compense les
+      croix de construction du cadre d'archive, que cette variante n'a pas.
+    */
+    .next-entry--planche .next-entry__plate {
+      width: 100%;
+    }
+
+    .next-entry--planche .next-entry__caption {
+      padding-inline-start: 0;
     }
   }
 </style>

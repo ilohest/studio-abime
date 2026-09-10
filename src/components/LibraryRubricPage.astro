@@ -75,14 +75,6 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
 ---
 
 <div class="rubric container-wide py-(--spacing-section)">
-  {
-    plate && (
-      <div class="rubric__plate" aria-hidden="true">
-        <PlateFigure variant={plate} />
-      </div>
-    )
-  }
-
   <nav class="breadcrumb rubric__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
     <ol role="list">
       <li>
@@ -101,6 +93,15 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     {description && <p class="rubric__description type-copy text-pretty">{description}</p>}
 
   </header>
+
+  {
+    plate && (
+      <div class="rubric__plate" aria-hidden="true">
+        <PlateFigure variant={plate} />
+      </div>
+    )
+  }
+
 
   {
     posts.length === 0 ? (
@@ -254,12 +255,34 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
   }
 
   /*
-    LA PLANCHE — la même encre que le verso, dans la marge de gauche, à
-    hauteur du titre. Masquée tant que la page n'a pas de marge à lui donner :
-    en dessous, elle passerait sous le texte au lieu d'être à côté.
+    LA PLANCHE DE LA RUBRIQUE.
+
+    En ÉTROIT : une vignette sous l'en-tête, centrée. La page n'a pas de marge
+    où la poser à côté du titre, mais elle a une place naturelle juste après
+    lui — celle du fleuron qui referme une ouverture de chapitre. Elle reste le
+    signe de la rubrique où l'on vient d'entrer, à une taille qui ne dispute
+    rien au titre.
+
+    En LARGE : elle quitte le flux pour l'angle haut-droit, en grand. C'est là
+    qu'il y a du blanc, et son rang dans le document n'a plus d'importance.
   */
   .rubric__plate {
-    display: none;
+    display: block;
+    width: 4.5rem;
+    margin: clamp(2rem, 7vw, 3rem) auto 0;
+    opacity: 0.3;
+    transition: opacity 300ms ease;
+  }
+
+  /* Sans survol possible en étroit, c'est l'arrivée qui la fait exister. */
+  .rubric__plate.is-showing {
+    opacity: 0.9;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rubric__plate {
+      transition: none;
+    }
   }
 
   /*
@@ -321,10 +344,10 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
         conséquence sur la lecture.
       */
       z-index: 2;
-      display: block;
       width: 11rem;
+      /* La marge de la vignette n'a plus lieu d'être une fois hors du flux. */
+      margin: 0;
       opacity: 0.16;
-      transition: opacity 300ms ease;
     }
 
     .rubric__plate:hover,
@@ -332,11 +355,6 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
       opacity: 0.85;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .rubric__plate {
-        transition: none;
-      }
-    }
 
   }
 

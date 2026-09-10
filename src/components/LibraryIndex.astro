@@ -656,9 +656,13 @@ const verso = [...versoText, ...versoText];
       */
       grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
       gap: clamp(2.5rem, 8vw, 3.5rem) clamp(1.5rem, 6vw, 2.5rem);
-      margin-top: clamp(4rem, 14vw, 7rem);
-      padding-top: clamp(2rem, 6vw, 3rem);
-      border-top: 1px solid var(--color-line);
+      /*
+        Aucun filet de séparation : le blanc suffit à dire que la planche
+        commence. Une barre en travers de la page y ajoutait une articulation
+        que rien ne réclamait — et elle était le seul trait droit horizontal
+        d'une page qui n'en a aucun autre.
+      */
+      margin-top: clamp(4.5rem, 16vw, 8rem);
     }
 
     /*
