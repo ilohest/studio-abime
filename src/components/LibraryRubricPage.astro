@@ -268,8 +268,17 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
   */
   .rubric__plate {
     display: block;
-    width: 4.5rem;
-    margin: clamp(2rem, 7vw, 3rem) auto 0;
+    width: 5.5rem;
+    /*
+      Plus d'air EN DESSOUS qu'au-dessus : la vignette referme l'en-tête, elle
+      n'ouvre pas la planche d'articles. C'est ce déséquilibre qui la rattache
+      au titre plutôt qu'à la grille — posée à égale distance des deux, elle
+      flottait entre les deux sans appartenir à l'un ni à l'autre.
+
+      L'espace du dessus vient de la marge de l'en-tête ; seul celui du dessous
+      se déclare ici.
+    */
+    margin: 0 auto clamp(4.75rem, 17vw, 6.5rem);
     opacity: 0.3;
     transition: opacity 300ms ease;
   }
