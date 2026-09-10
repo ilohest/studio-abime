@@ -662,6 +662,7 @@ export const journalPageQuery = /* groq */ `
   _type,
   language,
   "composition": composition ${PORTABLE_TEXT},
+  verso,
   seo ${SEO}
 }`;
 

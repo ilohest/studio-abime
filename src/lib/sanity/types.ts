@@ -459,6 +459,12 @@ export interface JournalPage {
    * vers les articles depuis cette page.
    */
   composition?: PortableTextBlock[];
+  /**
+   * Texte du verso, aperçu par transparence derrière la page.
+   *
+   * Facultatif : sans lui, c'est le texte d'accueil qui se montre à l'envers.
+   */
+  verso?: string;
   seo?: Seo;
 }
 

@@ -80,6 +80,32 @@ export const journalPage = defineType({
       ],
     }),
     defineField({
+      /*
+        LE VERSO — l'envers de la feuille.
+
+        La page montre en transparence, retourné, un texte qu'on ne lit pas :
+        c'est l'encre du dos du papier. Par défaut, c'est le texte d'accueil
+        lui-même — la page vue par son propre revers, ce qui est déjà juste.
+
+        Ce champ sert à en mettre un AUTRE : une liste, un fragment, une note
+        de travail, ce qu'on veut faire deviner sans le donner à lire. Laissé
+        vide, le texte d'accueil reprend sa place.
+
+        Un simple texte, sans mise en forme ni lien : à 8 % d'opacité et
+        retourné, rien de tout cela ne se verrait. Une ligne vide sépare deux
+        paragraphes. Il est répété autant de fois qu'il en faut pour tenir la
+        hauteur du bloc — inutile d'écrire long.
+      */
+      name: 'verso',
+      title: 'Texte du verso',
+      type: 'text',
+      rows: 6,
+      group: 'content',
+      description:
+        'Texte aperçu par transparence derrière la page, retourné et presque effacé. ' +
+        'Laisser vide pour y montrer le texte d’accueil lui-même.',
+    }),
+    defineField({
       name: 'seo',
       title: 'SEO',
       type: 'seo',

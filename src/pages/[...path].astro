@@ -555,6 +555,7 @@ const jsonLd = buildPageGraph({
     route.kind === 'library' && libraryComposition && (
       <LibraryIndex
         composition={libraryComposition}
+        verso={journalPage?.verso}
         locale={locale}
         title={libraryTitle}
         number="03."

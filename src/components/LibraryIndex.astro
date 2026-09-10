@@ -39,12 +39,19 @@ import type { Locale } from '~/i18n/config';
  */
 interface Props {
   composition: LibraryComposition;
+  /**
+   * Texte du verso, saisi dans le Studio.
+   *
+   * Absent, c'est le texte d'accueil lui-même qui se montre à l'envers — la
+   * page vue par son propre revers.
+   */
+  verso?: string;
   locale: Locale;
   title: string;
   number: string;
 }
 
-const { composition, locale, title, number } = Astro.props;
+const { composition, verso: versoInput, locale, title, number } = Astro.props;
 const t = useTranslations(locale);
 
 /** Libellé lisible d'une cible, pour les rattrapages et les noms accessibles. */
@@ -166,21 +173,27 @@ const noteId = (order: number) => notes.find((note) => note.order === order)?.id
 /*
   LE VERSO — l'envers de la feuille.
 
-  Le même texte, retourné sur l'axe vertical et presque effacé, posé DERRIÈRE
-  lui-même : l'encre du dos de la page, vue par transparence. Le procédé vient
-  du hero de l'accueil (`ManifestoHero.astro`) ; il dit ici quelque chose de
-  plus juste encore, puisque c'est littéralement cette page-ci qu'on voit au
-  travers.
+  Un texte retourné sur l'axe vertical et presque effacé, posé DERRIÈRE la
+  page : l'encre du dos du papier, vue par transparence. Le procédé vient du
+  hero de l'accueil (`ManifestoHero.astro`).
+
+  PAR DÉFAUT, c'est le texte d'accueil lui-même — la page vue par son propre
+  revers, ce qui est déjà juste. Le Studio peut en mettre un autre : une liste,
+  un fragment, une note de travail. Le champ laissé vide rend sa place au
+  texte d'accueil.
 
   Il est doublé pour remplir ses deux colonnes sur toute la hauteur du bloc :
   un verso qui s'arrêterait à mi-page se lirait comme un second texte, pas
   comme une trame. À 8 % d'opacité, la répétition ne se voit pas — le regard y
   reconnaît du texte, jamais des mots.
 */
-const versoText = composition.paragraphs.map((paragraph) =>
-  paragraph.segments.map((segment) => segment.text).join(''),
-);
-const verso = [...versoText, ...versoText];
+const versoSource = versoInput?.trim()
+  ? versoInput.split(/\n\s*\n/).map((paragraph) => paragraph.trim()).filter(Boolean)
+  : composition.paragraphs.map((paragraph) =>
+      paragraph.segments.map((segment) => segment.text).join(''),
+    );
+
+const verso = [...versoSource, ...versoSource];
 ---
 
 <div class="library container-wide py-(--spacing-section)">
