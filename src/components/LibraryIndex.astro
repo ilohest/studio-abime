@@ -435,9 +435,10 @@ const verso = [...versoText, ...versoText];
   .library__thread {
     /*
       La toile déborde de la colonne des deux côtés : c'est ce débord qui donne
-      aux mentions et aux flèches un endroit où aller. Il est nul tant que la
-      page n'a pas de marge à offrir — une toile plus large que son conteneur
-      ferait défiler la page de côté.
+      aux mentions et aux flèches un endroit où aller. Il reste NUL tant que la
+      page n'a pas de marge à offrir — sous 1300 px, le texte occupe toute la
+      largeur utile, et une toile plus large ne ferait que passer sous le menu
+      et hors de l'écran.
     */
     --thread-margin: 0px;
     --thread-margin-right: var(--thread-margin);
@@ -643,8 +644,18 @@ const verso = [...versoText, ...versoText];
   @media (max-width: 1299px) {
     .library__marginalia {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: clamp(2.5rem, 8vw, 4rem) clamp(1.5rem, 6vw, 3rem);
+      /*
+        Le NOMBRE de colonnes suit la place, il n'est pas fixé à deux.
+
+        Deux colonnes imposées donnaient, sur une tablette, des colonnes de
+        330 px pour des figures de 110 : la légende s'y étalait trois fois plus
+        large que la figure qu'elle légende, et le lien entre les deux se
+        perdait. En laissant la trame se remplir, chaque entrée garde à peu
+        près la largeur de son dessin — deux colonnes sur un téléphone, quatre
+        sur une tablette.
+      */
+      grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+      gap: clamp(2.5rem, 8vw, 3.5rem) clamp(1.5rem, 6vw, 2.5rem);
       margin-top: clamp(4rem, 14vw, 7rem);
       padding-top: clamp(2rem, 6vw, 3rem);
       border-top: 1px solid var(--color-line);
@@ -710,12 +721,6 @@ const verso = [...versoText, ...versoText];
     /* Une indentation de 11rem sur 375 px ne laisserait qu'un mot en tête. */
     .library__paragraph:first-of-type {
       text-indent: 2.5rem;
-    }
-  }
-
-  @media (min-width: 700px) {
-    .library__thread {
-      --thread-margin: 5rem;
     }
   }
 
@@ -904,12 +909,16 @@ const verso = [...versoText, ...versoText];
 
     /*
       Les mentions « début » et « fin » se posent À CÔTÉ du premier et du
-      dernier cadre, dans le blanc. Sur une colonne étroite, ce blanc n'existe
-      pas et l'annotation viendrait se coucher sur la ligne du dessus. Les
-      traits, eux, se dessinent partout : droits et fins, ils traversent le
+      dernier cadre, dans le blanc de la marge. Le seuil est celui des notes,
+      et pour la même raison : entre 700 et 1300 px, la colonne de lecture
+      occupe TOUTE la largeur utile — le menu latéral prend 16 rem, il ne reste
+      rien de chaque côté. Les mentions s'y couchaient sur le texte ou
+      passaient sous le menu.
+
+      Les traits, eux, se dessinent partout : droits et fins, ils traversent le
       texte sans le rendre illisible.
     */
-    const wide = window.matchMedia('(min-width: 700px)').matches;
+    const wide = window.matchMedia('(min-width: 1300px)').matches;
 
     const group = document.createElementNS(NS, 'g');
     group.setAttribute('fill', 'none');

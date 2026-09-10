@@ -473,7 +473,20 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     }
   }
 
-  @media (min-width: 768px) {
+  /*
+    LE FIL FLOTTE, MAIS SEULEMENT QUAND IL Y A LA PLACE.
+
+    Sorti du flux, il laisse le titre démarrer exactement où il démarre sur
+    l'accueil de la Bibliothèque, qui n'a rien au-dessus du sien. Mais ce
+    placement suppose une largeur : le titre est centré et occupe presque toute
+    la ligne, et sous 1300 px il venait se poser SUR le fil — à 768 px, les deux
+    partageaient la même bande, l'un par-dessus l'autre.
+
+    En dessous, le fil reprend donc sa place dans le flux, au-dessus du titre.
+    Le décalage de quelques dizaines de pixels entre les deux pages est un prix
+    dérisoire à côté d'un chevauchement.
+  */
+  @media (min-width: 1300px) {
     .rubric {
       position: relative;
     }
@@ -486,7 +499,13 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     }
   }
 
-  @media (max-width: 767px) {
+  /*
+    Le seuil est celui de la grille d'articles (899 px), pas celui du menu :
+    entre 768 et 899 px, le menu latéral prend déjà 16 rem et il ne reste que
+    ~460 px de page. La légende et les quatre figures ne tiennent pas sur une
+    ligne à cette largeur — elles s'y replieraient n'importe comment.
+  */
+  @media (max-width: 899px) {
     .rubric__header {
       margin-bottom: 3rem;
     }
@@ -497,19 +516,25 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
       « Correspondances » et « Références » se touchent, faute d'une largeur
       qui n'existe pas.
 
-      Elle se recompose donc, elle ne se réduit pas : la légende reprend le fer
-      à gauche et ouvre le bloc — sur une colonne étroite, une légende centrée
-      ou rejetée à droite n'a plus de figure à désigner — puis les rubriques se
-      rangent en DEUX COLONNES, chacune sur toute la largeur de la sienne.
+      Elle se recompose donc, elle ne se réduit pas : la légende passe
+      au-dessus des figures et s'aligne sur leur bord droit, puis les rubriques
+      se rangent en DEUX COLONNES calées contre ce même bord. Tout le bloc tient
+      sur une seule verticale — c'est elle qui dit que la légende et les figures
+      vont ensemble, à défaut de pouvoir les mettre côte à côte.
     */
     .rubric__others {
       display: block;
     }
 
+    /*
+      La légende suit le bord des figures, pas celui de la page : sur une
+      colonne étroite, elle est posée AU-DESSUS d'elles et non en face — c'est
+      donc leur alignement qui fait le lien entre les deux, pas leur voisinage.
+    */
     .rubric__others-caption {
       max-width: none;
       margin-bottom: 1.75rem;
-      text-align: left;
+      text-align: right;
     }
 
     /*

@@ -664,14 +664,16 @@
   /*
     ── LE FIL EN ÉTROIT ──────────────────────────────────────────────────────
     Sur une colonne étroite, les trois maillons ne tiennent pas côte à côte : le
-    dernier — le titre de la page — s'y coupait en plein mot.
+    dernier — le titre de la page — s'y coupait en plein mot. Le seuil est celui
+    de la tablette et non du téléphone : à 768 px, le menu latéral prend déjà
+    16 rem et il ne reste que ~460 px de page.
 
     Il PASSE À LA LIGNE plutôt que de se tronquer. `flex-basis: 100 %` le force
     seul sur la sienne, où il dispose alors de toute la largeur pour se
     composer sur deux lignes s'il le faut. Le fil dit toujours la même chose, il
     l'écrit simplement sur deux rangs.
   */
-  @media (max-width: 767px) {
+  @media (max-width: 899px) {
     .breadcrumb ol {
       flex-wrap: wrap;
       row-gap: 0.15rem;

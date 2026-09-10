@@ -107,7 +107,12 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
     margin-bottom: clamp(2rem, 5vw, 3.5rem);
   }
 
-  @media (min-width: 768px) {
+  /*
+    Même réserve que sur une page de rubrique : le fil ne quitte le flux que
+    lorsque la page est assez large pour que le titre centré ne vienne pas se
+    poser dessus. Voir `LibraryRubricPage.astro`.
+  */
+  @media (min-width: 1300px) {
     /*
       Flotte dans le rembourrage haut du conteneur plutôt que de s'insérer
       dans le flux : le header qui suit démarre ainsi au même point que celui

@@ -150,7 +150,18 @@ export const post = defineType({
       type: "image",
       group: "meta",
       options: { hotspot: true },
-      description: "Visuel de l’article dans la grille et en tête de page.",
+      /*
+        Ce visuel sert à QUATRE endroits, et l'éditrice doit le savoir avant de
+        le choisir : recadré au carré dans la grille d'une rubrique, déployé en
+        tête de l'article, repris en petit sur la fiche « article suivant », et
+        employé comme image de partage à défaut d'une image SEO propre. Un
+        visuel qui ne tient qu'en pleine largeur se retrouvera donc rogné
+        ailleurs — mieux vaut l'annoncer que de le laisser découvrir.
+      */
+      description:
+        "Recadré au carré dans la grille d’une rubrique, déployé en tête de l’article, " +
+        "repris sur la fiche « article suivant », et utilisé au partage si aucune image SEO " +
+        "n’est renseignée.",
       fields: [
         defineField({ name: "alt", title: "Texte alternatif", type: "string" }),
       ],
