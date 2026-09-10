@@ -110,21 +110,24 @@ const rowIndexes = Array.from(
 const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
 
 /*
-  ┌─ LA PLANCHE NE DÉPASSE JAMAIS L'ÉCRAN ────────────────────────────────────┐
-  │ Sa hauteur se déduit de sa largeur : autant de rangées que de colonnes,    │
-  │ chaque case étant plus large que haute (4/3). Sur un grand écran, la       │
-  │ largeur disponible donnait donc une planche plus haute que la fenêtre —    │
-  │ on ne pouvait plus voir converger tout le champ d'un seul regard, ce qui   │
-  │ est précisément ce que le geste raconte.                                   │
-  │                                                                             │
-  │ La largeur est donc PLAFONNÉE par la hauteur d'écran : on donne ici le      │
-  │ facteur qui convertit l'une en l'autre (largeur = hauteur × ce facteur),    │
-  │ pour n'avoir à diviser par rien dans la feuille de style. Au-delà, la       │
-  │ planche cesse de grandir et les lettres avec elle.                          │
-  └─────────────────────────────────────────────────────────────────────────────┘
+  ┌─ LA PLANCHE PREND TOUTE LA LARGEUR, ET AUTANT DE RANGÉES QU'IL EN TIENT ───┐
+  │ Les cases sont carrées : à largeur pleine, sept rangées feraient une       │
+  │ planche aussi haute que large — plus haute que la fenêtre sur un écran     │
+  │ de portable, et on ne verrait plus le champ converger d'un seul regard.    │
+  │ La brider en largeur réglait le problème, mais la réduisait à une          │
+  │ vignette perdue dans le blanc : la présence d'affiche disparaissait.       │
+  │                                                                            │
+  │ C'est donc le NOMBRE DE RANGÉES qui cède, pas la taille des lettres. La    │
+  │ planche occupe toute la largeur offerte, et n'affiche que les rangées      │
+  │ qui tiennent dans la hauteur : quatre ou cinq sur un écran large et bas,   │
+  │ sept sur une fenêtre haute. La composition se recompose au lieu de         │
+  │ rétrécir — c'est la même règle que pour le passage au doigt.               │
+  │                                                                            │
+  │ Le compte exact se mesure (voir le script) ; la feuille de style en donne  │
+  │ une approximation par rapport d'écran, qui tient seule si le script ne     │
+  │ s'exécute pas.                                                             │
+  └────────────────────────────────────────────────────────────────────────────┘
 */
-const CELL_RATIO = 1; // hauteur d'une case rapportée à sa largeur — carrée
-const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
 ---
 
 {/*
@@ -157,12 +160,14 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
   <div
     class="letter-field__plate"
     aria-hidden="true"
-    style={`--cols: ${letters.length}; --glyph-size: ${glyphSize}cqi; --plate-span: ${plateSpan};`}
+    data-rows={rowCount}
+    style={`--cols: ${letters.length}; --glyph-size: ${glyphSize}cqi;`}
   >
     {rowIndexes.map((row) =>
       letters.map((letter) => (
         <span
           class:list={['letter-field__cell', row >= rowCount && 'letter-field__cell--reserve']}
+          data-row={row}
           style={`--row: ${row};`}
         >
           <span class="letter-field__glyph">{letter}</span>
@@ -243,6 +248,11 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
     aspect-ratio: 1;
   }
 
+  /* `display: grid` l'emporterait sur la feuille du navigateur : on le redit. */
+  .letter-field__cell[hidden] {
+    display: none;
+  }
+
   .letter-field__glyph {
     display: block;
     font-family: var(--font-titre);
@@ -278,15 +288,42 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
     └────────────────────────────────────────────────────────────────────────┘
   */
   @media (pointer: fine) {
-    .letter-field__plate {
-      max-width: min(100%, calc(76svh * var(--plate-span)));
-    }
-
     .letter-field__cell--reserve {
       display: none;
     }
 
     .letter-field__anchor {
+      display: none;
+    }
+  }
+
+  /*
+    ┌─ LE COMPTE DE RANGÉES AVANT LE SCRIPT ────────────────────────────────┐
+    │ Le script mesure la planche et masque au pixel près les rangées qui    │
+    │ ne tiennent pas. Ces trois paliers sont ce qui tient AVANT lui — et    │
+    │ sans lui : une approximation par rapport d'écran, assez juste pour     │
+    │ qu'on ne voie jamais la planche déborder puis se recadrer.             │
+    │                                                                        │
+    │ Ils s'effacent dès que le script a pris la mesure (`data-measured`) :  │
+    │ sans cela, une rangée masquée ici resterait masquée même quand le      │
+    │ script la juge tenable — une règle de style ne se laisse pas rouvrir   │
+    │ par un attribut `hidden`.                                              │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  @media (pointer: fine) and (min-aspect-ratio: 11 / 10) {
+    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="6"] {
+      display: none;
+    }
+  }
+
+  @media (pointer: fine) and (min-aspect-ratio: 13 / 10) {
+    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="5"] {
+      display: none;
+    }
+  }
+
+  @media (pointer: fine) and (min-aspect-ratio: 17 / 10) {
+    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="4"] {
       display: none;
     }
   }
@@ -411,6 +448,58 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       });
     };
 
+    /*
+      ┌─ COMBIEN DE RANGÉES TIENNENT ─────────────────────────────────────┐
+      │ La planche prend toute la largeur ; c'est le nombre de rangées qui │
+      │ s'ajuste à ce que la fenêtre peut montrer. On compte des cases     │
+      │ carrées : leur côté vaut la largeur de la planche divisée par le   │
+      │ nombre de colonnes, et il en tient autant que la hauteur libre le  │
+      │ permet — jamais plus que le mot n'a de lettres, jamais moins de    │
+      │ trois, en deçà desquelles il n'y a plus de champ mais une ligne.   │
+      │                                                                    │
+      │ Au doigt, rien à ajuster : la planche DOIT déborder l'écran, c'est │
+      │ le défilement qui la traverse.                                     │
+      └────────────────────────────────────────────────────────────────────┘
+    */
+    const baseRows = Number(plate.dataset.rows) || 1;
+    /* Ce qu'on laisse respirer autour de la planche, en plus de ses marges. */
+    const BREATH = 56;
+    const MIN_ROWS = 3;
+    let visibleRows = 0;
+
+    const fitRows = () => {
+      const wanted = (() => {
+        if (coarse.matches) return Number.POSITIVE_INFINITY;
+
+        const cols = Number(getComputedStyle(plate).getPropertyValue('--cols')) || 1;
+        const cell = plate.getBoundingClientRect().width / cols;
+        if (!cell) return baseRows;
+
+        const style = getComputedStyle(field);
+        const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+        const room = window.innerHeight - padding - BREATH;
+
+        return Math.max(MIN_ROWS, Math.min(baseRows, Math.floor(room / cell)));
+      })();
+
+      /*
+        On ne touche au DOM que si le compte a changé : sans cette garde, la
+        mesure déclenchée par le redimensionnement de la planche relancerait
+        une écriture à chaque passage, et l'observateur tournerait en rond.
+      */
+      if (wanted === visibleRows) return false;
+      visibleRows = wanted;
+
+      for (const cell of cells) {
+        const row = Number(cell.dataset.row);
+        cell.hidden = row >= visibleRows;
+      }
+
+      /* Le script a pris la mesure : les paliers de la feuille de style se retirent. */
+      plate.dataset.measured = '';
+      return true;
+    };
+
     /* Dernier angle POSÉ, cumulé — voir le chemin le plus court plus bas. */
     const angles = new Float64Array(cells.length);
     let pointer: { x: number; y: number } | null = null;
@@ -496,6 +585,7 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       if (touching || !coarse.matches || reducedMotion.matches || !onScreen) return;
       if (!centers.length) measure();
 
+
       const plateBox = plate.getBoundingClientRect();
       pointer = { x: plateBox.width / 2, y: window.innerHeight / 2 - plateBox.top };
       placeAnchor(plateBox, pointer, 0);
@@ -570,11 +660,18 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
       else hideAnchor();
     }).observe(field);
 
-    /* La planche change de taille (fenêtre, rail, rotation) : on remesure. */
+    /*
+      La planche change de taille (fenêtre, rail, rotation) : on recompte ses
+      rangées, puis on remesure. Recompter peut changer sa hauteur et rappeler
+      l'observateur — la garde de `fitRows` fait converger le second passage.
+    */
     new ResizeObserver(() => {
-      if (centers.length) measure();
+      fitRows();
+      measure();
       syncScroll();
     }).observe(plate);
+
+    fitRows();
 
     /*
       La préférence peut changer pendant la visite : on redresse la planche
@@ -590,6 +687,7 @@ const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
 
     /* Le geste disponible peut changer aussi — clavier posé, souris branchée. */
     coarse.addEventListener('change', () => {
+      fitRows();
       measure();
       if (coarse.matches) syncScroll();
       else release();
