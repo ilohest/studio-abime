@@ -57,31 +57,114 @@
   }
 
   /*
-    Curseur porteur d'un mot — « Glisser », « Voir »…
+    Curseur porteur d'un mot — « sous le », « Glisser », « Voir »…
     Le pointeur système restant visible, ce mot ne remplace pas un repère de
     position : il ne fait qu'annoncer le geste attendu. Un élément peut donc
     déclarer son intention sans qu'aucune icône n'ait à être devinée.
+
+    ┌─ LE MOT SE POSE, IL NE S'ENFERME PAS ─────────────────────────────────┐
+    │ Il tenait dans un disque d'encre de 78 px. Ce disque était un trou    │
+    │ dans la page : il masquait ce que la main désignait, et c'est         │
+    │ exactement ce qu'on ne peut pas se permettre quand le mot commente    │
+    │ une composition — le champ aimanté de l'accueil, par exemple, où le   │
+    │ disque recouvrait la lettre qu'on visait.                             │
+    │                                                                        │
+    │ Le mot est donc écrit à même le papier, JUSTE AU-DESSUS du pointeur : │
+    │ rien n'est caché, ni par le disque ni par la main. Le petit compagnon │
+    │ de 17 px reste, lui : c'est le repère, pas l'étiquette.               │
+    └────────────────────────────────────────────────────────────────────────┘
   */
   .cursor__label {
     position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
+    left: 50%;
+    /*
+      Au ras du compagnon : le mot appartient au pointeur, il ne le survole
+      pas de loin. Deux pixels au-dessus du disque suffisent à ne pas être
+      couvert par la main.
+    */
+    bottom: calc(100% + 0.12rem);
+    transform: translateX(-50%);
+    /*
+      ┌─ UN HALO, PAS UNE ÉTIQUETTE ────────────────────────────────────────┐
+      │ Le mot doit rester lisible quand il passe au-dessus d'un dessin ou  │
+      │ d'un texte — les lettres du champ de l'accueil, par exemple — sans  │
+      │ que deux encres se confondent. Un aplat de papier y suffisait, mais │
+      │ son RECTANGLE se voyait : une vignette collée sur la page.          │
+      │                                                                      │
+      │ Le papier est donc versé en dégradé, opaque sous le mot et éteint   │
+      │ avant le bord (`closest-side`) : il n'a plus de forme, seulement une │
+      │ densité. L'ombre portée fait le même travail au ras des lettres, là  │
+      │ où le dégradé est trop large pour dégager une contre-forme.          │
+      └──────────────────────────────────────────────────────────────────────┘
+    */
+    text-shadow:
+      0 0 0.4em var(--color-surface),
+      0 0 0.9em var(--color-surface);
     font-family: var(--font-annotation);
     font-style: italic;
-    font-size: var(--text-note);
+    /* Le corps documenté du style Annotation : la voix manuscrite, à sa taille. */
+    font-size: var(--text-annotation);
+    line-height: 1;
     letter-spacing: var(--tracking-annotation);
-    color: var(--color-ink-invert);
+    color: var(--color-ink);
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s ease;
   }
 
-  .cursor.has-label {
-    width: 78px;
-    height: 78px;
-    margin: -39px 0 0 -39px;
-    background-color: var(--color-ink);
+  /*
+    ┌─ QUAND LE MOT REMPLACE LE CURSEUR ────────────────────────────────────┐
+    │ Un élément peut demander (`data-cursor-bare`) que son mot soit le      │
+    │ pointeur lui-même : le disque s'efface, le mot se centre sur la        │
+    │ position exacte de la main, et l'élément masque le curseur système de  │
+    │ son côté. C'est ce que fait le champ de l'accueil — « sous le » n'y    │
+    │ commente pas le pointeur, il EST le pointeur, et complète le mot       │
+    │ qu'il survole.                                                         │
+    │                                                                        │
+    │ Le masquage du curseur système reste conditionné à `html.has-cursor`,  │
+    │ posé par ce script : si le compagnon ne tourne pas, la flèche native   │
+    │ reste — jamais d'écran sans pointeur.                                  │
+    └────────────────────────────────────────────────────────────────────────┘
+  */
+  .cursor.is-bare {
+    background-color: transparent;
+    border-color: transparent;
+  }
+
+  .cursor.is-bare .cursor__label {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  /*
+    Le halo est un ROND, pas la boîte du mot : un fond posé sur l'élément
+    aurait pris la forme du texte — un ovale large et bas, dont on lisait les
+    bords. Ici c'est un disque de papier, indépendant de la longueur du mot,
+    qui s'éteint bien avant sa limite ; rien ne dessine de contour.
+  */
+  .cursor__label::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: -1;
+    width: 6.5em;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    /*
+      Le cœur est franc, la retombée longue : le mot se détache, mais le halo
+      n'efface pas ses voisins — sur la planche de l'accueil, les lettres
+      alentour doivent rester des lettres, pas des fantômes.
+    */
+    background: radial-gradient(
+      closest-side,
+      var(--color-surface) 26%,
+      color-mix(in srgb, var(--color-surface) 62%, transparent) 52%,
+      color-mix(in srgb, var(--color-surface) 20%, transparent) 78%,
+      color-mix(in srgb, var(--color-surface) 0%, transparent) 100%
+    );
   }
 
   .cursor.has-label .cursor__label {
@@ -122,6 +205,10 @@
 
       if (label && label.textContent !== text) label.textContent = text;
       cursor.classList.toggle('has-label', Boolean(text));
+      cursor.classList.toggle(
+        'is-bare',
+        Boolean(text) && labelled?.hasAttribute('data-cursor-bare') === true,
+      );
       cursor.classList.toggle('is-hovering', Boolean(interactive) && !text);
 
       document.documentElement.classList.add('has-cursor');
@@ -130,7 +217,7 @@
     document.addEventListener('pointermove', onPointerMove, { passive: true });
     // Le curseur disparaît avec le pointeur (sortie de fenêtre, changement d'onglet).
     document.addEventListener('pointerleave', () => {
-      cursor.classList.remove('is-hovering', 'has-label');
+      cursor.classList.remove('is-hovering', 'has-label', 'is-bare');
     });
     document.addEventListener('mouseleave', () => (cursor.style.opacity = '0'));
     document.addEventListener('mouseenter', () => (cursor.style.opacity = ''));

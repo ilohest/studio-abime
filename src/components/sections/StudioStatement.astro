@@ -2,6 +2,7 @@
 import { Image } from 'astro:assets';
 import SanityImage from '~/components/primitives/SanityImage.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
+import LetterField from '~/components/LetterField.astro';
 import { stegaClean } from '@sanity/client/stega';
 
 import { figureLabel } from '~/lib/figureLabel';
@@ -247,6 +248,23 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     </div>
   </div>
   <div class="statement__tail" aria-hidden="true"></div>
+
+  {/*
+    ┌─ LA SUITE DU BOUTON ────────────────────────────────────────────────┐
+    │ Le bouton dit « Plonger sous le visible ». Le champ le fait faire :  │
+    │ le curseur y porte « sous le », la planche y répète « visible », et  │
+    │ chaque lettre se tourne vers la main. La phrase se recompose là où   │
+    │ on la cherche.                                                        │
+    │                                                                       │
+    │ Il est posé APRÈS la traîne de la scène, donc dans le flux normal :   │
+    │ il apparaît quand la déclaration a fini de défiler, jamais par-dessus │
+    │ elle. Fixé en code comme le bouton, pour la même raison — c'est une   │
+    │ composition, pas un contenu à remplir.                                │
+    └───────────────────────────────────────────────────────────────────────┘
+  */}
+  <div class="statement__coda">
+    <LetterField locale={locale} />
+  </div>
 </section>
 
 <style>
@@ -336,6 +354,23 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
 
   .statement__tail {
     height: var(--scene-tail);
+  }
+
+  /*
+    Le champ reprend le retrait intérieur de la scène : son bord gauche
+    s'aligne sur la déclaration et sur la planche de figures, quelle que soit
+    la largeur de composition.
+  */
+  .statement__coda {
+    position: relative;
+    z-index: 1;
+    padding-inline: clamp(1.5rem, 4vw, 4rem);
+    /*
+      L'écart avec le bouton tient compte de la marge sensible que le champ
+      se réserve au-dessus de lui : c'est le même blanc à l'œil qu'avant, il
+      est seulement passé de côté du champ.
+    */
+    margin-top: clamp(3rem, 9vh, 7rem);
   }
 
   .statement__body {

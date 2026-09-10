@@ -27,6 +27,15 @@ const fr = {
   'project.constellation': 'Constellation',
   'project.constellationCaption': 'Constellation — L’équipe',
   'home.enterStudio': 'Plonger sous le visible',
+  /*
+    Le champ aimanté qui suit le bouton — voir `src/components/LetterField.astro`.
+    Le mot de la planche et celui du curseur se lisent ENSEMBLE : « sous le » +
+    « visible ». Les changer, c'est changer la phrase, jamais l'un sans l'autre.
+  */
+  'home.fieldWord': 'VISIBLE',
+  'home.fieldCursor': 'sous le',
+  'home.fieldDescription':
+    'Champ typographique : le mot « visible » répété en autant de rangées que de lettres. Chaque lettre se tourne vers le pointeur, qui porte les mots « sous le ».',
   'labo.sectionServices': 'Services',
   'labo.sectionVision': 'Vision',
   'labo.sectionTeam': 'L’équipe',
@@ -168,6 +177,10 @@ const en: Partial<Record<TranslationKey, string>> = {
   'project.constellation': 'Constellation',
   'project.constellationCaption': 'Constellation — The team',
   'home.enterStudio': 'Dive beneath the visible',
+  'home.fieldWord': 'VISIBLE',
+  'home.fieldCursor': 'beneath the',
+  'home.fieldDescription':
+    'Typographic field: the word “visible” repeated across as many rows as it has letters. Every letter turns toward the pointer, which carries the words “beneath the”.',
   'labo.sectionServices': 'Services',
   'labo.sectionVision': 'Vision',
   'labo.sectionTeam': 'The team',

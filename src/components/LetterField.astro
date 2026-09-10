@@ -1,0 +1,368 @@
+---
+import { useTranslations } from '~/i18n/ui';
+import type { Locale } from '~/i18n/config';
+
+/**
+ * LE CHAMP AIMANTÉ — la phrase du studio se recompose sous le curseur.
+ *
+ * ┌─ Le geste ──────────────────────────────────────────────────────────────┐
+ * │ Une grille répète un seul mot : VISIBLE, une lettre par colonne, autant  │
+ * │ de rangées que la planche en accepte. Chaque lettre se comporte comme    │
+ * │ une aiguille aimantée : elle se tourne pour se tenir DEBOUT SUR le       │
+ * │ pointeur, comme si celui-ci faisait gravité. Le curseur, lui, porte les  │
+ * │ mots « sous le » — la primitive de curseur du site sait déjà porter un   │
+ * │ mot (voir `CustomCursor.astro`). Partout où la main se pose, la phrase   │
+ * │ du studio se reforme : « sous le visible ».                              │
+ * │                                                                          │
+ * │ La planche vient juste après le bouton « Plonger sous le visible » : le  │
+ * │ bouton l'énonce, le champ le fait faire.                                 │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * ── LES MOTS SONT FIXÉS EN CODE ────────────────────────────────────────────
+ *
+ * Comme le libellé du bouton qui précède, le mot du champ et celui du curseur
+ * ne sont pas des champs Sanity : ils ne se remplissent pas, ils SE LISENT
+ * ENSEMBLE. Un mot d'une autre longueur ne donnerait pas une variante mais une
+ * autre composition — le nombre de colonnes, donc le corps des lettres et la
+ * hauteur de la planche, se déduisent de lui. Ils vivent avec les autres
+ * textes d'interface traduits, dans `src/i18n/ui.ts`.
+ *
+ * ── RIEN NE S'ANNONCE ──────────────────────────────────────────────────────
+ *
+ * Ni filet d'encadrement, ni invitation écrite : la planche n'a pas de bord et
+ * ne demande rien. Le mot répété se tient seul comme une composition, et la
+ * bascule se découvre en passant. Ce n'est pas une commande — rien n'est perdu
+ * à ne jamais y poser la main.
+ *
+ * ── CE QUI TIENT SANS JAVASCRIPT ───────────────────────────────────────────
+ *
+ * Au repos, toutes les lettres sont droites : la planche est un champ
+ * typographique lisible, et chaque rangée y énonce le mot. Le script ne fait
+ * qu'AJOUTER l'orientation. Sans lui — script en échec, mouvement réduit,
+ * écran tactile immobile — il ne manque rien à comprendre.
+ */
+interface Props {
+  locale: Locale;
+  /**
+   * Rangées de la planche. AUTANT QUE DE LETTRES, par défaut : la planche est
+   * alors un carré de mots — le mot se lit dans les deux sens de lecture, et
+   * la main atteint toujours une rangée, où qu'elle se pose.
+   */
+  rows?: number;
+  class?: string;
+}
+
+const { locale, rows, class: className } = Astro.props;
+const t = useTranslations(locale);
+
+/*
+  `Array.from` et non un `split('')` : une lettre accentuée écrite en deux
+  points de code (le Î d'ABÎME, par exemple) resterait entière ici, là où un
+  découpage naïf la couperait en deux cases.
+*/
+const letters = Array.from(t('home.fieldWord').toLocaleUpperCase(locale));
+const rowCount = rows ?? letters.length;
+const rowIndexes = Array.from({ length: rowCount }, (_, index) => index);
+
+/*
+  Le corps des lettres se déduit du nombre de colonnes, en pour-cent de la
+  LARGEUR DE LA PLANCHE (`cqi`) : la composition garde exactement les mêmes
+  proportions du téléphone au grand écran, et un mot plus long donne
+  mécaniquement des lettres plus petites plutôt qu'une planche qui déborde.
+
+  Le calcul est fait ici plutôt qu'en CSS pour ne pas diviser par une variable
+  personnalisée dans un `calc()`.
+*/
+const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
+
+/*
+  ┌─ LA PLANCHE NE DÉPASSE JAMAIS L'ÉCRAN ────────────────────────────────────┐
+  │ Sa hauteur se déduit de sa largeur : autant de rangées que de colonnes,    │
+  │ chaque case étant plus large que haute (4/3). Sur un grand écran, la       │
+  │ largeur disponible donnait donc une planche plus haute que la fenêtre —    │
+  │ on ne pouvait plus voir converger tout le champ d'un seul regard, ce qui   │
+  │ est précisément ce que le geste raconte.                                   │
+  │                                                                             │
+  │ La largeur est donc PLAFONNÉE par la hauteur d'écran : on donne ici le      │
+  │ facteur qui convertit l'une en l'autre (largeur = hauteur × ce facteur),    │
+  │ pour n'avoir à diviser par rien dans la feuille de style. Au-delà, la       │
+  │ planche cesse de grandir et les lettres avec elle.                          │
+  └─────────────────────────────────────────────────────────────────────────────┘
+*/
+const CELL_RATIO = 1; // hauteur d'une case rapportée à sa largeur — carrée
+const plateSpan = (letters.length / (rowCount * CELL_RATIO)).toFixed(4);
+---
+
+{/*
+  ┌─ LA BANDE ENTIÈRE EST SENSIBLE ─────────────────────────────────────────┐
+  │ La planche est plafonnée par la hauteur d'écran : sur un grand écran,    │
+  │ elle est plus étroite que la colonne, et il reste du blanc de part et    │
+  │ d'autre. Ce blanc FAIT PARTIE du champ — une main qui passe à côté des   │
+  │ lettres est quand même quelque part, et les lettres doivent la suivre.   │
+  │                                                                          │
+  │ L'écoute, le mot porté par le curseur et l'effacement du pointeur        │
+  │ système sont donc posés ici, sur toute la largeur, et non sur la seule   │
+  │ grille de lettres.                                                       │
+  └──────────────────────────────────────────────────────────────────────────┘
+*/}
+<figure
+  class:list={['letter-field', className]}
+  data-letter-field
+  data-cursor-label={t('home.fieldCursor')}
+  data-cursor-bare
+>
+  {/*
+    La planche est un DESSIN : elle est retirée de l'arbre d'accessibilité et
+    c'est la légende, juste dessous, qui en dit le propos. Une grille de
+    trente-cinq lettres épelée une à une n'apprendrait rien à personne.
+
+    `data-cursor-label` est ce qui met le mot dans le curseur : l'attribut est
+    porté par la planche entière, et le compagnon de curseur le trouve depuis
+    n'importe quelle lettre survolée (`closest`).
+  */}
+  <div
+    class="letter-field__plate"
+    aria-hidden="true"
+    style={`--cols: ${letters.length}; --glyph-size: ${glyphSize}cqi; --plate-span: ${plateSpan};`}
+  >
+    {rowIndexes.map((row) =>
+      letters.map((letter) => (
+        <span class="letter-field__cell" style={`--row: ${row};`}>
+          <span class="letter-field__glyph">{letter}</span>
+        </span>
+      )),
+    )}
+  </div>
+
+  <figcaption class="sr-only">{t('home.fieldDescription')}</figcaption>
+</figure>
+
+<style>
+  .letter-field {
+    margin: 0;
+    /*
+      La bande déborde un peu la planche, en haut comme en bas : la main est
+      « dans le champ » avant d'être dans les lettres, et le mot s'allume à
+      l'approche plutôt qu'au contact. Assez pour sentir la marge, trop peu
+      pour attraper le pointeur qui ne fait que passer vers la suite.
+    */
+    padding-block: clamp(1rem, 3.5vh, 2.5rem);
+    /*
+      Les lettres SONT du texte : le pointeur y prenait la forme du curseur
+      de sélection, et un glissement surlignait la planche au lieu de
+      l'orienter. Ici, la lettre est un objet dessiné, pas un mot à copier —
+      rien ne se sélectionne.
+    */
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: default;
+  }
+
+  /*
+    Le compagnon de curseur est en service : sur la bande, c'est le mot
+    « sous le » qui tient lieu de pointeur (`data-cursor-bare`), et le curseur
+    système s'efface pour lui laisser la place. Sans compagnon — script en
+    échec, pointeur grossier — la règle ne s'applique pas et la flèche reste.
+  */
+  :global(html.has-cursor) .letter-field {
+    cursor: none;
+  }
+
+  .letter-field__plate {
+    /*
+      Le conteneur de requête, c'est la PLANCHE elle-même : les `cqi` du corps
+      des lettres mesurent sa largeur réelle — celle qui reste après le
+      plafond de hauteur ci-dessous — et non l'espace disponible autour. Les
+      lettres suivent donc la planche quand elle se resserre.
+    */
+    container-type: inline-size;
+    /* Tient dans l'écran, en laissant respirer au-dessus et au-dessous. */
+    max-width: min(100%, calc(76svh * var(--plate-span)));
+    /* Plafonnée, la planche devient plus étroite que la colonne : on la centre. */
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  }
+
+  /*
+    La case est CARRÉE : d'une lettre à l'autre, l'écart est le même en
+    hauteur et en largeur. C'est ce qui fait qu'une lettre couchée ne paraît
+    ni plus serrée ni plus lâche qu'une lettre droite — le champ tourne sans
+    que sa trame bouge. Le corps des lettres vaut 72 % de la case ; au-delà,
+    deux lettres en diagonale finiraient par se rencontrer.
+  */
+  .letter-field__cell {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+  }
+
+  .letter-field__glyph {
+    display: block;
+    font-family: var(--font-titre);
+    font-size: clamp(1.5rem, var(--glyph-size), 7.5rem);
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--color-ink);
+    /*
+      L'angle est posé par le script, en degrés, SANS ramener la valeur dans
+      un tour : une lettre qui passe de 179° à 181° doit continuer sa rotation,
+      pas revenir en arrière sur presque un tour complet.
+    */
+    transform: rotate(var(--angle, 0deg));
+    transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+    /*
+      Un retard par rangée : la planche ne bascule pas d'un bloc, elle se
+      retourne en vague, du haut vers le bas. Quatre-vingts millisecondes au
+      plus — au-delà, le champ traîne derrière la main.
+    */
+    transition-delay: calc(var(--row) * 16ms);
+  }
+
+  /*
+    Mouvement réduit : la planche reste droite et lisible, et le script ne
+    pose jamais d'angle (voir plus bas). La transition est retirée ici pour
+    que même un angle hérité d'avant le changement de préférence retombe net.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .letter-field__glyph {
+      transform: none;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  /*
+    ┌─ L'AIMANT ────────────────────────────────────────────────────────────┐
+    │ Chaque lettre reçoit l'angle qui met SON BAS face au pointeur. Une     │
+    │ lettre posée juste au-dessus du curseur est donc droite ; une lettre   │
+    │ posée en dessous est retournée ; sur les côtés, elle se couche. Le     │
+    │ champ entier converge visuellement vers un seul point : la main.       │
+    │                                                                        │
+    │ Le repos vaut zéro : pointeur sorti, la planche se redresse et le mot  │
+    │ redevient lisible d'un bout à l'autre de chaque rangée.                │
+    └───────────────────────────────────────────────────────────────────────┘
+  */
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  for (const field of document.querySelectorAll<HTMLElement>('[data-letter-field]')) {
+    const plate = field.querySelector<HTMLElement>('.letter-field__plate');
+    if (!plate) continue;
+
+    const cells = Array.from(plate.querySelectorAll<HTMLElement>('.letter-field__cell'));
+    const glyphs = cells.map((cell) => cell.querySelector<HTMLElement>('.letter-field__glyph'));
+
+    /*
+      Les centres sont mesurés sur les CASES, jamais sur les lettres : une
+      lettre déjà tournée n'a plus le même rectangle englobant, et la planche
+      se mettrait à viser de travers dès le premier mouvement.
+
+      Ils sont relatifs à la planche, donc insensibles au défilement : une
+      seule mesure tient tant que la mise en page ne change pas.
+    */
+    let centers: { x: number; y: number }[] = [];
+
+    const measure = () => {
+      const plateBox = plate.getBoundingClientRect();
+      centers = cells.map((cell) => {
+        const box = cell.getBoundingClientRect();
+        return {
+          x: box.left - plateBox.left + box.width / 2,
+          y: box.top - plateBox.top + box.height / 2,
+        };
+      });
+    };
+
+    /* Dernier angle POSÉ, cumulé — voir le chemin le plus court plus bas. */
+    const angles = new Float64Array(cells.length);
+    let pointer: { x: number; y: number } | null = null;
+    let frame = 0;
+
+    const settle = () => {
+      frame = 0;
+      if (!centers.length) return;
+
+      for (let index = 0; index < glyphs.length; index += 1) {
+        const glyph = glyphs[index];
+        if (!glyph) continue;
+
+        let target = 0;
+
+        if (pointer) {
+          const dx = pointer.x - centers[index].x;
+          const dy = pointer.y - centers[index].y;
+
+          /*
+            Le bas de la lettre — le vecteur (0, 1) de son repère — doit
+            pointer vers le curseur. Une rotation d'angle a l'envoie sur
+            (-sin a, cos a) : l'angle cherché est donc atan2(-dx, dy).
+          */
+          target = (Math.atan2(-dx, dy) * 180) / Math.PI;
+        }
+
+        /*
+          On ramène la consigne dans le tour le plus proche de l'angle déjà
+          posé. Sans cela, le passage de +179° à -179° ferait faire à la lettre
+          un tour complet à l'envers, et la vague se briserait à chaque
+          traversée de l'axe.
+        */
+        const next = target + Math.round((angles[index] - target) / 360) * 360;
+        angles[index] = next;
+        glyph.style.setProperty('--angle', `${next.toFixed(1)}deg`);
+      }
+    };
+
+    const schedule = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(settle);
+    };
+
+    /*
+      Le rectangle de la planche est relu à chaque mouvement plutôt que gardé :
+      la page défile, et une position mémorisée viserait le point où la planche
+      se trouvait. C'est une lecture par événement, jamais par lettre.
+
+      Le point visé est ramené dans le repère de la PLANCHE, où sont mesurés
+      les centres — il peut donc sortir de ses bords, et c'est exactement ce
+      qu'on veut : à côté des lettres, elles regardent encore vers la main.
+    */
+    field.addEventListener(
+      'pointermove',
+      (event) => {
+        if (reducedMotion.matches) return;
+        if (!centers.length) measure();
+
+        const box = plate.getBoundingClientRect();
+        pointer = { x: event.clientX - box.left, y: event.clientY - box.top };
+        schedule();
+      },
+      { passive: true },
+    );
+
+    /* Au doigt, l'orientation suit le glissement ; le relâchement redresse. */
+    const release = () => {
+      pointer = null;
+      schedule();
+    };
+
+    field.addEventListener('pointerleave', release);
+    field.addEventListener('pointercancel', release);
+    field.addEventListener('pointerup', (event) => {
+      if (event.pointerType !== 'mouse') release();
+    });
+
+    /* La planche change de taille (fenêtre, rail, rotation) : on remesure. */
+    new ResizeObserver(() => {
+      if (centers.length) measure();
+    }).observe(plate);
+
+    /*
+      La préférence peut changer pendant la visite : on redresse la planche
+      sans attendre le prochain mouvement.
+    */
+    reducedMotion.addEventListener('change', () => {
+      if (reducedMotion.matches) release();
+    });
+  }
+</script>
