@@ -227,9 +227,7 @@ watch(
                     :aria-label="props.labels.increase"
                     :disabled="
                       cartState.busy ||
-                      (line.maxQuantity !== null &&
-                        line.maxQuantity > 0 &&
-                        line.quantity >= line.maxQuantity)
+                      (line.maxQuantity !== null && line.quantity >= line.maxQuantity)
                     "
                     @click="setQuantity(line.id, line.quantity + 1)"
                   >

@@ -71,11 +71,12 @@ export const productCardFragment = /* GraphQL */ `
     }
     # Distingue une vraie vente en rupture d'un produit disponible dont
     # l'inventaire n'est simplement pas suivi.
-    variants(first: 50) {
+    variants(first: 250) {
       nodes {
         availableForSale
         currentlyNotInStock
       }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;
@@ -85,18 +86,20 @@ export const productCardFragment = /* GraphQL */ `
  * générer de route pour un produit épuisé.
  */
 export const productHandlesQuery = /* GraphQL */ `
-  query ProductHandles($first: Int = 250) {
-    products(first: $first) {
+  query ProductHandles($first: Int = 250, $after: String) {
+    products(first: $first, after: $after) {
       nodes {
         handle
         availableForSale
-        variants(first: 50) {
+        variants(first: 250) {
           nodes {
             availableForSale
             currentlyNotInStock
           }
+          pageInfo { hasNextPage endCursor }
         }
       }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;
@@ -110,8 +113,8 @@ export const productByHandleQuery = /* GraphQL */ `
       descriptionHtml
       tags
       # Toutes les collections structurantes servent à choisir le libellé
-      # d'achat. La première continue d'alimenter les suggestions en bas de
-      # fiche, mais le CTA ne dépend plus de cet ordre.
+      # d'achat. La collection structurante alimente aussi le fil d'Ariane et
+      # les suggestions, sans dépendre de l'ordre de cette connexion.
       collections(first: 20) {
         nodes {
           handle
@@ -151,7 +154,7 @@ export const productByHandleQuery = /* GraphQL */ `
           }
         }
       }
-      variants(first: 50) {
+      variants(first: 250) {
         nodes {
           id
           title
@@ -176,6 +179,29 @@ export const productByHandleQuery = /* GraphQL */ `
             value
           }
         }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+/** Pages suivantes des variantes, quand un produit dépasse la limite Storefront. */
+export const productVariantsPageQuery = /* GraphQL */ `
+  query ProductVariantsPage($handle: String!, $after: String!) {
+    product(handle: $handle) {
+      variants(first: 250, after: $after) {
+        nodes {
+          id
+          title
+          sku
+          availableForSale
+          currentlyNotInStock
+          ${inventoryScopeGranted ? 'quantityAvailable' : ''}
+          price { amount currencyCode }
+          compareAtPrice { amount currencyCode }
+          selectedOptions { name value }
+        }
+        pageInfo { hasNextPage endCursor }
       }
     }
   }
@@ -192,15 +218,16 @@ export const productByHandleQuery = /* GraphQL */ `
  * l'API refuse la requête en entier plutôt que de renvoyer un champ vide.
  */
 export const productInventoryQuery = /* GraphQL */ `
-  query ProductInventory($handle: String!) {
+  query ProductInventory($handle: String!, $after: String) {
     product(handle: $handle) {
-      variants(first: 50) {
+      variants(first: 250, after: $after) {
         nodes {
           id
           availableForSale
           currentlyNotInStock
           quantityAvailable
         }
+        pageInfo { hasNextPage endCursor }
       }
     }
   }
@@ -209,7 +236,7 @@ export const productInventoryQuery = /* GraphQL */ `
 /** Collection et ses tirages, dans l'ordre défini dans l'admin Shopify. */
 export const collectionByHandleQuery = /* GraphQL */ `
   ${productCardFragment}
-  query CollectionByHandle($handle: String!, $first: Int = 50) {
+  query CollectionByHandle($handle: String!, $first: Int = 250, $after: String) {
     collection(handle: $handle) {
       id
       handle
@@ -221,10 +248,11 @@ export const collectionByHandleQuery = /* GraphQL */ `
         width
         height
       }
-      products(first: $first) {
+      products(first: $first, after: $after) {
         nodes {
           ...ProductCard
         }
+        pageInfo { hasNextPage endCursor }
       }
     }
   }
@@ -232,13 +260,14 @@ export const collectionByHandleQuery = /* GraphQL */ `
 
 /** Liste des collections — alimente la navigation de la boutique. */
 export const collectionsQuery = /* GraphQL */ `
-  query Collections($first: Int = 20) {
-    collections(first: $first) {
+  query Collections($first: Int = 100, $after: String) {
+    collections(first: $first, after: $after) {
       nodes {
         id
         handle
         title
       }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;
@@ -260,8 +289,8 @@ export const collectionsQuery = /* GraphQL */ `
  * trouvera derrière sans rien déflorer.
  */
 export const shopCollectionsQuery = /* GraphQL */ `
-  query ShopCollections($first: Int = 20, $products: Int = 100) {
-    collections(first: $first) {
+  query ShopCollections($first: Int = 100, $after: String, $products: Int = 250) {
+    collections(first: $first, after: $after) {
       nodes {
         id
         handle
@@ -277,15 +306,18 @@ export const shopCollectionsQuery = /* GraphQL */ `
           nodes {
             id
             availableForSale
-            variants(first: 50) {
+            variants(first: 250) {
               nodes {
                 availableForSale
                 currentlyNotInStock
               }
+              pageInfo { hasNextPage endCursor }
             }
           }
+          pageInfo { hasNextPage endCursor }
         }
       }
+      pageInfo { hasNextPage endCursor }
     }
   }
 `;

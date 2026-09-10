@@ -7,15 +7,7 @@ import { IndexWorksInput } from '../../components/IndexWorksInput';
  * Une entrée de l'index qui referme la page Contact.
  *
  * L'index reprend les codes d'un index de livre : un terme, sa catégorie
- * grammaticale, ses renvois — « Archive, n. f. 01.4, 02 » — et sous lui, en
- * italique, les œuvres où il apparaît.
- *
- * ── Ce qui ne se saisit PAS ici : les folios ────────────────────────────────
- * Un projet appartient aux Expériences, un article au Journal : on désigne le
- * document, le NUMÉRO suit, calculé au rendu depuis `src/lib/siteIndex.ts`.
- * Saisir « 02 » à la main marcherait le jour de la saisie et mentirait au
- * premier réordonnancement du menu — et un index dont les renvois sont faux ne
- * vaut rien.
+ * grammaticale, sa définition et, sous lui, les œuvres où il apparaît.
  */
 const indexWork = defineType({
   name: 'indexWork',

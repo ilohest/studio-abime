@@ -26,6 +26,7 @@ interface RawInventory {
         currentlyNotInStock: boolean;
         quantityAvailable: number | null;
       }>;
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
     };
   } | null;
 }
@@ -38,31 +39,40 @@ export async function fetchInventory(handle: string): Promise<InventoryByVariant
   */
   if (!inventoryScopeGranted) return new Map();
 
-  const data = await shopifyFetch<RawInventory>({
-    query: productInventoryQuery,
-    variables: { handle },
-    cache: 'no-store',
-    fallback: { product: null },
-  });
-
   const inventory: InventoryByVariant = new Map();
+  let after: string | null = null;
 
-  for (const variant of data.product?.variants.nodes ?? []) {
-    /*
-      `null` a un sens précis ici : la variante ne suit pas son stock. Une
-      formation sans suivi n'a pas de places restantes à annoncer, et on
-      préfère ne rien dire plutôt que d'afficher zéro.
-    */
-    if (typeof variant.quantityAvailable !== 'number') continue;
-    if (
-      variant.quantityAvailable === 0 &&
-      variant.availableForSale &&
-      !variant.currentlyNotInStock
-    ) {
-      continue;
+  do {
+    const data: RawInventory = await shopifyFetch<RawInventory>({
+      query: productInventoryQuery,
+      variables: { handle, after },
+      cache: 'no-store',
+      fallback: { product: null },
+    });
+
+    if (!data.product) return inventory;
+
+    for (const variant of data.product.variants.nodes) {
+      /*
+        `null` a un sens précis ici : la variante ne suit pas son stock. Une
+        formation sans suivi n'a pas de places restantes à annoncer, et on
+        préfère ne rien dire plutôt que d'afficher zéro.
+      */
+      if (typeof variant.quantityAvailable !== 'number') continue;
+      if (
+        variant.quantityAvailable === 0 &&
+        variant.availableForSale &&
+        !variant.currentlyNotInStock
+      ) {
+        continue;
+      }
+      inventory.set(variant.id, Math.max(0, variant.quantityAvailable));
     }
-    inventory.set(variant.id, Math.max(0, variant.quantityAvailable));
-  }
+
+    after = data.product.variants.pageInfo.hasNextPage
+      ? data.product.variants.pageInfo.endCursor
+      : null;
+  } while (after);
 
   return inventory;
 }

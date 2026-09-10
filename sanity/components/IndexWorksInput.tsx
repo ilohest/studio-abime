@@ -9,9 +9,11 @@ import {
   type BaseAutocompleteOption,
   type BadgeTone,
 } from '@sanity/ui';
+import { defineQuery } from 'groq';
 import {
   PatchEvent,
-  set,
+  insert,
+  setIfMissing,
   unset,
   type ArrayOfObjectsInputProps,
   useFormValue,
@@ -28,9 +30,6 @@ interface WorkValue {
   _key: string;
   _type: 'indexWork';
   reference?: { _type: 'reference'; _ref: string };
-  /* Anciennes valeurs conservées dans les données, mais plus affichées. */
-  label?: string;
-  year?: string;
 }
 
 interface WorkOption extends BaseAutocompleteOption {
@@ -52,11 +51,30 @@ function itemKey(): string {
   );
 }
 
+const WORK_TARGETS_QUERY = defineQuery(/* groq */ `
+  *[
+    _type in ["project", "post"] &&
+    language == $language &&
+    defined(title) &&
+    defined(slug.current)
+  ] | order(title asc) { _id, _type, title }
+`);
+
+function canonicalDocumentId(id: string): string {
+  return id.replace(/^drafts\./, '');
+}
+
 export function IndexWorksInput(props: ArrayOfObjectsInputProps) {
   const autocompleteId = useId();
   const language = (useFormValue(['language']) as string | undefined) ?? 'fr';
   const workspace = useWorkspace();
-  const client = useMemo(() => workspace.getClient({ apiVersion: '2025-02-19' }), [workspace]);
+  const client = useMemo(
+    () =>
+      workspace
+        .getClient({ apiVersion: '2025-02-19' })
+        .withConfig({ perspective: 'previewDrafts', useCdn: false }),
+    [workspace],
+  );
   const value = (props.value ?? []) as WorkValue[];
   const [targets, setTargets] = useState<WorkTarget[]>([]);
 
@@ -64,17 +82,16 @@ export function IndexWorksInput(props: ArrayOfObjectsInputProps) {
     let active = true;
 
     client
-      .fetch<WorkTarget[]>(
-        `*[
-          _type in ["project", "post"] &&
-          language == $language &&
-          defined(title) &&
-          defined(slug.current)
-        ] | order(title asc) { _id, _type, title }`,
-        { language },
-      )
+      .fetch<WorkTarget[]>(WORK_TARGETS_QUERY, { language })
       .then((documents) => {
-        if (active) setTargets(documents);
+        if (active) {
+          setTargets(
+            documents.map((document) => ({
+              ...document,
+              _id: canonicalDocumentId(document._id),
+            })),
+          );
+        }
       })
       .catch(() => {
         if (active) setTargets([]);
@@ -100,25 +117,33 @@ export function IndexWorksInput(props: ArrayOfObjectsInputProps) {
     [available],
   );
 
-  const commit = (next: WorkValue[]) =>
-    props.onChange(PatchEvent.from(next.length > 0 ? set(next) : unset()));
-
   const add = (referenceId: string) => {
     if (!referenceId || selectedIds.has(referenceId)) return;
-    commit([
-      ...value,
-      {
-        _key: itemKey(),
-        _type: 'indexWork',
-        reference: { _type: 'reference', _ref: referenceId },
-      },
-    ]);
+    props.onChange(
+      PatchEvent.from(
+        [
+          setIfMissing([]),
+          insert(
+            [
+              {
+                _key: itemKey(),
+                _type: 'indexWork',
+                reference: { _type: 'reference', _ref: referenceId },
+              },
+            ],
+            'after',
+            [-1],
+          ),
+        ],
+      ),
+    );
   };
 
   return (
     <Flex direction="column" gap={3}>
       <Autocomplete<WorkOption>
         id={autocompleteId}
+        disabled={props.readOnly}
         value=""
         options={options}
         openButton
@@ -170,7 +195,10 @@ export function IndexWorksInput(props: ArrayOfObjectsInputProps) {
                 padding={2}
                 text="Retirer"
                 tone="critical"
-                onClick={() => commit(value.filter((candidate) => candidate._key !== item._key))}
+                disabled={props.readOnly}
+                onClick={() =>
+                  props.onChange(PatchEvent.from(unset([{ _key: item._key }])))
+                }
               />
             </Flex>
           </Card>

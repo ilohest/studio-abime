@@ -10,7 +10,16 @@ import {
   type BaseAutocompleteOption,
   type BadgeTone,
 } from '@sanity/ui';
-import { PatchEvent, set, type ObjectInputProps, useFormValue, useWorkspace } from 'sanity';
+import { defineQuery } from 'groq';
+import {
+  PatchEvent,
+  set,
+  setIfMissing,
+  unset,
+  type ObjectInputProps,
+  useFormValue,
+  useWorkspace,
+} from 'sanity';
 
 interface SanityTarget {
   _id: string;
@@ -66,7 +75,7 @@ const SHOPIFY_QUERY = `
         handle
         title
         availableForSale
-        variants(first: 50) {
+        variants(first: 250) {
           nodes {
             availableForSale
             currentlyNotInStock
@@ -77,6 +86,27 @@ const SHOPIFY_QUERY = `
     collections(first: 250, sortKey: TITLE) { nodes { handle title } }
   }
 `;
+
+const SANITY_TARGETS_QUERY = defineQuery(/* groq */ `
+  *[
+    _type in ["page", "project", "post", "projectsPage", "journalPage"] &&
+    coalesce(language, $language) == $language &&
+    (!(_type in ["project", "post"]) || (defined(title) && defined(slug.current)))
+  ] | order(_type asc, title asc) { _id, _type, title }
+`);
+
+const INDEX_LINK_FIELDS = [
+  'internal',
+  'shopifyType',
+  'shopifyHandle',
+  'shopifyTitle',
+  'externalUrl',
+  'openInNewTab',
+] as const;
+
+function canonicalDocumentId(id: string): string {
+  return id.replace(/^drafts\./, '');
+}
 
 function currentValue(value: IndexLinkValue | undefined): string {
   if (value?.internal?._ref) return `sanity:${value.internal._ref}`;
@@ -93,7 +123,13 @@ export function IndexLinkInput(props: ObjectInputProps) {
   const value = props.value as IndexLinkValue | undefined;
   const language = (useFormValue(['language']) as string | undefined) ?? 'fr';
   const workspace = useWorkspace();
-  const client = useMemo(() => workspace.getClient({ apiVersion: '2025-02-19' }), [workspace]);
+  const client = useMemo(
+    () =>
+      workspace
+        .getClient({ apiVersion: '2025-02-19' })
+        .withConfig({ perspective: 'previewDrafts', useCdn: false }),
+    [workspace],
+  );
   const [sanityTargets, setSanityTargets] = useState<SanityTarget[]>([]);
   const [products, setProducts] = useState<ShopifyTarget[]>([]);
   const [collections, setCollections] = useState<ShopifyTarget[]>([]);
@@ -103,15 +139,16 @@ export function IndexLinkInput(props: ObjectInputProps) {
     let active = true;
 
     client
-      .fetch<SanityTarget[]>(
-        `*[
-          _type in ["page", "project", "post", "projectsPage", "journalPage"] &&
-          coalesce(language, $language) == $language
-        ] | order(_type asc, title asc) { _id, _type, title }`,
-        { language },
-      )
+      .fetch<SanityTarget[]>(SANITY_TARGETS_QUERY, { language })
       .then((targets) => {
-        if (active) setSanityTargets(targets);
+        if (active) {
+          setSanityTargets(
+            targets.map((target) => ({
+              ...target,
+              _id: canonicalDocumentId(target._id),
+            })),
+          );
+        }
       })
       .catch(() => {
         if (active) setSanityTargets([]);
@@ -238,8 +275,18 @@ export function IndexLinkInput(props: ObjectInputProps) {
     return destinations;
   }, [collections, products, sanityTargets, selected, selectedStillExists, value?.shopifyTitle]);
 
-  const commit = (next: IndexLinkValue) =>
-    props.onChange(PatchEvent.from(set({ _type: 'indexLink', ...next })));
+  const commit = (next: IndexLinkValue) => {
+    const patches: Array<
+      ReturnType<typeof setIfMissing> | ReturnType<typeof set> | ReturnType<typeof unset>
+    > = [setIfMissing({ _type: 'indexLink' })];
+
+    for (const field of INDEX_LINK_FIELDS) {
+      const fieldValue = next[field];
+      patches.push(fieldValue === undefined ? unset([field]) : set(fieldValue, [field]));
+    }
+
+    props.onChange(PatchEvent.from(patches));
+  };
 
   const selectDestination = (destination: string) => {
     const common = { openInNewTab: value?.openInNewTab ?? false };
@@ -280,6 +327,7 @@ export function IndexLinkInput(props: ObjectInputProps) {
     <Flex direction="column" gap={3}>
       <Autocomplete<DestinationOption>
         id={autocompleteId}
+        disabled={props.readOnly}
         value={selected}
         options={options}
         openButton
@@ -314,6 +362,7 @@ export function IndexLinkInput(props: ObjectInputProps) {
           <TextInput
             aria-label="URL ou chemin depuis la racine"
             value={value?.externalUrl ?? ''}
+            readOnly={props.readOnly}
             placeholder="/collections/ce-qui-se-contemple ou https://…"
             onChange={(event) =>
               commit({
@@ -340,6 +389,7 @@ export function IndexLinkInput(props: ObjectInputProps) {
       <Flex align="center" gap={3}>
         <Switch
           checked={value?.openInNewTab ?? false}
+          disabled={props.readOnly}
           onChange={(event) =>
             commit({ ...value, openInNewTab: event.currentTarget.checked })
           }

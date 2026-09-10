@@ -52,7 +52,7 @@ const CART_FRAGMENT = /* GraphQL */ `
         currencyCode
       }
     }
-    lines(first: 50) {
+    lines(first: 250) {
       nodes {
         id
         quantity
@@ -132,6 +132,34 @@ interface RawCart {
       };
     }>;
   };
+}
+
+interface CartUserError {
+  field: string[] | null;
+  message: string;
+}
+
+interface RawCartMutation {
+  cart: RawCart | null;
+  userErrors: CartUserError[];
+}
+
+/**
+ * Une mutation Storefront peut répondre HTTP 200 tout en refusant une ligne
+ * (stock insuffisant, variante supprimée, panier expiré…). La réponse ne doit
+ * jamais être traitée comme un succès tant que `userErrors` n'est pas vide.
+ */
+function unwrapCartMutation(result: RawCartMutation, operation: string): Cart {
+  if (result.userErrors.length > 0) {
+    const detail = result.userErrors.map((error) => error.message).join(' | ');
+    throw new Error(`[shopify] ${operation} refusée : ${detail}`);
+  }
+
+  if (!result.cart) {
+    throw new Error(`[shopify] ${operation} sans panier dans la réponse.`);
+  }
+
+  return toCart(result.cart);
 }
 
 function toCart(raw: RawCart): Cart {
@@ -249,7 +277,7 @@ export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart
   const id = readCartId();
 
   if (!id) {
-    const data = await shopifyFetch<{ cartCreate: { cart: RawCart } }>({
+    const data = await shopifyFetch<{ cartCreate: RawCartMutation }>({
       query: /* GraphQL */ `
         ${CART_FRAGMENT}
         mutation CartCreate($lines: [CartLineInput!]!) {
@@ -268,12 +296,12 @@ export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart
       cache: 'no-store',
     });
 
-    const cart = toCart(data.cartCreate.cart);
+    const cart = unwrapCartMutation(data.cartCreate, 'Création du panier');
     writeCartId(cart.id);
     return cart;
   }
 
-  const data = await shopifyFetch<{ cartLinesAdd: { cart: RawCart } }>({
+  const data = await shopifyFetch<{ cartLinesAdd: RawCartMutation }>({
     query: /* GraphQL */ `
       ${CART_FRAGMENT}
       mutation CartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
@@ -292,7 +320,7 @@ export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart
     cache: 'no-store',
   });
 
-  return toCart(data.cartLinesAdd.cart);
+  return unwrapCartMutation(data.cartLinesAdd, 'Ajout au panier');
 }
 
 /** Change la quantité d'une ligne. Une quantité nulle la retire. */
@@ -302,7 +330,7 @@ export async function updateLine(lineId: string, quantity: number): Promise<Cart
   const id = readCartId();
   if (!id) throw new Error('[shopify] Aucun panier à modifier.');
 
-  const data = await shopifyFetch<{ cartLinesUpdate: { cart: RawCart } }>({
+  const data = await shopifyFetch<{ cartLinesUpdate: RawCartMutation }>({
     query: /* GraphQL */ `
       ${CART_FRAGMENT}
       mutation CartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
@@ -321,7 +349,7 @@ export async function updateLine(lineId: string, quantity: number): Promise<Cart
     cache: 'no-store',
   });
 
-  return toCart(data.cartLinesUpdate.cart);
+  return unwrapCartMutation(data.cartLinesUpdate, 'Modification du panier');
 }
 
 /** Retire une ligne du panier. */
@@ -329,7 +357,7 @@ export async function removeLine(lineId: string): Promise<Cart> {
   const id = readCartId();
   if (!id) throw new Error('[shopify] Aucun panier à modifier.');
 
-  const data = await shopifyFetch<{ cartLinesRemove: { cart: RawCart } }>({
+  const data = await shopifyFetch<{ cartLinesRemove: RawCartMutation }>({
     query: /* GraphQL */ `
       ${CART_FRAGMENT}
       mutation CartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
@@ -348,5 +376,5 @@ export async function removeLine(lineId: string): Promise<Cart> {
     cache: 'no-store',
   });
 
-  return toCart(data.cartLinesRemove.cart);
+  return unwrapCartMutation(data.cartLinesRemove, 'Retrait du panier');
 }

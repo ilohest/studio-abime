@@ -565,9 +565,7 @@ export const contactPageQuery = /* groq */ `
   _type,
   language,
   enquiryNotice,
-  // L'index : le terme se saisit, les FOLIOS se calculent (src/lib/siteIndex.ts).
-  // Une œuvre citée n'est donc projetée qu'en type et en slug — de quoi
-  // reconstruire son numéro et son adresse au rendu.
+  // Une œuvre citée reprend directement le titre et l'adresse du document.
   // (Commentaires de ligne : GROQ ne connaît pas la forme /* … */.)
   "index": coalesce(index[]{
     _key,

@@ -149,7 +149,7 @@ export interface CollectionCard {
   title: string;
   description: string;
   image: ShopImage | null;
-  /** Nombre de tirages, plafonné par la requête. */
+  /** Nombre de produits encore achetables dans la collection. */
   count: number;
 }
 

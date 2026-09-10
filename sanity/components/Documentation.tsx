@@ -848,6 +848,7 @@ export default function Documentation() {
   }, [actif]);
 
   const changerOnglet = (ongletId: string) => {
+    if (scrollerRef.current) scrollerRef.current.scrollTop = 0;
     setActif(ongletId);
     setSectionActive(chapitreId(ongletId, 0));
   };

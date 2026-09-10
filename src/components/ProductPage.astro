@@ -42,8 +42,8 @@ const t = useTranslations(locale);
 const purchaseFamily = toFamilyFromCollections(product.collectionHandles) ?? product.family;
 const remainingKeys = product.hasCondition
   ? ({ one: 'shop.copyRemaining', other: 'shop.copiesRemaining' } as const)
-  : product.family
-    ? FAMILIES[product.family].remainingLabels
+  : purchaseFamily
+    ? FAMILIES[purchaseFamily].remainingLabels
     : ({ one: 'shop.copyRemaining', other: 'shop.copiesRemaining' } as const);
 
 const mediaLabels = { video: t('shop.video'), noVisual: t('shop.noVisual') };
@@ -159,7 +159,7 @@ const priceFallback =
         options={product.options}
         variants={variantViews}
         fetchInventory={inventoryScopeGranted}
-        showRemaining={product.showGauge && product.family !== null && inventoryScopeGranted}
+        showRemaining={product.showGauge && purchaseFamily !== null && inventoryScopeGranted}
         labels={purchaseLabels}
       />
 

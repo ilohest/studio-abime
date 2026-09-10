@@ -11,10 +11,11 @@
  * destination : mieux vaut une sous-entrée en moins qu'un lien qui ne mène
  * nulle part.
  */
-import { resolveWorkFolio } from '~/lib/siteIndex';
 import { getLocaleMeta } from '~/i18n/config';
+import { postPath, projectPath } from '~/i18n/routes';
 import { resolveLink } from '~/lib/routing';
 import type { IndexEntry } from '~/lib/sanity/types';
+import { getProductHandles } from '~/lib/shopify/catalogue';
 import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
@@ -33,6 +34,14 @@ const t = useTranslations(locale);
   E, comme dans n'importe quel index imprimé.
 */
 const collator = new Intl.Collator(getLocaleMeta(locale).htmlLang, { sensitivity: 'base' });
+
+/*
+  Un produit épuisé disparaît de la boutique. Un ancien lien enregistré dans
+  Sanity ne doit donc pas continuer à conduire vers sa fiche devenue 404.
+  Une seule lecture du manifeste suffit pour toutes les entrées de l'index.
+*/
+const hasProductLinks = entries.some((entry) => entry.link?.shopifyType === 'product');
+const purchasableProductHandles = hasProductLinks ? new Set(await getProductHandles()) : null;
 
 /*
   La lettre de classement ignore les accents : « Épreuve » se range sous E,
@@ -61,10 +70,12 @@ const prepared = entries
   .map((entry) => {
     const works = (entry.works ?? [])
       .map((work): PreparedWork | null => {
-        const target = resolveWorkFolio(locale, work.type, work.slug);
-        if (!target || !work.title) return null;
+        if (!work.slug || !work.title) return null;
+        const href = work.type === 'project'
+          ? projectPath(locale, work.slug)
+          : postPath(locale, work.slug);
 
-        return { href: target.href, key: work._key, title: work.title };
+        return { href, key: work._key, title: work.title };
       })
       .filter((work): work is PreparedWork => work !== null);
 
@@ -74,7 +85,10 @@ const prepared = entries
       cliquable — il n'y a donc pas de libellé à saisir, et pas de libellé à
       vérifier ici : seule l'adresse compte.
     */
-    const extra = resolveLink(entry.link, locale);
+    const linksToUnavailableProduct =
+      entry.link?.shopifyType === 'product' &&
+      (!entry.link.shopifyHandle || !purchasableProductHandles?.has(entry.link.shopifyHandle));
+    const extra = linksToUnavailableProduct ? null : resolveLink(entry.link, locale);
 
     return {
       key: entry._key,

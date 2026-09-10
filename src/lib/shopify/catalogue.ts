@@ -6,12 +6,14 @@ import {
   GAUGE_SHOW,
   PRODUCT_CONDITION,
   toFamily,
+  toFamilyFromCollections,
 } from './families';
 import {
   collectionByHandleQuery,
   collectionsQuery,
   productByHandleQuery,
   productHandlesQuery,
+  productVariantsPageQuery,
   shopCollectionsQuery,
 } from './queries';
 import type { FamilyFact, ProductFamily } from './families';
@@ -35,8 +37,20 @@ interface RawCollection {
   title: string;
   descriptionHtml: string | null;
   image: ShopImage | null;
-  products: { nodes: RawProductCard[] };
+  products: Connection<RawProductCard>;
 }
+
+interface PageInfo {
+  hasNextPage: boolean;
+  endCursor: string | null;
+}
+
+interface Connection<T> {
+  nodes: T[];
+  pageInfo: PageInfo;
+}
+
+const STOREFRONT_PAGE_SIZE = 250;
 
 /**
  * Lecture du catalogue.
@@ -64,6 +78,7 @@ interface RawProductAvailability {
   availableForSale: boolean;
   variants: {
     nodes: Array<{ availableForSale: boolean; currentlyNotInStock: boolean }>;
+    pageInfo?: PageInfo;
   };
 }
 
@@ -102,7 +117,7 @@ interface RawProduct extends RawProductCard {
   tags: string[];
   /** Liste complète des médias — voir l'alias dans `productByHandleQuery`. */
   allMedia: { nodes: RawMedia[] };
-  variants: { nodes: RawVariant[] };
+  variants: Connection<RawVariant>;
   /*
     Un emplacement par identifiant demandé, dans l'ordre de la demande, et
     `null` là où le produit ne porte rien. On n'exploite jamais les positions :
@@ -286,23 +301,59 @@ export async function getProductByHandle(handle: string): Promise<Product | null
   });
 
   const raw = data.product;
-  if (!raw || !isProductInStock(raw)) return null;
+  if (!raw) return null;
 
-  const card = toProductCard(raw);
-  const variants = raw.variants.nodes.map(toVariant);
+  const rawVariants = [...raw.variants.nodes];
+  let variantsAfter = raw.variants.pageInfo.hasNextPage
+    ? raw.variants.pageInfo.endCursor
+    : null;
+
+  while (variantsAfter) {
+    const page: { product: { variants: Connection<RawVariant> } | null } =
+      await shopifyFetch({
+        query: productVariantsPageQuery,
+        variables: { handle, after: variantsAfter },
+        fallback: { product: null },
+      });
+
+    if (!page.product) return null;
+    rawVariants.push(...page.product.variants.nodes);
+    variantsAfter = page.product.variants.pageInfo.hasNextPage
+      ? page.product.variants.pageInfo.endCursor
+      : null;
+  }
+
+  const completeRaw = { ...raw, variants: { ...raw.variants, nodes: rawVariants } };
+  if (!isProductInStock(completeRaw)) return null;
+
+  const card = toProductCard(completeRaw);
+  const variants = rawVariants.map(toVariant);
   const metafields = indexMetafields(raw.metafields);
+  const collectionHandles = raw.collections.nodes.map((collection) => collection.handle);
+  /*
+    L'appartenance à une collection structurante fait foi : elle gouverne déjà
+    le discours d'achat et doit aussi gouverner la fiche technique. Le Type de
+    produit reste le repli pour les anciennes fiches encore hors collection.
+  */
+  const collectionFamily = toFamilyFromCollections(collectionHandles);
+  const family = collectionFamily ?? card.family;
+  const structuredCollectionHandle = collectionFamily
+    ? FAMILIES[collectionFamily].collectionHandle
+    : null;
 
   return {
     ...card,
+    family,
     descriptionHtml: raw.descriptionHtml ?? '',
     tags: raw.tags,
     media: raw.allMedia.nodes.map(toMedia),
     variants,
-    facts: toFacts(card.family, metafields),
+    facts: toFacts(family, metafields),
     hasCondition: readFact(PRODUCT_CONDITION, metafields) !== null,
     showGauge: metafields.get(`${GAUGE_SHOW.namespace}.${GAUGE_SHOW.key}`)?.value === 'true',
-    collectionHandles: raw.collections.nodes.map((collection) => collection.handle),
-    primaryCollectionHandle: raw.collections.nodes[0]?.handle ?? null,
+    collectionHandles,
+    /* Une collection métier prime toujours sur une collection promotionnelle. */
+    primaryCollectionHandle: structuredCollectionHandle ?? collectionHandles[0] ?? null,
   };
 }
 
@@ -310,36 +361,65 @@ export async function getProductByHandle(handle: string): Promise<Product | null
  * Identifiants d'URL des tirages encore achetables — alimente `getStaticPaths()`.
  *
  * Requête volontairement minimale : au build, on n'a besoin que des handles.
- * Le plafond de 250 est celui de l'API ; au-delà il faudra paginer, ce qui n'a
- * pas lieu d'être tant que le catalogue tient en dizaines de tirages.
+ * La connexion est parcourue page par page pour ne pas faire disparaître les
+ * produits placés après la limite maximale d'une réponse Storefront.
  */
 export async function getProductHandles(): Promise<string[]> {
   if (!shopifyConfigured) return [];
 
-  const data = await shopifyFetch<{
-    products: { nodes: Array<RawProductAvailability & { handle: string }> };
-  }>({
-    query: productHandlesQuery,
-    variables: { first: 250 },
-    fallback: { products: { nodes: [] } },
-  });
+  const handles: string[] = [];
+  let after: string | null = null;
 
-  return data.products.nodes
-    .filter(isProductInStock)
-    .map((node) => node.handle);
+  do {
+    const data: { products: Connection<RawProductAvailability & { handle: string }> } = await shopifyFetch<{
+      products: Connection<RawProductAvailability & { handle: string }>;
+    }>({
+      query: productHandlesQuery,
+      variables: { first: STOREFRONT_PAGE_SIZE, after },
+      fallback: { products: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } },
+    });
+
+    for (const node of data.products.nodes) {
+      if (isProductInStock(node)) {
+        handles.push(node.handle);
+        continue;
+      }
+
+      /* La variante achetable peut se trouver sur une page suivante. */
+      if (node.availableForSale && node.variants.pageInfo?.hasNextPage) {
+        const product = await getProductByHandle(node.handle);
+        if (product) handles.push(node.handle);
+      }
+    }
+    after = data.products.pageInfo.hasNextPage ? data.products.pageInfo.endCursor : null;
+  } while (after);
+
+  return handles;
 }
 
 /** Collections publiées, pour la navigation de la boutique. */
 export async function getCollections(): Promise<Array<Pick<Collection, 'id' | 'handle' | 'title'>>> {
-  const data = await shopifyFetch<{
-    collections: { nodes: Array<{ id: string; handle: string; title: string }> };
-  }>({
-    query: collectionsQuery,
-    variables: { first: 20 },
-    fallback: { collections: { nodes: [] } },
-  });
+  const collections: Array<{ id: string; handle: string; title: string }> = [];
+  let after: string | null = null;
 
-  return data.collections.nodes;
+  do {
+    const data: {
+      collections: Connection<{ id: string; handle: string; title: string }>;
+    } = await shopifyFetch<{
+      collections: Connection<{ id: string; handle: string; title: string }>;
+    }>({
+      query: collectionsQuery,
+      variables: { first: 100, after },
+      fallback: { collections: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } },
+    });
+
+    collections.push(...data.collections.nodes);
+    after = data.collections.pageInfo.hasNextPage
+      ? data.collections.pageInfo.endCursor
+      : null;
+  } while (after);
+
+  return collections;
 }
 
 /**
@@ -357,31 +437,55 @@ export async function getCollections(): Promise<Array<Pick<Collection, 'id' | 'h
  * celles d'une autre.
  */
 export async function getShopCollections(): Promise<CollectionCard[]> {
-  const data = await shopifyFetch<{
-    collections: {
-      nodes: Array<{
-        id: string;
-        handle: string;
-        title: string;
-        description: string | null;
-        image: ShopImage | null;
-        products: { nodes: RawProductAvailability[] };
-      }>;
-    };
-  }>({
-    query: shopCollectionsQuery,
-    variables: { first: 20, products: 100 },
-    fallback: { collections: { nodes: [] } },
-  });
+  type RawShopCollection = {
+    id: string;
+    handle: string;
+    title: string;
+    description: string | null;
+    image: ShopImage | null;
+    products: Connection<RawProductAvailability>;
+  };
 
-  return data.collections.nodes.map((node) => ({
-    id: node.id,
-    handle: node.handle,
-    title: node.title,
-    description: node.description?.trim() ?? '',
-    image: node.image,
-    count: node.products.nodes.filter(isProductInStock).length,
-  }));
+  const rawCollections: RawShopCollection[] = [];
+  let after: string | null = null;
+
+  do {
+    const data: { collections: Connection<RawShopCollection> } = await shopifyFetch<{
+      collections: Connection<RawShopCollection>;
+    }>({
+      query: shopCollectionsQuery,
+      variables: { first: 100, after, products: STOREFRONT_PAGE_SIZE },
+      fallback: { collections: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } } },
+    });
+
+    rawCollections.push(...data.collections.nodes);
+    after = data.collections.pageInfo.hasNextPage
+      ? data.collections.pageInfo.endCursor
+      : null;
+  } while (after);
+
+  return Promise.all(
+    rawCollections.map(async (node) => {
+      const hasUnresolvedVariants = node.products.nodes.some(
+        (product) =>
+          product.availableForSale &&
+          !isProductInStock(product) &&
+          product.variants.pageInfo?.hasNextPage,
+      );
+      const count = node.products.pageInfo.hasNextPage || hasUnresolvedVariants
+        ? (await getCollectionByHandle(node.handle))?.products.length ?? 0
+        : node.products.nodes.filter(isProductInStock).length;
+
+      return {
+        id: node.id,
+        handle: node.handle,
+        title: node.title,
+        description: node.description?.trim() ?? '',
+        image: node.image,
+        count,
+      };
+    }),
+  );
 }
 
 /**
@@ -415,14 +519,36 @@ export async function getCollectionHandles(): Promise<string[]> {
 
 /** Une collection et ses tirages disponibles. `null` si elle n'existe pas ou n'est plus publiée. */
 export async function getCollectionByHandle(handle: string): Promise<Collection | null> {
-  const data = await shopifyFetch<{ collection: RawCollection | null }>({
-    query: collectionByHandleQuery,
-    variables: { handle, first: 50 },
-    fallback: { collection: null },
-  });
+  let raw: RawCollection | null = null;
+  const products: RawProductCard[] = [];
+  let after: string | null = null;
 
-  const raw = data.collection;
+  do {
+    const data: { collection: RawCollection | null } = await shopifyFetch<{
+      collection: RawCollection | null;
+    }>({
+      query: collectionByHandleQuery,
+      variables: { handle, first: STOREFRONT_PAGE_SIZE, after },
+      fallback: { collection: null },
+    });
+
+    if (!data.collection) return null;
+    raw ??= data.collection;
+    products.push(...data.collection.products.nodes);
+    after = data.collection.products.pageInfo.hasNextPage
+      ? data.collection.products.pageInfo.endCursor
+      : null;
+  } while (after);
+
   if (!raw) return null;
+
+  const visibleProducts = await Promise.all(
+    products.map(async (product): Promise<ProductCard | null> => {
+      if (isProductInStock(product)) return toProductCard(product);
+      if (!product.availableForSale || !product.variants.pageInfo?.hasNextPage) return null;
+      return getProductByHandle(product.handle);
+    }),
+  );
 
   return {
     id: raw.id,
@@ -430,9 +556,7 @@ export async function getCollectionByHandle(handle: string): Promise<Collection 
     title: raw.title,
     descriptionHtml: raw.descriptionHtml ?? '',
     image: raw.image,
-    products: raw.products.nodes
-      .filter(isProductInStock)
-      .map(toProductCard),
+    products: visibleProducts.filter((product): product is ProductCard => product !== null),
   };
 }
 

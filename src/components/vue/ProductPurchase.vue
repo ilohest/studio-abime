@@ -133,7 +133,7 @@ const showQuantityStepper = computed(() => currentStock.value !== 1);
 
 function increase(): void {
   const stock = currentStock.value;
-  if (stock !== null && stock > 0 && quantity.value >= stock) return;
+  if (stock !== null && quantity.value >= stock) return;
   quantity.value += 1;
 }
 
@@ -226,7 +226,7 @@ async function onSubmit(): Promise<void> {
           :aria-label="labels.increase"
           :disabled="
             isBusy ||
-            (currentStock !== null && currentStock > 0 && quantity >= currentStock)
+            (currentStock !== null && quantity >= currentStock)
           "
           @click="increase"
         >

@@ -1,15 +1,8 @@
 /**
  * Table des folios du site — la numérotation « 01 » à « 05 » et ses sous-numéros.
  *
- * Cette table existe parce que DEUX dispositifs affichent désormais la même
- * numérotation : le rail de navigation (`ServicesRail.astro`), qui la montre en
- * permanence, et l'index de la page Contact, qui l'emploie comme un index de
- * livre emploie ses folios — « Archive, n. f. 01.4, 02 ».
- *
- * Un index dont les renvois sont faux ne vaut rien. Si la liste des sections
- * vivait à deux endroits, elle divergerait au premier renommage, et l'index
- * renverrait vers des ancres disparues sans que rien ne le signale. Elle vit
- * donc ici, une seule fois, et les deux dispositifs la lisent.
+ * Cette table alimente le rail de navigation et garantit que ses numéros, ses
+ * ancres et son suivi de lecture restent issus d'une seule source.
  *
  * Les libellés restent en français : ce sont ceux du rail avant cette
  * extraction. Le jour où une seconde langue arrive, c'est ici qu'ils passeront
@@ -24,8 +17,6 @@ import {
   contactPath,
   journalIndexPath,
   laboPath,
-  postPath,
-  projectPath,
   projectsIndexPath,
   shopIndexPath,
 } from '../i18n/routes';
@@ -50,9 +41,7 @@ interface SiteSectionDefinition {
 
 /**
  * L'ordre de ce tableau EST la numérotation : première section = 01. Réordonner
- * renumérote le rail et l'index d'un seul geste — et déplace les renvois déjà
- * saisis dans le CMS, qui pointent des clés (`labo:vision`) et non des
- * numéros.
+ * renumérote le rail d'un seul geste.
  */
 const sections: SiteSectionDefinition[] = [
   {
@@ -92,7 +81,7 @@ const sections: SiteSectionDefinition[] = [
   {
     /*
       Aucune sous-entrée fixe : celles du Shop sont les collections Shopify,
-      injectées par le rail au rendu. L'index ne renvoie donc qu'à la section.
+      injectées par le rail au rendu.
     */
     key: 'shop',
     title: 'Shop',
@@ -146,34 +135,4 @@ export function getSiteSections(locale: Locale): ResolvedSiteSection[] {
       })),
     };
   });
-}
-
-export interface ResolvedFolio {
-  folio: string;
-  href: string;
-  /** Libellé complet, pour l'attribut `title` du renvoi. */
-  label: string;
-}
-
-/**
- * Folio d'une œuvre citée en sous-entrée : un projet appartient aux
- * Expériences, un article au Journal. Le numéro se déduit du type de document,
- * il ne se saisit pas.
- */
-export function resolveWorkFolio(
-  locale: Locale,
-  type: 'project' | 'post',
-  slug: string,
-): ResolvedFolio | null {
-  if (!slug) return null;
-
-  const key: SiteSectionKey = type === 'project' ? 'experiences' : 'journal';
-  const section = getSiteSections(locale).find((candidate) => candidate.key === key);
-  if (!section) return null;
-
-  return {
-    folio: section.folio,
-    href: type === 'project' ? projectPath(locale, slug) : postPath(locale, slug),
-    label: section.title,
-  };
 }
