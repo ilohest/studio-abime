@@ -28,6 +28,11 @@ export const productCardFragment = /* GraphQL */ `
     # bouton et la fiche technique. Demandé dès la carte pour que la grille
     # puisse s'en servir sans une seconde requête.
     productType
+    # Drapeau natif des cartes cadeaux : c'est lui que le paiement Shopify
+    # consulte pour émettre un code. Une carte cadeau est rangée dans toutes les
+    # collections à la fois, sa famille ne peut donc pas en être déduite — ce
+    # drapeau dit ce qu'elle est, là où la collection ne le peut pas.
+    isGiftCard
     # Texte brut tronqué : le propos affiché dans l'index, sans balises à nettoyer.
     excerpt: description(truncateAt: 260)
     # Deux médias : le premier s'affiche, le second apparaît au survol.

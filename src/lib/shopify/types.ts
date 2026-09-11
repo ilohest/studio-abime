@@ -99,6 +99,17 @@ export interface ProductCard {
    * générique et n'affiche que les champs communs.
    */
   family: ProductFamily | null;
+  /**
+   * Carte cadeau. Elle ne relève d'aucune famille : rangée dans les trois
+   * collections, elle n'en choisit pas une, et c'est ce drapeau — non la
+   * collection — qui décide de son bouton d'achat.
+   */
+  isGiftCard: boolean;
+  /**
+   * Libellé du bouton d'achat, résolu depuis le Type de produit. `null` quand
+   * le type ne dit rien : la fiche se rabat alors sur la collection.
+   */
+  purchaseCta: TranslationKey | null;
 }
 
 /** Fiche complète. */

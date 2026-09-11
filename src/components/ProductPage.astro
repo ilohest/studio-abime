@@ -64,11 +64,21 @@ const variantViews: VariantView[] = product.variants.map((variant) => ({
 
 const purchaseLabels = {
   /*
-    Le bouton porte la collection : on ne met pas un tirage au panier comme on
-    s'inscrit à une formation. Le Type de produit sert de repli aux anciennes
-    fiches hors collection ; sans l'un ni l'autre, la formule reste neutre.
+    LE TYPE DE PRODUIT DÉCIDE DU BOUTON : on ne met pas un tirage au panier
+    comme on s'inscrit à une formation, et c'est le type qui dit ce qu'on
+    achète. Un produit peut être rangé dans plusieurs collections ; il n'a
+    qu'un type. La carte cadeau le montre : présente dans les trois
+    collections, elle héritait de la première trouvée et proposait
+    « J'investis dans mes connaissances » — son type « Cadeau » lui rend le
+    sien.
+
+    La collection ne sert plus qu'à défaut, pour une fiche au type vide ou
+    inconnu ; sans l'un ni l'autre, la formule reste neutre.
   */
-  addToCart: t(purchaseFamily ? FAMILIES[purchaseFamily].cta : 'shop.addToCart'),
+  addToCart: t(
+    product.purchaseCta ??
+      (purchaseFamily ? FAMILIES[purchaseFamily].cta : 'shop.addToCart'),
+  ),
   remaining: { one: t(remainingKeys.one), other: t(remainingKeys.other) },
   adding: t('shop.adding'),
   soldOut: t('shop.soldOut'),
@@ -159,7 +169,17 @@ const priceFallback =
         options={product.options}
         variants={variantViews}
         fetchInventory={inventoryScopeGranted}
-        showRemaining={product.showGauge && purchaseFamily !== null && inventoryScopeGranted}
+        showRemaining={
+          /*
+            Pas de décompte sur une carte cadeau : elle n'a pas de tirage limité,
+            et « places restantes », hérité de la famille Transmission, n'y
+            voulait rien dire.
+          */
+          product.showGauge &&
+          purchaseFamily !== null &&
+          !product.isGiftCard &&
+          inventoryScopeGranted
+        }
         labels={purchaseLabels}
       />
 

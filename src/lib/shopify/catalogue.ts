@@ -7,6 +7,8 @@ import {
   PRODUCT_CONDITION,
   toFamily,
   toFamilyFromCollections,
+  isGiftProductType,
+  toPurchaseCta,
 } from './families';
 import {
   collectionByHandleQuery,
@@ -87,6 +89,7 @@ interface RawProductCard extends RawProductAvailability {
   handle: string;
   title: string;
   productType: string | null;
+  isGiftCard: boolean;
   excerpt: string | null;
   media: { nodes: RawMedia[] };
   options: Array<{ name: string; optionValues: Array<{ name: string }> }>;
@@ -271,6 +274,13 @@ function toProductCard(raw: RawProductCard): ProductCard {
     minPrice: raw.priceRange.minVariantPrice,
     maxPrice: raw.priceRange.maxVariantPrice,
     family: toFamily(raw.productType),
+    /*
+      Le drapeau Shopify ou le Type de produit « Cadeau » : l'un vient du
+      paiement, l'autre de la saisie. Il ne gouverne que le décompte du stock —
+      le bouton, lui, se lit dans le type seul (`purchaseCta`).
+    */
+    isGiftCard: raw.isGiftCard || isGiftProductType(raw.productType),
+    purchaseCta: toPurchaseCta(raw.productType),
   };
 }
 

@@ -133,6 +133,35 @@ export function toFamily(productType: string | null): ProductFamily | null {
 }
 
 /**
+ * Type de produit de la carte cadeau.
+ *
+ * Ce n'est pas une famille : une carte cadeau n'a ni collection propre — elle
+ * est rangée dans les trois —, ni fiche technique. Elle n'a en commun avec les
+ * familles que ceci : son Type de produit décide de son bouton.
+ */
+export const GIFT_PRODUCT_TYPE = 'Cadeau';
+
+/** La valeur saisie désigne-t-elle une carte cadeau ? Casse et espaces tolérés. */
+export function isGiftProductType(productType: string | null): boolean {
+  return productType?.trim().toLowerCase() === GIFT_PRODUCT_TYPE.toLowerCase();
+}
+
+/**
+ * Libellé du bouton d'achat, lu dans le TYPE DE PRODUIT.
+ *
+ * C'est le type, et non la collection, qui dit ce qu'on achète : un produit peut
+ * être rangé dans plusieurs collections — la carte cadeau l'est dans les trois —
+ * mais il n'a qu'un type. `null` quand le type est vide ou inconnu : l'appelant
+ * se rabat alors sur la collection, puis sur la formule neutre.
+ */
+export function toPurchaseCta(productType: string | null): TranslationKey | null {
+  if (isGiftProductType(productType)) return 'shop.ctaGift';
+
+  const family = toFamily(productType);
+  return family ? FAMILIES[family].cta : null;
+}
+
+/**
  * Famille commerciale déduite des collections Shopify.
  *
  * Un produit peut appartenir à plusieurs collections : on retient la première
