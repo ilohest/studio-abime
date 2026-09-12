@@ -40,6 +40,7 @@ const props = defineProps<{
     browseShop: string;
     subtotal: string;
     note: string;
+    recipient: string;
     checkout: string;
     remove: string;
     quantity: string;
@@ -213,6 +214,15 @@ function onNote(event: Event): void {
                 {{ line.variantTitle }}
               </p>
 
+              <!--
+                Le destinataire d'une carte cadeau. Dernier endroit où relire
+                l'adresse saisie : une fois la commande passée, le code part et
+                l'erreur ne se rattrape plus.
+              -->
+              <p v-if="line.recipient" class="cart__recipient type-note">
+                {{ props.labels.recipient }} {{ line.recipient }}
+              </p>
+
               <div class="cart__controls">
                 <div
                   v-if="line.maxQuantity !== 1"
@@ -297,7 +307,7 @@ function onNote(event: Event): void {
             panier entier, que chaque réponse remplace.
           -->
           <label class="cart__note">
-            <span class="type-annotation">{{ props.labels.note }}</span>
+            <span class="type-note">{{ props.labels.note }}</span>
             <textarea
               class="cart__note-field"
               rows="2"
@@ -622,8 +632,25 @@ function onNote(event: Event): void {
   gap: 0.3rem;
 }
 
+/*
+  Corps réduit : c'est une mention, pas une invitation. `type-annotation` — qui
+  est plus GRAND que le corps de texte — donnait à ce champ facultatif le poids
+  d'une étape du paiement.
+*/
 .cart__note span {
   color: var(--color-muted);
+  font-size: 0.68rem;
+}
+
+/*
+  Le destinataire se lit sous le titre, dans le registre des mentions. Les
+  adresses longues se coupent plutôt que d'élargir la ligne : le tiroir est
+  étroit, et une adresse tronquée ne se vérifierait plus.
+*/
+.cart__recipient {
+  margin: 0;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
 }
 
 .cart__note-field {

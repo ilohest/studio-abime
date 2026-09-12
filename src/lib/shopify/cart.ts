@@ -1,6 +1,6 @@
 import { shopifyFetch } from './client';
 import { inventoryScopeGranted } from './env';
-import type { CartLineAttribute } from './giftCard';
+import { giftRecipientLabel, type CartLineAttribute } from './giftCard';
 import type { Money, ShopImage } from './types';
 
 /**
@@ -31,6 +31,11 @@ export interface CartLine {
   linePrice: Money;
   /** Stock courant, ou `null` lorsque la variante ne suit pas son inventaire. */
   maxQuantity: number | null;
+  /**
+   * Destinataire d'une carte cadeau, prêt à afficher. `null` sur toute ligne
+   * ordinaire — et sur une carte cadeau que l'acheteuse garde pour elle.
+   */
+  recipient: string | null;
 }
 
 export interface Cart {
@@ -60,6 +65,13 @@ const CART_FRAGMENT = /* GraphQL */ `
       nodes {
         id
         quantity
+        # Ce qui est attaché à la ligne : aujourd'hui le destinataire d'une
+        # carte cadeau, qu'on réaffiche dans le tiroir pour qu'il soit
+        # relisible avant le paiement.
+        attributes {
+          key
+          value
+        }
         cost {
           totalAmount {
             amount
@@ -120,6 +132,7 @@ interface RawCart {
     nodes: Array<{
       id: string;
       quantity: number;
+      attributes: CartLineAttribute[];
       cost: { totalAmount: Money };
       merchandise: {
         id: string;
@@ -190,6 +203,7 @@ function toCart(raw: RawCart): Cart {
       image: line.merchandise.image ?? line.merchandise.product.media.nodes[0]?.previewImage ?? null,
       unitPrice: line.merchandise.price,
       linePrice: line.cost.totalAmount,
+      recipient: giftRecipientLabel(line.attributes),
       maxQuantity:
         typeof line.merchandise.quantityAvailable === 'number' &&
         !(

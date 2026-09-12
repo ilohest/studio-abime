@@ -75,6 +75,24 @@ export function giftAttributes(recipient: GiftRecipient): CartLineAttribute[] {
   return attributes;
 }
 
+/**
+ * Le destinataire d'une ligne de panier, tel qu'on l'affiche.
+ *
+ * Relit les attributs posés à l'ajout. Le nom ET le courriel sont montrés quand
+ * les deux existent : le nom dit à qui la carte s'adresse, le courriel permet de
+ * vérifier l'adresse saisie — c'est la seule erreur qu'on ne rattrape plus une
+ * fois la commande passée, et le panier est le dernier endroit où la voir.
+ */
+export function giftRecipientLabel(attributes: CartLineAttribute[]): string | null {
+  const read = (key: string) => attributes.find((a) => a.key === key)?.value.trim() ?? '';
+
+  const name = read('Recipient name');
+  const email = read('Recipient email');
+
+  if (!email) return null;
+  return name ? `${name} · ${email}` : email;
+}
+
 /** Date du jour au format attendu, pour interdire une date déjà passée. */
 export function giftMinDate(): string {
   return new Date().toISOString().slice(0, 10);
