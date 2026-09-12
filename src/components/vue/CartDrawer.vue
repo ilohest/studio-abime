@@ -15,6 +15,7 @@ import {
   initCart,
   openCart,
   remove,
+  setNote,
   setQuantity,
 } from '~/lib/shopify/cartStore';
 
@@ -38,6 +39,7 @@ const props = defineProps<{
     empty: string;
     browseShop: string;
     subtotal: string;
+    note: string;
     checkout: string;
     remove: string;
     quantity: string;
@@ -132,6 +134,19 @@ watch(
     }
   },
 );
+
+/**
+ * Note de commande, envoyée à la sortie du champ.
+ *
+ * Rien n'est envoyé si le texte n'a pas changé : ouvrir puis quitter le champ
+ * sans rien écrire ne doit pas coûter une requête, ni faire repasser le panier
+ * par l'état « occupé ».
+ */
+function onNote(event: Event): void {
+  const value = (event.target as HTMLTextAreaElement).value;
+  if (value === (cartState.cart?.note ?? '')) return;
+  void setNote(value);
+}
 </script>
 
 <template>
@@ -275,6 +290,21 @@ watch(
               <dd>{{ props.labels.calculatedAtCheckout }}</dd>
             </div>
           </dl>
+
+          <!--
+            La note part quand le champ est QUITTÉ, pas à chaque frappe : une
+            requête par lettre saisie n'apporterait rien et ferait clignoter le
+            panier entier, que chaque réponse remplace.
+          -->
+          <label class="cart__note">
+            <span class="type-annotation">{{ props.labels.note }}</span>
+            <textarea
+              class="cart__note-field"
+              rows="2"
+              :value="cartState.cart!.note"
+              @change="onNote"
+            ></textarea>
+          </label>
 
           <a class="button-minimal cart__checkout" :href="cartState.cart!.checkoutUrl">
             <span class="button-minimal__label">{{ props.labels.checkout }}</span>
@@ -579,5 +609,36 @@ watch(
   color: var(--color-ink-invert);
   padding: 0.42rem 1.1rem;
   text-decoration: none;
+}
+
+/*
+  Le champ de note reprend le filet des autres saisies du parcours d'achat. Il
+  se tient au-dessus du bouton de paiement : c'est la dernière chose qu'on peut
+  vouloir ajouter, et elle ne doit pas passer après le départ vers la caisse.
+*/
+.cart__note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cart__note span {
+  color: var(--color-muted);
+}
+
+.cart__note-field {
+  border: 1px solid var(--color-line);
+  background: transparent;
+  padding: 0.4rem 0.6rem;
+  color: inherit;
+  font-family: var(--font-titre);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  letter-spacing: var(--tracking-copy);
+  resize: vertical;
+}
+
+.cart__note-field:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
 }
 </style>

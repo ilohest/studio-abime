@@ -16,6 +16,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { add, cartState } from '~/lib/shopify/cartStore';
 import { fetchInventory } from '~/lib/shopify/inventory';
+import { GIFT_LIMITS, giftAttributes, giftMinDate } from '~/lib/shopify/giftCard';
 
 export interface VariantView {
   id: string;
@@ -41,6 +42,8 @@ const props = defineProps<{
    * borner la quantité quand `fetchInventory` est vrai.
    */
   showRemaining: boolean;
+  /** Carte cadeau : la fiche demande alors à qui l'envoyer. */
+  isGiftCard: boolean;
   labels: {
     addToCart: string;
     adding: string;
@@ -52,10 +55,29 @@ const props = defineProps<{
     increase: string;
     /** Décompte accordé à la nature du produit et au nombre. */
     remaining: { one: string; other: string };
+    /** Libellés du destinataire — `null` hors carte cadeau. */
+    gift: {
+      legend: string;
+      email: string;
+      name: string;
+      message: string;
+      sendOn: string;
+      note: string;
+    } | null;
   };
 }>();
 
 const quantity = ref(1);
+
+/*
+  Le destinataire d'une carte cadeau. La validation est confiée au navigateur —
+  `type="email"`, `required`, `maxlength`, `min` — plutôt que réécrite ici : elle
+  parle la langue du visiteur, s'annonce aux lecteurs d'écran et bloque l'envoi
+  avant nous. Le seul enjeu réel est ailleurs : un courriel valide mais erroné
+  envoie la carte dans le vide, sans que personne s'en aperçoive.
+*/
+const gift = ref({ email: '', name: '', message: '', sendOn: '' });
+const giftMin = giftMinDate();
 /* Garde l'état SSR et le premier rendu client identiques pendant l'initialisation du panier. */
 const hydrated = ref(false);
 const isBusy = computed(() => hydrated.value && cartState.busy);
@@ -156,9 +178,17 @@ const remainingLabel = computed(() => {
 async function onSubmit(): Promise<void> {
   const variant = currentVariant.value;
   if (!variant?.available) return;
-  await add(variant.id, quantity.value);
+
+  await add(variant.id, quantity.value, props.isGiftCard ? giftAttributes(gift.value) : []);
+
   // Prêt pour un second ajout à l'identique plutôt que de rester sur le dernier chiffre choisi.
   quantity.value = 1;
+  /*
+    Le destinataire, lui, est oublié : deux cartes s'offrent rarement à la même
+    personne, et reproposer l'adresse précédente ferait partir la seconde au
+    mauvais endroit sur un simple clic.
+  */
+  if (props.isGiftCard) gift.value = { email: '', name: '', message: '', sendOn: '' };
 }
 </script>
 
@@ -201,6 +231,38 @@ async function onSubmit(): Promise<void> {
           <span>{{ value }}</span>
         </label>
       </div>
+    </fieldset>
+
+    <!--
+      LE DESTINATAIRE. Un vrai jeu de champs, pas une option repliée : sur une
+      carte cadeau, savoir à qui elle va n'est pas un détail de la commande,
+      c'est la commande. Laisser le courriel vide reste permis — la carte part
+      alors à l'acheteuse, qui la transmettra elle-même.
+    -->
+    <fieldset v-if="labels.gift" class="purchase__gift">
+      <legend class="purchase__gift-legend type-note">{{ labels.gift.legend }}</legend>
+
+      <label class="purchase__field">
+        <span class="type-note">{{ labels.gift.email }}</span>
+        <input v-model="gift.email" type="email" autocomplete="off" inputmode="email" />
+      </label>
+
+      <label class="purchase__field">
+        <span class="type-note">{{ labels.gift.name }}</span>
+        <input v-model="gift.name" type="text" :maxlength="GIFT_LIMITS.name" />
+      </label>
+
+      <label class="purchase__field">
+        <span class="type-note">{{ labels.gift.message }}</span>
+        <textarea v-model="gift.message" rows="3" :maxlength="GIFT_LIMITS.message"></textarea>
+      </label>
+
+      <label class="purchase__field">
+        <span class="type-note">{{ labels.gift.sendOn }}</span>
+        <input v-model="gift.sendOn" type="date" :min="giftMin" />
+      </label>
+
+      <p class="purchase__gift-note type-note">{{ labels.gift.note }}</p>
     </fieldset>
 
     <div class="purchase__action">
@@ -288,6 +350,60 @@ async function onSubmit(): Promise<void> {
 .purchase__remaining {
   color: var(--color-muted);
   margin-left: auto;
+}
+
+/*
+  Le jeu de champs du destinataire reprend le filet des puces de format : même
+  vocabulaire, même corps de note. Rien n'y signale qu'il est spécial — c'est un
+  formulaire, il se reconnaît à ses champs.
+*/
+.purchase__gift {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.purchase__gift-legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+  color: var(--color-muted);
+}
+
+.purchase__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.purchase__field span {
+  color: var(--color-muted);
+}
+
+.purchase__field :is(input, textarea) {
+  border: 1px solid var(--color-line);
+  background: transparent;
+  padding: 0.4rem 0.6rem;
+  color: inherit;
+  font-family: var(--font-titre);
+  font-size: clamp(0.85rem, 1vw, 1rem);
+  letter-spacing: var(--tracking-copy);
+}
+
+.purchase__field textarea {
+  resize: vertical;
+}
+
+.purchase__field :is(input, textarea):focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.purchase__gift-note {
+  margin: 0;
+  color: var(--color-muted);
 }
 
 .purchase__option {

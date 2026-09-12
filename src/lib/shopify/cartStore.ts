@@ -1,5 +1,14 @@
 import { reactive, readonly } from 'vue';
-import { addLine, fetchCart, forgetCart, removeLine, updateLine, type Cart } from './cart';
+import {
+  addLine,
+  fetchCart,
+  forgetCart,
+  removeLine,
+  updateLine,
+  updateNote,
+  type Cart,
+} from './cart';
+import type { CartLineAttribute } from './giftCard';
 
 /**
  * État partagé du panier.
@@ -68,10 +77,27 @@ export async function initCart(): Promise<void> {
   await run(fetchCart);
 }
 
-export async function add(merchandiseId: string, quantity = 1): Promise<void> {
-  await run(() => addLine(merchandiseId, quantity));
+export async function add(
+  merchandiseId: string,
+  quantity = 1,
+  /** Informations attachées à la ligne — le destinataire d'une carte cadeau. */
+  attributes: CartLineAttribute[] = [],
+): Promise<void> {
+  await run(() => addLine(merchandiseId, quantity, attributes));
   // Le tiroir s'ouvre sur un ajout réussi : c'est la confirmation de l'action.
   if (!state.error) state.open = true;
+}
+
+/**
+ * Note libre attachée à la commande.
+ *
+ * Écrite chez Shopify, jamais chez nous : c'est le panier distant qui fait foi,
+ * et la note doit survivre à un rechargement comme au passage sur un autre
+ * onglet. Le tiroir l'envoie quand le champ est quitté, pas à chaque frappe —
+ * une requête par lettre saisie n'apporterait rien.
+ */
+export async function setNote(note: string): Promise<void> {
+  await run(() => updateNote(note));
 }
 
 export async function setQuantity(lineId: string, quantity: number): Promise<void> {

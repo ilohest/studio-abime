@@ -1,5 +1,6 @@
 import { shopifyFetch } from './client';
 import { inventoryScopeGranted } from './env';
+import type { CartLineAttribute } from './giftCard';
 import type { Money, ShopImage } from './types';
 
 /**
@@ -39,12 +40,15 @@ export interface Cart {
   totalQuantity: number;
   subtotal: Money;
   lines: CartLine[];
+  /** Note libre laissée par la cliente, reportée sur la commande. */
+  note: string;
 }
 
 const CART_FRAGMENT = /* GraphQL */ `
   fragment CartParts on Cart {
     id
     checkoutUrl
+    note
     totalQuantity
     cost {
       subtotalAmount {
@@ -109,6 +113,7 @@ const CART_FRAGMENT = /* GraphQL */ `
 interface RawCart {
   id: string;
   checkoutUrl: string;
+  note: string | null;
   totalQuantity: number;
   cost: { subtotalAmount: Money };
   lines: {
@@ -166,6 +171,8 @@ function toCart(raw: RawCart): Cart {
   return {
     id: raw.id,
     checkoutUrl: raw.checkoutUrl,
+    /* Shopify renvoie `null` pour une note jamais écrite ; la vue veut une chaîne. */
+    note: raw.note ?? '',
     totalQuantity: raw.totalQuantity,
     subtotal: raw.cost.subtotalAmount,
     lines: raw.lines.nodes.map((line) => ({
@@ -272,9 +279,25 @@ export async function fetchCart(): Promise<Cart | null> {
   return toCart(data.cart);
 }
 
-/** Ajoute une variante, en créant le panier au premier ajout. */
-export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart> {
+/**
+ * Ajoute une variante, en créant le panier au premier ajout.
+ *
+ * `attributes` porte ce qui est attaché à CETTE ligne — aujourd'hui le
+ * destinataire d'une carte cadeau (voir `giftCard.ts`). Shopify les recopie sur
+ * la commande, où le paiement les lit.
+ */
+export async function addLine(
+  merchandiseId: string,
+  quantity = 1,
+  attributes: CartLineAttribute[] = [],
+): Promise<Cart> {
   const id = readCartId();
+  /*
+    Une ligne sans attribut n'en déclare aucun : envoyer un tableau vide ferait
+    apparaître une ligne « personnalisée » là où il n'y a rien à personnaliser.
+  */
+  const line =
+    attributes.length > 0 ? { merchandiseId, quantity, attributes } : { merchandiseId, quantity };
 
   if (!id) {
     const data = await shopifyFetch<{ cartCreate: RawCartMutation }>({
@@ -292,7 +315,7 @@ export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart
           }
         }
       `,
-      variables: { lines: [{ merchandiseId, quantity }] },
+      variables: { lines: [line] },
       cache: 'no-store',
     });
 
@@ -316,11 +339,44 @@ export async function addLine(merchandiseId: string, quantity = 1): Promise<Cart
         }
       }
     `,
-    variables: { cartId: id, lines: [{ merchandiseId, quantity }] },
+    variables: { cartId: id, lines: [line] },
     cache: 'no-store',
   });
 
   return unwrapCartMutation(data.cartLinesAdd, 'Ajout au panier');
+}
+
+/**
+ * Écrit la note de commande.
+ *
+ * Elle vit chez Shopify, avec le panier : elle survit donc au rechargement et
+ * suit la commande jusqu'au back-office, là où une note gardée de notre côté se
+ * serait perdue au paiement.
+ */
+export async function updateNote(note: string): Promise<Cart> {
+  const id = readCartId();
+  if (!id) throw new Error('Note de commande : aucun panier ouvert.');
+
+  const data = await shopifyFetch<{ cartNoteUpdate: RawCartMutation }>({
+    query: /* GraphQL */ `
+      ${CART_FRAGMENT}
+      mutation CartNoteUpdate($cartId: ID!, $note: String!) {
+        cartNoteUpdate(cartId: $cartId, note: $note) {
+          cart {
+            ...CartParts
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `,
+    variables: { cartId: id, note },
+    cache: 'no-store',
+  });
+
+  return unwrapCartMutation(data.cartNoteUpdate, 'Note de commande');
 }
 
 /** Change la quantité d'une ligne. Une quantité nulle la retire. */

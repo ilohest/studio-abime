@@ -87,6 +87,20 @@ const purchaseLabels = {
   quantity: t('cart.quantity'),
   decrease: t('cart.decrease'),
   increase: t('cart.increase'),
+  /*
+    Le formulaire du destinataire n'est bâti que pour une carte cadeau : ailleurs
+    il n'a pas d'objet, et l'îlot ne reçoit alors rien à afficher.
+  */
+  gift: product.isGiftCard
+    ? {
+        legend: t('shop.giftLegend'),
+        email: t('shop.giftEmail'),
+        name: t('shop.giftName'),
+        message: t('shop.giftMessage'),
+        sendOn: t('shop.giftSendOn'),
+        note: t('shop.giftNote'),
+      }
+    : null,
 };
 
 /** Repli sans JavaScript : la fourchette telle que la grille l'affiche. */
@@ -169,6 +183,7 @@ const priceFallback =
         options={product.options}
         variants={variantViews}
         fetchInventory={inventoryScopeGranted}
+        isGiftCard={product.isGiftCard}
         showRemaining={
           /*
             Pas de décompte sur une carte cadeau : elle n'a pas de tirage limité,
