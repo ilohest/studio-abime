@@ -143,10 +143,52 @@ watch(
  * sans rien écrire ne doit pas coûter une requête, ni faire repasser le panier
  * par l'état « occupé ».
  */
-function onNote(event: Event): void {
-  const value = (event.target as HTMLTextAreaElement).value;
-  if (value === (cartState.cart?.note ?? '')) return;
-  void setNote(value);
+/*
+  ─────────────────────────────────────────────────────────────────────────────
+  LA NOTE DOIT ÊTRE PARTIE AVANT QU'ON QUITTE LA PAGE
+  ─────────────────────────────────────────────────────────────────────────────
+  Elle était envoyée à la sortie du champ. Or cliquer sur « Passer commande »
+  fait les deux d'un coup : le champ perd le focus — la requête part — et le
+  lien navigue aussitôt vers Shopify, ce qui l'annule en vol. La commande
+  arrivait donc sans note, sans que rien ne signale l'échec.
+
+  Le brouillon vit maintenant ici, et le départ vers la caisse ATTEND son
+  enregistrement. C'est le seul moment où l'on peut encore le garantir.
+*/
+const noteDraft = ref('');
+
+/* Le panier distant fait foi : toute réponse de Shopify réaligne le brouillon. */
+watch(
+  () => cartState.cart?.note ?? '',
+  (note) => {
+    noteDraft.value = note;
+  },
+  { immediate: true },
+);
+
+const noteIsUnsaved = computed(() => noteDraft.value !== (cartState.cart?.note ?? ''));
+
+async function saveNote(): Promise<void> {
+  if (!noteIsUnsaved.value) return;
+  await setNote(noteDraft.value);
+}
+
+/**
+ * Départ vers la caisse.
+ *
+ * On retient la navigation le temps d'écrire la note — et on part quand même
+ * si l'écriture échoue : une note perdue ne doit pas empêcher d'acheter.
+ */
+async function onCheckout(event: MouseEvent): Promise<void> {
+  const url = cartState.cart?.checkoutUrl;
+  if (!url || !noteIsUnsaved.value) return;
+
+  event.preventDefault();
+  try {
+    await saveNote();
+  } finally {
+    window.location.href = url;
+  }
 }
 </script>
 
@@ -309,14 +351,18 @@ function onNote(event: Event): void {
           <label class="cart__note">
             <span class="type-note">{{ props.labels.note }}</span>
             <textarea
+              v-model="noteDraft"
               class="cart__note-field"
               rows="2"
-              :value="cartState.cart!.note"
-              @change="onNote"
+              @change="saveNote"
             ></textarea>
           </label>
 
-          <a class="button-minimal cart__checkout" :href="cartState.cart!.checkoutUrl">
+          <a
+            class="button-minimal cart__checkout"
+            :href="cartState.cart!.checkoutUrl"
+            @click="onCheckout"
+          >
             <span class="button-minimal__label">{{ props.labels.checkout }}</span>
             <span class="button-minimal__arrow" aria-hidden="true">&#8627;</span>
           </a>
