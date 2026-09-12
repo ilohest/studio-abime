@@ -699,13 +699,20 @@ async function onCheckout(event: MouseEvent): Promise<void> {
   overflow-wrap: anywhere;
 }
 
+/*
+  Le champ se tient au corps de son libellé, à peine au-dessus : ce qu'on y
+  écrit reste une mention en marge de la commande, pas une ligne de la commande.
+  À la taille des autres saisies du parcours d'achat, il pesait plus lourd que
+  le sous-total qu'il accompagne.
+*/
 .cart__note-field {
   border: 1px solid var(--color-line);
   background: transparent;
   padding: 0.4rem 0.6rem;
   color: inherit;
   font-family: var(--font-titre);
-  font-size: clamp(0.85rem, 1vw, 1rem);
+  font-size: 0.75rem;
+  line-height: 1.5;
   letter-spacing: var(--tracking-copy);
   resize: vertical;
 }
