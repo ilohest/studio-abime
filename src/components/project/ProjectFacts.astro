@@ -7,8 +7,8 @@ import type { Project, ProjectChannel } from '~/lib/sanity/types';
 /**
  * Fiche projet — relevé technique.
  *
- * Aucun cadre, aucune matière, aucun fond : rien que des intitulés et leurs
- * valeurs, posés en colonnes. La fiche s'efface derrière ce qu'elle énonce.
+ * Les intitulés et leurs valeurs sont réunis dans une étiquette technique :
+ * un filet léger, une matière papier et quatre angles coupés.
  *
  * Chaque champ tient sur UNE ligne : l'intitulé à gauche, la valeur poussée
  * contre le bord droit. Deux colonnes se dessinent d'elles-mêmes — celle des
@@ -91,11 +91,60 @@ const rows = allRows.filter((row) => Boolean(row.values?.length || row.links));
     de l'écran, et tient donc aussi bien en pleine colonne que dans une marge.
   */
   .facts {
+    --facts-chamfer: clamp(0.55rem, 1vw, 0.8rem);
+    --facts-border-width: 1px;
+    /*
+      Le retrait d'un pixel déplace deux axes à la fois dans les angles.
+      En réduisant le chanfrein intérieur de (2 - √2) px, sa diagonale reste
+      parallèle à l'extérieure et le filet garde visuellement 1 px partout.
+    */
+    --facts-inner-chamfer: calc(var(--facts-chamfer) - 0.5858px);
+    --facts-shape: polygon(
+      var(--facts-chamfer) 0,
+      calc(100% - var(--facts-chamfer)) 0,
+      100% var(--facts-chamfer),
+      100% calc(100% - var(--facts-chamfer)),
+      calc(100% - var(--facts-chamfer)) 100%,
+      var(--facts-chamfer) 100%,
+      0 calc(100% - var(--facts-chamfer)),
+      0 var(--facts-chamfer)
+    );
+
+    position: relative;
+    isolation: isolate;
     width: 100%;
+    padding: clamp(1rem, 2vw, 1.35rem);
+    clip-path: var(--facts-shape);
+    background: var(--color-line);
     container-type: inline-size;
   }
 
+  .facts::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    inset: var(--facts-border-width);
+    clip-path: polygon(
+      var(--facts-inner-chamfer) 0,
+      calc(100% - var(--facts-inner-chamfer)) 0,
+      100% var(--facts-inner-chamfer),
+      100% calc(100% - var(--facts-inner-chamfer)),
+      calc(100% - var(--facts-inner-chamfer)) 100%,
+      var(--facts-inner-chamfer) 100%,
+      0 calc(100% - var(--facts-inner-chamfer)),
+      0 var(--facts-inner-chamfer)
+    );
+    /* Même jaune que la page : seule la trame apporte une variation de matière. */
+    background-color: var(--color-lumiere);
+    background-image: var(--texture-grain);
+    background-size: var(--texture-grain-size);
+    background-blend-mode: multiply;
+    pointer-events: none;
+  }
+
   .facts__list {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     margin: 0;

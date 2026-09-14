@@ -47,7 +47,16 @@ const layout = section.layout ?? 'centered';
     <div class:list={[layout === 'centered' && 'mx-auto max-w-3xl']}>
       <h1 class="type-titre text-balance" data-text-reveal>{section.heading}</h1>
 
-      {section.subheading && <p class="type-copy mt-6 max-w-prose text-pretty" data-text-reveal>{section.subheading}</p>}
+      {
+        section.subheading && (
+          <p
+            class="type-copy mt-6 max-w-prose text-pretty"
+            data-text-reveal
+          >
+            {section.subheading}
+          </p>
+        )
+      }
 
       <SmartLink
         link={section.cta}

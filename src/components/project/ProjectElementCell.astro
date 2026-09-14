@@ -27,6 +27,7 @@ const { project, class: className } = Astro.props;
 
 const number = projectDisplayNumber(project);
 const symbol = projectInitials(project.title);
+const sector = project.sector?.trim();
 ---
 
 {
@@ -34,7 +35,7 @@ const symbol = projectInitials(project.title);
     <div class:list={['project-element', className]} aria-hidden="true">
       <span class="project-element__number">{number}</span>
       <strong class="project-element__symbol">{symbol}</strong>
-      <span class="project-element__name">{project.title}</span>
+      {sector && <span class="project-element__name">{sector}</span>}
     </div>
   )
 }

@@ -19,9 +19,11 @@ interface Props {
   projects: ProjectCard[];
   clients?: Client[];
   locale: Locale;
+  /** Foliotage de la planche recomposée, affiché uniquement sur mobile. */
+  mobileNumberByAtom?: ReadonlyMap<number, number>;
 }
 
-const { projects, clients = [], locale } = Astro.props;
+const { projects, clients = [], locale, mobileNumberByAtom = new Map() } = Astro.props;
 const t = useTranslations(locale);
 
 const footnotes = buildClientFootnotes(projects, clients);
@@ -38,7 +40,10 @@ const footnotes = buildClientFootnotes(projects, clients);
         {footnotes.map(({ client, atomicNumber }) => (
           <li class="references__item type-note" id={atomicNumber ? `reference-${atomicNumber}` : undefined}>
             <span class="references__marker" aria-hidden="true">
-              {atomicNumber ?? '—'}
+              <span class="references__marker-desktop">{atomicNumber ?? '—'}</span>
+              <span class="references__marker-mobile">
+                {atomicNumber ? (mobileNumberByAtom.get(atomicNumber) ?? atomicNumber) : '—'}
+              </span>
             </span>
             <span class="references__body">
               <span class="references__name">{client.name}</span>
@@ -132,6 +137,10 @@ const footnotes = buildClientFootnotes(projects, clients);
     transition: background-color 320ms ease, color 320ms ease;
   }
 
+  .references__marker-mobile {
+    display: none;
+  }
+
   /*
     Une ligne de registre, et non un flux de texte : le nom tient le bord
     gauche, le secteur le bord droit. Le filet qui souligne chaque entrée les
@@ -175,6 +184,14 @@ const footnotes = buildClientFootnotes(projects, clients);
       /* Dégage le titre de la barre de marque, fixe en haut de l'écran. */
       padding-block-start: 5.5rem;
     }
+
+    .references__marker-desktop {
+      display: none;
+    }
+
+    .references__marker-mobile {
+      display: inline;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -184,4 +201,3 @@ const footnotes = buildClientFootnotes(projects, clients);
     }
   }
 </style>
-

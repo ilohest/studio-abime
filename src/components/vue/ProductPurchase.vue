@@ -194,12 +194,6 @@ async function onSubmit(): Promise<void> {
 
 <template>
   <form class="purchase" @submit.prevent="onSubmit">
-    <!--
-      Le décompte partage la ligne du prix, poussé au bord droit : deux faces de
-      la même offre, ce qu'elle coûte et ce qu'il en reste. `aria-live` porte
-      sur la ligne entière, si bien que passer d'une session à l'autre fait
-      annoncer le nouveau prix ET le nouveau restant d'un seul tenant.
-    -->
     <p class="purchase__price type-copy" aria-live="polite">
       <span>{{ currentVariant?.priceLabel ?? '—' }}</span>
       <s v-if="currentVariant?.compareAtLabel" class="purchase__compare">
@@ -211,7 +205,6 @@ async function onSubmit(): Promise<void> {
     </p>
 
     <fieldset v-for="option in options" :key="option.name" class="purchase__option">
-      <!-- Le nom de l'axe (« Format ») est redondant à l'œil : les valeurs se comprennent seules. -->
       <legend class="sr-only">{{ option.name }}</legend>
 
       <div class="purchase__values">
@@ -233,12 +226,6 @@ async function onSubmit(): Promise<void> {
       </div>
     </fieldset>
 
-    <!--
-      LE DESTINATAIRE. Un vrai jeu de champs, pas une option repliée : sur une
-      carte cadeau, savoir à qui elle va n'est pas un détail de la commande,
-      c'est la commande. Laisser le courriel vide reste permis — la carte part
-      alors à l'acheteuse, qui la transmettra elle-même.
-    -->
     <fieldset v-if="labels.gift" class="purchase__gift">
       <legend class="purchase__gift-legend type-note">{{ labels.gift.legend }}</legend>
 

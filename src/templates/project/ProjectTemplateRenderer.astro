@@ -2,7 +2,7 @@
 import { stegaClean } from '@sanity/client/stega';
 
 import ProjectElementCell from '~/components/project/ProjectElementCell.astro';
-import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectBreadcrumb from '~/components/project/ProjectBreadcrumb.astro';
 import ProjectFacts from '~/components/project/ProjectFacts.astro';
 
 import SplitTemplate from './SplitTemplate.astro';
@@ -55,28 +55,28 @@ const Template = (() => {
 ---
 
 {/*
-  `type-dactylo` : tout le cas d'étude se compose en GT Canon Mono (voir la
-  portée dans `src/styles/global.css`). Posé sur la coque et non sur chaque
-  gabarit — les trois modèles en héritent, et un quatrième en hériterait aussi.
+  `type-project` fixe la hiérarchie commune des trois gabarits : le corps reste
+  dans la fonte de lecture, tandis que titres et spécifications gardent le
+  vocabulaire GT Canon Mono. Un futur gabarit héritera du même contrat.
 */}
-<div class="project-page-shell type-dactylo" data-project-shell data-template={template}>
+<div class="project-page-shell type-project" data-project-shell data-template={template}>
   {/*
-    Copie mobile du lien de retour — même parti que le relevé du gabarit
-    « Colonne fixe », qui rend le sien deux fois : le lien vit DANS le gabarit,
+    Copie mobile du fil d’Ariane — même parti que le relevé du gabarit
+    « Colonne fixe », qui rend le sien deux fois : le fil vit DANS le gabarit,
     à la place que sa mise en page lui donne au bureau — en tête de la colonne
     fixe, où il reste visible tant qu'elle colle. Sous 900 px, le cartouche
     rentre dans le flux et passait devant lui : on lisait la case et le relevé
-    avant de savoir comment revenir. Un second lien ouvre donc la page, et
+    avant de savoir où l'on se trouvait. Un second fil ouvre donc la page, et
     celui du gabarit s'efface — comme en tête d'un article du Journal.
   */}
-  <div class="project-page-back container-wide">
-    <ProjectBackLink locale={locale} />
+  <div class="project-page-breadcrumb container-wide">
+    <ProjectBreadcrumb locale={locale} title={project.title} />
   </div>
 
   {/*
     Le cartouche de tête : la case que le visiteur vient de quitter, et sous
     elle le relevé du projet. Posé hors du flux, en haut à DROITE — il ne
-    repousse alors rien vers le bas, et le lien de retour garde sa place en haut
+      repousse alors rien vers le bas, et le fil d’Ariane garde sa place en haut
     à gauche. Les gabarits ne portent plus la fiche : elle est ici, une fois
     pour les cinq.
   */}
@@ -185,6 +185,18 @@ const Template = (() => {
   }
 
   /*
+    COMPOSITION LIBRE — le titre peut devenir beaucoup plus large et plus haut
+    qu'un nom de projet ordinaire. Son relevé ne partage donc jamais cette
+    strate : une copie dans le flux est rendue après le titre par le gabarit.
+    La case, plus compacte, reste seule dans le coin supérieur au bureau.
+  */
+  .project-page-shell[data-template='composition']
+    .project-page-aside
+    :global(.project-page-aside__facts) {
+    display: none;
+  }
+
+  /*
     BANDEAU — le relevé accompagne la lecture, puis s'efface.
 
     Le gabarit lit son texte dans une colonne, la planche d'images en dessous.
@@ -230,21 +242,19 @@ const Template = (() => {
     pointer-events: auto;
   }
 
-  /* Au bureau, le lien du gabarit suffit : celui-ci n'existe que pour le flux. */
-  .project-page-back {
+  /* Au bureau, le fil du gabarit suffit : celui-ci n'existe que pour le flux. */
+  .project-page-breadcrumb {
     display: none;
   }
 
   /*
     Sous 900 px, la colonne de droite n'a plus la largeur d'accueillir le
-    cartouche. Il rentrerait dans le flux, mais EN TÊTE — avant le titre : la
-    page s'ouvrirait sur un sigle et un numéro sans dire de quel projet il
-    s'agit. Il s'efface donc ici, et chaque gabarit rend le sien après son
-    titre (`ProjectMobileHead`). Rien ne disparaît : c'est le même contenu, à
-    sa place dans l'ordre de lecture.
+    cartouche. Elle s'efface donc ici ; chaque gabarit replace la case avant son
+    titre et le relevé après (`ProjectMobileHead`). Rien ne disparaît : le même
+    contenu est recomposé pour la lecture verticale.
   */
   @media (max-width: 899px) {
-    .project-page-back {
+    .project-page-breadcrumb {
       display: block;
       /*
         C'est lui, désormais, qui démarre la page : il porte le dégagement de la
@@ -252,15 +262,15 @@ const Template = (() => {
         `--mobile-brand-clearance` vaut zéro et le `max` retombe sur l'écart
         courant).
       */
-      padding-top: max(clamp(1.5rem, 3vw, 2.5rem), var(--mobile-brand-clearance));
+      padding-top: var(--spacing-breadcrumb-start);
     }
 
     /*
-      Le lien que porte le gabarit s'efface : les deux se suivraient à trois
+      Le fil que porte le gabarit s'efface : les deux se suivraient à trois
       lignes d'intervalle. Ciblé par la racine du gabarit — un `<article>`,
       chez les trois — plutôt que par une négation.
     */
-    .project-page-shell > :global(article) :global(.back-link) {
+    .project-page-shell > :global(article) :global(.project-breadcrumb) {
       display: none;
     }
 

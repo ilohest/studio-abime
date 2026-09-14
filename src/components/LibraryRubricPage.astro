@@ -74,7 +74,7 @@ const others = rubrics.filter((entry) => entry.key !== rubric?.key);
 const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
 ---
 
-<div class="rubric container-wide py-(--spacing-section)">
+<div class="rubric container-wide pt-(--spacing-breadcrumb-start) pb-(--spacing-section)">
   <nav class="breadcrumb rubric__breadcrumb type-note" aria-label={t('nav.breadcrumb')}>
     <ol role="list">
       <li>
@@ -88,7 +88,7 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
   </nav>
 
   <header class="rubric__header">
-    <h1 class="rubric__title type-titre text-balance" data-text-reveal>{title}</h1>
+    <h1 class="rubric__title section-folio-title type-titre text-balance" data-text-reveal>{title}</h1>
 
     {description && <p class="rubric__description type-copy text-pretty">{description}</p>}
 
@@ -520,7 +520,7 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
 
     .rubric__breadcrumb {
       position: absolute;
-      top: var(--spacing-section);
+      top: var(--spacing-breadcrumb-start);
       left: var(--spacing-gutter);
       margin-bottom: 0;
     }

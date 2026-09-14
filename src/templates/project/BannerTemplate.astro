@@ -3,7 +3,8 @@ import SanityImage from '~/components/primitives/SanityImage.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
-import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectBreadcrumb from '~/components/project/ProjectBreadcrumb.astro';
+import ProjectHeading from '~/components/project/ProjectHeading.astro';
 import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
 import ProjectConstellation from '~/components/project/ProjectConstellation.astro';
 
@@ -14,8 +15,8 @@ import type { Project } from '~/lib/sanity/types';
 /**
  * Modèle BANDEAU — le titre ouvre la page, les images la ferment.
  *
- * Trois temps qui se lisent de haut en bas : le titre seul en ouverture, puis
- * le texte et la fiche côte à côte, puis la planche d'images en bandeau. Rien
+ * Trois temps qui se lisent de haut en bas : le titre et son chapô en
+ * ouverture, puis le texte et la fiche côte à côte, puis la planche d'images en bandeau. Rien
  * n'est fixe — c'est le pendant horizontal du modèle Colonne fixe, pour les
  * projets dont le texte est court et les visuels larges.
  *
@@ -36,7 +37,7 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
 
 <article class="banner">
   <div class="banner__inner container-wide">
-    <ProjectBackLink locale={locale} />
+    <ProjectBreadcrumb locale={locale} title={project.title} />
 
     {/*
       Deux colonnes de haut en bas : le titre et le texte tiennent dans la
@@ -45,21 +46,21 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
     */}
     <div class="banner__band">
       <div class="banner__column">
-        {/*
-          Le nom du projet passe en mention, entre parenthèses : c'est le titre
-          affiché qui porte la page. Sans titre affiché, le nom reprend sa
-          place — la page garde toujours son `h1`.
-        */}
-        <header class="banner__header">
-          {project.headline && <p class="banner__eyebrow">({project.title})</p>}
-          <h1 class="banner__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
-        </header>
+        <ProjectMobileHead
+          project={project}
+          locale={locale}
+          part="cell"
+          class="banner__mobile-cell"
+        />
 
-        {/*
-          Sous 900 px seulement : au bureau, la case et le relevé se tiennent
-          dans le cartouche de tête, en haut à droite.
-        */}
-        <ProjectMobileHead project={project} locale={locale} class="banner__mobile-head" />
+        <ProjectHeading project={project} />
+
+        <ProjectMobileHead
+          project={project}
+          locale={locale}
+          part="facts"
+          class="banner__mobile-facts"
+        />
 
         <div class="banner__body">
           <SectionRenderer sections={project.sections} locale={locale} />
@@ -111,14 +112,9 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
 </article>
 
 <style>
-  /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
+  /* Le fil d'Ariane reprend le même départ vertical que partout ailleurs. */
   .banner__inner {
-    padding-block: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance))
-      clamp(3rem, 8vw, 6rem);
-  }
-
-  .banner__header {
-    margin-top: clamp(2rem, 5vw, 3.5rem);
+    padding-block: var(--spacing-breadcrumb-start) clamp(3rem, 8vw, 6rem);
   }
 
   /*
@@ -131,35 +127,6 @@ const items = projectGallery(project).map((item) => ({ ...item, span: Math.min(i
       padding-block-start: 0;
     }
 
-    .banner__header {
-      margin-top: clamp(1.25rem, 4vw, 2rem);
-    }
-  }
-
-  /* Même police que le texte courant : la mention se lit comme une note. */
-  .banner__eyebrow {
-    margin: 0;
-    font-family: var(--font-copy);
-    font-size: var(--text-note);
-    font-weight: 400;
-    letter-spacing: var(--tracking-copy);
-    line-height: 1.3;
-    text-transform: none;
-  }
-
-  /*
-    Le titre quitte la casse forcée des titres de section : ici c'est une
-    phrase qui se lit, pas une enseigne. La fonte, elle, est celle du texte
-    courant — devenue le mono avec la portée `type-dactylo` de la page.
-  */
-  .banner__title {
-    margin: 0.9rem 0 0;
-    font-family: var(--font-copy);
-    font-size: clamp(1.75rem, 3.6vw, var(--text-titre));
-    font-weight: 400;
-    letter-spacing: var(--tracking-titre);
-    line-height: 1.12;
-    text-transform: none;
   }
 
   /*

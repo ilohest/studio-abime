@@ -256,11 +256,6 @@ async function onCheckout(event: MouseEvent): Promise<void> {
                 {{ line.variantTitle }}
               </p>
 
-              <!--
-                Le destinataire d'une carte cadeau. Dernier endroit où relire
-                l'adresse saisie : une fois la commande passée, le code part et
-                l'erreur ne se rattrape plus.
-              -->
               <p v-if="line.recipient" class="cart__recipient type-note">
                 {{ props.labels.recipient }} {{ line.recipient }}
               </p>
@@ -282,10 +277,6 @@ async function onCheckout(event: MouseEvent): Promise<void> {
                     &minus;
                   </button>
 
-                  <!--
-                    Le nombre est annoncé quand il change : sans ça, la commande
-                    est confirmée visuellement mais reste muette au lecteur d'écran.
-                  -->
                   <span class="cart__count" aria-live="polite">{{ line.quantity }}</span>
 
                   <button
@@ -343,11 +334,6 @@ async function onCheckout(event: MouseEvent): Promise<void> {
             </div>
           </dl>
 
-          <!--
-            La note part quand le champ est QUITTÉ, pas à chaque frappe : une
-            requête par lettre saisie n'apporterait rien et ferait clignoter le
-            panier entier, que chaque réponse remplace.
-          -->
           <label class="cart__note">
             <span class="type-note">{{ props.labels.note }}</span>
             <textarea

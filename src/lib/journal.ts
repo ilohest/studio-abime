@@ -33,25 +33,14 @@ export interface LibraryRubricView {
 }
 
 export interface PostCardView {
-  id: string;
-  /** Rang chronologique, figé sur la liste complète : il ne bouge pas au filtrage. */
-  number: string;
   title: string;
   href: string;
   /** Rubriques de l'article, dans l'ordre du classement. */
   rubrics: Array<{ key: LibraryRubric; title: string; mark: string }>;
-  /** Date complète, lisible : « 25 août 2026 ». */
-  dateLabel: string;
   /** Date compacte imprimée en grand sur la fiche : « 25.08.26 ». */
   dateStamp: string;
   /** Attribut `datetime` de la balise `<time>`. */
   dateIso: string;
-  /**
-   * Fiche de l'article, à la manière d'une planche de botanique : la rubrique
-   * ouvre la liste, puis viennent les lignes libres saisies dans le CMS.
-   */
-  facts: Array<{ key: string; label: string; value: string }>;
-  excerpt: string | null;
   image: {
     src: string;
     srcset: string;
@@ -87,12 +76,6 @@ function toDate(value: string | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function formatJournalDate(value: string | undefined, locale: Locale): string {
-  const date = toDate(value);
-  if (!date) return '';
-  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
-}
-
 /**
  * Cote de la fiche : jour.mois.année sur deux chiffres, à la manière d'un
  * tampon d'archive. Le format reste identique quelle que soit la langue —
@@ -105,22 +88,9 @@ export function formatJournalStamp(value: string | undefined): string {
   return [pad(date.getDate()), pad(date.getMonth() + 1), pad(date.getFullYear() % 100)].join('.');
 }
 
-/** Lignes libres de la fiche, nettoyées des saisies incomplètes. */
-export function postFreeFacts(card: Pick<PostCard, 'listingFacts'>) {
-  return (card.listingFacts ?? [])
-    .filter((fact): fact is typeof fact & { label: string; value: string } =>
-      Boolean(fact.label?.trim() && fact.value?.trim()),
-    )
-    .slice(0, 5)
-    .map((fact) => ({ key: fact._key, label: fact.label.trim(), value: fact.value.trim() }));
-}
-
 export function toPostCardView(
   card: PostCard,
   locale: Locale,
-  index = 0,
-  /** Intitulé de la ligne « rubrique », traduit par la page appelante. */
-  rubricLabel = 'Rubrique',
 ): PostCardView {
   const image = resolveImage(card.coverImage, { width: 900 });
   const rubrics = postRubrics(card).map((key) => {
@@ -129,21 +99,11 @@ export function toPostCardView(
   });
 
   return {
-    id: card._id,
-    number: String(index + 1).padStart(2, '0'),
     title: card.title,
     href: postPath(locale, card.slug),
     rubrics,
-    dateLabel: formatJournalDate(card.publishedAt, locale),
     dateStamp: formatJournalStamp(card.publishedAt),
     dateIso: stegaClean(card.publishedAt ?? '').slice(0, 10),
-    facts: [
-      // Les rubriques tiennent sur une seule ligne, séparées par une virgule :
-      // un article classé trois fois ne doit pas ouvrir trois lignes de fiche.
-      { key: 'rubrics', label: rubricLabel, value: rubrics.map((r) => r.title).join(', ') },
-      ...postFreeFacts(card),
-    ],
-    excerpt: card.excerpt?.trim() ? card.excerpt : null,
     image: image ? { ...image, alt: image.alt || card.title } : null,
   };
 }

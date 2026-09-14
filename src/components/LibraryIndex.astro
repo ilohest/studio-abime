@@ -4,7 +4,11 @@ import PlateFigure, { type PlateVariant } from '~/components/library/PlateFigure
 
 import { useTranslations } from '~/i18n/ui';
 import { rubricTargetPath, type LibraryComposition } from '~/lib/library';
-import { getLibraryRubric, ALL_RUBRICS } from '~/content/libraryRubrics';
+import {
+  getLibraryRubric,
+  ALL_RUBRICS,
+  type LibraryRubric,
+} from '~/content/libraryRubrics';
 import type { Locale } from '~/i18n/config';
 
 /**
@@ -88,13 +92,23 @@ const WIDTHS = ['6.5rem', '6.5rem', '6.5rem', '6.5rem', '6.5rem'];
   des deux mains, et deux colonnes de notes courtes se lisent mieux qu'une
   seule qui descendrait toute la page.
 
-  L'alternance n'est pas mécanique. Les Essais ne vont NI À GAUCHE NI À DROITE :
+  La place est attachée à la rubrique, et non à son rang dans le texte : une
+  réécriture dans le Studio ne doit pas faire changer une planche de marge.
+  Journal ouvre la marge gauche ; Carnet de voyages ouvre la droite.
+
+  Les Essais ne vont NI À GAUCHE NI À DROITE :
   leur mot ferme le texte, et leur note se pose EN DESSOUS, à peu près dans
   l'axe. C'est la place que prend la dernière annotation d'une page — celle
   qu'on écrit quand les marges sont pleines — et la seule d'où la flèche
   n'ait à traverser ni le paragraphe ni une autre note.
 */
-const SIDES = ['right', 'left', 'right', 'left', 'bottom'] as const;
+const SIDE_BY_RUBRIC = {
+  journal: 'left',
+  'carnet-de-voyages': 'right',
+  correspondances: 'right',
+  references: 'left',
+  essais: 'bottom',
+} as const satisfies Record<LibraryRubric, 'left' | 'right' | 'bottom'>;
 
 /*
   La hauteur de pose, en pixels au-dessus de la ligne du mot.
@@ -126,7 +140,7 @@ const notes = composition.paragraphs
             shift: SHIFTS[position % SHIFTS.length]!,
             tilt: TILTS[position % TILTS.length]!,
             width: WIDTHS[position % WIDTHS.length]!,
-            side: SIDES[segment.order % SIDES.length]!,
+            side: SIDE_BY_RUBRIC[segment.target],
             lift: LIFTS[segment.order % LIFTS.length]!,
             /*
               LA PLANCHE DE LA RUBRIQUE, rangée avec sa note.
@@ -198,7 +212,7 @@ const verso = [...versoSource, ...versoSource];
 
 <div class="library container-wide py-(--spacing-section)">
   <header class="library__header">
-    <h1 class="library__title type-titre text-balance" data-text-reveal>
+    <h1 class="library__title section-folio-title type-titre text-balance" data-text-reveal>
       {number} {title}
     </h1>
   </header>
@@ -374,8 +388,8 @@ const verso = [...versoSource, ...versoSource];
       Le corps courant du site, sans agrandissement.
 
       Ce n'est pas une affiche : c'est une PAGE, et le dessin ne prend son sens
-      que par contraste avec un texte imprimé ordinaire. `type-copy` porte déjà
-      la taille et l'interlignage.
+      que par contraste avec un texte imprimé ordinaire. `type-copy` porte la
+      taille et l'interlignage communs aux deux paragraphes.
     */
     text-align: justify;
     text-wrap: pretty;

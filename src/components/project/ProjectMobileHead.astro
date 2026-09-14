@@ -6,32 +6,29 @@ import type { Locale } from '~/i18n/config';
 import type { Project } from '~/lib/sanity/types';
 
 /**
- * Cartouche du projet dans l'ordre de lecture MOBILE — la case, puis le relevé.
+ * Morceau du cartouche projet rendu dans le flux MOBILE.
  *
  * Au bureau, les deux se tiennent hors du flux, dans le coin haut droit de la
  * page (voir `ProjectTemplateRenderer`) : la mise en page les donne à voir en
  * même temps que le titre, et l'ordre du document n'a pas d'importance.
  *
- * Sur écran étroit il n'y a plus de coin : tout s'empile, et le cartouche posé
- * en tête passait AVANT le titre. On ouvrait donc la page sur un sigle et un
- * numéro, sans savoir de quel projet il s'agissait. Chaque gabarit rend ce bloc
- * après son titre ; le cartouche du coin, lui, s'efface à cette taille.
- *
- * Il porte les deux, et non le seul relevé comme auparavant : la case
- * appartient au même geste — c'est elle que le visiteur vient de cliquer.
+ * Sur écran étroit, la case ouvre maintenant le projet avant son titre tandis
+ * que le relevé reste après celui-ci. `part` permet aux trois gabarits de poser
+ * ces deux morceaux autour du même `h1`, sans dupliquer leur mise en forme.
  */
 interface Props {
   project: Project;
   locale: Locale;
+  part?: 'cell' | 'facts' | 'both';
   class?: string;
 }
 
-const { project, locale, class: className } = Astro.props;
+const { project, locale, part = 'both', class: className } = Astro.props;
 ---
 
-<div class:list={['project-mobile-head', className]}>
-  <ProjectElementCell project={project} />
-  <ProjectFacts project={project} locale={locale} />
+<div class:list={['project-mobile-head', className]} data-part={part}>
+  {part !== 'facts' && <ProjectElementCell project={project} />}
+  {part !== 'cell' && <ProjectFacts project={project} locale={locale} />}
 </div>
 
 <style>
@@ -41,25 +38,23 @@ const { project, locale, class: className } = Astro.props;
   }
 
   @media (max-width: 899px) {
-    /*
-      La case garde le bord droit qu'elle occupe au bureau, le relevé prend
-      toute la largeur : les deux se lisent comme un seul bloc, aligné à droite
-      comme les valeurs du relevé lui-même.
-    */
     .project-mobile-head {
       display: flex;
       width: 100%;
       flex-direction: column;
       align-items: flex-end;
-      /*
-        La case a besoin d'air des deux côtés : c'est un objet, pas une ligne de
-        texte, et collée au titre comme au relevé elle se lisait comme la suite
-        de l'un ou l'autre. Le bloc porte donc ses écarts lui-même — avant,
-        après, et entre ses deux pièces — plutôt que de les laisser à chacun des
-        trois gabarits, où ils auraient divergé.
-      */
       gap: clamp(2rem, 7vw, 2.75rem);
       margin-block: clamp(3.5rem, 10vw, 4.5rem) clamp(2.5rem, 8vw, 3.5rem);
+    }
+
+    /* La case ouvre la composition, alignée sur le bord droit historique. */
+    .project-mobile-head[data-part='cell'] {
+      margin-block-end: clamp(2.5rem, 8vw, 3.5rem);
+    }
+
+    /* Le relevé conserve sa respiration sous le titre. */
+    .project-mobile-head[data-part='facts'] {
+      margin-block-start: clamp(3.5rem, 10vw, 4.5rem);
     }
   }
 </style>

@@ -18,7 +18,7 @@ import type { JournalFigureView } from '~/lib/journal';
  */
 interface Props {
   figure: JournalFigureView;
-  /** En marge, les images sont servies bien plus petites. */
+  /** En marge, la largeur s'adapte à l'orientation de chaque image. */
   variant?: 'texte' | 'marge';
 }
 
@@ -30,21 +30,43 @@ const { figure, variant = 'texte' } = Astro.props;
 */
 const scale = stegaClean(figure.scale) || 'colonne';
 const images = (figure.images ?? []).filter((image) => image?.asset);
-const width = variant === 'marge' ? 420 : 1100;
-const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
+const preparedImages = images.map((image) => {
+  const ratio = image.asset?.metadata?.dimensions?.aspectRatio;
+  const portrait = typeof ratio === 'number' && ratio < 1;
+
+  return {
+    image,
+    portrait,
+    ratio,
+    width: variant === 'marge' ? 420 : 1100,
+    sizes: variant === 'marge' ? '11rem' : '(min-width: 1024px) 34rem, 90vw',
+  };
+});
+const singlePortraitRatio =
+  variant === 'marge' && preparedImages.length === 1 && preparedImages[0]?.portrait
+    ? preparedImages[0].ratio
+    : undefined;
 ---
 
 {
-  images.length > 0 && (
-    <figure class:list={['journal-figure', `journal-figure--${variant}`]} data-scale={scale}>
-      <div class="journal-figure__plate" data-count={images.length}>
-        {images.map((image) => (
+  preparedImages.length > 0 && (
+    <figure
+      class:list={['journal-figure', `journal-figure--${variant}`]}
+      data-scale={scale}
+      style={
+        singlePortraitRatio
+          ? `--margin-portrait-width: ${singlePortraitRatio * 100}%`
+          : undefined
+      }
+    >
+      <div class="journal-figure__plate" data-count={preparedImages.length}>
+        {preparedImages.map(({ image, portrait, width, sizes }) => (
           <SanityImage
             image={image}
             width={width}
             sizes={sizes}
             alt={image.alt ?? ''}
-            class="journal-figure__image"
+            class={`journal-figure__image${portrait ? ' journal-figure__image--portrait' : ''}`}
           />
         ))}
       </div>
@@ -90,6 +112,7 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
   }
 
   .journal-figure--marge {
+    align-self: flex-start;
     width: 100%;
   }
 
@@ -107,10 +130,34 @@ const sizes = variant === 'marge' ? '12rem' : '(min-width: 1024px) 34rem, 90vw';
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .journal-figure__image {
+  :global(.journal-figure__image) {
     display: block;
     width: 100%;
     height: auto;
+  }
+
+  /*
+    Une image paysage utilise toute la largeur RÉELLE de la marge. Pour un
+    portrait seul, on inverse ce rectangle : sa hauteur devient cette largeur
+    et sa largeur est déduite de son ratio. La valeur doit donc être un
+    pourcentage du conteneur, et non une multiplication du token `11rem` : la
+    colonne peut avoir une largeur calculée différente selon le viewport.
+    Dans une planche multiple, chaque image conserve sa cellule.
+  */
+  .journal-figure--marge :global(.journal-figure__image--portrait) {
+    width: min(100%, var(--margin-portrait-width, 100%));
+    justify-self: start;
+  }
+
+  /*
+    Quand la colonne de marge se rabat sous le texte, la figure conserve son
+    statut d'appareil éditorial : elle ne devient pas une image pleine page.
+    La mesure reste compacte tout en diminuant progressivement sur mobile.
+  */
+  @media (max-width: 1023px) {
+    .journal-figure--marge {
+      width: min(100%, clamp(11rem, 28vw, 18rem));
+    }
   }
 
   /*

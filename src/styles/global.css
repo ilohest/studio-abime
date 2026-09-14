@@ -40,11 +40,18 @@
   --text-sous-titre--letter-spacing: 0.05em;
   --text-sous-titre--font-weight: 600;
 
-  /* COPY — GT Canon M Regular · 18 px · +2 % */
-  --text-copy: 1.125rem; /* 18px */
-  --text-copy--line-height: 1.55;
+  /* INTERTITRES DE CONTENU — niveau h2, toujours sous le titre de page. */
+  --text-intertitre: clamp(1.25rem, 0.95rem + 1.2vw, 2rem);
+  --text-intertitre--line-height: 1.15;
+
+  /* COPY — corps normal commun · 14 px mobile → 16 px desktop · +2 % */
+  --text-copy: clamp(0.875rem, 0.5vw + 0.75rem, 1rem);
+  --text-copy--line-height: 1.6;
   --text-copy--letter-spacing: 0.02em;
   --text-copy--font-weight: 400;
+
+  /* Rythme commun entre deux paragraphes, y compris entre deux blocs CMS. */
+  --space-paragraph: 1.25em;
 
   /* ANNOTATIONS — GT Canon Narrow S Regular Italic · 20 px · -5 % */
   --text-annotation: 1.25rem; /* 20px */
@@ -111,6 +118,8 @@
   /* ── Rythme & mise en page ───────────────────────────────────────────────── */
   --spacing-gutter: 1.5rem;
   --spacing-section: 6rem;
+  /* Départ vertical unique de tous les fils d'Ariane du site. */
+  --spacing-breadcrumb-start: max(var(--spacing-section), var(--mobile-brand-clearance));
   /*
     Retrait des planches d'images des pages projet — plus large que la gouttière
     de page, parce qu'une planche va au bord de l'écran là où le texte reste
@@ -132,6 +141,12 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
+    /*
+      Une seule règle native pour toutes les ancres : la zone de défilement
+      réserve la barre de marque mobile. Le token vaut zéro sur desktop et
+      5 rem sous 768 px ; aucun script ne remesure ni ne corrige l'arrivée.
+    */
+    scroll-padding-top: var(--mobile-brand-clearance, 0px);
   }
 
   body {
@@ -308,7 +323,12 @@
   @media (max-width: 767px) {
     :root {
       --rail-width: 0px;
-      --mobile-brand-clearance: 5rem;
+      /*
+        Le logo et le bouton commencent à 1 rem et s'achèvent au plus tard à
+        4 rem. La réserve suit leur boîte réelle, sans inventer une cinquième
+        rem de header invisible.
+      */
+      --mobile-brand-clearance: 4rem;
     }
 
     body.has-services-rail > main,
@@ -377,6 +397,15 @@
   font-family: var(--font-titre);
   font-size: var(--text-titre);
   line-height: var(--text-titre--line-height);
+  letter-spacing: var(--tracking-titre);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+@utility type-intertitre {
+  font-family: var(--font-titre);
+  font-size: var(--text-intertitre);
+  line-height: var(--text-intertitre--line-height);
   letter-spacing: var(--tracking-titre);
   font-weight: 400;
   text-transform: uppercase;
@@ -593,11 +622,9 @@
    * ➜ EMPLOI : `<nav class="breadcrumb type-note">` autour d'un `<ol>` de
    *   maillons, chaque séparateur en `<span class="breadcrumb__separator">`.
    *
-   * UNE SEULE LIGNE, toujours. Un fil qui passe à la ligne cesse d'être un fil :
-   * il devient un paragraphe de liens, et la hiérarchie qu'il dessine se perd.
-   * Le dernier maillon — la page courante, la seule qui ne mène nulle part —
-   * se tronque donc plutôt que de rompre la ligne. C'est aussi celui dont on
-   * peut le mieux se passer : on est dessus.
+   * Tous les maillons restent sur une ligne tant qu'ils tiennent. Sur une
+   * largeur étroite, un maillon descend entier avec son séparateur plutôt que
+   * d'être coupé ou forcé prématurément sur un nouveau rang.
    */
   .breadcrumb {
     color: var(--color-muted);
@@ -650,28 +677,13 @@
 
   /*
     ── LE FIL EN ÉTROIT ──────────────────────────────────────────────────────
-    Sur une colonne de 375 px, trois maillons ne tiennent pas : le dernier — le
-    titre de la page — s'y coupait en plein mot pour ne rien apprendre, puisque
-    ce titre est écrit en grand juste dessous.
-
-    On le retire donc, et le fil se réduit à ce qu'il sait faire ici : dire
-    d'où l'on vient et permettre d'y remonter. Ce n'est pas une troncature de
-    la version large, c'est le même outil ramené à son office.
-
-    Le maillon reste dans le document pour les technologies d'assistance et
-    pour les données structurées ; seul son affichage cesse.
+    Sur une colonne étroite, les maillons remplissent le rang courant tant
+    qu'ils y tiennent. Le retour se fait entre deux maillons, jamais dedans.
   */
   /*
     ── LE FIL EN ÉTROIT ──────────────────────────────────────────────────────
-    Sur une colonne étroite, les trois maillons ne tiennent pas côte à côte : le
-    dernier — le titre de la page — s'y coupait en plein mot. Le seuil est celui
-    de la tablette et non du téléphone : à 768 px, le menu latéral prend déjà
-    16 rem et il ne reste que ~460 px de page.
-
-    Il PASSE À LA LIGNE plutôt que de se tronquer. `flex-basis: 100 %` le force
-    seul sur la sienne, où il dispose alors de toute la largeur pour se
-    composer sur deux lignes s'il le faut. Le fil dit toujours la même chose, il
-    l'écrit simplement sur deux rangs.
+    Le slash appartient au maillon qu'il introduit : si ce maillon descend, son
+    séparateur descend avec lui et reste visible comme sur desktop.
   */
   @media (max-width: 899px) {
     .breadcrumb ol {
@@ -679,23 +691,19 @@
       row-gap: 0.15rem;
     }
 
+    .breadcrumb li {
+      flex: 0 0 auto;
+      max-width: 100%;
+    }
+
+    /* Un titre plus large que la colonne peut encore se composer en entier. */
     .breadcrumb li:last-child {
-      flex-basis: 100%;
       white-space: normal;
     }
 
-    /* Plus rien à tronquer : la place est là. */
     .breadcrumb li:last-child > span:last-child {
       overflow: visible;
       text-overflow: clip;
-    }
-
-    /*
-      La barre du dernier maillon disparaît : en tête de ligne, elle ne sépare
-      plus rien — c'est le retour à la ligne qui fait la séparation.
-    */
-    .breadcrumb li:last-child > .breadcrumb__separator {
-      display: none;
     }
   }
 
@@ -1375,13 +1383,13 @@
   }
 
   .prose-abime > * + * {
-    margin-top: 1.25em;
+    margin-top: var(--space-paragraph);
   }
 
   .prose-abime h2 {
     font-family: var(--font-titre);
-    font-size: var(--text-titre);
-    line-height: var(--text-titre--line-height);
+    font-size: var(--text-intertitre);
+    line-height: var(--text-intertitre--line-height);
     letter-spacing: var(--tracking-titre);
     text-transform: uppercase;
     margin-top: 2em;
@@ -1526,6 +1534,21 @@
 }
 
 /*
+  ARRIVÉE DES ANCRES SUR MOBILE.
+
+  Les styles Astro des composants ne vivent dans aucune couche et prennent
+  donc le pas sur les règles `base`/`components`, quelle que soit leur
+  spécificité. Cette convention reste elle aussi hors couche : toute cible
+  identifiée abandonne sa marge éditoriale sur mobile et s'appuie uniquement
+  sur le `scroll-padding` de la racine. Aucun `!important`, aucun script.
+*/
+@media (max-width: 767px) {
+  html body [id]:target {
+    scroll-margin-top: 0;
+  }
+}
+
+/*
   L'en-tête d'une page légale et le texte qui suit forment un seul bloc. La
   section du page builder porte sa propre marge haute : rejouée ici, elle
   creuse un vide entre le titre et son premier paragraphe.
@@ -1535,50 +1558,52 @@
   c'est la dernière déclarée qui l'emporte — la spécificité n'y peut rien.
 */
 @layer utilities {
+  /*
+    Les cinq grands chapitres gardent le foliotage d'une note sur mobile.
+    On redéfinit le TOKEN lu par `.type-titre` plutôt que son `font-size` :
+    l'utilitaire peut ainsi rester prioritaire dans la cascade sans restaurer
+    par mégarde ses 46 px desktop.
+  */
+  @media (max-width: 767px) {
+    .section-folio-title {
+      --text-titre: var(--text-note);
+    }
+  }
+
   body.page-legal .legal-header-block + section {
     padding-top: 0;
   }
 }
 
 /**
- * COMPOSITION DACTYLO — tout un sous-arbre en GT Canon Mono.
+ * TYPOGRAPHIES CONTEXTUELLES.
  *
- * Ce n'est pas un style de plus mais une PORTÉE : la règle ne peint rien, elle
- * redéfinit les variables du texte courant pour ce qu'elle contient. Tout ce
- * qui les lit en dessous — le corps de page hérité, les utilitaires `type-*`,
- * les gabarits qui appellent `--font-copy` en propre — bascule d'un coup, sans
- * qu'il faille retrouver un à un les endroits où le texte se compose.
+ * Un projet alterne deux registres sans redéfinir les tokens fondamentaux :
+ * `--font-copy` reste donc toujours la fonte de lecture. Les titres de texte
+ * riche (h2/h3) rejoignent GT Canon Mono via `--font-sous-titre`, comme les
+ * titres de page et les spécifications qui le demandent dans leur composant.
  *
- * Deux portées l'emploient :
- *   - les cas d'étude (`.project-page-shell`), où le mono donne à la lecture le
- *     grain d'un document de travail plutôt que celui d'un magazine ;
- *   - le contenu des pages légales et de politique (`body.page-legal main`),
- *     qui doivent se ressembler quelle que soit leur source — Sanity ou l'admin
- *     Shopify.
+ * Les pages légales conservent, elles, leur composition entièrement dactylo.
+ * Cette portée reste limitée à `main` pour ne pas modifier l'en-tête, le rail
+ * ni le pied de page.
  *
- * `main` et non `body` pour les secondes : l'en-tête, le rail et le pied de
- * page sont les mêmes sur tout le site, ils n'ont pas à changer de fonte parce
- * qu'on lit les CGV.
- *
- * Ce que la portée NE touche PAS : `--font-annotation`. Légendes de figure,
- * citations et notes en italique gardent la Narrow S — c'est le seul contraste
- * qui subsiste, et c'est lui qui distingue une annotation d'un texte.
- *
- * Posée en fin de feuille à dessein : elle doit passer APRÈS les règles de
- * `.prose-abime`, dont elle corrige la graisse des sous-titres.
+ * Posées en fin de feuille, ces règles passent après `.prose-abime` et peuvent
+ * corriger proprement la graisse des sous-titres monospacés.
  */
 @layer components {
-  .type-dactylo,
+  .type-project {
+    --font-sous-titre: var(--font-titre);
+    font-family: var(--font-copy);
+  }
+
   body.page-legal main {
     --font-copy: var(--font-titre);
     --font-sous-titre: var(--font-titre);
     /*
-      Descente d'un cran, 18 px vers 16 px. Le mono occupe sensiblement plus de
-      place que la Narrow à corps égal : sans elle, la même phrase se casse une
-      fois de plus et la colonne de lecture enfle. Seize pixels reste le
-      plancher de confort, on ne descend pas en dessous.
+      Le corps reste celui du texte normal : la variation dactylographiée
+      change de famille, pas de taille. Son interlignage un peu plus ouvert
+      compense seulement la densité du dessin mono.
     */
-    --text-copy: 1rem;
     --text-copy--line-height: 1.62;
     --text-sous-titre: 1rem;
     /*
@@ -1613,7 +1638,7 @@
     un dessin déformé, pas un dessin dessiné. On revient à la seule graisse
     réellement disponible.
   */
-  .type-dactylo :is(h2, h3, .type-sous-titre, .prose-abime h2, .prose-abime h3),
+  .type-project :is(h2, h3, .type-sous-titre, .prose-abime h2, .prose-abime h3),
   body.page-legal main :is(h2, h3, .type-sous-titre, .prose-abime h2, .prose-abime h3) {
     font-weight: 400;
   }

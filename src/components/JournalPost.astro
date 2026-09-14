@@ -1,9 +1,6 @@
 ---
-import { stegaClean } from '@sanity/client/stega';
-
 import JournalComposition from '~/components/journal/JournalComposition.astro';
 import NextEntry from '~/components/NextEntry.astro';
-import SanityImage from '~/components/primitives/SanityImage.astro';
 
 import { libraryIndexPath, libraryRubricPath, postPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
@@ -19,13 +16,12 @@ import type { Post } from '~/lib/sanity/types';
  * date et la fiche appartiennent à la grille du Journal : les répéter ici
  * ferait précéder la lecture d'un inventaire que le lecteur vient de traverser.
  *
- * Deux modèles, une seule saisie :
+ * La composition unique reprend le principe de la « Planche illustrée » :
+ * colonne ample, figures présentes et appareil de notes en marge.
  *
- *  - « Article de revue »    — colonne de lecture étroite, figures réduites.
- *    Le visuel de tête est lui aussi ramené à l'échelle d'une planche : un
- *    article scientifique ne s'ouvre pas sur une image pleine largeur.
- *
- *  - « Planche illustrée »   — colonne plus large, visuel de tête déployé.
+ * L'image de couverture appartient aux grilles de la Bibliothèque. Elle n'est
+ * pas répétée en ouverture : dans l'article, la narration commence directement
+ * par les blocs composés dans Sanity.
  *
  * Voir `JournalComposition.astro` pour l'appareil de notes et de figures.
  */
@@ -36,8 +32,6 @@ interface Props {
 
 const { post, locale } = Astro.props;
 const t = useTranslations(locale);
-
-const template = stegaClean(post.template) === 'planche' ? 'planche' : 'revue';
 
 const next = post.next ?? null;
 
@@ -56,7 +50,7 @@ const next = post.next ?? null;
 const rubric = getLibraryRubric(postRubrics(post)[0]);
 ---
 
-<article class="journal-post" data-template={template} data-last={next ? undefined : ''}>
+<article class="journal-post" data-last={next ? undefined : ''}>
   {/*
     Le fil se tient en haut à gauche, hors de la colonne de titre — la même
     place que sur une page de rubrique. Il situe l'article, il n'en fait pas
@@ -96,22 +90,8 @@ const rubric = getLibraryRubric(postRubrics(post)[0]);
     )}
   </header>
 
-  {post.coverImage?.asset && (
-    <figure class="journal-post__cover container-wide">
-      <SanityImage
-        image={post.coverImage}
-        width={template === 'planche' ? 1600 : 1100}
-        sizes={template === 'planche' ? '(min-width: 1440px) 90rem, 100vw' : '(min-width: 1024px) 44rem, 90vw'}
-        loading="eager"
-        fetchpriority="high"
-        alt={post.coverImage.alt || post.title}
-        class="journal-post__cover-image"
-      />
-    </figure>
-  )}
-
   <div class="journal-post__body container-wide">
-    <JournalComposition blocks={post.blocks} template={template} locale={locale} />
+    <JournalComposition blocks={post.blocks} locale={locale} />
   </div>
 
   {next && (
@@ -143,9 +123,13 @@ const rubric = getLibraryRubric(postRubrics(post)[0]);
     padding-bottom: clamp(6rem, 14vw, 12rem);
   }
 
-  /* La page démarre sous la barre de marque, fixée en haut de l'écran en mobile. */
+  /*
+    Même distance entre la marque et le fil que sur une page de rubrique.
+    La garde mobile reste explicite : si la barre de marque grandit un jour,
+    elle continuera de primer sur l'espacement éditorial.
+  */
   .journal-post__top {
-    padding-top: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance));
+    padding-top: var(--spacing-breadcrumb-start);
   }
 
   .journal-post__header {
@@ -172,22 +156,6 @@ const rubric = getLibraryRubric(postRubrics(post)[0]);
     max-width: 34ch;
     margin-inline: auto;
     margin-top: clamp(1.5rem, 4vw, 2.5rem);
-  }
-
-  /*
-    En modèle revue, le visuel de tête est une planche, pas une bannière : il
-    reste à l'échelle de la colonne de lecture, centré.
-  */
-  .journal-post[data-template='revue'] .journal-post__cover {
-    width: 100%;
-    max-width: 44rem;
-    margin-inline: auto;
-  }
-
-  .journal-post__cover-image {
-    display: block;
-    width: 100%;
-    height: auto;
   }
 
   .journal-post__body {

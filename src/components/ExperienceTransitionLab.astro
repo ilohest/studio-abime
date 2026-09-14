@@ -1,5 +1,6 @@
 ---
 import ProjectGrid from '~/components/ProjectGrid.astro';
+import ExperienceReferences from '~/components/ExperienceReferences.astro';
 
 import { projectPath } from '~/i18n/routes';
 import { useTranslations } from '~/i18n/ui';
@@ -82,10 +83,10 @@ const slotByAtom = new Map(referenceSlots.map((slot) => [slot.atomicNumber, slot
   la classification, au lieu de se masser dans un coin.
 
   Ce qui fait reconnaître Mendeleïev survit intact : les sept périodes, le TROU
-  de la première rangée — l'hydrogène seul face à l'hélium —, les deux séries
-  DÉTACHÉES en bas, et les vrais numéros atomiques, 22, 26, 29, 47…, jamais un
-  compteur de 1 à n. C'est par ces numéros que la planche et la note de bas de
-  page se lisent l'une par l'autre.
+  de la première rangée — l'hydrogène seul face à l'hélium — et les deux séries
+  DÉTACHÉES en bas. La composition mobile est toutefois une sélection : son
+  foliotage suit donc son ordre de lecture, de gauche à droite et de haut en bas,
+  plutôt que les numéros atomiques discontinus de la table complète.
 */
 const PLATE_COLUMNS = 4;
 
@@ -99,6 +100,18 @@ const PLATE_COLUMNS = 4;
 const plateSlotByAtom = new Map(
   referenceSlots.map((slot) => [slot.atomicNumber, slot] as const),
 );
+
+/*
+  La rangée détachée n'affiche plus les deux séries : elle est réservée aux
+  deux derniers clients de la sélection. Ils sont retirés des périodes AVANT
+  leur composition pour ne jamais apparaître deux fois. S'il n'y en a pas
+  assez, La et Ac complètent la rangée comme de vrais éléments.
+*/
+const plateSeriesClients = referenceSlots
+  .filter((slot) => slot.source.kind === 'client')
+  .slice(-2);
+const plateSeriesClientAtoms = new Set(plateSeriesClients.map((slot) => slot.atomicNumber));
+plateSeriesClientAtoms.forEach((atomicNumber) => plateSlotByAtom.delete(atomicNumber));
 
 /*
   Prend `count` entrées RÉGULIÈREMENT ESPACÉES dans une liste. Une période peut
@@ -121,7 +134,7 @@ interface PlateElement {
 }
 
 type PlateEntry =
-  | { kind: 'cell'; element: PlateElement; slot?: ReferenceSlot }
+  | { kind: 'cell'; element: PlateElement; slot?: ReferenceSlot; mobileNumber?: number }
   | { kind: 'void' }
   | { kind: 'spacer' };
 
@@ -200,17 +213,15 @@ const plateRows: PlateEntry[][] = mainRows.map((period) => {
 });
 
 /*
-  RANGÉE DÉTACHÉE — ce que les périodes n'ont pas pu loger.
+  RÉFÉRENCES RESTÉES HORS DE LEUR PÉRIODE.
 
-  Elle portait les deux séries, 57–71 et 89–103, qui ne désignent aucun élément
-  unique et n'ont donc jamais de référence : deux cases en vue, au bas de la
-  planche, pour deux tirets. Elle accueille maintenant les références restées
-  dehors — les clients d'abord, puisque ce sont eux que le surnombre laisse de
-  côté. C'est le rôle même de cette rangée sur la table imprimée : recevoir ce
-  qui ne tient pas dans la grille.
+  Une période mobile ne garde que quatre cases. Si davantage de références y
+  vivent, elles ne doivent pourtant pas disparaître tandis qu'une autre rangée
+  montre encore un élément ordinaire. On reprend donc toutes les cases non
+  habitées de la planche, dans l'ordre de lecture, pour y placer les références
+  restantes — les clients d'abord, puis les projets. Leur vrai numéro atomique
+  les suit : la correspondance avec la table et la note reste exacte.
 
-  Les deux séries reprennent leur place si toutes les références ont trouvé la
-  leur : la rangée garde alors son dessin plutôt que de se vider.
 */
 const platePlaced = new Set<number>();
 plateRows.forEach((row) =>
@@ -219,29 +230,69 @@ plateRows.forEach((row) =>
   }),
 );
 
-const plateLeftovers = [
+const platePriority = [
   ...referenceSlots.filter(
-    (slot) => slot.source.kind === 'client' && !platePlaced.has(slot.atomicNumber),
+    (slot) =>
+      slot.source.kind === 'client' &&
+      !plateSeriesClientAtoms.has(slot.atomicNumber) &&
+      !platePlaced.has(slot.atomicNumber),
   ),
   ...referenceSlots.filter(
-    (slot) => slot.source.kind !== 'client' && !platePlaced.has(slot.atomicNumber),
+    (slot) =>
+      slot.source.kind !== 'client' &&
+      !plateSeriesClientAtoms.has(slot.atomicNumber) &&
+      !platePlaced.has(slot.atomicNumber),
   ),
-].slice(0, 2);
+];
 
-const plateSeriesCell = (index: number, series: PlateElement): PlateEntry => {
-  const slot = plateLeftovers[index];
+let platePriorityCursor = 0;
+const populatedPlateRows = plateRows.map((row) =>
+  row.map((entry) => {
+    if (entry.kind !== 'cell' || entry.slot) return entry;
+    const slot = platePriority[platePriorityCursor];
+    if (!slot) return entry;
+    platePriorityCursor += 1;
+    return {
+      kind: 'cell' as const,
+      element: { number: slot.atomicNumber, symbol: '—' },
+      slot,
+    };
+  }),
+);
+
+const plateFinalCell = (index: number, fallback: PlateElement): PlateEntry => {
+  const slot = plateSeriesClients[index];
   return slot
     ? { kind: 'cell', element: { number: slot.atomicNumber, symbol: '—' }, slot }
-    : plateEntry(series);
+    : plateEntry(fallback);
 };
 
 // Rangée détachée, rentrée d'une case de chaque côté.
 const plateSeriesRow: PlateEntry[] = [
   plateVoid,
-  plateSeriesCell(0, { number: '57–71', symbol: '—' }),
-  plateSeriesCell(1, { number: '89–103', symbol: '—' }),
+  plateFinalCell(0, { number: 57, symbol: 'La' }),
+  plateFinalCell(1, { number: 89, symbol: 'Ac' }),
   plateVoid,
 ];
+
+/*
+  Le DOM de la planche est organisé par colonnes pour sa chorégraphie, mais
+  elle se LIT par rangées. On attribue donc le foliotage avant la transposition :
+  seules les vraies cases comptent, jamais les vides ni l'espace qui détache la
+  dernière rangée. Les numéros atomiques restent dans `element.number` pour les
+  correspondances, les liens et la table desktop.
+*/
+let mobileSequence = 0;
+const mobileReferenceNumberByAtom = new Map<number, number>();
+const numberPlateEntry = (entry: PlateEntry): PlateEntry => {
+  if (entry.kind !== 'cell') return entry;
+  const mobileNumber = (mobileSequence += 1);
+  if (entry.slot) mobileReferenceNumberByAtom.set(entry.slot.atomicNumber, mobileNumber);
+  return { ...entry, mobileNumber };
+};
+
+const numberedPlateRows = populatedPlateRows.map((row) => row.map(numberPlateEntry));
+const numberedPlateSeriesRow = plateSeriesRow.map(numberPlateEntry);
 
 /*
   Une colonne par pile de cases — même structure que la table, pour que la
@@ -249,9 +300,9 @@ const plateSeriesRow: PlateEntry[] = [
   aux deux planches sans rien savoir de leur contenu.
 */
 const plateColumns: PlateEntry[][] = Array.from({ length: PLATE_COLUMNS }, (_, columnIndex) => [
-  ...plateRows.map((row) => row[columnIndex]!),
+  ...numberedPlateRows.map((row) => row[columnIndex]!),
   { kind: 'spacer' } as PlateEntry,
-  plateSeriesRow[columnIndex]!,
+  numberedPlateSeriesRow[columnIndex]!,
 ]);
 
 /*
@@ -296,7 +347,6 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                     : undefined;
                   const reference = slot?.source;
                   const linkedProject = reference?.kind === 'project' ? reference.project : undefined;
-                  const name = reference ? referenceName(reference) : undefined;
                   const symbolName = reference ? referenceSymbolName(reference) : undefined;
                   const sector = reference ? referenceSector(reference) : undefined;
                   const client = reference?.kind === 'client' ? reference.client : undefined;
@@ -317,7 +367,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                       }
                       aria-label={
                         linkedProject
-                          ? `Voir l’expérience ${linkedProject.title}`
+                          ? `Voir l’expérience ${linkedProject.title}${sector ? ` — ${sector}` : ''}`
                           : client
                             ? `${client.name} — voir la référence`
                             : undefined
@@ -328,7 +378,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                         {symbolName ? projectInitials(symbolName) : element.symbol}
                       </strong>
                       <span class="element-cell__name">
-                        {sector ?? name ?? (element.symbol === '—' ? 'série' : 'élément')}
+                        {reference ? sector : element.symbol === '—' ? 'série' : 'élément'}
                       </span>
                     </Tag>
                   );
@@ -359,6 +409,11 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                     const reference = slot?.source;
                     const linkedProject =
                       reference?.kind === 'project' ? reference.project : undefined;
+                    const label = reference
+                      ? referenceSector(reference)
+                      : entry.element.symbol === '—'
+                        ? 'série'
+                        : 'élément';
                     const Tag = reference ? 'a' : 'span';
 
                     return (
@@ -378,6 +433,13 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                               ? `#reference-${slot.atomicNumber}`
                               : undefined
                         }
+                        aria-label={
+                          linkedProject
+                            ? `Voir l’expérience ${linkedProject.title}${label ? ` — ${label}` : ''}`
+                            : reference
+                              ? `${referenceName(reference)} — voir la référence`
+                              : undefined
+                        }
                       >
                         {/*
                           Le numéro et le symbole sortent du nom accessible d'une
@@ -390,7 +452,7 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                           class="element-cell__number"
                           aria-hidden={reference ? 'true' : undefined}
                         >
-                          {entry.element.number}
+                          {entry.mobileNumber}
                         </span>
                         <strong
                           class="element-cell__symbol"
@@ -400,12 +462,14 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
                             ? projectInitials(referenceSymbolName(reference))
                             : entry.element.symbol}
                         </strong>
-                        {reference && (
-                          <span class="element-cell__label">{referenceName(reference)}</span>
-                        )}
-                        {reference && (
-                          <span class="sr-only">
-                            {linkedProject ? ' — voir l’expérience' : ' — voir la référence'}
+                        {label && (
+                          <span
+                            class:list={[
+                              'element-cell__label',
+                              { 'element-cell__label--sector': reference },
+                            ]}
+                          >
+                            {label}
                           </span>
                         )}
                       </Tag>
@@ -442,6 +506,13 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
     <ProjectGrid projects={projects} locale={locale} editorialCards={editorialCards} />
   </div>
 </div>
+
+<ExperienceReferences
+  projects={projects}
+  clients={clients}
+  locale={locale}
+  mobileNumberByAtom={mobileReferenceNumberByAtom}
+/>
 
 <script>
   const clamp = (value: number, min = 0, max = 1) => Math.min(Math.max(value, min), max);
@@ -887,143 +958,13 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
     };
 
     /*
-      Descente vers la note de bas de page.
-
-      Le défilement natif « smooth » va vite et sa durée ne se règle pas : on
-      mène la course nous-mêmes. Deux pièges, tous deux payés d'un temps mort
-      à l'écran :
-
-       · la feuille globale pose `scroll-behavior: smooth` sur la racine, ce qui
-         fait de CHAQUE `scrollTo` une animation lissée du navigateur. Notre
-         boucle en émettait une par image : le défilement traînait derrière au
-         lieu de suivre. Le comportement natif est donc écarté pendant tout le
-         geste, et rendu à la fin ;
-
-       · poser le fragment AVANT la descente fait sauter la page à l'arrivée,
-         puis revenir. On descend d'abord, et le fragment est posé une fois sur
-         place — il ne déplace alors plus rien, et `:target` allume la ligne au
-         moment où on y arrive.
-
-      Un geste de l'utilisateur pendant la descente l'interrompt : il reprend la
-      main immédiatement, sans être ramené à l'arrivée.
-    */
-    /*
-      Descente vers la note de bas de page.
-
-      Pas de courbe d'accélération classique ici : elle est la plus rapide en
-      son MILIEU, c'est-à-dire précisément là où la table devient grille, et le
-      passage s'y perdait. Le mouvement garde donc une VITESSE CONSTANTE, lissée
-      seulement sur ses deux extrémités — la transformation se lit au même
-      rythme du début à la fin, sans temps mort.
-
-      La durée suit la distance plutôt qu'une valeur fixe : un clic donné plus
-      bas dans la page, alors que la grille est déjà formée, ne s'étire pas
-      inutilement.
-    */
-    const SCROLL_SPEED = 1350; // pixels par seconde
-    const SCROLL_MIN = 340;
-    const SCROLL_MAX = 3200;
-    const EASE_EDGE = 0.16; // part du trajet consacrée à démarrer, puis à freiner
-
-    /*
-      Vitesse constante au centre, rampes aux extrémités. La vitesse de croisière
-      compense les deux demi-rampes pour que le trajet fasse exactement 1.
-    */
-    const easeSteady = (value: number) => {
-      const cruise = 1 / (1 - EASE_EDGE);
-      if (value < EASE_EDGE) return (cruise * value * value) / (2 * EASE_EDGE);
-      if (value > 1 - EASE_EDGE) {
-        const remaining = 1 - value;
-        return 1 - (cruise * remaining * remaining) / (2 * EASE_EDGE);
-      }
-      return (cruise * EASE_EDGE) / 2 + cruise * (value - EASE_EDGE);
-    };
-
-    root.querySelectorAll<HTMLAnchorElement>('a.element-cell[href^="#"]').forEach((link) => {
-      link.addEventListener('click', (event) => {
-        const hash = link.getAttribute('href');
-        const target = hash ? document.querySelector<HTMLElement>(hash) : null;
-        if (!target || event.defaultPrevented || event.metaKey || event.ctrlKey) return;
-
-        /*
-          On descend jusqu'à la SECTION, pas jusqu'à la ligne : viser la ligne
-          la pose bien à la bonne hauteur, mais fait alors passer le titre de la
-          note au-dessus du bord de l'écran, et laisse voir la fin de la section
-          précédente. C'est `:target` qui désigne la ligne, le défilement n'a
-          pas à s'en charger.
-        */
-        const landing = target.closest<HTMLElement>('.references') ?? target;
-        const from = window.scrollY;
-        const margin = Number.parseFloat(getComputedStyle(landing).scrollMarginTop) || 0;
-        const limit = document.documentElement.scrollHeight - window.innerHeight;
-        const to = clamp(landing.getBoundingClientRect().top + from - margin, 0, limit);
-
-        // Trop court ou mouvement refusé : le saut natif fait déjà l'affaire.
-        if (reducedMotion.matches || Math.abs(to - from) < 2) return;
-
-        event.preventDefault();
-
-        const duration = Math.min(
-          Math.max((Math.abs(to - from) / SCROLL_SPEED) * 1000, SCROLL_MIN),
-          SCROLL_MAX,
-        );
-
-        /*
-          La feuille globale pose `scroll-behavior: smooth` sur la racine :
-          chaque `scrollTo` deviendrait lui-même une animation lissée du
-          navigateur, et la boucle en émet une par image. Le comportement natif
-          est donc écarté pendant tout le geste, et rendu à la fin.
-        */
-        const documentElement = document.documentElement;
-        const previousBehavior = documentElement.style.scrollBehavior;
-        documentElement.style.scrollBehavior = 'auto';
-
-        let cancelled = false;
-        const interrupt = () => {
-          cancelled = true;
-        };
-        const events = ['wheel', 'touchstart', 'keydown'] as const;
-        events.forEach((name) =>
-          window.addEventListener(name, interrupt, { once: true, passive: true }),
-        );
-
-        const release = () => {
-          documentElement.style.scrollBehavior = previousBehavior;
-          events.forEach((name) => window.removeEventListener(name, interrupt));
-        };
-
-        const start = performance.now();
-        const step = (now: number) => {
-          if (cancelled) {
-            release();
-            return;
-          }
-
-          const progressed = clamp((now - start) / duration);
-          window.scrollTo(0, from + (to - from) * easeSteady(progressed));
-
-          if (progressed < 1) {
-            window.requestAnimationFrame(step);
-            return;
-          }
-
-          // Arrivés : le fragment ne déplace plus rien, il ne fait qu'allumer.
-          window.location.hash = hash!;
-          release();
-        };
-
-        window.requestAnimationFrame(step);
-      });
-    });
-
-    /*
       Le passage d'une planche à l'autre. Les cases changent de taille, de
       nombre et de place : tout ce qui avait été mesuré est périmé, on remesure
       entièrement.
 
-      C'est ici que disparaît l'ancien rattrapage — sur écran étroit, la table
-      se voyait retirer ses `href`, faute de cases visables à dix-sept pixels.
-      L'extrait n'a plus besoin de cette amputation : ses cases font la taille
+      Sur écran étroit, la table se voyait retirer ses `href`, faute de cases
+      visables à dix-sept pixels. L'extrait n'a plus besoin de cette amputation :
+      ses cases font la taille
       d'un doigt, et une référence y reste un lien, au doigt comme au clavier.
     */
     narrowScreen.addEventListener('change', () => {
@@ -1436,7 +1377,12 @@ const plateTrack = `repeat(${plateRows.length}, var(--plate-cell)) var(--plate-s
     font-size: 0.5rem;
     line-height: 1.15;
     letter-spacing: 0.03em;
-    text-transform: uppercase;
+    text-transform: lowercase;
+  }
+
+  /* Toute référence porte son secteur, toujours composé en bas de casse. */
+  .element-cell__label--sector {
+    text-transform: lowercase;
   }
 
   /*

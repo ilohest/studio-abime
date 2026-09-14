@@ -1,6 +1,7 @@
 ---
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import { buildConstellation, buildRays } from '~/lib/constellation';
+import { projectInitials } from '~/lib/viewModels';
 import type { Star } from '~/lib/sanity/types';
 
 /**
@@ -24,8 +25,9 @@ import type { Star } from '~/lib/sanity/types';
  *
  *  · LE RELEVÉ — la liste des noms et des rôles. C'est LUI que lisent les
  *    technologies d'assistance, et lui qui paraît à l'écran sous 720 px, où
- *    la planche n'a plus la largeur d'accueillir un libellé. Rien n'est perdu
- *    en petit écran : la même information change de forme.
+ *    la planche n'a plus la largeur d'accueillir un libellé. Les initiales de
+ *    chaque personne restent près de son point ; les noms complets passent dans
+ *    le relevé. Rien n'est perdu en petit écran : l'information change de forme.
  *
  * ── CE QUI SE CALCULE ──────────────────────────────────────────────────────
  *
@@ -148,6 +150,7 @@ const fieldSettings = JSON.stringify(settings);
             style={`left:${star.x.toFixed(2)}%;top:${star.y.toFixed(2)}%;--depth:${star.depth.toFixed(3)}`}
           >
             <span class="constellation__mark" />
+            <span class="constellation__starInitials">{projectInitials(star.name)}</span>
             <span class="constellation__tag">
               <span class="constellation__name">{star.name}</span>
               {star.role && <span class="constellation__role">{star.role}</span>}
@@ -213,12 +216,22 @@ const fieldSettings = JSON.stringify(settings);
 
 <style>
   .constellation {
+    /*
+      Surface utilisée pour effacer les traits sous les libellés et autour
+      des points. Elle suit le contexte de la figure, pas le fond papier global.
+    */
+    --constellation-surface: var(--color-surface);
     margin: 0;
     /*
       Un libellé pousse vers l'extérieur de la planche : la marge intérieure lui
       donne où aller sans que la figure ne déborde de la colonne.
     */
     padding-inline: clamp(0.25rem, 1.5vw, 1.25rem);
+  }
+
+  /* Les constellations de projet sont toujours posées sur le jaune Lumière. */
+  .constellation--projet {
+    --constellation-surface: var(--color-lumiere);
   }
 
   /*
@@ -327,8 +340,8 @@ const fieldSettings = JSON.stringify(settings);
     line-height: 1.2;
     background: radial-gradient(
       ellipse at center,
-      var(--color-surface) 45%,
-      color-mix(in oklab, var(--color-surface) 0%, transparent) 78%
+      var(--constellation-surface) 45%,
+      color-mix(in oklab, var(--constellation-surface) 0%, transparent) 78%
     );
     font-family: var(--font-titre);
     font-size: clamp(0.6875rem, 1.15cqw, 0.9375rem);
@@ -355,10 +368,15 @@ const fieldSettings = JSON.stringify(settings);
       arrive dessous. Pas de lueur — à cette taille, elle ne se lisait pas comme
       une magnitude mais comme une tache grise autour d'un point net.
     */
-    box-shadow: 0 0 0 0.22cqw var(--color-surface);
+    box-shadow: 0 0 0 0.22cqw var(--constellation-surface);
     transition:
       box-shadow 0.45s ease,
       scale 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  /* Les initiales ne sont utiles que lorsque les noms quittent la planche. */
+  .constellation__starInitials {
+    display: none;
   }
 
   /*
@@ -455,7 +473,7 @@ const fieldSettings = JSON.stringify(settings);
   .constellation__star.is-lit .constellation__mark {
     scale: 1.35;
     box-shadow:
-      0 0 0 0.22cqw var(--color-surface),
+      0 0 0 0.22cqw var(--constellation-surface),
       0 0 0 calc(0.22cqw + 1px) color-mix(in oklab, var(--color-ink) 55%, transparent);
   }
 
@@ -510,7 +528,7 @@ const fieldSettings = JSON.stringify(settings);
   .constellation.is-hailed .constellation__coreMark {
     scale: 1.2;
     box-shadow:
-      0 0 0 0.3cqw var(--color-surface),
+      0 0 0 0.3cqw var(--constellation-surface),
       0 0 0 calc(0.3cqw + 1px) color-mix(in oklab, var(--color-ink) 55%, transparent);
   }
 
@@ -567,9 +585,9 @@ const fieldSettings = JSON.stringify(settings);
   /*
     ── SOUS 720 PX ──────────────────────────────────────────────────────────
     La planche n'a plus la largeur d'un libellé : un nom y prendrait le tiers
-    de l'écran. Elle garde donc ses points et ses traits — la FORME de la
-    constellation, qui se lit encore très bien —, et les noms passent dans le
-    relevé, qui redevient une liste visible sous la figure.
+    de l'écran. Elle garde donc ses points, ses traits et les initiales des
+    personnes — la FORME de la constellation reste lisible —, tandis que les
+    noms complets passent dans le relevé.
   */
   @media (max-width: 719px) {
     .constellation--projet .constellation__plate,
@@ -580,6 +598,28 @@ const fieldSettings = JSON.stringify(settings);
 
     .constellation__tag {
       display: none;
+    }
+
+    .constellation__starInitials {
+      position: absolute;
+      top: 50%;
+      display: block;
+      font-family: var(--font-titre);
+      font-size: clamp(0.5rem, 2.5cqw, 0.625rem);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* Comme les noms sur desktop, les initiales s'éloignent toujours du centre. */
+    .constellation__star[data-side='right'] .constellation__starInitials {
+      left: calc(100% + clamp(0.3rem, 1.8cqw, 0.5rem));
+      translate: 0 -50%;
+    }
+
+    .constellation__star[data-side='left'] .constellation__starInitials {
+      right: calc(100% + clamp(0.3rem, 1.8cqw, 0.5rem));
+      translate: 0 -50%;
     }
 
     .constellation__coreLabel {

@@ -4,11 +4,12 @@
  * Une seule règle de remplissage, partagée par la table et par la note de bas
  * de page, en deux temps :
  *
- *  1. les SEPT CASES RÉSERVÉES reçoivent d'abord les projets favoris (ordre
- *     éditorial, du plus récent au plus ancien), puis les clients encodés sans
- *     projet (ordre d'encodage) pour celles que les projets laissent libres ;
- *  2. les clients encore sans case REPRENNENT LA TABLE PAR LE DÉBUT — 1, 2,
- *     3… — en enjambant les cases réservées, déjà attribuées au premier temps.
+ *  1. les SEPT CASES RÉSERVÉES reçoivent les projets favoris, dans leur
+ *     ordre éditorial ;
+ *  2. les clients parcourent ensuite TOUTE LA TABLE dans l'ordre — 1, 2, 3… —
+ *     en sautant uniquement les cases qu'un projet occupe vraiment. Une case
+ *     réservée restée libre peut donc recevoir un client, mais seulement quand
+ *     le parcours atteint naturellement son numéro.
  *
  * Ce qui reste vide garde son véritable élément chimique : la table ne ment
  * jamais sur ce qu'elle montre.
@@ -31,18 +32,13 @@ export const MAX_FEATURED_PROJECTS = REFERENCE_SLOTS.length;
 /** Dernier numéro atomique de la table. Au-delà, plus une case à donner. */
 const LAST_ELEMENT = 118;
 
-/**
- * Cases de débordement : toute la table, du début à la fin, moins les sept
- * réservées. Un client en surnombre prend la première venue.
- */
-const FREE_SLOTS = Array.from({ length: LAST_ELEMENT }, (_, index) => index + 1).filter(
+/** Toutes les cases de la table, dans l'ordre naturel des clients. */
+const ASCENDING_SLOTS = Array.from({ length: LAST_ELEMENT }, (_, index) => index + 1);
+
+/** Cases non réservées, utilisées par les numéros des projets ordinaires. */
+const FREE_SLOTS = ASCENDING_SLOTS.filter(
   (atomicNumber) => !REFERENCE_SLOTS.includes(atomicNumber as (typeof REFERENCE_SLOTS)[number]),
 );
-
-/**
- * Cases de débordement des CLIENTS : la table par le début, 1, 2, 3…
- */
-const ASCENDING_SLOTS = FREE_SLOTS;
 
 /**
  * Cases des PROJETS SANS CASE RÉSERVÉE : la table par la fin, 118, 116, 115…
@@ -125,24 +121,15 @@ export function featuredProjects(projects: ProjectCard[]): ProjectCard[] {
   return projects.filter((project) => project.featured).slice(0, MAX_FEATURED_PROJECTS);
 }
 
-/**
- * Attribue les cases réservées. Le résultat contient au plus 7 entrées ; les
- * cases non attribuées ne figurent simplement pas dans la liste.
- */
+/** Attribue d'abord les cases des projets, puis les clients de 1 à 118. */
 export function buildReferenceSlots(
   projects: ProjectCard[],
   clients: Client[] = [],
 ): ReferenceSlot[] {
-  const sources: ReferenceSource[] = [
-    ...featuredProjects(projects).map((project) => ({ kind: 'project' as const, project })),
-    ...clients
-      .filter((client) => client?.name?.trim())
-      .map((client) => ({ kind: 'client' as const, client })),
-  ];
-
-  const reserved = sources
-    .slice(0, REFERENCE_SLOTS.length)
-    .map((source, index) => ({ atomicNumber: REFERENCE_SLOTS[index]!, source }));
+  const reserved: ReferenceSlot[] = featuredProjects(projects).map((project, index) => ({
+    atomicNumber: REFERENCE_SLOTS[index]!,
+    source: { kind: 'project', project },
+  }));
 
   const taken = new Set<number>(reserved.map((slot) => slot.atomicNumber));
 
@@ -164,10 +151,10 @@ export function buildReferenceSlots(
     });
   };
 
-  // Les sources en surnombre ne peuvent être que des clients : les favoris sont
-  // plafonnés au nombre de cases réservées. Elles reprennent la table par le
-  // début.
-  const overflow = assign(sources.slice(REFERENCE_SLOTS.length), ASCENDING_SLOTS);
+  const clientSources: ReferenceSource[] = clients
+    .filter((client) => client?.name?.trim())
+    .map((client) => ({ kind: 'client', client }));
+  const assignedClients = assign(clientSources, ASCENDING_SLOTS);
 
   /*
     LA TABLE NE MONTRE QUE LES FAVORIS ET LES CLIENTS. Un projet ordinaire y a
@@ -180,7 +167,7 @@ export function buildReferenceSlots(
     grille du catalogue et sur la fiche du projet suivant — où il ne risque
     plus de porter celui d'un client.
   */
-  return [...reserved, ...overflow];
+  return [...reserved, ...assignedClients];
 }
 
 /** Client de la note de bas de page, avec l'appel de note qui lui revient. */

@@ -185,18 +185,9 @@ const POST_CARD = /* groq */ `{
     defined(slug.current) &&
     coalesce(publishedAt, _createdAt) > coalesce(^.publishedAt, ^._createdAt)
   ]) + 1,
-  // Un article porte désormais PLUSIEURS rubriques. Le champ est toujours un
-  // tableau non vide : la saisie d'avant la refonte tenait dans un champ
-  // "category" unique, qu'on replie ici, et un article sans classement retombe
-  // sur le Journal plutôt que de disparaître des grilles.
-  "rubrics": select(
-    count(rubrics) > 0 => rubrics,
-    defined(category) => [category],
-    ["journal"]
-  ),
+  // La requête garantit une rubrique même aux documents anciens ou incomplets.
+  "rubrics": select(count(rubrics) > 0 => rubrics, ["journal"]),
   "publishedAt": coalesce(publishedAt, _createdAt),
-  excerpt,
-  listingFacts[]{ _key, label, value },
   "coverImage": coverImage ${IMAGE}
 }`;
 
@@ -669,9 +660,7 @@ export const journalPageQuery = /* groq */ `
 /**
  * Article complet.
  *
- * `blocks` porte la composition. Quand elle est vide, l'ancien corps de texte
- * y est replié dans un unique bloc « Texte » : le rendu n'a donc qu'une seule
- * forme à connaître, et aucun article écrit avant les blocs n'est amputé.
+ * `blocks` porte toute la composition de l'article : texte, figures et notes.
  */
 export const postBySlugQuery = /* groq */ `
 *[_type == "post" && language == $locale && slug.current == $slug][0]{
@@ -681,44 +670,26 @@ export const postBySlugQuery = /* groq */ `
   "updatedAt": _updatedAt,
   title,
   "slug": slug.current,
-  // Un article porte désormais PLUSIEURS rubriques. Le champ est toujours un
-  // tableau non vide : la saisie d'avant la refonte tenait dans un champ
-  // "category" unique, qu'on replie ici, et un article sans classement retombe
-  // sur le Journal plutôt que de disparaître des grilles.
-  "rubrics": select(
-    count(rubrics) > 0 => rubrics,
-    defined(category) => [category],
-    ["journal"]
-  ),
+  // La requête garantit une rubrique même aux documents anciens ou incomplets.
+  "rubrics": select(count(rubrics) > 0 => rubrics, ["journal"]),
   "publishedAt": coalesce(publishedAt, _createdAt),
   standfirst,
-  excerpt,
-  listingFacts[]{ _key, label, value },
   "coverImage": coverImage ${IMAGE},
-  "template": coalesce(template, "revue"),
-  "blocks": select(
-    count(blocks) > 0 => blocks[]{
-      _key,
-      _type,
-      _type == "journalProse" => { "body": body ${PORTABLE_TEXT} },
-      _type == "journalFigure" => {
-        caption,
-        "placement": coalesce(placement, "texte"),
-        "scale": coalesce(scale, "colonne"),
-        "images": images[] ${IMAGE}
-      },
-      _type == "journalNote" => { text }
+  "blocks": blocks[]{
+    _key,
+    _type,
+    _type == "journalProse" => { "body": body ${PORTABLE_TEXT} },
+    _type == "journalFigure" => {
+      caption,
+      "placement": coalesce(placement, "texte"),
+      "scale": coalesce(scale, "colonne"),
+      "images": images[] ${IMAGE}
     },
-    count(body) > 0 => [{
-      "_key": "legacy-body",
-      "_type": "journalProse",
-      "body": body ${PORTABLE_TEXT}
-    }],
-    []
-  ),
+    _type == "journalNote" => { text }
+  },
   "seo": {
     "title": seo.title,
-    "description": coalesce(seo.description, excerpt),
+    "description": seo.description,
     "image": coalesce(seo.image ${IMAGE}, coverImage ${IMAGE})
   },
   "next": *[

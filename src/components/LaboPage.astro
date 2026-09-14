@@ -228,7 +228,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
     lève aucune erreur — il choisit silencieusement.
   */}
   <header class="labo-hero container-wide">
-    <h1 class="labo-hero__title type-titre" data-text-reveal>01. {page.title}</h1>
+    <h1 class="labo-hero__title section-folio-title type-titre" data-text-reveal>01. {page.title}</h1>
 
     {/*
       Texte d'ouverture, entre le titre et l'animation — même place et même
@@ -730,7 +730,7 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   <section class="labo-archive project-index" id="archives" aria-labelledby="labo-archive-title">
     <div class="labo-archive__layout container-wide">
       <header class="labo-archive__head">
-        <h2 id="labo-archive-title" class="type-titre" data-text-reveal>{archiveTitle}</h2>
+        <h2 id="labo-archive-title" class="type-intertitre" data-text-reveal>{archiveTitle}</h2>
       </header>
 
       <div class="labo-archive__rail">
@@ -1694,14 +1694,14 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
 
       La garde était de 9 rem au large : l'ancre déposait la section si bas que
       le titre flottait au milieu de l'écran, précédé d'un tiers de page vide.
-      Elle se resserre — juste de quoi ne pas coller l'en-tête au bord — et
-      cède le pas, sur écran étroit, au dégagement de la barre de marque, qui
-      lui est fixe et masquerait le titre.
+      Elle se resserre — juste de quoi ne pas coller l'en-tête au bord. La
+      barre de marque est réservée une seule fois par le `scroll-padding` de la
+      racine ; la recompter ici doublerait artificiellement l'espace mobile.
 
       Le script des fiches lit cette valeur pour composer la sienne
       (`--service-anchor-offset`) : la resserrer ici les resserre toutes.
     */
-    scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
+    scroll-margin-top: clamp(1.5rem, 3vw, 3rem);
   }
 
   /*
@@ -1999,11 +1999,10 @@ const teamLeadEditable = documentFieldAttribute(page._id, page._type, 'teamLead'
   .labo-method {
     padding-block: clamp(1.5rem, 2.5vw, 2.5rem) clamp(5rem, 9vw, 9rem);
     /*
-      Destination de l'entrée 01.3 du rail. Même garde que la section Services,
-      barre de marque comprise : sur écran étroit, celle-ci est fixe et
-      couvrirait le repère si l'ancre déposait la section au ras du bord.
+      Destination de l'entrée 01.3 du rail. Même garde éditoriale que la
+      section Services ; la barre mobile est déjà réservée par la racine.
     */
-    scroll-margin-top: max(clamp(1.5rem, 3vw, 3rem), var(--mobile-brand-clearance, 0rem));
+    scroll-margin-top: clamp(1.5rem, 3vw, 3rem);
   }
 
 

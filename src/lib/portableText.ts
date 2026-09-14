@@ -32,6 +32,12 @@ function components(
   identity: Omit<IdentityContext, 'dateLocale'> | undefined,
 ): Partial<PortableTextHtmlComponents> {
   return {
+    /*
+      Sanity conserve un retour forcé sous la forme `\n` dans un span. Le
+      rendre explicitement en `<br>` garantit qu'un, deux ou plusieurs retours
+      saisis dans le même bloc ne sont jamais aplatis par le HTML.
+    */
+    hardBreak: () => '<br />',
     types: {
       /**
        * Renvoi vers la fiche d'entreprise (voir `organizationIdentity.ts`).

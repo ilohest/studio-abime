@@ -4,7 +4,7 @@ import JournalFigure from '~/components/journal/JournalFigure.astro';
 
 import { toJournalRows } from '~/lib/journal';
 import type { Locale } from '~/i18n/config';
-import type { JournalBlock, PostTemplate } from '~/lib/sanity/types';
+import type { JournalBlock } from '~/lib/sanity/types';
 
 /**
  * Corps d'un article du Journal.
@@ -14,23 +14,27 @@ import type { JournalBlock, PostTemplate } from '~/lib/sanity/types';
  * savante, où le texte court sans être interrompu et où tout le reste se lit
  * dans le blanc de la marge.
  *
- * Le modèle ne change que deux mesures : la largeur de la colonne de lecture
- * et l'échelle par défaut des figures. Le contenu, lui, est identique.
+ * La mesure ample et les figures présentes reprennent la composition de la
+ * « Planche illustrée », désormais commune à tous les articles.
  */
 interface Props {
   blocks: JournalBlock[];
-  template: PostTemplate;
   locale: Locale;
 }
 
-const { blocks, template, locale } = Astro.props;
+const { blocks, locale } = Astro.props;
 const rows = toJournalRows(blocks);
 ---
 
-<div class="journal-composition" data-template={template}>
+<div class="journal-composition">
   {
     rows.map((row) => (
-      <div class="journal-row">
+      <div
+        class:list={[
+          'journal-row',
+          row.main?._type === 'journalProse' && 'journal-row--prose',
+        ]}
+      >
         <div class="journal-row__main">
           {row.main?._type === 'journalProse' && (
             <PortableText value={row.main.body} locale={locale} class="journal-prose" />
@@ -58,28 +62,119 @@ const rows = toJournalRows(blocks);
   }
 </div>
 
+<script>
+  /*
+    Chaque marge a deux contraintes, dans cet ordre : rester au moins à hauteur
+    du bloc Sanity qu'elle commente, puis ne jamais recouvrir la marge qui la
+    précède. Sa position est donc le maximum entre son ancrage éditorial et le
+    bas de la pile de droite. Rien n'est ajouté aux rangées de gauche : leur
+    rythme reste entièrement autonome.
+  */
+  for (const composition of document.querySelectorAll<HTMLElement>('.journal-composition')) {
+    if (composition.dataset.asidesBound !== undefined) continue;
+    composition.dataset.asidesBound = '';
+
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const asides = [...composition.querySelectorAll<HTMLElement>('.journal-row__aside')];
+    let frame = 0;
+
+    const arrange = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (!desktop.matches || asides.length === 0) {
+          composition.style.removeProperty('--journal-aside-overflow');
+          for (const aside of asides) aside.style.removeProperty('--journal-aside-shift');
+          return;
+        }
+
+        const compositionTop = composition.getBoundingClientRect().top;
+        const rows = [...composition.querySelectorAll<HTMLElement>('.journal-row')];
+        const stackGap = Number.parseFloat(getComputedStyle(asides[0]).rowGap) || 20;
+        let previousBottom: number | null = null;
+
+        for (const aside of asides) {
+          const row = aside.closest<HTMLElement>('.journal-row');
+          if (!row) continue;
+
+          const anchorTop = row.getBoundingClientRect().top - compositionTop;
+          const stackedTop = previousBottom === null ? anchorTop : previousBottom + stackGap;
+          const resolvedTop = Math.max(anchorTop, stackedTop);
+
+          aside.style.setProperty('--journal-aside-shift', `${resolvedTop - anchorTop}px`);
+          previousBottom = resolvedTop + aside.getBoundingClientRect().height;
+        }
+
+        const lastRow = rows.at(-1);
+        const contentBottom = lastRow
+          ? lastRow.getBoundingClientRect().bottom - compositionTop
+          : 0;
+        const asideBottom = previousBottom ?? 0;
+        const overflow = Math.max(0, asideBottom - contentBottom);
+        composition.style.setProperty('--journal-aside-overflow', `${overflow}px`);
+      });
+    };
+
+    const observer = new ResizeObserver(arrange);
+    observer.observe(composition);
+    for (const aside of asides) observer.observe(aside);
+
+    desktop.addEventListener('change', arrange);
+    document.fonts?.ready.then(arrange);
+    arrange();
+  }
+</script>
+
 <style>
   .journal-composition {
-    --journal-measure: 34rem;
+    --journal-figure-measure: 44rem;
+    --journal-prose-measure: 58rem;
     --journal-aside: 11rem;
+    --journal-aside-stack-gap: 1.25rem;
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: clamp(2rem, 4vw, 3.25rem);
+    gap: 0;
+    padding-bottom: var(--journal-aside-overflow, 0px);
   }
 
-  /* La planche illustrée respire davantage : la colonne s'élargit avec elle. */
-  .journal-composition[data-template='planche'] {
-    --journal-measure: 44rem;
-    gap: clamp(2.5rem, 5vw, 4.5rem);
+  /*
+    Le rythme ordinaire reste ample autour d'une figure principale. Deux blocs
+    de texte consécutifs, en revanche, sont deux paragraphes du même récit :
+    leur joint reprend exactement le token employé DANS un Portable Text.
+  */
+  .journal-row + .journal-row {
+    margin-top: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .journal-row--prose + .journal-row--prose {
+    margin-top: var(--space-paragraph);
   }
 
   .journal-row {
+    --journal-measure: var(--journal-figure-measure);
+
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, var(--journal-measure)) var(--journal-aside);
     column-gap: clamp(1.5rem, 3vw, 2.75rem);
     row-gap: 1.25rem;
     align-items: start;
     justify-content: center;
+  }
+
+  /*
+    La composition unique prolonge le principe ample de l'ancien gabarit
+    « planche » et porte le TEXTE à 58rem. Les rangées de figures gardent leur
+    plafond de 44rem : un portrait ne grandit donc pas avec la nouvelle colonne
+    de lecture.
+  */
+  .journal-row--prose {
+    --journal-measure: var(--journal-prose-measure);
+  }
+
+  /* Même garde pour une image exceptionnellement insérée dans le texte riche. */
+  .journal-row--prose :global(.prose-abime figure) {
+    max-width: var(--journal-figure-measure);
   }
 
   .journal-row__main {
@@ -91,10 +186,21 @@ const rows = toJournalRows(blocks);
     display: flex;
     grid-column: 2;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: var(--journal-aside-stack-gap);
     min-width: 0;
-    /* La marge accompagne la lecture au lieu de la devancer. */
-    padding-top: 0.35rem;
+  }
+
+  /*
+    La marge est retirée de la hauteur de la rangée PAR CSS : le texte suivant
+    ne peut donc jamais être repoussé par elle. Son décalage éventuel appartient
+    uniquement à la pile de droite calculée ci-dessus.
+  */
+  @media (min-width: 1024px) {
+    .journal-row__aside {
+      position: absolute;
+      top: var(--journal-aside-shift, 0px);
+      width: 100%;
+    }
   }
 
   .journal-note {
@@ -122,6 +228,10 @@ const rows = toJournalRows(blocks);
     plutôt que la note de marge.
   */
   @media (max-width: 1023px) {
+    .journal-composition {
+      padding-bottom: 0;
+    }
+
     .journal-row {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -132,9 +242,25 @@ const rows = toJournalRows(blocks);
     }
 
     .journal-row__aside {
-      max-width: var(--journal-measure);
+      position: static;
+      max-width: var(--journal-prose-measure);
+      width: auto;
       padding-top: 0.9rem;
-      border-top: 1px solid var(--color-line);
+      border-top: 0;
+    }
+
+    /*
+      Une fois la marge rabattue sous le texte, son filet devient le signe
+      bref d'une note de bas de page : couleur du texte, départ à gauche et
+      longueur fixe — sans reprendre toute la largeur de la colonne.
+    */
+    .journal-row__aside::before {
+      content: '';
+      display: block;
+      width: 3rem;
+      height: 1px;
+      flex: 0 0 auto;
+      background-color: var(--color-ink);
     }
   }
 </style>

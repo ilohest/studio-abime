@@ -40,7 +40,7 @@ export const project = defineType({
       title: 'Nom du projet',
       type: 'string',
       group: 'meta',
-      description: 'Affiché entre parenthèses au-dessus du titre, et dans les listes.',
+      description: 'Titre principal de la page projet et nom affiché dans les listes.',
       validation: (rule) => rule.required(),
     }),
     slugField,
@@ -115,7 +115,7 @@ export const project = defineType({
       type: 'string',
       group: 'meta',
       description:
-        'Domaine d’activité du client — ex. Gastronomie, Édition, Musique. Affiché sous l’initiale dans la table des éléments, à la place du mot « élément ».',
+        'Domaine d’activité du client — ex. Gastronomie, Édition, Musique. Affiché en minuscules sous les initiales dans la table des éléments et sur la page du projet. Si le champ est vide, aucune mention ne le remplace.',
       validation: (rule) => rule.max(40),
     }),
     defineField({
@@ -261,20 +261,14 @@ export const project = defineType({
       validation: (rule) => rule.required(),
     }),
 
-    /*
-      Le titre affiché ouvre la saisie du contenu : c'est la première phrase que
-      lit le visiteur, pas une donnée de la fiche. Il vivait avec le relevé —
-      client, secteur, année, services —, là où on ne pense pas à le chercher au
-      moment d'écrire la page.
-    */
+    /* Le nom technique reste inchangé afin de préserver tous les contenus. */
     defineField({
       name: 'headline',
-      title: 'Titre affiché',
+      title: 'Chapô',
       type: 'text',
       rows: 2,
       group: 'content',
-      description:
-        'Grande phrase en tête de la page projet, sous le nom entre parenthèses. Vide = le nom du projet.',
+      description: 'Phrase d’ouverture affichée sous le titre principal de la page projet.',
       validation: (rule) => rule.max(160),
     }),
 

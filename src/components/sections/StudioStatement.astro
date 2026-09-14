@@ -499,19 +499,20 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     │ vidéo. Rien dans la page ne les ajoutait — la boîte avait exactement  │
     │ le rapport de la source.                                              │
     │                                                                        │
-    │ On les rogne donc : la boîte prend le rapport de l'IMAGE UTILE, et    │
-    │ `cover` fait déborder la vidéo de part et d'autre, exactement de la   │
-    │ hauteur des bandes. Le plan n'est pas recadré sur les côtés — le      │
-    │ débordement est vertical et symétrique, comme les bandes.             │
+    │ L'image utile a été mesurée dans le fichier : 2160 × 2880, soit    │
+    │ un rapport 3:4. La boîte prend ce rapport et `cover` fait déborder     │
+    │ symétriquement les 480 px noirs du haut et du bas.                    │
     │                                                                        │
-    │ Le rapport est MESURÉ au chargement, pas écrit ici : une autre vidéo  │
-    │ aurait d'autres bandes, ou pas du tout. Sans mesure, il reste le      │
-    │ rapport de la source, et la vidéo s'affiche telle quelle.             │
+    │ Le rapport est déclaré en CSS plutôt que mesuré dans un canevas :     │
+    │ Safari iOS peut refuser cette lecture d'une vidéo distante, notamment │
+    │ lorsque l'autoplay est suspendu. Le cadrage doit rester juste avant   │
+    │ même que la vidéo commence à jouer.                                 │
     └────────────────────────────────────────────────────────────────────────┘
   */
   .statement__video {
-    aspect-ratio: var(--video-ratio, auto);
+    aspect-ratio: 3 / 4;
     object-fit: cover;
+    object-position: center;
     /* Le fond évite le rectangle noir tant que la première image n'est pas là. */
     background-color: var(--color-surface);
   }
@@ -697,70 +698,6 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     La préférence est écoutée : elle peut changer pendant la visite.
   */
   const reducedMotionVideos = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-  /*
-    Mesure des bandes noires incrustées, sur une image de la vidéo.
-
-    On relit la source en `crossOrigin: anonymous` plutôt que de dessiner
-    l'élément déjà en page : sans cet attribut posé AVANT le chargement, le
-    canevas est « teinté » par l'origine distante et devient illisible.
-
-    On sonde UNE colonne, au milieu de l'image : les bandes traversent toute
-    la largeur, une colonne suffit à les mesurer, et c'est mille fois moins de
-    pixels à lire que l'image entière.
-  */
-  const NOIR = 24;
-
-  const measureBars = async (video: HTMLVideoElement) => {
-    const source = video.getAttribute('src');
-    if (!source) return;
-
-    const probe = document.createElement('video');
-    probe.crossOrigin = 'anonymous';
-    probe.muted = true;
-    probe.src = source;
-
-    await new Promise<void>((resolve, reject) => {
-      probe.onloadeddata = () => resolve();
-      probe.onerror = () => reject(new Error('video'));
-    });
-
-    // Pas la toute première image : une ouverture en fondu au noir tromperait la mesure.
-    probe.currentTime = Math.min(0.5, (probe.duration || 1) / 2);
-    await new Promise<void>((resolve) => {
-      probe.onseeked = () => resolve();
-      window.setTimeout(resolve, 2000);
-    });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = probe.videoWidth;
-    canvas.height = probe.videoHeight;
-    if (!canvas.width || !canvas.height) return;
-
-    const context = canvas.getContext('2d');
-    if (!context) return;
-    context.drawImage(probe, 0, 0);
-
-    const column = context.getImageData(Math.floor(canvas.width / 2), 0, 1, canvas.height).data;
-    const isBlack = (row: number) =>
-      column[row * 4] < NOIR && column[row * 4 + 1] < NOIR && column[row * 4 + 2] < NOIR;
-
-    let top = 0;
-    while (top < canvas.height && isBlack(top)) top += 1;
-    let bottom = canvas.height - 1;
-    while (bottom > top && isBlack(bottom)) bottom -= 1;
-
-    const useful = bottom - top + 1;
-    // Rien de noir, ou une image entièrement sombre : on ne touche à rien.
-    if (useful >= canvas.height || useful < canvas.height / 4) return;
-
-    video.style.setProperty('--video-ratio', `${canvas.width} / ${useful}`);
-  };
-
-  for (const video of document.querySelectorAll<HTMLVideoElement>('[data-statement-video]')) {
-    // Silencieux : une mesure impossible (origine, format) laisse la vidéo intacte.
-    measureBars(video).catch(() => {});
-  }
 
   const syncStatementVideos = () => {
     for (const video of document.querySelectorAll<HTMLVideoElement>('[data-statement-video]')) {

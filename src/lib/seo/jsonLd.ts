@@ -432,7 +432,8 @@ function projectNode(
     '@id': ids.entity(canonical, 'project'),
     url: canonical,
     name: clean(project.title),
-    headline: clean(project.headline),
+    /* Le champ `headline` éditorial est désormais le chapô, pas le titre. */
+    headline: clean(project.title),
     description: summarize(project.excerpt),
     inLanguage: getLocaleMeta(locale).htmlLang,
     creator: ref(ids.organization(origin)),
@@ -470,7 +471,7 @@ function blogPostingNode(
     url: canonical,
     headline: clean(post.title),
     alternativeHeadline: clean(post.standfirst),
-    description: summarize(post.excerpt ?? post.standfirst),
+    description: summarize(post.standfirst),
     inLanguage: getLocaleMeta(locale).htmlLang,
     datePublished: published,
     // Sans révision connue, la date de publication fait foi : `dateModified`

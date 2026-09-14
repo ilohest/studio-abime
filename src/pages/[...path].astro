@@ -5,7 +5,6 @@ import ProjectTemplateRenderer from '~/templates/project/ProjectTemplateRenderer
 import LaboPageView from '~/components/LaboPage.astro';
 import ContactPage from '~/components/ContactPage.astro';
 import ExperienceTransitionLab from '~/components/ExperienceTransitionLab.astro';
-import ExperienceReferences from '~/components/ExperienceReferences.astro';
 import LibraryIndex from '~/components/LibraryIndex.astro';
 import LibraryRubricPage from '~/components/LibraryRubricPage.astro';
 import JournalPost from '~/components/JournalPost.astro';
@@ -379,7 +378,7 @@ const libraryIntro = libraryComposition?.paragraphs
 */
 const postViews =
   route.kind === 'libraryRubrics' || route.kind === 'libraryRubric'
-    ? posts.map((card, index) => toPostCardView(card, locale, index, t('library.rubric')))
+    ? posts.map((card) => toPostCardView(card, locale))
     : [];
 const rubricViews = toLibraryRubricViews(postViews, locale);
 const platePosts =
@@ -435,7 +434,7 @@ const descriptionFallback =
   route.kind === 'project'
     ? project?.excerpt
     : route.kind === 'post'
-      ? (post?.excerpt ?? post?.standfirst)
+      ? post?.standfirst
       : route.kind === 'product'
         ? shopProduct?.excerpt
         : route.kind === 'collection'
@@ -632,7 +631,7 @@ const jsonLd = buildPageGraph({
     route.kind === 'projectIndex' && (
       <div class="project-index container-wide py-(--spacing-section)">
         <header class="project-index__header">
-          <h1 class="project-index__title type-titre text-balance" data-text-reveal>
+          <h1 class="project-index__title section-folio-title type-titre text-balance" data-text-reveal>
             02. {projectIndexTitle}
           </h1>
           {projectsIntro && <p class="project-index__intro type-copy text-pretty">{projectsIntro}</p>}
@@ -653,7 +652,6 @@ const jsonLd = buildPageGraph({
           clients={clients}
         />
 
-        <ExperienceReferences projects={projects} clients={clients} locale={locale} />
       </div>
     )
   }

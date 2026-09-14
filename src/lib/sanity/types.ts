@@ -289,7 +289,7 @@ export interface Project {
   template: ProjectTemplate;
   client?: string;
   year?: number;
-  /** Grande phrase de tête de la page projet. À défaut, le titre reprend la place. */
+  /** Chapô affiché sous le titre principal de la page projet. */
   headline?: string;
   excerpt?: string;
   services?: string[];
@@ -385,15 +385,10 @@ export interface PostCard {
   number?: number;
   /** Date de publication, au format ISO (`2026-08-25`). */
   publishedAt: string;
-  excerpt?: string;
-  /** Lignes libres de la fiche, saisies par l'éditeur (jusqu'à 5). */
-  listingFacts?: Array<{ _key: string; label?: string; value?: string }>;
   coverImage?: SanityImage | null;
 }
 
 /** Modèles de page d'un article. Voir `src/components/JournalPost.astro`. */
-export type PostTemplate = 'revue' | 'planche';
-
 /** Texte courant de l'article. */
 export interface JournalProse {
   _key: string;
@@ -426,8 +421,7 @@ export interface Post extends PostCard {
   /** Date ISO de dernière révision — `dateModified` des données structurées. */
   updatedAt?: string;
   standfirst?: string;
-  template: PostTemplate;
-  /** Composition de l'article. L'ancienne saisie y est repliée par la requête. */
+  /** Composition de l'article : textes, figures et notes. */
   blocks: JournalBlock[];
   seo?: Seo;
   /** Article suivant dans l'ordre chronologique décroissant. */

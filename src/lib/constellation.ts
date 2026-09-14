@@ -299,20 +299,44 @@ function buildDust(
   options: ConstellationOptions,
   random: () => number,
 ): DustGrain[] {
-  const target = options.dust ?? clamp(Math.round(stars.length * 1.8) + 6, 8, 26);
+  const target = options.dust ?? clamp(Math.round(stars.length * 2.2) + 8, 12, 32);
   const grains: DustGrain[] = [];
   const gapX = (options.gapX ?? DEFAULTS.gapX) * 0.42;
   const gapY = (options.gapY ?? DEFAULTS.gapY) * 0.75;
 
+  /*
+    Une suite à faible discrépance couvre naturellement toute la planche avant
+    de repasser dans une même zone. Les décalages aléatoires conservent un ciel
+    propre à chaque germe, sans les amas et les grands vides d'un tirage pur.
+  */
+  const offsetX = random();
+  const offsetY = random();
+  const radicalInverse = (index: number, base: number) => {
+    let result = 0;
+    let fraction = 1 / base;
+    let value = index;
+
+    while (value > 0) {
+      result += (value % base) * fraction;
+      value = Math.floor(value / base);
+      fraction /= base;
+    }
+
+    return result;
+  };
+
   /* Tirage avec rejet : on tente, on jette ce qui tombe mal, on s'arrête net. */
-  for (let attempt = 0; attempt < target * 12 && grains.length < target; attempt += 1) {
-    const x = 4 + random() * 92;
-    const y = 5 + random() * 90;
+  for (let attempt = 0; attempt < target * 16 && grains.length < target; attempt += 1) {
+    const x = 1 + ((radicalInverse(attempt + 1, 2) + offsetX) % 1) * 98;
+    const y = 2 + ((radicalInverse(attempt + 1, 3) + offsetY) % 1) * 96;
 
     const collides = [...stars, { x: center.x, y: center.y }].some(
       (point) => Math.hypot((point.x - x) / gapX, (point.y - y) / gapY) < 1,
     );
-    if (collides) continue;
+    const crowdsAnotherGrain = grains.some(
+      (grain) => Math.hypot((grain.x - x) / 3.5, (grain.y - y) / 4.5) < 1,
+    );
+    if (collides || crowdsAnotherGrain) continue;
 
     grains.push({
       x,

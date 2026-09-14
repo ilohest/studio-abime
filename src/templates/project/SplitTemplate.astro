@@ -3,7 +3,8 @@ import SanityImage from '~/components/primitives/SanityImage.astro';
 import FigureCaption from '~/components/primitives/FigureCaption.astro';
 import SectionRenderer from '~/components/sections/SectionRenderer.astro';
 import NextProject from '~/components/project/NextProject.astro';
-import ProjectBackLink from '~/components/project/ProjectBackLink.astro';
+import ProjectBreadcrumb from '~/components/project/ProjectBreadcrumb.astro';
+import ProjectHeading from '~/components/project/ProjectHeading.astro';
 import ProjectMobileHead from '~/components/project/ProjectMobileHead.astro';
 import ProjectConstellation from '~/components/project/ProjectConstellation.astro';
 
@@ -44,24 +45,23 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     {/* ── Colonne fixe : le texte du projet ──────────────────────────────── */}
     <div class="split__pane">
       <div class="split__paneInner">
-        <ProjectBackLink locale={locale} />
+        <ProjectBreadcrumb locale={locale} title={project.title} />
 
-        {/*
-          Le nom du projet passe en mention, entre parenthèses : c'est le
-          titre affiché qui porte la page. Sans titre affiché, le nom reprend
-          sa place — la page garde toujours son `h1`.
-        */}
-        <header class="split__header">
-          {project.headline && <p class="split__eyebrow">({project.title})</p>}
-          <h1 class="split__title text-balance" data-text-reveal>{project.headline || project.title}</h1>
-        </header>
+        <ProjectMobileHead
+          project={project}
+          locale={locale}
+          part="cell"
+          class="split__mobile-cell"
+        />
 
-        {/*
-          Sous 900 px seulement : au bureau, la case et le relevé restent dans
-          le cartouche de tête, en colonne collante à droite (voir
-          `ProjectTemplateRenderer`).
-        */}
-        <ProjectMobileHead project={project} locale={locale} class="split__mobile-head" />
+        <ProjectHeading project={project} />
+
+        <ProjectMobileHead
+          project={project}
+          locale={locale}
+          part="facts"
+          class="split__mobile-facts"
+        />
 
         <div class="split__body">
           <SectionRenderer sections={project.sections} locale={locale} />
@@ -135,41 +135,9 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
     align-items: flex-start;
     max-width: 34rem;
     margin-inline: auto;
-    /* La colonne démarre sous la barre de marque, fixée en haut en mobile. */
-    padding: max(clamp(2rem, 4vw, 4rem), var(--mobile-brand-clearance))
-      clamp(1rem, 1.8vw, 1.75rem) clamp(2rem, 4vw, 4rem);
-  }
-
-  .split__header {
-    width: 100%;
-    margin-top: clamp(4rem, 11vw, 8rem);
-    text-align: center;
-  }
-
-  /* Même police que le texte courant : la mention se lit comme une note. */
-  .split__eyebrow {
-    margin: 0;
-    font-family: var(--font-copy);
-    font-size: var(--text-note);
-    font-weight: 400;
-    letter-spacing: var(--tracking-copy);
-    line-height: 1.3;
-    text-transform: none;
-  }
-
-  /*
-    Le titre quitte la casse forcée des titres de section : ici c'est une
-    phrase qui se lit, pas une enseigne. La fonte, elle, est celle du texte
-    courant — devenue le mono avec la portée `type-dactylo` de la page.
-  */
-  .split__title {
-    margin: 0.9rem 0 0;
-    font-family: var(--font-copy);
-    font-size: clamp(1.6rem, 3.2vw, var(--text-titre));
-    font-weight: 400;
-    letter-spacing: var(--tracking-titre);
-    line-height: 1.15;
-    text-transform: none;
+    /* Le fil d'Ariane reprend le même départ vertical que partout ailleurs. */
+    padding: var(--spacing-breadcrumb-start) clamp(1rem, 1.8vw, 1.75rem)
+      clamp(2rem, 4vw, 4rem);
   }
 
   /*
@@ -296,15 +264,6 @@ const columnSizes = '(min-width: 900px) 26vw, 50vw';
       max-width: none;
       padding-top: 0;
       padding-inline: var(--spacing-gutter);
-    }
-
-    /*
-      La grande respiration d'avant le titre n'a de sens qu'au bureau, où elle
-      descend la colonne sous le cartouche du coin. Empilée, elle n'ouvre plus
-      qu'un trou entre le retour et le titre.
-    */
-    .split__header {
-      margin-top: clamp(1.25rem, 4vw, 2rem);
     }
 
     .split__gallery {

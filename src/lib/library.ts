@@ -106,6 +106,30 @@ function countRubrics(paragraphs: LibraryParagraph[]): number {
 }
 
 /**
+ * L'intitulé de cette rubrique forme une seule expression. Dans Portable Text,
+ * une annotation peut cependant n'avoir été posée que sur « voyages » : le
+ * navigateur encadrait alors ce seul mot, alors que la porte s'appelle bien
+ * « carnet de voyages ». On reprend le préfixe adjacent sans toucher aux
+ * annotations déjà correctes ni aux autres rubriques.
+ */
+function completeTravelNotebookLabel(segments: LibrarySegment[], text: string): string {
+  if (stegaClean(text).trim().toLocaleLowerCase('fr') !== 'voyages') return text;
+
+  const previous = segments.at(-1);
+  if (!previous || previous.kind !== 'text') return text;
+
+  const cleanPrevious = stegaClean(previous.text);
+  const prefix = cleanPrevious.match(/carnet\s+de\s+$/iu);
+  if (!prefix || prefix.index === undefined) return text;
+
+  const before = cleanPrevious.slice(0, prefix.index);
+  if (before) previous.text = before;
+  else segments.pop();
+
+  return `${prefix[0]}${text}`;
+}
+
+/**
  * Portable Text → segments.
  *
  * Un mot-rubrique est un `span` portant une annotation `rubricLink`. Les
@@ -135,10 +159,14 @@ function fromPortableText(blocks: PortableTextBlock[], locale: Locale): LibraryP
         const target = stegaClean(definition?.rubric);
 
         if (definition && isLibraryRubricTarget(target)) {
+          const label =
+            target === 'carnet-de-voyages'
+              ? completeTravelNotebookLabel(segments, text)
+              : text;
           segments.push({
             kind: 'rubric',
             key: child._key,
-            text,
+            text: label,
             target,
             href: rubricTargetPath(target, locale),
             order: order++,

@@ -98,53 +98,6 @@ export const post = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
-      name: "excerpt",
-      title: "Accroche",
-      type: "text",
-      rows: 3,
-      group: "meta",
-      description: "Résumé court affiché dans la grille du Journal.",
-      validation: (rule) => rule.max(280),
-    }),
-    defineField({
-      name: "listingFacts",
-      title: "Champs de la carte article",
-      type: "array",
-      group: "meta",
-      description:
-        "Jusqu’à 5 lignes libres affichées entre l’image et l’accroche sur la page Journal, à la manière d’une planche de botanique. Une ligne incomplète n’est pas affichée.",
-      of: [
-        defineArrayMember({
-          name: "listingFact",
-          title: "Champ",
-          type: "object",
-          fields: [
-            defineField({
-              name: "label",
-              title: "Intitulé",
-              type: "string",
-              description: "Ex. Famille, Genre, Espèce, Saison…",
-            }),
-            defineField({
-              name: "value",
-              title: "Valeur",
-              type: "string",
-              description: "Ex. Abacardiacées, Vicia, Été…",
-            }),
-          ],
-          preview: {
-            select: { title: "label", subtitle: "value" },
-            prepare: ({ title, subtitle }) => ({
-              title: title || "Champ sans intitulé",
-              subtitle:
-                subtitle || "Aucune valeur — cette ligne ne sera pas affichée",
-            }),
-          },
-        }),
-      ],
-      validation: (rule) => rule.max(5),
-    }),
-    defineField({
       name: "coverImage",
       title: "Visuel",
       type: "image",
@@ -152,14 +105,14 @@ export const post = defineType({
       options: { hotspot: true },
       /*
         Ce visuel sert à QUATRE endroits, et l'éditrice doit le savoir avant de
-        le choisir : recadré au carré dans la grille d'une rubrique, déployé en
+        le choisir : recadré au carré dans la grille d'une rubrique, présenté en
         tête de l'article, repris en petit sur la fiche « article suivant », et
         employé comme image de partage à défaut d'une image SEO propre. Un
         visuel qui ne tient qu'en pleine largeur se retrouvera donc rogné
         ailleurs — mieux vaut l'annoncer que de le laisser découvrir.
       */
       description:
-        "Recadré au carré dans la grille d’une rubrique, déployé en tête de l’article, " +
+        "Recadré au carré dans la grille d’une rubrique, présenté en tête de l’article, " +
         "repris sur la fiche « article suivant », et utilisé au partage si aucune image SEO " +
         "n’est renseignée.",
       fields: [
@@ -167,26 +120,6 @@ export const post = defineType({
       ],
     }),
 
-    defineField({
-      name: "template",
-      title: "Modèle de page",
-      type: "string",
-      group: "content",
-      initialValue: "revue",
-      options: {
-        layout: "radio",
-        list: [
-          { value: "revue", title: "Article de revue" },
-          { value: "planche", title: "Planche illustrée" },
-        ],
-      },
-      description: [
-        "Article de revue — colonne de lecture étroite, figures réduites, notes en marge. Pour un texte long.",
-        "Planche illustrée — colonne plus large et images plus présentes. Pour un article porté par ses visuels.",
-        "Le contenu est le même dans les deux cas : changer de modèle ne demande aucune ressaisie.",
-      ].join("\n"),
-      validation: (rule) => rule.required(),
-    }),
     defineField({
       name: "standfirst",
       title: "Chapô",
@@ -209,22 +142,6 @@ export const post = defineType({
         defineArrayMember({ type: "journalFigure" }),
         defineArrayMember({ type: "journalNote" }),
       ],
-    }),
-
-    /*
-      Ancienne saisie : un corps de texte unique, sans figures ni notes. Elle
-      reste lue au rendu tant que la composition est vide, afin qu'aucun
-      article écrit avant les blocs ne se retrouve amputé.
-    */
-    defineField({
-      name: "body",
-      title: "Corps de l’article (ancienne saisie)",
-      type: "richText",
-      group: "content",
-      hidden: ({ document }) =>
-        ((document?.blocks as unknown[] | undefined)?.length ?? 0) > 0,
-      description:
-        "Repris tel quel tant que la composition ci-dessus est vide. Recopiez-le dans un bloc « Texte » pour pouvoir y intercaler des figures.",
     }),
 
     defineField({

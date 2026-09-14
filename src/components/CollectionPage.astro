@@ -44,7 +44,7 @@ const shopHref = shopIndexPath(locale);
 const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection.title;
 ---
 
-<div class="collection-page container-wide py-(--spacing-section)">
+<div class="collection-page container-wide pt-(--spacing-breadcrumb-start) pb-(--spacing-section)">
   {/*
     Positionné en absolu à partir de 768px, pour que le titre et la description
     tombent exactement là où ils tombent sur `/shop`, qui n'a rien au-dessus
@@ -72,7 +72,7 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
     même gabarit, ça vaudra un composant commun plutôt qu'une troisième copie.
   */}
   <header class="collection-page__header">
-    <h1 class="collection-page__title type-titre text-balance" data-text-reveal>
+    <h1 class="collection-page__title section-folio-title type-titre text-balance" data-text-reveal>
       {heading}
     </h1>
 
@@ -124,7 +124,7 @@ const heading = folio ? `N°\u00A0${folio} — ${collection.title}` : collection
 
     .collection-page__breadcrumb {
       position: absolute;
-      top: clamp(1.5rem, 4vw, 2.5rem);
+      top: var(--spacing-breadcrumb-start);
       inset-inline-start: 0;
       width: max-content;
       max-width: 100%;

@@ -10,7 +10,6 @@ import CustomCursor from '~/components/CustomCursor.astro';
 import PageFade from '~/components/PageFade.astro';
 import ServicesRail from '~/components/ServicesRail.astro';
 import TextReveal from '~/components/TextReveal.astro';
-import AnchorLanding from '~/components/AnchorLanding.astro';
 
 import { defaultLocale, getLocaleMeta, type Locale } from '~/i18n/config';
 import { localizedPath } from '~/i18n/routes';
@@ -105,7 +104,6 @@ const defaultAlternate = alternates[defaultLocale];
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Le corps de texte est préchargé : il conditionne le premier rendu utile. -->
     <link
       rel="preload"
       href="/fonts/GT-Canon-M-Narrow-Regular.woff2"
@@ -121,13 +119,6 @@ const defaultAlternate = alternates[defaultLocale];
       crossorigin
     />
 
-    <!--
-      Commuters Sans est servie par Adobe Fonts (projet web de la cliente) : sa
-      licence interdit de l'héberger à côté des trois autres. Les deux
-      « preconnect » ouvrent à l'avance les connexions vers le CSS du kit et vers
-      les fichiers de fonte, qui vivent sur deux domaines distincts — sans eux,
-      la fonte n'est demandée qu'après trois allers-retours réseau.
-    -->
     <link rel="preconnect" href="https://use.typekit.net" crossorigin />
     <link rel="preconnect" href="https://p.typekit.net" crossorigin />
     <link rel="stylesheet" href="https://use.typekit.net/faf7gxq.css" />
@@ -167,7 +158,6 @@ const defaultAlternate = alternates[defaultLocale];
     <slot name="head" />
 
     <TextReveal />
-    <AnchorLanding />
   </head>
 
   <body class={resolvedBodyClass}>
