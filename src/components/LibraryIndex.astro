@@ -741,6 +741,13 @@ const verso = [...versoSource, ...versoSource];
 
   @media (max-width: 599px) {
     .library__composition {
+      /*
+        La gouttière globale suffit aux blocs ordinaires, mais cette phrase
+        contient plusieurs locutions encadrées et insécables. Une garde
+        supplémentaire raccourcit la ligne sur téléphone réel et évite
+        l'impression d'un texte poussé contre les deux bords.
+      */
+      width: calc(100% - 1rem);
       padding-block: 2rem;
     }
 

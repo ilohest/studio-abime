@@ -2733,6 +2733,18 @@ const phases = [
     }
 
     /*
+      Sur Safari mobile, la petite hauteur utile imposait le côté des cases
+      carrées et laissait une large bande vide de chaque côté du plateau. Les
+      rangées gardent cette hauteur pour tenir dans la scène, mais les six
+      colonnes du plan étroit utilisent désormais toute la laize disponible :
+      les fragments ne débordent plus de leurs cases.
+    */
+    .contact-wordmark__grid.is-narrow,
+    .contact-wordmark__grid:not(.is-wide) {
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    }
+
+    /*
       La scène se pose SOUS la barre de marque, fixée en haut de l'écran sur
       petit écran : collée à zéro, la première rangée passait derrière le
       logotype. Elle perd d'autant en hauteur pour rester dans la fenêtre.
