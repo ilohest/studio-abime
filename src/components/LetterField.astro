@@ -117,11 +117,17 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
   │ La brider en largeur réglait le problème, mais la réduisait à une          │
   │ vignette perdue dans le blanc : la présence d'affiche disparaissait.       │
   │                                                                            │
-  │ C'est donc le NOMBRE DE RANGÉES qui cède, pas la taille des lettres. La    │
-  │ planche occupe toute la largeur offerte, et n'affiche que les rangées      │
-  │ qui tiennent dans la hauteur : quatre ou cinq sur un écran large et bas,   │
-  │ sept sur une fenêtre haute. La composition se recompose au lieu de         │
+  │ C'est donc le NOMBRE DE RANGÉES qui cède d'abord, pas la taille des        │
+  │ lettres. La planche occupe toute la largeur offerte, et n'affiche que les  │
+  │ rangées qui tiennent dans la hauteur : cinq ou six sur un écran large et   │
+  │ bas, sept sur une fenêtre haute. La composition se recompose au lieu de    │
   │ rétrécir — c'est la même règle que pour le passage au doigt.               │
+  │                                                                            │
+  │ JUSQU'À CINQ RANGÉES, pas en deçà. Sur un portable, la pleine largeur n'en │
+  │ laissait que trois : plus un champ, une bande de lettres. En dessous de    │
+  │ cinq, c'est donc la LARGEUR qui cède — la planche se resserre juste assez  │
+  │ pour que cinq rangées tiennent dans la fenêtre, et garde encore une        │
+  │ présence d'affiche.                                                        │
   │                                                                            │
   │ Le compte exact se mesure (voir le script) ; la feuille de style en donne  │
   │ une approximation par rapport d'écran, qui tient seule si le script ne     │
@@ -191,6 +197,13 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
 
 <style>
   .letter-field {
+    /*
+      La marge de la bande, et le blanc qu'on laisse respirer autour de la
+      planche (`BREATH` dans le script) : le plafond de largeur ci-dessous les
+      retire de la hauteur d'écran, exactement comme le compte des rangées.
+    */
+    --field-pad: clamp(1rem, 3.5vh, 2.5rem);
+    --field-breath: 56px;
     position: relative;
     margin: 0;
     /*
@@ -199,7 +212,7 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
       l'approche plutôt qu'au contact. Assez pour sentir la marge, trop peu
       pour attraper le pointeur qui ne fait que passer vers la suite.
     */
-    padding-block: clamp(1rem, 3.5vh, 2.5rem);
+    padding-block: var(--field-pad);
     /*
       Les lettres SONT du texte : le pointeur y prenait la forme du curseur
       de sélection, et un glissement surlignait la planche au lieu de
@@ -288,6 +301,17 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     └────────────────────────────────────────────────────────────────────────┘
   */
   @media (pointer: fine) {
+    /*
+      LE PLANCHER DE CINQ RANGÉES. Une case vaut la largeur de la planche
+      divisée par le nombre de colonnes : pour que cinq cases tiennent dans la
+      hauteur libre, la planche ne dépasse pas cette hauteur × colonnes ÷ 5.
+      Sur un écran assez haut, le plafond n'est jamais atteint et la planche
+      garde toute la largeur. Le 5 est le `MIN_ROWS` du script.
+    */
+    .letter-field__plate {
+      max-width: calc((100vh - 2 * var(--field-pad) - var(--field-breath)) * var(--cols) / 5);
+    }
+
     .letter-field__cell--reserve {
       display: none;
     }
@@ -316,14 +340,9 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     }
   }
 
+  /* Pas de palier en deçà de cinq rangées : le plafond de largeur les garantit. */
   @media (pointer: fine) and (min-aspect-ratio: 13 / 10) {
     .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="5"] {
-      display: none;
-    }
-  }
-
-  @media (pointer: fine) and (min-aspect-ratio: 17 / 10) {
-    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="4"] {
       display: none;
     }
   }
@@ -455,7 +474,9 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
       │ carrées : leur côté vaut la largeur de la planche divisée par le   │
       │ nombre de colonnes, et il en tient autant que la hauteur libre le  │
       │ permet — jamais plus que le mot n'a de lettres, jamais moins de    │
-      │ trois, en deçà desquelles il n'y a plus de champ mais une ligne.   │
+      │ cinq : en deçà, il n'y a plus de champ mais une bande. Ce plancher │
+      │ est tenu par le plafond de largeur de la feuille de style, qui     │
+      │ resserre la planche pour que cinq rangées tiennent.                │
       │                                                                    │
       │ Au doigt, rien à ajuster : la planche DOIT déborder l'écran, c'est │
       │ le défilement qui la traverse.                                     │
@@ -464,7 +485,8 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     const baseRows = Number(plate.dataset.rows) || 1;
     /* Ce qu'on laisse respirer autour de la planche, en plus de ses marges. */
     const BREATH = 56;
-    const MIN_ROWS = 3;
+    /* Le même plancher que le plafond de largeur, dans la feuille de style. */
+    const MIN_ROWS = 5;
     let visibleRows = 0;
 
     const fitRows = () => {
