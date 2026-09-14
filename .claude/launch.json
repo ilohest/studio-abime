@@ -27,6 +27,15 @@
         "MAINTENANCE_MODE=off npx astro dev --port 4321"
       ],
       "port": 4321
+    },
+    {
+      "name": "astro-dev-ouvert-4325",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "MAINTENANCE_MODE=off npx astro dev --port 4325"
+      ],
+      "port": 4325
     }
   ]
 }
