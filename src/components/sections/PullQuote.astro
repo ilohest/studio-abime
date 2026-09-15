@@ -92,6 +92,11 @@ const textLines = cleanText.split(/\n+/).map((line) => ({
     padding-block: clamp(5rem, 12vh, 9rem);
   }
 
+  /* Le fond et le grain s'arrêtent à la limite du menu ancré. */
+  :global(html.rail-docked [data-services-menu] ~ .pull-quote) {
+    clip-path: inset(0 0 0 var(--rail-width));
+  }
+
   .pull-quote__grain {
     z-index: 0;
   }

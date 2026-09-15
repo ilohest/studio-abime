@@ -316,6 +316,19 @@ export interface Project {
   next?: ProjectCard | null;
 }
 
+export type SheetModule =
+  | { _key: string; _type: 'sheetText'; label?: string; text: string }
+  | { _key: string; _type: 'sheetImage'; label?: string; image?: SanityImage; caption?: string }
+  | { _key: string; _type: 'sheetDetails'; label?: string; details?: { _key: string; image?: SanityImage; caption?: string }[] }
+  | { _key: string; _type: 'sheetPalette'; label?: string; colors?: { _key: string; hex: string; name?: string }[] }
+  | { _key: string; _type: 'sheetAxis'; label?: string; left?: string; right?: string; position: number; caption?: string }
+  | { _key: string; _type: 'sheetFacts'; label?: string; facts?: { _key: string; label: string; value: string }[] }
+  | { _key: string; _type: 'sheetLink'; label?: string; link?: SanityLink };
+
+export interface LooseSheets {
+  sheets?: { _key: string; title: string; status?: string; date?: string; template?: 'modules' | 'annotated'; annotatedText?: PortableTextBlock[]; footerLink?: SanityLink; modules?: SheetModule[] }[];
+}
+
 export interface Page {
   _id: string;
   _type: 'page';
@@ -325,6 +338,7 @@ export interface Page {
   title: string;
   slug: string;
   sections: Section[];
+  looseSheets?: LooseSheets;
   seo?: Seo;
 }
 

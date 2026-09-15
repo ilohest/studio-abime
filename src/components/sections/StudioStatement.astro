@@ -263,7 +263,7 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     └───────────────────────────────────────────────────────────────────────┘
   */}
   <div class="statement__coda">
-    <LetterField locale={locale} />
+    <LetterField locale={locale} backgroundText={stegaClean(section.statement)} />
   </div>
 </section>
 
@@ -281,8 +281,10 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
       ne change donc plus lorsque `rail-docked` est ajouté à la fin du trajet.
     */
     padding-left: var(--rail-width);
-    padding-bottom: clamp(5rem, 12vh, 9rem);
+    /* Le filet de la double page rejoint directement la section suivante. */
+    padding-bottom: 0;
     overflow: clip;
+    overflow-clip-margin: 7px;
   }
 
   /*
@@ -292,7 +294,7 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
   */
   :global(html.statement-vertical) .statement {
     z-index: 31;
-    clip-path: inset(0 0 0 var(--rail-width));
+    clip-path: inset(0 0 -7px var(--rail-width));
   }
 
   .statement__inner {
@@ -356,15 +358,11 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     height: var(--scene-tail);
   }
 
-  /*
-    Le champ reprend le retrait intérieur de la scène : son bord gauche
-    s'aligne sur la déclaration et sur la planche de figures, quelle que soit
-    la largeur de composition.
-  */
+  /* La double page va de la limite du rail au bord droit de l'écran. */
   .statement__coda {
     position: relative;
     z-index: 1;
-    padding-inline: clamp(1.5rem, 4vw, 4rem);
+    padding-inline: 0;
     /*
       L'écart avec le bouton tient compte de la marge sensible que le champ
       se réserve au-dessus de lui : c'est le même blanc à l'œil qu'avant, il
@@ -557,8 +555,8 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     .statement {
       margin-top: 0;
       padding-left: 0;
-      padding-block: clamp(5rem, 12vh, 9rem);
-      overflow: hidden;
+      padding-block: clamp(5rem, 12vh, 9rem) 0;
+      overflow: clip;
       clip-path: none;
     }
 
@@ -654,7 +652,7 @@ const figures = (section.figures ?? []).slice(0, PLATE_FIGURES).map((figure, ind
     .statement {
       margin-top: 0;
       padding-left: 0;
-      padding-block: clamp(5rem, 12vh, 9rem);
+      padding-block: clamp(5rem, 12vh, 9rem) 0;
       clip-path: none;
     }
 

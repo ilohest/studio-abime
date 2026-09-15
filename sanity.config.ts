@@ -59,6 +59,7 @@ const previewOrigin =
 const creationTitles: Record<string, string> = {
   project: 'Projet',
   post: 'Article',
+  actu: 'Actu',
   localizedSettings: 'Réglages du site',
   projectsPage: 'Page Expériences',
   laboPage: 'Page Labo',

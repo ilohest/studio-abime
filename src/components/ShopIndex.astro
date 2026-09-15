@@ -76,7 +76,7 @@ const entries = collections.map((collection, index) => ({
               checked={entry.index === 0}
             />
 
-            <label class="shop-tab" for={entry.id} style={`--tab-index: ${entry.index}`}>
+            <label class="shop-tab paper-grain-after" for={entry.id} style={`--tab-index: ${entry.index}`}>
               {/*
                 L'onglet porte le NUMÉRO de la collection, celui-là même que la
                 notice affiche en tête : un repère de classement se retrouve
@@ -91,7 +91,7 @@ const entries = collections.map((collection, index) => ({
             </label>
 
             <section
-              class="shop-record"
+              class="shop-record paper-grain-after"
               aria-label={entry.title}
               style={`--tab-index: ${entry.index}`}
             >
@@ -205,8 +205,6 @@ const entries = collections.map((collection, index) => ({
 
   .shop-tabs {
     /* Trame partagée avec la feuille de l'enquête (voir `global.css`). */
-    --grain: var(--texture-grain);
-    --grain-size: var(--texture-grain-size);
     --tab-width: clamp(2.25rem, 3.5vw, 3rem);
     --tab-height: clamp(9rem, 16vw, 13rem);
     position: relative;
@@ -317,14 +315,11 @@ const entries = collections.map((collection, index) => ({
     position: absolute;
     inset: 1px 1px 1px 0;
     background-color: var(--color-sable);
-    background-image: var(--grain);
-    background-size: var(--grain-size);
     /*
       `background-blend-mode` et non `mix-blend-mode` : la trame doit se
       multiplier dans le fond de la languette elle-même, pas avec ce qui se
       trouve derrière — elle est opaque.
     */
-    background-blend-mode: multiply;
     clip-path: var(--tab-shape);
     transition: background-color 0.25s ease-out;
   }
@@ -463,8 +458,6 @@ const entries = collections.map((collection, index) => ({
       pseudo-éléments, il passe par-dessus lui et la texture redevient continue.
     */
     inset: -1px;
-    background-image: var(--grain);
-    background-size: var(--grain-size);
     mix-blend-mode: multiply;
     pointer-events: none;
   }

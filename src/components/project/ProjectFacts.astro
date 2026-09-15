@@ -62,7 +62,7 @@ const rows = allRows.filter((row) => Boolean(row.values?.length || row.links));
 
 {
   rows.length > 0 && (
-    <div class:list={['facts', className]}>
+    <div class:list={['facts', 'paper-grain-before', className]}>
       <dl class="facts__list">
         {rows.map((row) => (
           <div class="facts__row">
@@ -136,9 +136,6 @@ const rows = allRows.filter((row) => Boolean(row.values?.length || row.links));
     );
     /* Même jaune que la page : seule la trame apporte une variation de matière. */
     background-color: var(--color-lumiere);
-    background-image: var(--texture-grain);
-    background-size: var(--texture-grain-size);
-    background-blend-mode: multiply;
     pointer-events: none;
   }
 

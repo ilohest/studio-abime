@@ -620,6 +620,7 @@ const jsonLd = buildPageGraph({
   }
 
   {page && <SectionRenderer
+      looseSheets={route.kind === 'home' ? page.looseSheets : undefined}
       sections={pageSections}
       locale={locale}
       documentUpdatedAt={page.updatedAt}

@@ -182,6 +182,8 @@ const notes = composition.paragraphs
   )
   .filter((note) => note.text);
 
+const noteNumber = (order: number) => notes.findIndex((note) => note.order === order) + 1;
+
 const noteId = (order: number) => notes.find((note) => note.order === order)?.id;
 
 /*
@@ -259,6 +261,9 @@ const verso = [...versoSource, ...versoSource];
                   data-cursor-interactive
                 >
                   {segment.text}
+                  {noteId(segment.order) && (
+                    <sup class="library__note-call" aria-hidden="true">{noteNumber(segment.order)}</sup>
+                  )}
                 </a>
               ),
             )}
@@ -314,6 +319,7 @@ const verso = [...versoSource, ...versoSource];
               )
             }
 
+            <span class="library__note-number" aria-hidden="true">{noteNumber(note.order)}.</span>
             <span class="library__note-name type-note">{note.name}</span>
             <span class="library__note-text">{note.text}</span>
           </a>
@@ -431,7 +437,7 @@ const verso = [...versoSource, ...versoSource];
       LE COUP DE FLUO.
 
       Un cadre tracé dit « ce mot compte » ; il ne dit pas « ce mot s'ouvre ».
-      La bande de Lumière, elle, passe sur le mot au survol comme un
+      La bande de Ciel, elle, passe sur le mot au survol comme un
       surligneur — de la gauche vers la droite, dans le sens de l'écriture —
       et ne laisse aucun doute sur ce qui va se produire au clic.
 
@@ -440,7 +446,7 @@ const verso = [...versoSource, ...versoSource];
       pseudo-élément en `z-index: -1` dépend du contexte d'empilement de ses
       ancêtres et peut disparaître sous l'aplat de la page.
     */
-    background-image: linear-gradient(var(--color-accent), var(--color-accent));
+    background-image: linear-gradient(var(--color-accent-alt), var(--color-accent-alt));
     background-repeat: no-repeat;
     background-position: 0 82%;
     background-size: 0% 0.55em;
@@ -739,6 +745,89 @@ const verso = [...versoSource, ...versoSource];
     }
   }
 
+  .library__note-call,
+  .library__note-number {
+    display: none;
+  }
+
+  @media (max-width: 767px) {
+    .library__note-call {
+      display: inline;
+      font-family: var(--font-titre);
+      font-size: var(--text-note);
+      line-height: 0;
+      margin-inline-start: 0.25em;
+    }
+
+    .library__marginalia {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-gutter);
+      position: relative;
+      margin-top: var(--spacing-gutter);
+      padding-top: var(--spacing-gutter);
+      border-top: 0;
+    }
+
+    .library__marginalia::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: calc(var(--spacing-gutter) * 4);
+      max-width: 30%;
+      height: 1px;
+      background: var(--color-ink);
+    }
+
+    .library__composition { padding-bottom: 0; }
+
+    .library__note {
+      display: grid;
+      grid-template-columns: 2em calc(var(--spacing-gutter) * 2.5) minmax(0, 1fr);
+      column-gap: 0.5em;
+      align-items: start;
+      scroll-margin-top: var(--mobile-brand-clearance);
+    }
+
+    .library__note-number {
+      display: block;
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .library__note-name { display: none; }
+
+    .library__note-text {
+      grid-column: 3;
+      grid-row: 1;
+      color: var(--color-ink);
+    }
+
+    .library__note-text {
+      font-size: var(--text-copy);
+      line-height: var(--text-copy--line-height);
+    }
+
+    .library__note-plate {
+      display: block;
+      grid-column: 2;
+      grid-row: 1;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding-inline-end: 0.5em;
+      opacity: 0.65;
+    }
+
+    .library__note:not(:has(.library__note-plate)) {
+      grid-template-columns: 2em minmax(0, 1fr);
+    }
+
+    .library__note:not(:has(.library__note-plate)) .library__note-text {
+      grid-column: 2;
+    }
+  }
+
   @media (max-width: 599px) {
     .library__composition {
       /*
@@ -748,7 +837,7 @@ const verso = [...versoSource, ...versoSource];
         l'impression d'un texte poussé contre les deux bords.
       */
       width: calc(100% - 1rem);
-      padding-block: 2rem;
+      padding-block: 2rem 0;
     }
 
     .library__paragraph {

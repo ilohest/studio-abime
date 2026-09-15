@@ -1,3 +1,5 @@
+import { defineQuery } from 'groq';
+
 /**
  * Requêtes GROQ.
  *
@@ -388,8 +390,22 @@ export const legalPagesQuery = /* groq */ `
 *[_type == "page" && _id in $ids]._id`;
 
 /** Page d'accueil : désignée dans les réglages localisés, pas par un slug magique. */
-export const homePageQuery = /* groq */ `
-*[_type == "localizedSettings" && language == $locale][0].homePage-> ${PAGE_BODY}`;
+export const homePageQuery = defineQuery(/* groq */ `
+*[_type == "localizedSettings" && language == $locale][0].homePage-> ${PAGE_BODY} {
+  ...,
+  "looseSheets": {
+      "sheets": *[_type == "actu" && language == $locale && visible == true && defined(title) && ((template == "annotated" && count(annotatedText) > 0) || (coalesce(template, "modules") == "modules" && count(modules) > 0))]
+        | order(orderRank asc, _createdAt asc, _id asc)[0...6] {
+          "_key": _id, title, status, date, template,
+          annotatedText[]{ _key, _type, style, children[]{ _key, _type, text, marks }, markDefs[]{ _key, _type, text } },
+          footerLink ${LINK},
+          modules[]{ _key, _type, label, text, caption, left, right, position,
+            image ${IMAGE}, details[]{ _key, caption, image ${IMAGE} },
+            colors[]{ _key, hex, name }, facts[]{ _key, label, value }, link ${LINK}
+          }
+        }
+  }
+}`);
 
 /**
  * Page projet. Deux rangs y sont calculés pour que la page puisse reconstituer

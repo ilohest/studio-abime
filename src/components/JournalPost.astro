@@ -82,13 +82,15 @@ const rubric = getLibraryRubric(postRubrics(post)[0]);
     </nav>
   </div>
 
-  <header class="journal-post__header container-content">
-    <h1 class="journal-post__title type-titre text-balance" data-text-reveal>{post.title}</h1>
+  <div class="journal-post__opening container-wide">
+    <header class="journal-post__header">
+      <h1 class="journal-post__title type-titre text-balance" data-text-reveal>{post.title}</h1>
 
-    {post.standfirst && (
-      <p class="journal-post__standfirst type-annotation text-pretty" data-text-reveal>{post.standfirst}</p>
-    )}
-  </header>
+      {post.standfirst && (
+        <p class="journal-post__standfirst type-annotation text-pretty" data-text-reveal>{post.standfirst}</p>
+      )}
+    </header>
+  </div>
 
   <div class="journal-post__body container-wide">
     <JournalComposition blocks={post.blocks} locale={locale} />
@@ -133,9 +135,25 @@ const rubric = getLibraryRubric(postRubrics(post)[0]);
   }
 
   .journal-post__header {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-inline: auto;
     padding-top: clamp(2rem, 5vw, 3.5rem);
     padding-bottom: clamp(2rem, 5vw, 3.5rem);
     text-align: center;
+  }
+
+  @media (min-width: 1024px) {
+    .journal-post__opening {
+      display: grid;
+      grid-template-columns: minmax(0, 58rem) 11rem;
+      column-gap: clamp(1.5rem, 3vw, 2.75rem);
+      justify-content: center;
+    }
+
+    .journal-post__header {
+      grid-column: 1;
+    }
   }
 
   /*

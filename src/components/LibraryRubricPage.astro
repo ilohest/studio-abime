@@ -143,37 +143,34 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     />
 
     <ul class="rubric__others-list" role="list">
+      {rubric && (
+        <li>
+          <a class="rubric__other rubric__other--all" href={libraryRubricsPath(locale)} data-cursor-interactive>
+            <span class="rubric__other-number type-note" aria-hidden="true">00.</span>
+            <span class="rubric__other-plate" aria-hidden="true"></span>
+            <span class="rubric__other-label type-note"><span class="button-minimal__label">{t('library.all')}</span> <span class="rubric__other-arrow" aria-hidden="true">↳</span></span>
+          </a>
+        </li>
+      )}
       {
         others.map((entry) => (
           <li>
             <a class="rubric__other" href={entry.href} data-cursor-interactive>
+              <span class="rubric__other-number type-note" aria-hidden="true">{entry.folio}.</span>
               <span class="rubric__other-plate" aria-hidden="true">
                 <PlateFigure variant={entry.plate as PlateVariant} />
               </span>
-              <span class="rubric__other-label type-note">{entry.title}</span>
+              <span class="rubric__other-label type-note"><span class="button-minimal__label">{entry.title}</span> <span class="rubric__other-arrow" aria-hidden="true">↳</span></span>
             </a>
           </li>
         ))
       }
 
+
     </ul>
   </nav>
 
-  {
-    /*
-      « Tout » ne rejoint pas la rangée de figures : ce n'est pas une rubrique,
-      elle n'a pas de planche, et une case vide au milieu des autres se serait
-      lue comme une figure manquante. Elle referme la page à sa place, sous
-      elles — c'est la dernière sortie, celle qui ouvre tout le reste.
-    */
-    rubric && (
-      <p class="rubric__all type-note">
-        <a class="link-underline" href={libraryRubricsPath(locale)} data-cursor-interactive>
-          {t('library.all')}
-        </a>
-      </p>
-    )
-  }
+
 </div>
 
 <script>
@@ -452,9 +449,14 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     list-style: none;
   }
 
+  .rubric__other-number { display: none; }
+  .rubric__other-arrow { white-space: nowrap; }
+  .rubric__other--all .rubric__other-plate { aspect-ratio: 1; }
+
   .rubric__other {
     display: block;
-    width: 4.5rem;
+    width: max-content;
+    min-width: 4.5rem;
     color: var(--color-ink);
     text-decoration: none;
   }
@@ -466,6 +468,7 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
   */
   .rubric__other-plate {
     display: block;
+    width: 4.5rem;
     opacity: 0.3;
     transition: opacity 260ms ease;
   }
@@ -489,9 +492,29 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     color: var(--color-ink);
   }
 
+  .rubric__other:hover :global(.button-minimal__label),
+  .rubric__other:focus-visible :global(.button-minimal__label) {
+    background-size: 100% 1px;
+  }
+
   .rubric__other:focus-visible {
     outline: 2px solid var(--color-ink);
     outline-offset: 0.4rem;
+  }
+
+  @media (min-width: 900px) {
+    .rubric__others,
+    .rubric__others-list { align-items: last baseline; }
+
+    .rubric__others-caption { padding-bottom: 0; }
+
+    .rubric__other-plate {
+      display: grid;
+      align-items: center;
+      height: 4.5rem;
+    }
+
+    .rubric__other-label { white-space: nowrap; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -561,7 +584,7 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     .rubric__others-caption {
       max-width: none;
       margin-bottom: 1.75rem;
-      text-align: right;
+      text-align: left;
     }
 
     /*
@@ -578,13 +601,36 @@ const figureLabel = rubric ? `fig. ${rubric.folio}` : 'fig. 00';
     */
     .rubric__others-list {
       display: grid;
-      grid-template-columns: repeat(2, max-content);
-      justify-content: end;
-      gap: clamp(1.25rem, 5vw, 1.75rem) clamp(1rem, 4vw, 1.5rem);
+      grid-template-columns: minmax(0, 1fr);
+      justify-content: start;
+      gap: var(--spacing-gutter);
     }
 
     .rubric__other {
-      width: 5.5rem;
+      display: grid;
+      grid-template-columns: 2em calc(var(--spacing-gutter) * 2.5) minmax(0, 1fr);
+      gap: 0.5em;
+      align-items: center;
+      width: 100%;
+    }
+
+    .rubric__other-number { display: block; grid-column: 1; }
+
+    .rubric__other-plate {
+      width: 100%;
+      grid-column: 2;
+      grid-row: 1;
+      padding-inline-end: 0.5em;
+      opacity: 0.65;
+    }
+
+    .rubric__other-label {
+      grid-column: 3;
+      grid-row: 1;
+      margin: 0;
+      font-size: var(--text-note);
+      line-height: var(--text-note--line-height);
+      color: var(--color-ink);
     }
 
     /* La sortie suit le bord des figures, pas celui de la légende. */

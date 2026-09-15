@@ -24,6 +24,7 @@
     "home:seed": "node sanity/seed/build-home.mjs",
     "sanity:deploy-graphql": "sanity graphql deploy",
     "typecheck": "astro check",
+    "test:mobile-sheets": "node scripts/check-loose-sheets-mobile.mjs",
     "check:invisible": "node scripts/check-invisible-chars.mjs",
     "home:testimonial": "node --env-file=.env scripts/swap-home-testimonial.mjs"
   },
@@ -38,6 +39,7 @@
     "@sanity/client": "^7.26.2",
     "@sanity/document-internationalization": "^6.2.28",
     "@sanity/image-url": "^2.1.1",
+    "@sanity/orderable-document-list": "^2.0.24",
     "@sanity/types": "^6.9.1",
     "@sanity/vision": "^6.9.1",
     "@sanity/visual-editing": "^5.7.3",
@@ -56,6 +58,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
+    "playwright": "^1.63.0",
     "wrangler": "^4.127.0"
   }
 }

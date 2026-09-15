@@ -190,16 +190,12 @@
     background-color: var(--color-lumiere);
   }
 
-  /*
-    Bibliothèque : sœur de la page Expériences, mais sur le second accent de la
-    palette. Le Ciel distingue la section éditoriale du portfolio sans sortir
-    de la charte — la trame, les fiches et la typographie restent les mêmes.
-  */
+  /* Surface Papier commune à la Bibliothèque, ses rubriques et ses articles. */
   body.page-bibliotheque,
   body.page-bibliotheque > main,
   body.page-bibliotheque > footer,
   body.page-bibliotheque [data-page-rail] {
-    background-color: var(--color-ciel);
+    background-color: var(--color-surface);
   }
 
   body.page-bibliotheque ::selection,
@@ -740,6 +736,14 @@
  * Le fichier de repli (`/textures/papier-froisse.jpg`) peut être remplacé par une
  * image pilotée depuis Sanity via la variable `--paper-texture`.
  */
+.paper-grain,
+.paper-grain-before::before,
+.paper-grain-after::after {
+  background-image: var(--texture-grain);
+  background-size: var(--texture-grain-size);
+  background-blend-mode: multiply;
+}
+
 @utility surface-paper {
   position: relative;
 }

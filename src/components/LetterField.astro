@@ -3,60 +3,11 @@ import { useTranslations } from '~/i18n/ui';
 import type { Locale } from '~/i18n/config';
 
 /**
- * LE CHAMP AIMANTÉ — la phrase du studio se recompose sous le curseur.
- *
- * ┌─ Le geste ──────────────────────────────────────────────────────────────┐
- * │ Une grille répète un seul mot : VISIBLE, une lettre par colonne, autant  │
- * │ de rangées que la planche en accepte. Chaque lettre se comporte comme    │
- * │ une aiguille aimantée : elle se tourne pour se tenir DEBOUT SUR le       │
- * │ pointeur, comme si celui-ci faisait gravité. Le curseur, lui, porte les  │
- * │ mots « sous le » — la primitive de curseur du site sait déjà porter un   │
- * │ mot (voir `CustomCursor.astro`). Partout où la main se pose, la phrase   │
- * │ du studio se reforme : « sous le visible ».                              │
- * │                                                                          │
- * │ La planche vient juste après le bouton « Plonger sous le visible » : le  │
- * │ bouton l'énonce, le champ le fait faire.                                 │
- * └─────────────────────────────────────────────────────────────────────────┘
- *
- * ── LES MOTS SONT FIXÉS EN CODE ────────────────────────────────────────────
- *
- * Comme le libellé du bouton qui précède, le mot du champ et celui du curseur
- * ne sont pas des champs Sanity : ils ne se remplissent pas, ils SE LISENT
- * ENSEMBLE. Un mot d'une autre longueur ne donnerait pas une variante mais une
- * autre composition — le nombre de colonnes, donc le corps des lettres et la
- * hauteur de la planche, se déduisent de lui. Ils vivent avec les autres
- * textes d'interface traduits, dans `src/i18n/ui.ts`.
- *
- * ── DEUX COMPOSITIONS, UN SEUL PROPOS ──────────────────────────────────────
- *
- *  · AU CURSEUR — la planche est un carré, plafonnée par la hauteur d'écran.
- *    La main explore latéralement ; le mot « sous le » lui tient lieu de
- *    pointeur, et la phrase se recompose là où elle se pose.
- *
- *  · AU DOIGT — il n'y a pas de survol, et un téléphone ne s'explore pas de
- *    côté : il se DESCEND. La planche s'y poursuit donc bien au-delà de
- *    l'écran (rangées de réserve), et l'aimant devient un point fixe au
- *    milieu de la vue, qui porte le mot. C'est le DÉFILEMENT qui fait
- *    traverser la phrase au champ : les rangées se retournent une à une au
- *    passage, et « sous le visible » se forme sans qu'on ait rien à toucher.
- *    Un doigt posé reprend la main, le temps du glissement.
- *
- *    Ce n'est pas la version réduite du geste au curseur : c'est le même
- *    propos — plonger — dit avec le geste natif de l'appareil.
- *
- * ── RIEN NE S'ANNONCE ──────────────────────────────────────────────────────
- *
- * Ni filet d'encadrement, ni invitation écrite : la planche n'a pas de bord et
- * ne demande rien. Le mot répété se tient seul comme une composition, et la
- * bascule se découvre en passant. Ce n'est pas une commande — rien n'est perdu
- * à ne jamais y poser la main.
- *
- * ── CE QUI TIENT SANS JAVASCRIPT ───────────────────────────────────────────
- *
- * Au repos, toutes les lettres sont droites : la planche est un champ
- * typographique lisible, et chaque rangée y énonce le mot. Le script ne fait
- * qu'AJOUTER l'orientation. Sans lui — script en échec, mouvement réduit,
- * écran tactile immobile — il ne manque rien à comprendre.
+ * Double page aimantée : une pile de VISIBLE sur chaque feuille.
+ * Le filet central reprend l'axe du hero. Les lettres suivent le pointeur,
+ * qui porte « sous le » ; au tactile, le défilement pilote leur orientation.
+ * Sans JavaScript ou avec mouvement réduit, les deux piles restent droites.
+ * Les mots traduits vivent ensemble dans `src/i18n/ui.ts`.
  */
 interface Props {
   locale: Locale;
@@ -66,10 +17,11 @@ interface Props {
    * la main atteint toujours une rangée, où qu'elle se pose.
    */
   rows?: number;
+  backgroundText?: string;
   class?: string;
 }
 
-const { locale, rows, class: className } = Astro.props;
+const { locale, rows, backgroundText, class: className } = Astro.props;
 const t = useTranslations(locale);
 
 /*
@@ -80,23 +32,7 @@ const t = useTranslations(locale);
 const letters = Array.from(t('home.fieldWord').toLocaleUpperCase(locale));
 const rowCount = rows ?? letters.length;
 
-/*
-  ┌─ LES RANGÉES DE RÉSERVE ──────────────────────────────────────────────────┐
-  │ Au doigt, la planche doit être PLUS HAUTE QUE L'ÉCRAN : sans cela, le      │
-  │ point fixe la traverserait en un seul geste de pouce et la phrase          │
-  │ n'aurait pas le temps de se former. Ces rangées supplémentaires sont       │
-  │ rendues pour tout le monde et masquées là où il y a un curseur — une       │
-  │ requête de média ne peut pas ajouter du contenu, seulement en retirer.     │
-  │                                                                            │
-  │ Elles ne coûtent rien d'autre que leur balisage : masquées, elles n'ont    │
-  │ plus de boîte, et le script les ignore à la mesure.                        │
-  └────────────────────────────────────────────────────────────────────────────┘
-*/
-const TOUCH_ROWS = 18;
-const rowIndexes = Array.from(
-  { length: Math.max(rowCount, TOUCH_ROWS) },
-  (_, index) => index,
-);
+const rowIndexes = Array.from({ length: rowCount }, (_, index) => index);
 
 /*
   Le corps des lettres se déduit du nombre de colonnes, en pour-cent de la
@@ -109,31 +45,6 @@ const rowIndexes = Array.from(
 */
 const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
 
-/*
-  ┌─ LA PLANCHE PREND TOUTE LA LARGEUR, ET AUTANT DE RANGÉES QU'IL EN TIENT ───┐
-  │ Les cases sont carrées : à largeur pleine, sept rangées feraient une       │
-  │ planche aussi haute que large — plus haute que la fenêtre sur un écran     │
-  │ de portable, et on ne verrait plus le champ converger d'un seul regard.    │
-  │ La brider en largeur réglait le problème, mais la réduisait à une          │
-  │ vignette perdue dans le blanc : la présence d'affiche disparaissait.       │
-  │                                                                            │
-  │ C'est donc le NOMBRE DE RANGÉES qui cède d'abord, pas la taille des        │
-  │ lettres. La planche occupe toute la largeur offerte, et n'affiche que les  │
-  │ rangées qui tiennent dans la hauteur : cinq ou six sur un écran large et   │
-  │ bas, sept sur une fenêtre haute. La composition se recompose au lieu de    │
-  │ rétrécir — c'est la même règle que pour le passage au doigt.               │
-  │                                                                            │
-  │ JUSQU'À CINQ RANGÉES, pas en deçà. Sur un portable, la pleine largeur n'en │
-  │ laissait que trois : plus un champ, une bande de lettres. En dessous de    │
-  │ cinq, c'est donc la LARGEUR qui cède — la planche se resserre juste assez  │
-  │ pour que cinq rangées tiennent dans la fenêtre, et garde encore une        │
-  │ présence d'affiche.                                                        │
-  │                                                                            │
-  │ Le compte exact se mesure (voir le script) ; la feuille de style en donne  │
-  │ une approximation par rapport d'écran, qui tient seule si le script ne     │
-  │ s'exécute pas.                                                             │
-  └────────────────────────────────────────────────────────────────────────────┘
-*/
 ---
 
 {/*
@@ -167,19 +78,27 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     class="letter-field__plate"
     aria-hidden="true"
     data-rows={rowCount}
-    style={`--cols: ${letters.length}; --glyph-size: ${glyphSize}cqi;`}
+    style={`--cols: ${letters.length}; --rows: ${rowCount}; --mobile-rows: ${Math.min(6, rowCount)}; --glyph-size: ${glyphSize}cqi;`}
   >
-    {rowIndexes.map((row) =>
-      letters.map((letter) => (
-        <span
-          class:list={['letter-field__cell', row >= rowCount && 'letter-field__cell--reserve']}
-          data-row={row}
-          style={`--row: ${row};`}
-        >
-          <span class="letter-field__glyph">{letter}</span>
-        </span>
-      )),
-    )}
+    {[0, 1].map(() => (
+      <div class="letter-field__sheet">
+        {backgroundText && <div class="letter-field__verso">
+          {Array.from({ length: 12 }, () => <p>{backgroundText}</p>)}
+        </div>}
+        {rowIndexes.map((row) =>
+          letters.map((letter) => (
+            <span
+              class="letter-field__cell"
+              data-row={row}
+              data-mobile-hidden={row >= 6 ? '' : undefined}
+              style={`--row: ${row};`}
+            >
+              <span class="letter-field__glyph">{letter}</span>
+            </span>
+          )),
+        )}
+      </div>
+    ))}
   </div>
 
   {/*
@@ -192,18 +111,20 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
   */}
   <p class="letter-field__anchor" aria-hidden="true" hidden>{t('home.fieldCursor')}</p>
 
+  <span class="letter-field__cross letter-field__cross--top" aria-hidden="true"></span>
+  <span class="letter-field__cross letter-field__cross--bottom" aria-hidden="true"></span>
+
   <figcaption class="sr-only">{t('home.fieldDescription')}</figcaption>
 </figure>
 
 <style>
   .letter-field {
-    /*
-      La marge de la bande, et le blanc qu'on laisse respirer autour de la
-      planche (`BREATH` dans le script) : le plafond de largeur ci-dessous les
-      retire de la hauteur d'écran, exactement comme le compte des rangées.
-    */
+    /* Les deux piles partagent un écran complet, avec une marge intérieure. */
     --field-pad: clamp(1rem, 3.5vh, 2.5rem);
-    --field-breath: 56px;
+    box-sizing: border-box;
+    height: 100svh;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
     position: relative;
     margin: 0;
     /*
@@ -213,6 +134,8 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
       pour attraper le pointeur qui ne fait que passer vers la suite.
     */
     padding-block: var(--field-pad);
+    border-block: 1px solid var(--color-line);
+    border-inline: 1px solid var(--color-line);
     /*
       Les lettres SONT du texte : le pointeur y prenait la forme du curseur
       de sélection, et un glissement surlignait la planche au lieu de
@@ -234,31 +157,91 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     cursor: none;
   }
 
-  .letter-field__plate {
-    /*
-      Le conteneur de requête, c'est la PLANCHE elle-même : les `cqi` du corps
-      des lettres mesurent sa largeur réelle — celle qui reste après le
-      plafond de hauteur ci-dessous — et non l'espace disponible autour. Les
-      lettres suivent donc la planche quand elle se resserre.
-    */
-    container-type: inline-size;
-    /* Plafonnée, la planche devient plus étroite que la colonne : on la centre. */
-    margin-inline: auto;
-    display: grid;
-    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  /* Deux feuilles égales : le filet reste sur l'axe du livre. */
+  .letter-field::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    left: 50%;
+    width: 1px;
+    background: var(--color-line);
+    pointer-events: none;
   }
 
-  /*
-    La case est CARRÉE : d'une lettre à l'autre, l'écart est le même en
-    hauteur et en largeur. C'est ce qui fait qu'une lettre couchée ne paraît
-    ni plus serrée ni plus lâche qu'une lettre droite — le champ tourne sans
-    que sa trame bouge. Le corps des lettres vaut 72 % de la case ; au-delà,
-    deux lettres en diagonale finiraient par se rencontrer.
-  */
+  .letter-field__cross {
+    position: absolute;
+    left: 50%;
+    z-index: 3;
+    width: 14px;
+    height: 14px;
+    transform: translateX(-50%);
+    background:
+      linear-gradient(var(--color-ink), var(--color-ink)) center / 14px 2px no-repeat,
+      linear-gradient(var(--color-ink), var(--color-ink)) center / 2px 14px no-repeat;
+    pointer-events: none;
+  }
+
+  .letter-field__cross--top { top: -7px; }
+  .letter-field__cross--bottom { bottom: -7px; }
+
+  .letter-field__plate {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .letter-field__sheet {
+    position: relative;
+    isolation: isolate;
+    container-type: inline-size;
+    min-width: 0;
+    margin-inline: var(--spacing-gutter);
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+  }
+
+  /* Encre du verso vue à travers les deux feuilles, comme dans le hero. */
+  .letter-field__verso {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    columns: 2;
+    column-gap: var(--spacing-gutter);
+    font-family: var(--font-titre);
+    font-size: var(--text-note);
+    line-height: 2.1;
+    letter-spacing: var(--tracking-copy);
+    color: var(--color-ink);
+    text-align: justify;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    transform: scaleX(-1);
+    opacity: 0.12;
+    pointer-events: none;
+  }
+
+  .letter-field__verso p { margin: 0; }
+  .letter-field__verso p + p { text-indent: 2em; }
+
+  @media (max-width: 767px) {
+    .letter-field { height: 75svh; }
+    .letter-field::before { display: none; }
+    .letter-field__cross { display: none; }
+    .letter-field__plate { grid-template-columns: minmax(0, 1fr); --rows: var(--mobile-rows) !important; }
+    .letter-field__sheet + .letter-field__sheet { display: none; }
+    .letter-field__cell[data-mobile-hidden] { display: none; }
+    .letter-field__sheet {
+      margin-inline: calc(var(--spacing-gutter) / 3);
+    }
+    .letter-field__verso { columns: 1; }
+  }
+
+  /* Les cases remplissent la hauteur disponible sans étirer les glyphes. */
   .letter-field__cell {
     display: grid;
     place-items: center;
-    aspect-ratio: 1;
+    min-height: 0;
   }
 
   /* `display: grid` l'emporterait sur la feuille du navigateur : on le redit. */
@@ -269,7 +252,7 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
   .letter-field__glyph {
     display: block;
     font-family: var(--font-titre);
-    font-size: clamp(1.5rem, var(--glyph-size), 7.5rem);
+    font-size: min(var(--glyph-size), calc(72svh / var(--rows)));
     line-height: 1;
     letter-spacing: 0;
     color: var(--color-ink);
@@ -288,61 +271,8 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
     transition-delay: calc(min(var(--row), 6) * 16ms);
   }
 
-  /*
-    ┌─ CE QUI DISTINGUE LES DEUX COMPOSITIONS ──────────────────────────────┐
-    │ Un seul basculement, sur la PRÉSENCE D'UN CURSEUR — pas sur la largeur │
-    │ de l'écran : c'est le geste disponible qui décide de la forme, et une  │
-    │ tablette en paysage doit avoir la planche du doigt, pas celle de la    │
-    │ souris.                                                                │
-    │                                                                        │
-    │ Au curseur : la planche est plafonnée par la hauteur d'écran et les    │
-    │ rangées de réserve disparaissent — un carré qu'on embrasse d'un        │
-    │ regard. Au doigt : elle garde toute sa hauteur et déborde la vue.      │
-    └────────────────────────────────────────────────────────────────────────┘
-  */
   @media (pointer: fine) {
-    /*
-      LE PLANCHER DE CINQ RANGÉES. Une case vaut la largeur de la planche
-      divisée par le nombre de colonnes : pour que cinq cases tiennent dans la
-      hauteur libre, la planche ne dépasse pas cette hauteur × colonnes ÷ 5.
-      Sur un écran assez haut, le plafond n'est jamais atteint et la planche
-      garde toute la largeur. Le 5 est le `MIN_ROWS` du script.
-    */
-    .letter-field__plate {
-      max-width: calc((100vh - 2 * var(--field-pad) - var(--field-breath)) * var(--cols) / 5);
-    }
-
-    .letter-field__cell--reserve {
-      display: none;
-    }
-
     .letter-field__anchor {
-      display: none;
-    }
-  }
-
-  /*
-    ┌─ LE COMPTE DE RANGÉES AVANT LE SCRIPT ────────────────────────────────┐
-    │ Le script mesure la planche et masque au pixel près les rangées qui    │
-    │ ne tiennent pas. Ces trois paliers sont ce qui tient AVANT lui — et    │
-    │ sans lui : une approximation par rapport d'écran, assez juste pour     │
-    │ qu'on ne voie jamais la planche déborder puis se recadrer.             │
-    │                                                                        │
-    │ Ils s'effacent dès que le script a pris la mesure (`data-measured`) :  │
-    │ sans cela, une rangée masquée ici resterait masquée même quand le      │
-    │ script la juge tenable — une règle de style ne se laisse pas rouvrir   │
-    │ par un attribut `hidden`.                                              │
-    └────────────────────────────────────────────────────────────────────────┘
-  */
-  @media (pointer: fine) and (min-aspect-ratio: 11 / 10) {
-    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="6"] {
-      display: none;
-    }
-  }
-
-  /* Pas de palier en deçà de cinq rangées : le plafond de largeur les garantit. */
-  @media (pointer: fine) and (min-aspect-ratio: 13 / 10) {
-    .letter-field__plate:not([data-measured]) .letter-field__cell[data-row="5"] {
       display: none;
     }
   }
@@ -465,61 +395,6 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
           y: box.top - plateBox.top + box.height / 2,
         };
       });
-    };
-
-    /*
-      ┌─ COMBIEN DE RANGÉES TIENNENT ─────────────────────────────────────┐
-      │ La planche prend toute la largeur ; c'est le nombre de rangées qui │
-      │ s'ajuste à ce que la fenêtre peut montrer. On compte des cases     │
-      │ carrées : leur côté vaut la largeur de la planche divisée par le   │
-      │ nombre de colonnes, et il en tient autant que la hauteur libre le  │
-      │ permet — jamais plus que le mot n'a de lettres, jamais moins de    │
-      │ cinq : en deçà, il n'y a plus de champ mais une bande. Ce plancher │
-      │ est tenu par le plafond de largeur de la feuille de style, qui     │
-      │ resserre la planche pour que cinq rangées tiennent.                │
-      │                                                                    │
-      │ Au doigt, rien à ajuster : la planche DOIT déborder l'écran, c'est │
-      │ le défilement qui la traverse.                                     │
-      └────────────────────────────────────────────────────────────────────┘
-    */
-    const baseRows = Number(plate.dataset.rows) || 1;
-    /* Ce qu'on laisse respirer autour de la planche, en plus de ses marges. */
-    const BREATH = 56;
-    /* Le même plancher que le plafond de largeur, dans la feuille de style. */
-    const MIN_ROWS = 5;
-    let visibleRows = 0;
-
-    const fitRows = () => {
-      const wanted = (() => {
-        if (coarse.matches) return Number.POSITIVE_INFINITY;
-
-        const cols = Number(getComputedStyle(plate).getPropertyValue('--cols')) || 1;
-        const cell = plate.getBoundingClientRect().width / cols;
-        if (!cell) return baseRows;
-
-        const style = getComputedStyle(field);
-        const padding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-        const room = window.innerHeight - padding - BREATH;
-
-        return Math.max(MIN_ROWS, Math.min(baseRows, Math.floor(room / cell)));
-      })();
-
-      /*
-        On ne touche au DOM que si le compte a changé : sans cette garde, la
-        mesure déclenchée par le redimensionnement de la planche relancerait
-        une écriture à chaque passage, et l'observateur tournerait en rond.
-      */
-      if (wanted === visibleRows) return false;
-      visibleRows = wanted;
-
-      for (const cell of cells) {
-        const row = Number(cell.dataset.row);
-        cell.hidden = row >= visibleRows;
-      }
-
-      /* Le script a pris la mesure : les paliers de la feuille de style se retirent. */
-      plate.dataset.measured = '';
-      return true;
     };
 
     /* Dernier angle POSÉ, cumulé — voir le chemin le plus court plus bas. */
@@ -682,18 +557,12 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
       else hideAnchor();
     }).observe(field);
 
-    /*
-      La planche change de taille (fenêtre, rail, rotation) : on recompte ses
-      rangées, puis on remesure. Recompter peut changer sa hauteur et rappeler
-      l'observateur — la garde de `fitRows` fait converger le second passage.
-    */
+    /* Une rotation ou un changement de largeur demande de remesurer les centres. */
     new ResizeObserver(() => {
-      fitRows();
       measure();
       syncScroll();
     }).observe(plate);
 
-    fitRows();
 
     /*
       La préférence peut changer pendant la visite : on redresse la planche
@@ -709,7 +578,6 @@ const glyphSize = ((100 / letters.length) * 0.72).toFixed(3);
 
     /* Le geste disponible peut changer aussi — clavier posé, souris branchée. */
     coarse.addEventListener('change', () => {
-      fitRows();
       measure();
       if (coarse.matches) syncScroll();
       else release();

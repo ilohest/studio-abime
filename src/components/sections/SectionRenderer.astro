@@ -3,6 +3,7 @@ import ManifestoHero from './ManifestoHero.astro';
 import ServicesMenu from './ServicesMenu.astro';
 import StudioStatement from './StudioStatement.astro';
 import PullQuote from './PullQuote.astro';
+import LooseSheetsView from './LooseSheets.astro';
 import PlateSpread from './PlateSpread.astro';
 import ProjectShowcaseGrid from './ProjectShowcaseGrid.astro';
 import FullBleedImage from './FullBleedImage.astro';
@@ -15,7 +16,7 @@ import CtaSection from './CtaSection.astro';
 
 import { SECTION_TYPE_NAMES } from '~/lib/sections';
 import type { Locale } from '~/i18n/config';
-import type { Section } from '~/lib/sanity/types';
+import type { Section, LooseSheets } from '~/lib/sanity/types';
 
 /**
  * Rendu du page builder.
@@ -36,6 +37,7 @@ import type { Section } from '~/lib/sanity/types';
  * blanc pour l'éditeur.
  */
 interface Props {
+  looseSheets?: LooseSheets;
   sections?: Section[] | null;
   locale: Locale;
   /** Date de révision du document, relayée aux blocs qui savent la citer. */
@@ -49,7 +51,8 @@ interface Props {
   documentType?: string;
 }
 
-const { sections, locale, documentUpdatedAt, documentId, documentType } = Astro.props;
+const { sections, locale, documentUpdatedAt, documentId, documentType, looseSheets } = Astro.props;
+const deskIndex = sections?.findIndex(section => section._type === 'pullQuote') ?? -1;
 
 if (import.meta.env.DEV) {
   const known: readonly string[] = SECTION_TYPE_NAMES;
@@ -81,11 +84,14 @@ if (import.meta.env.DEV) {
         );
       case 'pullQuote':
         return (
+          <>
+          {index === deskIndex && looseSheets && <LooseSheetsView content={looseSheets} locale={locale} />}
           <PullQuote
             section={section}
             documentId={documentId}
             documentType={documentType}
           />
+          </>
         );
       case 'plateSpread':
         return <PlateSpread section={section} />;

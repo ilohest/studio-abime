@@ -1,0 +1,51 @@
+---
+import { toHTML } from '@portabletext/to-html';
+import { stegaClean } from '@sanity/client/stega';
+import type { PortableTextBlock } from '~/lib/sanity/types';
+interface Props { value?: PortableTextBlock[]; prefix: string }
+const { value = [], prefix } = Astro.props;
+const notes = new Map<string, { number: number; text: string }>();
+for (const block of value) {
+  for (const span of block.children ?? []) {
+    for (const key of span.marks ?? []) {
+      const definition = block.markDefs?.find(mark => mark._key === key && mark._type === 'footnote');
+      if (definition && typeof definition.text === 'string' && stegaClean(definition.text).trim() && !notes.has(key)) notes.set(key, { number: notes.size + 1, text: definition.text });
+    }
+  }
+}
+const renderedCalls = new Set<number>();
+const html = toHTML(value, { components: { marks: {
+  footnote: ({ children, value: mark }) => {
+    const note = mark && notes.get(mark._key);
+    if (!note || renderedCalls.has(note.number)) return children;
+    renderedCalls.add(note.number);
+    return `${children}<sup><a data-sheet-note href="#${prefix}-note-${note.number}" id="${prefix}-call-${note.number}" aria-label="Note ${note.number}">[${note.number}]</a></sup>`;
+  },
+} } });
+---
+<div class:list={['annotated-sheet', { 'annotated-sheet--with-notes': notes.size > 0 }]}>
+  <div class="annotated-sheet__text type-copy" set:html={html} />
+  {notes.size > 0 && <aside class="annotated-sheet__notes" aria-label="Notes du texte">
+    <ol>{Array.from(notes.values()).map(note => <li id={`${prefix}-note-${note.number}`}>
+      <a data-sheet-note class="type-note" href={`#${prefix}-call-${note.number}`} aria-label={`Revenir à l’appel de note ${note.number}`}>[{note.number}]</a>
+      <span class="type-annotation">{note.text}</span>
+    </li>)}</ol>
+  </aside>}
+</div>
+<style>
+  .annotated-sheet { display: block; grid-column: 1 / -1; width: 100%; padding-block: 1rem; min-width: 0; }
+  .annotated-sheet--with-notes { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 2rem; }
+  .annotated-sheet__text { width: 100%; max-width: none; min-width: 0; overflow-wrap: anywhere; }
+  .annotated-sheet__text :global(p) { max-width: none; }
+  .annotated-sheet__text :global(p + p) { margin-top: 1.5rem; }
+  .annotated-sheet__text :global(sup) { font-size: .65em; margin-left: .2em; }
+  .annotated-sheet :global(a) { text-decoration: none; }
+  .annotated-sheet :global(a:focus-visible) { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+  .annotated-sheet__notes ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 1.25rem; }
+  .annotated-sheet__notes li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .5rem; scroll-margin-block: 1rem; }
+  .annotated-sheet__notes span { font-size: var(--text-copy); white-space: pre-line; overflow-wrap: anywhere; }
+  @media (max-width: 767px) {
+    .annotated-sheet, .annotated-sheet--with-notes { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+    .annotated-sheet__notes::before { content: ''; display: block; width: 3rem; height: 1px; background: var(--color-ink); margin-bottom: 1rem; }
+  }
+</style>

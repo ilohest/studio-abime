@@ -423,7 +423,7 @@ const phases = [
     </header>
 
     <div class="contact-enquiry-layout">
-      <div class="contact-form-panel">
+      <div class="contact-form-panel paper-grain">
         {/*
           EN-TÊTE DE FICHE.
 
@@ -455,7 +455,7 @@ const phases = [
         >
           <input type="hidden" name="reference" value="" data-fiche-reference-field />
 
-        <header class="fiche-head">
+        <header class="fiche-head paper-grain">
           <dl class="fiche-head__rows">
             <div class="fiche-head__row">
               <dt>Enquête n°</dt>
@@ -1812,13 +1812,6 @@ const phases = [
       pour devenir un bord de tableau. La feuille s'élargit d'autant.
     */
     --sheet-gutter: clamp(1rem, 2vw, 1.75rem);
-    /*
-      Les deux encres de la bande, dérivées de celle du texte : les trous
-      soutenus, la perforation deux fois plus claire. Des piqûres d'un pixel ne
-      se voyaient pas — c'est un tiret court qui se lit comme une ligne de
-      découpe à cette échelle.
-    */
-    --sheet-hole-ink: color-mix(in oklab, var(--color-ink) 74%, transparent);
     --sheet-perforation: color-mix(in oklab, var(--color-ink) 38%, transparent);
     position: relative;
     min-width: 0;
@@ -1831,9 +1824,6 @@ const phases = [
       par-dessus, et leurs trous laissent voir cette même surface grenue.
     */
     background-color: var(--color-surface);
-    background-image: var(--texture-grain);
-    background-size: var(--texture-grain-size);
-    background-blend-mode: multiply;
   }
 
   .contact-form-panel::before,
@@ -1856,16 +1846,14 @@ const phases = [
          Et de la COULEUR DES FILETS, non de celle de l'encre : c'est une
          découpe imprimée sur la feuille, au même titre que les cadres.
 
-      2. LES TROUS d'entraînement, un par pas vertical, centrés dans la bande.
-         Percés dans le papier, ils ont la couleur de ce qu'on voit à travers :
-         l'encre, adoucie d'un quart pour ne pas creuser des trous d'un noir
-         qu'aucune autre marque de la page ne porte.
+      2. Les trous d'entraînement : fond papier et ombre intérieure douce.
     */
     background-image:
       linear-gradient(to bottom, var(--sheet-perforation) 0 55%, transparent 55%),
       radial-gradient(
         circle at center,
-        var(--sheet-hole-ink) 0 var(--sheet-hole),
+        var(--color-surface) 0 calc(var(--sheet-hole) - 2px),
+        var(--color-line) calc(var(--sheet-hole) - 0.5px) var(--sheet-hole),
         transparent calc(var(--sheet-hole) + 0.5px)
       );
     background-size:
@@ -1913,9 +1901,6 @@ const phases = [
     padding: 0.95rem 1.1rem 1.1rem;
     border: 1px solid var(--color-line);
     background-color: var(--color-surface);
-    background-image: var(--texture-grain);
-    background-size: var(--texture-grain-size);
-    background-blend-mode: multiply;
   }
 
   .fiche-head__rows {

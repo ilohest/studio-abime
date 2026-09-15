@@ -615,18 +615,26 @@ const panelId = `services-menu-${mode}`;
       --mobile-logo-left: 1.25rem;
     }
 
-    .services-rail--page {
-      position: static;
-      width: 0;
+    .services-rail--page,
+    .services-rail--embedded[data-mobile-root] {
+      /* Une seule couche fixe pour la marque et le menu, indépendante des
+         surfaces animées. Le nav ne reste pas une boîte hors écran en fin
+         de document avec deux descendants composités séparément. */
+      position: fixed;
+      z-index: 80;
+      inset: 0 0 auto;
+      width: 100vw;
       height: 0;
       padding: 0;
+      pointer-events: none;
     }
 
     .services-rail__mobile-toggle {
       position: fixed;
       z-index: 82;
       top: 1rem;
-      right: 1rem;
+      left: calc(100vw - 3.75rem);
+      right: auto;
       display: flex;
       width: 2.75rem;
       height: 2.75rem;
@@ -640,6 +648,7 @@ const panelId = `services-menu-${mode}`;
       background: transparent;
       color: var(--color-ink);
       cursor: pointer;
+      pointer-events: auto;
     }
 
     .services-rail__mobile-logo {
@@ -699,6 +708,8 @@ const panelId = `services-menu-${mode}`;
       position: fixed;
       z-index: 80;
       inset: 0;
+      right: auto;
+      width: 100vw;
       display: flex;
       align-items: center;
       overflow-y: auto;
@@ -894,6 +905,25 @@ const panelId = `services-menu-${mode}`;
     mobileMedia.addEventListener('change', () => setOpen(false));
 
     if (menu.classList.contains('services-rail--embedded')) {
+      /*
+        Le header appartient à la fenêtre, pas à la scène des prestations.
+        Même sans transform, ses parents peuvent le confiner dans une couche
+        ou le découper. Déplacer le nav original préserve liens, événements et
+        panier ; le repère permet de le remettre en place sur desktop.
+      */
+      const origin = document.createComment('services-rail-origin');
+      menu.before(origin);
+      const syncMobileRoot = () => {
+        if (mobileMedia.matches) {
+          menu.setAttribute('data-mobile-root', '');
+          document.body.append(menu);
+        } else {
+          origin.after(menu);
+          menu.removeAttribute('data-mobile-root');
+        }
+      };
+      mobileMedia.addEventListener('change', syncMobileRoot);
+      syncMobileRoot();
       const hero = document.querySelector<HTMLElement>('.manifesto');
       const syncMobileLogo = () => {
         const visible = mobileMedia.matches && (!hero || hero.getBoundingClientRect().bottom <= 0);

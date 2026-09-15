@@ -7,6 +7,7 @@ import { locales, localeMeta } from '../../src/i18n/config';
 import type { LegalPageKey } from '../../src/i18n/routes';
 import { homePageId } from '../../src/i18n/routes';
 import Documentation from '../components/Documentation';
+import { orderableDocumentListDeskItem } from '@sanity/orderable-document-list';
 
 /** Identifiant figé du document de réglages globaux (instance unique). */
 export const SITE_SETTINGS_ID = 'siteSettings';
@@ -21,6 +22,7 @@ const HANDLED_TYPES = [
   'client',
   'star',
   'post',
+  'actu',
   'projectsPage',
   'laboPage',
   'journalPage',
@@ -249,6 +251,15 @@ export const structure: StructureResolver = (S, context) =>
         .title('Journal')
         .id('posts')
         .child(byLanguage(S, 'post', 'Articles du Journal')),
+
+      ...(locales.length === 1
+        ? [orderableDocumentListDeskItem({ type: 'actu', title: 'Actus', id: 'actus', S, context })]
+        : [S.listItem().title('Actus').id('actus').child(
+            S.list().title('Actus').items(locales.map(locale =>
+              orderableDocumentListDeskItem({ type: 'actu', title: localeMeta[locale]?.label ?? locale,
+                id: `actus-${locale}`, filter: 'language == $locale', params: { locale }, S, context }),
+            )),
+          )]),
 
       S.divider(),
 

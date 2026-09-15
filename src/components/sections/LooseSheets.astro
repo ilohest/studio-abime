@@ -1,0 +1,559 @@
+---
+import { stegaClean } from '@sanity/client/stega';
+import SanityImage from '../primitives/SanityImage.astro';
+import FigureCaption from '../primitives/FigureCaption.astro';
+import AnnotatedSheet from '../primitives/AnnotatedSheet.astro';
+import { resolveLink } from '~/lib/routing';
+import type { LooseSheets } from '~/lib/sanity/types';
+import type { Locale } from '~/i18n/config';
+
+interface Props { content: LooseSheets; locale: Locale; id?: string }
+const { content, locale, id = 'home-loose-sheets' } = Astro.props;
+const sheets = (content.sheets ?? []).filter(s => s.title && (stegaClean(s.template) === 'annotated' ? s.annotatedText?.length : s.modules?.length)).slice(0, 6);
+const safeColor = (hex: string) => /^#[\da-f]{6}$/i.test(stegaClean(hex)) ? stegaClean(hex) : 'var(--color-accent-alt)';
+const angles = [-1.2, 1, -.7, 1.4, -.9, .5];
+const sheetDate = (value?: string) => {
+  const clean = value && stegaClean(value);
+  if (!clean || !/^\d{4}-\d{2}-\d{2}$/.test(clean)) return undefined;
+  const date = new Date(`${clean}T12:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== clean) return undefined;
+  return { value: clean, label: `le ${new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date)}` };
+};
+---
+
+{sheets.length > 0 && <section class="desk" data-loose-sheets aria-labelledby={`${id}-title`}>
+  <div class="desk__inner container-wide">
+  <h2 id={`${id}-title`} class="sr-only">Feuilles volantes</h2>
+  <div class="desk__tabs" aria-label="Choisir une feuille" hidden>
+    {sheets.map((sheet, i) => <button class="button-minimal" type="button" id={`${id}-tab-${i}`} aria-controls={`${id}-sheet-${i}`} data-sheet-tab>
+      <span class="desk__check" aria-hidden="true"></span><span class="button-minimal__label">{sheet.title}</span>
+    </button>)}
+  </div>
+  <figure class="desk__figure">
+  <div class="desk__pile">
+    <div class="desk__preview" data-sheet-preview aria-hidden="true" inert></div>
+    {sheets.map((_, i) => <div class="desk__back paper-grain" data-sheet-back={i} style={`--angle:${angles[i]}deg;--offset:${i * .12}rem`} aria-hidden="true"></div>)}
+    {sheets.map((sheet, i) => {
+      const annotated = stegaClean(sheet.template) === 'annotated';
+      const lead = !annotated && sheet.modules?.[0]?._type === 'sheetImage' && sheet.modules[0].image ? sheet.modules[0] : undefined;
+      const links = (annotated ? [sheet.footerLink] : (sheet.modules ?? []).filter(m => m._type === 'sheetLink').map(m => m.link)).map(link => resolveLink(link, locale)).filter(Boolean);
+      const date = sheetDate(sheet.date);
+      return <article class:list={['sheet', 'paper-grain', { 'sheet--illustrated': Boolean(lead) }]} style={`--angle:${angles[i]}deg`} id={`${id}-sheet-${i}`} data-sheet-panel aria-labelledby={`${id}-heading-${i}`}>
+      <header class="sheet__header">
+        {date && <p class="sheet__date type-note"><time datetime={date.value}>{date.label}</time></p>}
+        <h3 id={`${id}-heading-${i}`} class="type-declaration">{sheet.title}</h3>
+        {sheet.status && <p class="sheet__status type-annotation">{sheet.status}</p>}
+      </header>
+      {lead && <figure class="sheet__lead">
+        <SanityImage image={lead.image} width={800} sizes="(max-width: 767px) 85vw, 400px" />
+        {lead.caption && <figcaption class="type-annotation">{lead.caption}</figcaption>}
+      </figure>}
+      <div class:list={['sheet__modules', { 'sheet__modules--annotated': annotated }]}>
+        {annotated ? <AnnotatedSheet value={sheet.annotatedText} prefix={`${id}-annotation-${i}`} /> : (sheet.modules ?? []).filter(m => m._type !== 'sheetLink' && m !== lead).map(m => {
+          const label = m.label && <h4 class="type-note sheet__label">{m.label}</h4>;
+          switch (m._type) {
+            case 'sheetText': return <div class="sheet__module">{label}<p class="sheet__text type-copy">{m.text}</p></div>;
+            case 'sheetImage': return <figure class="sheet__module sheet__image">{label}
+              {m.image && <SanityImage image={m.image} width={800} sizes="(max-width: 767px) 85vw, 400px" />}
+              {m.caption && <figcaption class="type-annotation">{m.caption}</figcaption>}</figure>;
+            case 'sheetDetails': return <div class="sheet__module">{label}<div class="sheet__details">{(m.details ?? []).map(d => <figure>
+              <div class="sheet__circle">{d.image && <SanityImage image={d.image} width={320} ratio="square" sizes="160px" />}</div>
+              {d.caption && <figcaption class="type-annotation">{d.caption}</figcaption>}</figure>)}</div></div>;
+            case 'sheetPalette': return <div class="sheet__module">{label}<ul class="sheet__palette">{(m.colors ?? []).map(c => <li><span class="sheet__swatch" style={`--swatch:${safeColor(c.hex)}`} aria-hidden="true"></span><span class="type-note">{c.name || c.hex}</span></li>)}</ul></div>;
+            case 'sheetFacts': return <div class="sheet__module">{label}<dl class="sheet__facts">{(m.facts ?? []).map(f => <div><dt class="type-note">{f.label}</dt><dd class="type-copy">{f.value}</dd></div>)}</dl></div>;
+            case 'sheetAxis': {
+              const position = Math.min(100, Math.max(0, Number(m.position) || 0));
+              return <div class="sheet__module">{label}<div class="sheet__axis" role="img" aria-label={`${m.left || 'Gauche'} — ${m.right || 'Droite'} : ${position} %`}>
+                <div class="sheet__track" style={`--position:${position}%`}><span></span></div><div class="sheet__poles type-note"><span>{m.left}</span><span>{m.right}</span></div>
+              </div>{m.caption && <p class="type-annotation">{m.caption}</p>}</div>;
+            }
+            default: return null;
+          }
+        })}
+      </div>
+      <div class="sheet__scroll-controls" hidden>
+        <button class="button-minimal" type="button" data-sheet-scroll="down" aria-label="Découvrir la suite de la feuille"><span class="sheet__scroll-hint type-note">La suite</span><span aria-hidden="true">↓</span></button>
+      </div>
+      {links.length > 0 && <footer class="sheet__footer">
+        {links.map(link => {
+          return link && <a class="button-minimal sheet__link" href={link.href} target={link.openInNewTab ? '_blank' : undefined} rel={link.openInNewTab ? 'noopener noreferrer' : undefined}><span class="button-minimal__label">{link.label || 'Poursuivre'}</span><span class="button-minimal__arrow" aria-hidden="true">↳</span>{link.openInNewTab && <span class="sr-only"> (nouvel onglet)</span>}</a>;
+        })}
+      </footer>}
+    </article>;
+    })}
+  </div>
+  <nav class="desk__navigation" aria-label="Parcourir les feuilles" hidden>
+    <button class="button-minimal" type="button" data-sheet-previous aria-label="Feuille précédente">←</button>
+    <span class="type-note" data-sheet-position aria-live="polite" aria-atomic="true"></span>
+    <button class="button-minimal" type="button" data-sheet-next aria-label="Feuille suivante">→</button>
+  </nav>
+  <FigureCaption value="fig. 10 — Feuilles volantes" class="desk__caption" />
+  </figure>
+  </div>
+  <dialog class="desk__reader" aria-label="Feuille dépliée">
+    <button class="button-minimal desk__reader-close" type="button" data-sheet-close>Refermer la feuille ×</button>
+    <nav class="desk__reader-navigation" aria-label="Parcourir les feuilles dépliées">
+      <button class="button-minimal" type="button" data-reader-previous aria-label="Feuille précédente">←</button>
+      <span class="type-note" data-reader-position aria-live="polite" aria-atomic="true"></span>
+      <button class="button-minimal" type="button" data-reader-next aria-label="Feuille suivante">→</button>
+    </nav>
+    <div class="desk__reader-window"><div data-sheet-reader-content></div></div>
+  </dialog>
+</section>}
+
+<style>
+  .desk { min-height: 100svh; padding-block: 2rem; overflow: clip; overflow-anchor: none; }
+  .desk[data-enhanced] { height: 100svh; padding-top: max(2rem, var(--mobile-brand-clearance, 0px)); }
+  @media (min-width: 768px) {
+    .desk { padding-inline-start: var(--rail-width); }
+  }
+  .desk__inner { min-width: 0; }
+  .desk__navigation { display: none; align-items: center; justify-content: center; gap: 1rem; }
+  .desk__navigation button { width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 0; font-size: var(--text-note); line-height: 1; cursor: pointer; }
+  [data-sheet-position], [data-reader-position] { display: flex; align-items: center; justify-content: center; min-width: 4rem; min-height: 44px; line-height: 1; }
+  .desk__navigation button:focus-visible, .desk__reader-close:focus-visible, .sheet__scroll-controls button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+  .desk__reader { position: fixed; inset: 0; box-sizing: border-box; width: 100%; max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 1rem; border: 0; background: var(--color-surface); color: var(--color-ink); overflow: hidden; overscroll-behavior: contain; }
+  .desk__reader[open] { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+  .desk__reader::backdrop { background: color-mix(in srgb, var(--color-ink) 8%, transparent); }
+  .desk__reader-close { min-height: 44px; margin: 0 0 0 auto; justify-self: end; cursor: pointer; }
+  .desk__reader-navigation { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-block: .25rem; }
+  .desk__reader-navigation button { width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 0; font-size: var(--text-note); line-height: 1; cursor: pointer; }
+  .desk__reader-navigation button:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+  .desk__reader-window { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .desk__reader-window[data-more-above] { --reader-top: transparent; --reader-top-end: 3rem; }
+  .desk__reader-window[data-more-below] { --reader-bottom: transparent; --reader-bottom-start: calc(100% - 3rem); }
+  .desk__reader-window [data-sheet-reader-content] { mask-image: linear-gradient(to bottom, var(--reader-top, #000), #000 var(--reader-top-end, 0px), #000 var(--reader-bottom-start, 100%), var(--reader-bottom, #000)); }
+  [data-sheet-reader-content] { width: 100%; height: 100%; min-width: 0; min-height: 0; max-width: 100%; contain: inline-size; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y pinch-zoom; }
+  .desk__reader .sheet { height: auto; overflow: visible; transform: none; margin: 0; }
+  .desk__reader .sheet__modules { overflow: visible; mask-image: none; }
+  .desk__reader .sheet__scroll-controls { display: none; }
+  .desk[data-enhanced] .desk__inner { display: grid; height: 100%; min-height: 0; grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr); gap: 1.5rem; align-items: stretch; }
+  .desk[data-enhanced] .desk__figure { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  /* Le recadrage doit porter sur la scène animée elle-même. `clip` sur la
+     section ne suffit pas à empêcher les translations de dilater le viewport
+     mobile : le header fixé à droite quitte alors l'écran visible. Ce
+     conteneur local ne contient aucun élément sticky ni le header. */
+  .desk[data-enhanced] .desk__pile { flex: 1; min-height: 0; overflow: hidden; contain: paint; clip-path: inset(0); }
+  .desk__tabs { display: flex; flex-direction: column; gap: .5rem; padding-block: 2rem; }
+  .desk__tabs[hidden] { display: none; }
+  .desk__tabs button { min-height: 44px; text-align: left; cursor: pointer; font-size: var(--text-note); }
+  .desk__check { flex: 0 0 .65rem; width: .65rem; height: .65rem; border: 1px solid var(--color-ink); }
+  .desk__tabs button[aria-selected="true"] .desk__check { background: var(--color-ink); }
+  .desk__tabs button:focus-visible, .sheet__link:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 5px; }
+  .desk__figure { width: 100%; min-width: 0; max-width: 68rem; margin-inline: auto; }
+  /* Les feuilles remplacées ne doivent pas devenir l'ancre du scroll natif. */
+  .desk__pile { position: relative; isolation: isolate; overflow-anchor: none; padding: 2rem; }
+  .desk :global(.desk__caption) { margin: 1.5rem 2rem 0; font-size: var(--text-note); line-height: 1.25; }
+  .desk__back { display: none; }
+  .desk__preview { display: none; pointer-events: none; }
+  .desk[data-enhanced] .desk__back { display: block; position: absolute; inset: 2rem; z-index: -1; background-color: var(--color-surface); border: 1px solid var(--color-line); transform: rotate(var(--angle)) translateY(var(--offset)); pointer-events: none; }
+  .desk[data-enhanced] .desk__back[hidden] { display: none; }
+  .sheet { position: relative; padding: clamp(1.25rem, 4vw, 3rem); border: 1px solid var(--color-line); background-color: var(--color-surface); box-shadow: 0 .5rem 1.5rem color-mix(in srgb, var(--color-ink) 6%, transparent); margin-bottom: 2rem; }
+  .sheet[hidden] { display: none; }
+  .sheet::before, .sheet::after {
+    content: '';
+    position: absolute;
+    left: .9rem;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 50%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    box-shadow: inset 1px 1px 2px var(--color-line);
+    pointer-events: none;
+  }
+  .sheet::before { top: 30%; }
+  .sheet::after { top: 70%; }
+  .desk[data-enhanced] .sheet { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; margin-bottom: 0; padding: clamp(1rem, 2.5vw, 2rem); transform: rotate(var(--angle)); }
+  .desk[data-enhanced] .sheet[hidden] { display: none; }
+  .sheet, .desk[data-enhanced] .sheet { padding-left: 2.75rem; }
+  .sheet:has(.sheet__footer), .desk[data-enhanced] .sheet:has(.sheet__footer) { padding-bottom: .75rem; }
+  .desk[data-enhanced] .sheet__header { flex: 0 0 auto; padding-bottom: .75rem; margin-bottom: 1rem; }
+  .desk[data-enhanced] .sheet__modules { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+    .desk[data-enhanced] .desk__pile > .sheet { z-index: 1; width: 100%; }
+    .desk[data-enhanced] .desk__preview:not(:empty) { display: block; position: absolute; inset: 2rem; z-index: 0; overflow: hidden; }
+    .desk[data-enhanced] .desk__preview > .sheet { width: 100%; height: 100%; min-height: 0; max-height: 100%; overflow: hidden; box-shadow: none; }
+    .desk[data-enhanced] .desk__preview .sheet__modules { overflow: hidden; }
+    .desk[data-enhanced] .desk__preview .sheet__header,
+    .desk[data-enhanced] .desk__preview .sheet__lead,
+    .desk[data-enhanced] .desk__preview .sheet__modules,
+    .desk[data-enhanced] .desk__preview .sheet__footer { opacity: .45; filter: blur(1px); }
+    .desk[data-enhanced] .desk__preview .sheet__scroll-controls { display: none; }
+  @media (min-width: 768px) {
+    .desk[data-enhanced] .desk__pile { display: flex; align-items: center; }
+    .desk[data-enhanced] .desk__pile > .sheet { height: auto; max-height: 100%; min-height: min(100%, 20rem); }
+    .desk[data-enhanced] .desk__pile > .sheet .sheet__modules { flex: 0 1 auto; }
+    .desk[data-enhanced] .desk__pile > .sheet .sheet__footer { margin-top: auto; padding-top: 1rem; }
+  }
+  .sheet::-webkit-scrollbar, .sheet__modules::-webkit-scrollbar { display: none; }
+  .sheet__scroll-controls { flex: 0 0 auto; display: flex; justify-content: flex-end; gap: .5rem; }
+  .sheet__scroll-controls[hidden] { display: none; }
+  .sheet__scroll-controls button { justify-content: center; min-width: 44px; min-height: 44px; cursor: pointer; }
+  .sheet__scroll-controls button[aria-disabled="true"] { visibility: hidden; }
+  .sheet__scroll-hint { text-transform: none; }
+  .sheet__modules[data-more-below] { mask-image: linear-gradient(to bottom, #000 calc(100% - 3rem), transparent); }
+  .sheet__modules:focus-visible { mask-image: none; outline: 2px solid var(--color-ink); outline-offset: -2px; }
+  .desk[data-enhanced] .sheet__footer { flex: 0 0 auto; margin-top: 1rem; }
+  .sheet__header { border-bottom: 1px solid var(--color-line); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .sheet__footer { display: flex; justify-content: flex-end; gap: 1rem; flex-wrap: wrap; }
+  .sheet__header h3 { text-wrap: balance; }
+  .sheet__date { margin-bottom: .75rem; color: var(--color-muted); text-align: right; }
+  .sheet__status { margin-top: .5rem; }
+  .sheet .type-annotation { font-size: var(--text-copy); }
+  .sheet__modules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; align-items: stretch; align-content: start; }
+  .desk .sheet__modules--annotated { grid-template-columns: minmax(0, 1fr); background-image: none; }
+  .sheet__module { min-width: 0; overflow-wrap: anywhere; padding: 1.25rem 1rem; border-bottom: 1px solid var(--color-line); }
+  .sheet__module:last-child { border-bottom: 0; }
+  @media (min-width: 768px) {
+    .sheet:not(.sheet--illustrated) .sheet__module:nth-last-child(2):nth-child(odd) { border-bottom: 0; }
+  }
+  .sheet__label { margin-bottom: 1rem; text-transform: uppercase; color: var(--color-muted); }
+  .sheet__text { white-space: pre-line; }
+  .sheet__image :global(img) { width: 100%; height: auto; max-height: min(12rem, 24svh); object-fit: contain; object-position: left; }
+  .sheet :global(img) { background-image: none !important; }
+  .sheet__lead { min-width: 0; min-height: 0; margin-bottom: 1rem; }
+  .sheet__lead :global(img) { display: block; width: 100%; height: auto; max-height: 30svh; object-fit: contain; }
+  @media (min-width: 768px) {
+    .sheet__modules { background-image: linear-gradient(var(--color-line), var(--color-line)); background-size: 1px 100%; background-position: center; background-repeat: no-repeat; }
+    .sheet--illustrated, .desk[data-enhanced] .sheet--illustrated { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto minmax(0, 1fr) auto auto; column-gap: 0; }
+    .sheet--illustrated .sheet__lead { grid-column: 1; grid-row: 1 / -1; display: flex; flex-direction: column; margin: 0; padding-right: 1rem; border-right: 1px solid var(--color-line); }
+    .sheet--illustrated .sheet__lead :global(img) { flex: 1; min-height: 0; max-height: none; object-position: center; }
+    .sheet--illustrated .sheet__header, .sheet--illustrated .sheet__modules, .sheet--illustrated .sheet__scroll-controls, .sheet--illustrated .sheet__footer { grid-column: 2; }
+    .sheet--illustrated .sheet__header { grid-row: 1; padding-left: 1rem; }
+    .sheet--illustrated .sheet__modules { grid-row: 2; grid-template-columns: minmax(0, 1fr); background-image: none; }
+    .sheet--illustrated .sheet__scroll-controls { grid-row: 3; padding-left: 1rem; }
+    .sheet--illustrated .sheet__footer { grid-row: 4; margin-left: 1rem; }
+  }
+  .sheet figcaption { margin-top: .5rem; font-size: var(--text-copy); }
+  .sheet__details { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .sheet__details figure { flex: 1 1 4rem; max-width: 6rem; }
+  .sheet__circle { aspect-ratio: 1; border-radius: 50%; overflow: hidden; border: 1px solid var(--color-line); }
+  .sheet__circle :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .sheet__palette { display: flex; flex-wrap: wrap; gap: 1rem; list-style: none; padding: 0; }
+  .sheet__palette li { display: grid; justify-items: center; gap: .5rem; max-width: 5rem; text-align: center; }
+  .sheet__swatch { display: block; width: 2.5rem; aspect-ratio: 1; border-radius: 50%; background: var(--swatch); border: 1px solid var(--color-line); }
+  .sheet__facts > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 1rem; padding-block: .6rem; border-bottom: 1px solid var(--color-line); }
+  .sheet__facts dd { margin: 0; }
+  .sheet__track { height: 1px; background: var(--color-ink); position: relative; margin: .75rem .4rem; }
+  .sheet__track span { position: absolute; left: var(--position); width: .65rem; height: .65rem; border-radius: 50%; background: var(--color-ink); transform: translate(-50%, -50%); }
+  .sheet__poles { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+  .sheet__poles span:last-child { text-align: right; }
+  .sheet__link { min-height: 44px; }
+  .sheet__footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-line); color: var(--color-muted); }
+  @media (max-width: 767px) { .sheet__modules { grid-template-columns: minmax(0, 1fr); } .sheet__module { padding-inline: .5rem; } .sheet__lead { padding-bottom: 1rem; border-bottom: 1px solid var(--color-line); } }
+  @media (max-width: 1023px) { .desk[data-enhanced] .desk__inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: .5rem; } .desk__tabs { padding-block: 0; max-height: 22svh; overflow-y: auto; } }
+  @media (max-width: 767px) {
+    .desk[data-enhanced] { height: auto; }
+    .desk[data-enhanced] .desk__inner { height: auto; grid-template-rows: auto auto; gap: .75rem; padding-inline: .75rem; }
+    .desk__tabs { display: none; }
+    .desk__tabs button { padding-block: .25rem; }
+    .desk[data-enhanced] .desk__figure { height: auto; }
+    .desk[data-enhanced] .desk__pile { flex: none; height: 86svh; padding: 1rem; }
+    .desk[data-enhanced] .desk__pile { display: flex; align-items: center; }
+    .desk[data-enhanced] .desk__pile > .sheet { height: auto; max-height: 100%; min-height: min(100%, 20rem); }
+    .desk[data-enhanced] .desk__pile > .sheet .sheet__modules { flex: 0 1 auto; }
+    .desk[data-enhanced] .desk__pile > .sheet .sheet__footer { margin-top: auto; padding-top: 1rem; }
+    .desk[data-enhanced] .desk__back { inset: 1rem; }
+    /* Pendant le fondu, l'aperçu change déjà pour la feuille suivante : il
+       révèle alors un troisième contenu sous la feuille entrante. Garder
+       seulement les dos de papier sur mobile, comme dans le lecteur. */
+    .desk[data-enhanced] .desk__preview:not(:empty) { display: none; }
+    /* La feuille lue reste droite ; seules les feuilles au-dessous sont
+       inclinées. Éviter un changement d'angle au remplacement du contenu. */
+    .desk[data-enhanced] .desk__pile > .sheet { transform: none; }
+    .desk[data-enhanced] .sheet { overflow: hidden; touch-action: pan-y pinch-zoom; }
+    .desk[data-enhanced] .sheet__modules { overflow: hidden; }
+    .desk[data-enhanced] .sheet__lead { flex: 0 0 auto; min-height: auto; }
+    .desk[data-enhanced] .sheet__lead :global(img) { height: 22svh; max-height: 22svh; object-fit: contain; }
+    .desk__navigation:not([hidden]) { display: flex; }
+    .sheet::before, .sheet::after { display: none; }
+    .sheet, .desk[data-enhanced] .sheet { padding-inline: 1rem; }
+    .sheet__header { position: relative; }
+    .sheet__date { padding-left: 2rem; }
+    .sheet__header:not(:has(.sheet__date)) h3 { padding-left: 2rem; }
+    /* Une perforation dans le coin supérieur, centrée sur la ligne de date. */
+    .sheet__header::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: calc(var(--text-note) * var(--text-note--line-height) / 2);
+      width: 1.25rem;
+      height: 1.25rem;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      box-shadow: inset 1px 1px 2px var(--color-line);
+      pointer-events: none;
+    }
+    .desk :global(.desk__caption) { margin-inline: .5rem; }
+  }
+  .desk[data-enhanced] .desk__reader .sheet { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; height: auto; overflow: visible; transform: none; overflow-wrap: anywhere; }
+  .desk__reader .sheet__header, .desk__reader .sheet__lead, .desk__reader .sheet__footer { min-width: 0; }
+  .desk[data-enhanced] .desk__reader .sheet__modules { overflow: visible; mask-image: none; }
+  .desk[data-enhanced] .desk__reader .sheet__lead :global(img) { height: auto; max-height: 45svh; }
+  @media (prefers-reduced-motion: reduce) { .desk__back, .desk[data-enhanced] .sheet { transform: none !important; } }
+</style>
+
+<script>
+  function initSheets() {
+    document.querySelectorAll<HTMLElement>('[data-loose-sheets]:not([data-enhanced])').forEach(desk => {
+      const tabs = Array.from(desk.querySelectorAll<HTMLButtonElement>('[data-sheet-tab]'));
+      const panels = Array.from(desk.querySelectorAll<HTMLElement>('[data-sheet-panel]'));
+      const tablist = desk.querySelector<HTMLElement>('.desk__tabs');
+      if (!tabs.length || !tablist || tabs.length !== panels.length) return;
+      const mobile = matchMedia('(max-width: 767px)');
+      const navigation = desk.querySelector<HTMLElement>('.desk__navigation');
+      const position = desk.querySelector<HTMLElement>('[data-sheet-position]');
+      const reader = desk.querySelector<HTMLDialogElement>('.desk__reader');
+      const readerContent = desk.querySelector<HTMLElement>('[data-sheet-reader-content]');
+      const readerWindow = desk.querySelector<HTMLElement>('.desk__reader-window');
+      const updateReaderEdges = () => {
+        if (!readerContent || !readerWindow || !reader?.open) return;
+        readerWindow.toggleAttribute('data-more-above', readerContent.scrollTop > 2);
+        readerWindow.toggleAttribute('data-more-below', readerContent.scrollTop + readerContent.clientHeight < readerContent.scrollHeight - 2);
+      };
+      readerContent?.addEventListener('scroll', updateReaderEdges, { passive: true });
+      readerContent?.addEventListener('load', updateReaderEdges, true);
+      const readerObserver = new ResizeObserver(updateReaderEdges);
+      if (readerContent) readerObserver.observe(readerContent);
+      document.addEventListener('astro:before-swap', () => readerObserver.disconnect(), { once: true });
+      let current = 0;
+      let readerTrigger: HTMLElement | undefined;
+      let previousOverflow = '';
+      let closingReader = false;
+      const renderReader = (panel: HTMLElement, resetScroll = false) => {
+        if (!reader || !readerContent) return;
+        const scrollTop = resetScroll ? 0 : readerContent.scrollTop;
+        const copy = panel.cloneNode(true) as HTMLElement;
+        copy.hidden = false;
+        copy.removeAttribute('id');
+        copy.removeAttribute('data-sheet-panel');
+        copy.removeAttribute('role');
+        copy.removeAttribute('tabindex');
+        copy.removeAttribute('aria-labelledby');
+        copy.querySelectorAll('[id]').forEach(el => { el.id = `${el.id}-reader`; });
+        copy.querySelectorAll<HTMLAnchorElement>('a[data-sheet-note]').forEach(el => { el.setAttribute('href', `${el.getAttribute('href')}-reader`); });
+        const modules = copy.querySelector<HTMLElement>('.sheet__modules');
+        modules?.removeAttribute('tabindex');
+        modules?.removeAttribute('data-more-below');
+        copy.querySelector('.sheet__scroll-controls')?.remove();
+        readerContent.replaceChildren(copy);
+        readerContent.scrollTo({ top: scrollTop, left: 0, behavior: 'instant' });
+        requestAnimationFrame(updateReaderEdges);
+        const readerPosition = reader.querySelector('[data-reader-position]');
+        if (readerPosition) readerPosition.textContent = `${current + 1} / ${panels.length}`;
+        reader.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      };
+      const openReader = (panel: HTMLElement, trigger: HTMLElement) => {
+        if (!reader || !readerContent || reader.open) return;
+        readerTrigger = trigger;
+        renderReader(panel, true);
+        previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        reader.showModal();
+        reader.scrollTop = 0;
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          reader.animate([
+            { opacity: 0, translate: '0 1.5rem', scale: '.985' },
+            { opacity: 1, translate: '0 0', scale: '1' }
+          ], { duration: 280, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+        }
+      };
+      const closeReader = async () => {
+        if (!reader?.open || closingReader) return;
+        closingReader = true;
+        reader.getAnimations().forEach(animation => animation.cancel());
+        try {
+          if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            await reader.animate([
+              { opacity: 1, translate: '0 0', scale: '1' },
+              { opacity: 0, translate: '0 1rem', scale: '.985' }
+            ], { duration: 200, easing: 'ease-in', fill: 'forwards' }).finished;
+          }
+        } catch { /* La fermeture immédiate reste possible lors d’un changement de page. */ }
+        finally {
+          reader.close();
+          reader.getAnimations().forEach(animation => animation.cancel());
+          closingReader = false;
+        }
+      };
+      reader?.querySelector('[data-sheet-close]')?.addEventListener('click', closeReader);
+      reader?.addEventListener('cancel', event => { event.preventDefault(); closeReader(); });
+      reader?.addEventListener('close', () => {
+        document.body.style.overflow = previousOverflow;
+        readerContent?.replaceChildren();
+        readerTrigger?.focus({ preventScroll: true });
+      });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const cancel = () => { clearTimeout(timer); };
+      const select = (index: number) => {
+        cancel();
+        current = (index + panels.length) % panels.length;
+        index = current;
+        if (position) position.textContent = `${index + 1} / ${panels.length}`;
+        // Montrer l'entrante avant de cacher la sortante : aucun état vide de
+        // la pile ne peut modifier sa géométrie entre deux feuilles.
+        panels[index].hidden = false;
+        tabs.forEach((tab, i) => { tab.setAttribute('aria-selected', String(i === index)); tab.tabIndex = i === index ? 0 : -1; panels[i].hidden = i !== index; });
+        desk.querySelectorAll<HTMLElement>('[data-sheet-back]').forEach(back => { back.hidden = Number(back.dataset.sheetBack) === index; });
+        const preview = desk.querySelector<HTMLElement>('[data-sheet-preview]');
+        if (preview) {
+          preview.replaceChildren();
+          if (panels.length > 1 && !mobile.matches) {
+            const next = panels[(index + 1) % panels.length].cloneNode(true) as HTMLElement;
+            next.hidden = false;
+            next.removeAttribute('id');
+            next.removeAttribute('data-sheet-panel');
+            next.removeAttribute('aria-labelledby');
+            next.removeAttribute('role');
+            next.removeAttribute('tabindex');
+            next.querySelectorAll('[id]').forEach(element => element.removeAttribute('id'));
+            next.querySelectorAll('img').forEach(image => { image.loading = 'lazy'; });
+            preview.append(next);
+          }
+        }
+        // Régler le bouton « Déplier » avant la première image animée : sa
+        // hauteur modifie celle de la carte, centrée verticalement sur mobile.
+        panels[index].dispatchEvent(new Event('sheet-resize'));
+      };
+      const syncPreview = () => select(current);
+      mobile.addEventListener('change', syncPreview);
+      document.addEventListener('astro:before-swap', () => mobile.removeEventListener('change', syncPreview), { once: true });
+      let moving = false;
+      const move = async (direction: number) => {
+        if (moving || closingReader || panels.length < 2) return;
+        moving = true;
+        const expanded = Boolean(reader?.open);
+        const outgoing = expanded ? readerContent?.firstElementChild as HTMLElement : panels[current];
+        const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        try {
+          if (outgoing && mobile.matches && !reduced) {
+            // Même transition dans la pile et dans le lecteur déplié.
+            await outgoing.animate([
+              { opacity: 1, transform: 'translateX(0)' },
+              { opacity: 0, transform: `translateX(${-direction * 24}px)` }
+            ], { duration: 220, easing: 'ease-in', fill: 'forwards' }).finished;
+          }
+          outgoing?.getAnimations().forEach(animation => animation.cancel());
+          select(current + direction);
+          if (expanded) {
+            renderReader(panels[current]);
+            readerTrigger = panels[current].querySelector<HTMLElement>('[data-sheet-scroll]') ?? undefined;
+          }
+          const incoming = expanded ? readerContent?.firstElementChild as HTMLElement : panels[current];
+          if (incoming && mobile.matches && !reduced) {
+            const arrival = incoming.animate([
+              { opacity: 0, transform: `translateX(${direction * 24}px)` },
+              { opacity: 1, transform: 'translateX(0)' }
+            ], { duration: 260, easing: 'ease-out', fill: 'both' });
+            // Préparer la carte invisible et laisser finir layout/ResizeObserver
+            // avant de lancer le fondu, plutôt que pendant son apparition.
+            arrival.pause();
+            arrival.currentTime = 0;
+            await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+            arrival.play();
+            try { await arrival.finished; }
+            finally { arrival.cancel(); }
+          }
+        } catch { /* Une navigation Astro peut interrompre la transition. */ }
+        finally { if (expanded) readerContent?.scrollTo({ left: 0, behavior: 'instant' }); moving = false; }
+      };
+      desk.querySelector('[data-sheet-previous]')?.addEventListener('click', () => move(-1));
+      desk.querySelector('[data-sheet-next]')?.addEventListener('click', () => move(1));
+      reader?.querySelector('[data-reader-previous]')?.addEventListener('click', () => move(-1));
+      reader?.querySelector('[data-reader-next]')?.addEventListener('click', () => move(1));
+      if (navigation) navigation.hidden = panels.length < 2;
+      [...panels, ...(readerContent ? [readerContent] : [])].forEach(panel => {
+        let start: { x: number; y: number; id: number } | undefined;
+        panel.addEventListener('pointerdown', event => {
+          if (!mobile.matches || event.pointerType !== 'touch' || !event.isPrimary || (event.target as HTMLElement).closest('a, button')) return;
+          start = { x: event.clientX, y: event.clientY, id: event.pointerId };
+        });
+        panel.addEventListener('pointercancel', () => { start = undefined; });
+        panel.addEventListener('pointerup', event => {
+          if (!start || event.pointerId !== start.id) return;
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          start = undefined;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) move(dx < 0 ? 1 : -1);
+        });
+      });
+      panels.forEach(panel => {
+        const scroller = panel.querySelector<HTMLElement>('.sheet__modules');
+        const controls = panel.querySelector<HTMLElement>('.sheet__scroll-controls');
+        if (!scroller || !controls) return;
+        scroller.tabIndex = 0;
+        scroller.setAttribute('role', 'region');
+        scroller.setAttribute('aria-label', 'Contenu de la feuille');
+        const arrows = Array.from(controls.querySelectorAll<HTMLButtonElement>('[data-sheet-scroll]'));
+        const update = () => {
+          if (panel.hidden) return;
+          const overflow = scroller.scrollHeight > scroller.clientHeight + 2;
+          // Un tabindex, même -1, rend la boîte focusable au toucher et peut
+          // faire remonter la page pour révéler son début. Sur mobile, seule
+          // l'action « Déplier » est interactive ; le contenu n'y défile pas.
+          if (mobile.matches) scroller.removeAttribute('tabindex');
+          else scroller.tabIndex = 0;
+          const moreBelow = overflow && scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 2;
+          scroller.toggleAttribute('data-more-below', moreBelow);
+          controls.hidden = !overflow;
+          arrows.forEach(arrow => {
+            arrow.dataset.sheetScroll = moreBelow ? 'down' : 'up';
+            arrow.setAttribute('aria-disabled', String(!overflow));
+            arrow.setAttribute('aria-label', mobile.matches ? 'Déplier la feuille pour lire tout le contenu' : moreBelow ? 'Découvrir la suite de la feuille' : 'Revenir au début de la feuille');
+            const hint = arrow.querySelector('.sheet__scroll-hint');
+            const glyph = arrow.querySelector('[aria-hidden]');
+            if (hint) hint.textContent = mobile.matches ? 'Déplier la feuille' : moreBelow ? 'La suite' : 'Le début';
+            if (glyph) glyph.textContent = mobile.matches ? '→' : moreBelow ? '↓' : '↑';
+          });
+        };
+        arrows.forEach(arrow => arrow.addEventListener('click', () => {
+          if (arrow.getAttribute('aria-disabled') === 'true') return;
+          if (mobile.matches) { openReader(panel, arrow); return; }
+          const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+          if (arrow.dataset.sheetScroll === 'up') scroller.scrollTo({ top: 0, behavior });
+          else scroller.scrollBy({ top: scroller.clientHeight * .7, behavior });
+        }));
+        scroller.addEventListener('scroll', update, { passive: true });
+        mobile.addEventListener('change', update);
+        panel.addEventListener('sheet-resize', update);
+        const observer = new ResizeObserver(update);
+        observer.observe(scroller);
+        scroller.querySelectorAll('img').forEach(img => img.addEventListener('load', update, { once: true }));
+        document.addEventListener('astro:before-swap', () => { observer.disconnect(); mobile.removeEventListener('change', update); if (reader?.open) reader.close(); }, { once: true });
+      });
+      tabs.forEach((tab, i) => {
+        tab.setAttribute('role', 'tab');
+        panels[i].setAttribute('role', 'tabpanel');
+        panels[i].setAttribute('aria-labelledby', tab.id);
+        const syncPanelFocus = () => {
+          if (mobile.matches) panels[i].removeAttribute('tabindex');
+          else panels[i].tabIndex = 0;
+        };
+        syncPanelFocus();
+        mobile.addEventListener('change', syncPanelFocus);
+        document.addEventListener('astro:before-swap', () => mobile.removeEventListener('change', syncPanelFocus), { once: true });
+        tab.addEventListener('click', () => select(i));
+        tab.addEventListener('focus', () => select(i));
+        tab.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse' && matchMedia('(hover: hover) and (pointer: fine)').matches && !panels.some(p => p.contains(document.activeElement))) { cancel(); timer = setTimeout(() => select(i), 160); } });
+        tab.addEventListener('pointerleave', cancel);
+        tab.addEventListener('keydown', event => {
+          let next: number | undefined;
+          if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (i + 1) % tabs.length;
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length;
+          if (event.key === 'Home') next = 0;
+          if (event.key === 'End') next = tabs.length - 1;
+          if (next !== undefined) { event.preventDefault(); select(next); tabs[next].focus({ preventScroll: true }); }
+        });
+      });
+      tablist.setAttribute('role', 'tablist');
+      tablist.setAttribute('aria-orientation', 'vertical');
+      tablist.hidden = false;
+      desk.setAttribute('data-enhanced', '');
+      select(0);
+    });
+  }
+  initSheets();
+  document.addEventListener('astro:page-load', initSheets);
+</script>

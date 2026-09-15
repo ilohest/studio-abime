@@ -22,6 +22,7 @@ export const TRANSLATED_DOCUMENT_TYPES = [
   'page',
   'project',
   'post',
+  'actu',
   'localizedSettings',
   'projectsPage',
   'laboPage',

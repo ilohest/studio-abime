@@ -53,8 +53,14 @@ Le site a besoin de deux documents pour s'afficher :
 | `npm run studio:build` | build du Studio dans `dist-studio/` |
 | `npm run preview` | build **puis** exécution locale dans le runtime Cloudflare (`wrangler`) |
 | `npm run typecheck` | `astro check` seul |
+| `npm run test:mobile-sheets` | contrôle tactile des feuilles sur l’accueil local (4323) : viewport, header et conservation du scroll pendant chaque transition |
 | `npm run check:invisible` | inspecte `dist/` — ajouter `-- --fix` pour nettoyer un build déjà construit |
 | `npx sanity <cmd>` | CLI Sanity (datasets, tokens, import/export) |
+
+Le test des feuilles utilise le serveur local et le mot de passe de maintenance
+configuré. Installer les moteurs avec `npx playwright install chromium webkit` ;
+`MOBILE_TEST_ENGINES=chromium,webkit npm run test:mobile-sheets` vérifie les deux
+moteurs, avec et sans mouvement, à 362, 390 et 650 px.
 
 `npm run preview` passe par `wrangler` plutôt que par `astro preview` : c'est le
 seul moyen d'exécuter `/api/contact` dans le vrai runtime Workers, celui qui
@@ -272,6 +278,8 @@ Les composants n'utilisent jamais ces couleurs directement mais des **rôles** (
 
 ### Typographie
 
+La classe `paper-grain` applique le grain fin de la boutique sur la couleur de fond existante, sans modifier le contenu. `paper-grain-before` et `paper-grain-after` appliquent la même texture à un pseudo-élément déjà défini par le composant. Les fiches Actus, les étiquettes de spécifications, les fiches Contact et les dossiers Shop partagent cet effet ; `surface-paper-grain` reste réservé à la texture photographique froissée des grandes sections.
+
 | Style | Fonte | Casse | Corps | Interlettrage | Classe |
 | --- | --- | --- | --- | --- | --- |
 | Titres | GT Canon Mono Regular | Majuscule | 46 px | −3 % | `.type-titre` |
@@ -301,6 +309,14 @@ En dessous de 768 px, la double page s'effondre en colonne unique : le pli dispa
 Une mention dont la valeur est une adresse e-mail ou une URL devient cliquable d'elle-même (`mailto:` / lien externe) : l'éditeur saisit l'adresse, sans champ de lien supplémentaire à gérer.
 
 Tant qu'aucune page d'accueil n'est désignée dans Sanity, la racine sert le contenu d'amorçage de `src/content/homeFallback.ts` plutôt qu'un 404. Ce fichier devient inutile — et supprimable — dès que le CMS est alimenté.
+
+### Feuilles volantes
+
+Dans **Actus**, créer une actu indépendante avec des modules réordonnables : note, image, détails circulaires, palette, axe de recherche, relevé label/valeur et lien. Le toggle **Visible sur le site** décide de sa diffusion après publication. La liste **Actus** se réorganise par glisser-déposer. Les six premières actus visibles de la langue courante, dans cet ordre manuel, alimentent la pile avant la première citation de l’accueil. Le champ Date est retiré du formulaire ; les dates déjà enregistrées restent conservées. À la première utilisation, le menu « Reset order » de la liste initialise les rangs des actus existantes ; les nouvelles actus sont ajoutées en fin de liste. Une pile vide n’apparaît pas : seule l’entité Actus pilote désormais cette section.
+
+Une seule feuille est ouverte à la fois : sélection au survol temporisé, au clic, au toucher ou avec les flèches du clavier. La pile réserve toujours le rail gauche et reste contenue dans la hauteur de l’écran ; les compositions longues défilent à l’intérieur sans réduire le texte. Une légende commune « fig. 10 — Feuilles volantes » remplace l’en-tête visible. Sans JavaScript, les feuilles restent toutes lisibles dans le flux. Les images sont chargées paresseusement et les détails circulaires respectent le point focal Sanity.
+
+La sélection prend la forme d’une liste verticale sans numérotation, à gauche de la pile sur grand écran et au-dessus sur petit écran. Chaque annonce conserve son inclinaison ; la pile montre une feuille par annonce. Le défilement intérieur reste natif, avec des flèches cliquables plutôt qu’une barre visible et une zone accessible au clavier.
 
 ### Navigation et pied de page
 

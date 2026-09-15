@@ -6,6 +6,7 @@ import { project } from './documents/project';
 import { client } from './documents/client';
 import { star } from './documents/star';
 import { post } from './documents/post';
+import { actu } from './documents/actu';
 
 // Singletons
 import { siteSettings } from './singletons/siteSettings';
@@ -24,6 +25,7 @@ import { richText, inlineImage } from './objects/richText';
 import { identityValue } from './objects/identityValue';
 import { indexEntryTypes } from './objects/indexEntry';
 import { sectionTypes } from './objects/sections';
+import { looseSheetModules } from './objects/looseSheets';
 import { journalBlockTypes } from './objects/journalBlocks';
 
 /**
@@ -37,6 +39,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
   client,
   star,
   post,
+  actu,
 
   // Singletons
   siteSettings,
@@ -58,6 +61,7 @@ export const schemaTypes: SchemaTypeDefinition[] = [
 
   // Sections du page builder
   ...sectionTypes,
+  ...looseSheetModules,
 
   // Blocs de composition d'un article du Journal
   ...journalBlockTypes,
