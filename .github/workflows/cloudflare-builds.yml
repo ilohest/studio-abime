@@ -1,0 +1,40 @@
+name: Lancer les builds Cloudflare
+run-name: Builds Cloudflare sur main · ${{ github.sha }}
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studio-abime-cloudflare-main
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    name: Lancer le build · ${{ matrix.worker }}
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - worker: studio-abime
+            hook: STUDIO_ABIME_SITE_DEPLOY_HOOK
+          - worker: studio-abime-studio
+            hook: STUDIO_ABIME_STUDIO_DEPLOY_HOOK
+    steps:
+      - name: Lire le dépôt
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Déclencher le build de main dans Cloudflare
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets[matrix.hook] }}
+          DEPLOY_HOOK_SECRET_NAME: ${{ matrix.hook }}
+          EXPECTED_WORKER: ${{ matrix.worker }}
+        run: node scripts/trigger-cloudflare-build.mjs

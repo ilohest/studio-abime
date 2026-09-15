@@ -419,6 +419,37 @@ gratuits et illimités**. La cliente peut donc rester seule propriétaire de son
 compte et y inviter un intervenant, sans jamais partager de mot de passe. Le
 domaine peut vivre dans le même compte, acheté au prix coûtant du registre.
 
+### Déclencher les builds depuis GitHub Actions
+
+Le workflow `.github/workflows/cloudflare-builds.yml` lance les builds du site
+et du Studio après chaque push sur `main`. Il peut aussi être relancé depuis
+GitHub → **Actions → Lancer les builds Cloudflare → Run workflow**, sur `main`.
+Les builds et les déploiements restent exécutés par Cloudflare avec les variables
+et secrets déjà configurés dans chaque projet. Ce déclenchement par HTTP évite
+de dépendre de la réception des événements de push par l’application GitHub
+Cloudflare, notamment avec plusieurs comptes clients.
+
+Configuration dans ce dépôt GitHub → **Settings → Secrets and variables → Actions** :
+
+| Repository secret | Valeur |
+| --- | --- |
+| `STUDIO_ABIME_SITE_DEPLOY_HOOK` | URL d’un deploy hook du Worker `studio-abime`, branche `main` |
+| `STUDIO_ABIME_STUDIO_DEPLOY_HOOK` | URL d’un deploy hook du Worker `studio-abime-studio`, branche `main` |
+
+Créer les hooks dans chaque projet Cloudflare → **Settings → Builds → Deploy Hooks**.
+Le hook Site existant « Publication Sanity » peut être réutilisé ; un hook dédié
+« GitHub Actions » facilite toutefois la lecture de l’historique. Conserver le
+hook et le webhook Sanity existants. Les URL sont des secrets : ne jamais les
+committer ni les publier dans les logs. Aucun token API Cloudflare global n’est
+nécessaire, et aucune modification du projet Creyda n’est requise.
+
+**Un workflow GitHub vert confirme seulement que Cloudflare a accepté le lancement.**
+Le résultat du build et du déploiement se consulte dans chaque projet Cloudflare
+→ **Deployments → Go to build history**, avec le `build_uuid` affiché dans le
+résumé GitHub Actions. Un hook construit le dernier état de `main` au moment du
+lancement, pas nécessairement le commit exact à l’origine d’un workflow en attente.
+Ne pas déconnecter le dépôt Cloudflare : les deploy hooks ont besoin de cette connexion.
+
 ### Le site
 
 `@astrojs/cloudflare` produit un build hybride : toutes les pages partent en HTML
